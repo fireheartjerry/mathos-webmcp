@@ -56,6 +56,11 @@
   box-shadow: 0 0 0 4px var(--green-soft);
 }
 
+.session-status.tools-fallback i {
+  background: var(--muted);
+  box-shadow: 0 0 0 4px rgba(120, 117, 107, 0.12);
+}
+
 .studio-grid {
   min-height: calc(100vh - 64px);
   display: grid;
@@ -785,6 +790,24 @@
   color: var(--green);
 }
 
+.activity-block li div {
+  display: grid;
+  gap: 3px;
+}
+
+.activity-block li small {
+  color: var(--muted);
+  font: 700 7px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.empty-activity {
+  margin: 0;
+  color: var(--muted);
+  font: italic 12px var(--serif);
+}
+
 .session-note {
   margin: auto 0 0;
   padding-top: 20px;
@@ -816,6 +839,13 @@
 
   .studio-header p {
     display: none;
+  }
+
+  .session-status.tools-fallback {
+    max-width: 190px;
+    font-size: 7px;
+    line-height: 1.35;
+    text-align: right;
   }
 
   .studio-grid {

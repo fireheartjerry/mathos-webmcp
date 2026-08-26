@@ -1,35 +1,20 @@
-import { useReducer } from 'react'
-import type { Dispatch, SyntheticEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SyntheticEvent } from 'react'
+import {
+  createLearningTools,
+  DIAGNOSIS_ID,
+  LESSON_ID,
+  registerLearningTools,
+} from '../lib/webmcp'
+import type {
+  ActionResult,
+  ActivitySource,
+  SemanticAction,
+  Stage,
+  StudioState,
+  ToolEnvelope,
+} from '../lib/webmcp'
 import './learning-studio.css'
-
-type Stage = 'initial' | 'diagnosis' | 'lesson' | 'initial_correct' | 'transfer' | 'receipt'
-
-type StudioState = {
-  stage: Stage
-  initial_answer: string
-  transfer_answer: string
-  initial_message: string
-  transfer_message: string
-  used_lesson: boolean
-}
-
-type StudioAction =
-  | { type: 'SET_INITIAL'; value: string }
-  | { type: 'SUBMIT_INITIAL' }
-  | { type: 'OPEN_LESSON' }
-  | { type: 'START_TRANSFER' }
-  | { type: 'SET_TRANSFER'; value: string }
-  | { type: 'SUBMIT_TRANSFER' }
-  | { type: 'RESET' }
-
-const INITIAL_STATE: StudioState = {
-  stage: 'initial',
-  initial_answer: '',
-  transfer_answer: '',
-  initial_message: '',
-  transfer_message: '',
-  used_lesson: false,
-}
 
 const PATHWAY = [
   { number: '01', label: 'From slopes to learning', meta: 'calculus' },
@@ -44,31 +29,73 @@ const PATHWAY = [
   { number: '10', label: 'Teach your own tiny model', meta: 'training lab' },
 ]
 
-function reduceStudio(state: StudioState, action: StudioAction): StudioState {
+function createSessionId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `mathos_${crypto.randomUUID().replaceAll('-', '')}`
+  return `mathos_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
+}
+
+function createInitialState(): StudioState {
+  return {
+    session_id: createSessionId(),
+    stage: 'initial',
+    revision: 0,
+    initial_attempted: false,
+    transfer_attempted: false,
+    initial_message: '',
+    transfer_message: '',
+    used_lesson: false,
+    activities: [],
+  }
+}
+
+function successfulAction(
+  state: StudioState,
+  source: ActivitySource,
+  action: string,
+  changes: Partial<StudioState>,
+  data: Record<string, unknown>,
+): ActionResult {
+  const revision = state.revision + 1
+  const activity = { id: `activity-${revision}`, source, action, revision }
+  const nextState = { ...state, ...changes, revision, activities: [...state.activities, activity] }
+  return { ok: true, state: nextState, activity, data }
+}
+
+function transitionStudio(state: StudioState, action: SemanticAction, source: ActivitySource): ActionResult {
   switch (action.type) {
-    case 'SET_INITIAL':
-      return { ...state, initial_answer: action.value, initial_message: '' }
-    case 'SUBMIT_INITIAL':
-      if (state.initial_answer.trim() === '40') {
-        return { ...state, stage: 'initial_correct', initial_message: '' }
+    case 'CHECK_ATTEMPT': {
+      const attempt = action.attempt.trim()
+      if (!attempt || action.attempt.length > 256) {
+        return { ok: false, code: 'invalid_input', message: 'The attempt must be 1 to 256 characters.', recovery: 'Enter a short answer and try again.' }
       }
-      if (state.initial_answer.trim() === '36') {
-        return { ...state, stage: 'diagnosis', initial_message: '' }
+      if (state.stage === 'initial') {
+        if (attempt === '40') {
+          return successfulAction(state, source, 'Checked initial attempt · both paths found', { stage: 'initial_correct', initial_attempted: true, initial_message: '' }, { outcome: 'correct', stage: 'initial_correct' })
+        }
+        if (attempt === '36') {
+          return successfulAction(state, source, 'Checked initial attempt · one path found', { stage: 'diagnosis', initial_attempted: true, initial_message: '' }, { outcome: 'diagnosed', stage: 'diagnosis', diagnosisId: DIAGNOSIS_ID })
+        }
+        return successfulAction(state, source, 'Checked initial attempt · retry needed', { initial_attempted: true, initial_message: 'Not yet. Recheck every route from x to y.' }, { outcome: 'try_again', stage: 'initial' })
       }
-      return { ...state, initial_message: 'Not yet. Recheck every route from x to y.' }
-    case 'OPEN_LESSON':
-      return { ...state, stage: 'lesson', used_lesson: true }
+      if (state.stage === 'transfer') {
+        if (attempt === '8') {
+          return successfulAction(state, source, 'Checked transfer attempt · passed', { stage: 'receipt', transfer_attempted: true, transfer_message: '' }, { outcome: 'passed', stage: 'receipt' })
+        }
+        return successfulAction(state, source, 'Checked transfer attempt · retry needed', { transfer_attempted: true, transfer_message: 'Not yet. Count the q → s path and the q → product → s path.' }, { outcome: 'try_again', stage: 'transfer' })
+      }
+      return { ok: false, code: 'invalid_phase', message: 'There is no answer to check at this stage.', recovery: 'Read the workspace and use one of its valid next actions.' }
+    }
+    case 'SHOW_LESSON':
+      if (action.diagnosisId !== DIAGNOSIS_ID) return { ok: false, code: 'invalid_input', message: 'The diagnosis ID does not match the visible diagnosis.', recovery: 'Use the diagnosis ID from the current workspace.' }
+      if (state.stage !== 'diagnosis') return { ok: false, code: 'invalid_phase', message: 'The shared-path diagnosis is not visible.', recovery: 'Check the current attempt before opening this lesson.' }
+      return successfulAction(state, source, 'Opened targeted lesson', { stage: 'lesson', used_lesson: true }, { stage: 'lesson', lessonId: LESSON_ID })
     case 'START_TRANSFER':
-      return { ...state, stage: 'transfer', transfer_answer: '', transfer_message: '' }
-    case 'SET_TRANSFER':
-      return { ...state, transfer_answer: action.value, transfer_message: '' }
-    case 'SUBMIT_TRANSFER':
-      if (state.transfer_answer.trim() === '8') {
-        return { ...state, stage: 'receipt', transfer_message: '' }
-      }
-      return { ...state, transfer_message: 'Not yet. Count the q → s path and the q → product → s path.' }
+      if (source === 'agent' && state.stage !== 'lesson') return { ok: false, code: 'invalid_phase', message: 'The targeted lesson is not visible.', recovery: 'Show the targeted lesson before starting transfer.' }
+      if (state.stage !== 'lesson' && state.stage !== 'initial_correct') return { ok: false, code: 'invalid_phase', message: 'The session is not ready for transfer.', recovery: 'Complete the current problem or lesson first.' }
+      if (state.stage === 'lesson' && action.lessonId !== LESSON_ID) return { ok: false, code: 'invalid_input', message: 'The lesson ID does not match the visible lesson.', recovery: 'Use the lesson ID from the current workspace.' }
+      return successfulAction(state, source, 'Started fresh transfer problem', { stage: 'transfer', transfer_attempted: false, transfer_message: '' }, { stage: 'transfer', problemId: 'transfer-shared-path-v1' })
     case 'RESET':
-      return INITIAL_STATE
+      return successfulAction(state, source, 'Restarted learning path', { stage: 'initial', initial_attempted: false, transfer_attempted: false, initial_message: '', transfer_message: '', used_lesson: false }, { stage: 'initial' })
   }
 }
 
@@ -174,7 +201,7 @@ function GraphLesson() {
   )
 }
 
-function InitialProblem({ state, dispatch }: { state: StudioState; dispatch: Dispatch<StudioAction> }) {
+function InitialProblem({ draft, setDraft, onCheck, message }: { draft: string; setDraft: (value: string) => void; onCheck: () => void; message: string }) {
   return (
     <section className="work-card enter-panel">
       <div className="section-kicker"><span>Problem 01</span><span>Calculus · computation graphs</span></div>
@@ -182,58 +209,58 @@ function InitialProblem({ state, dispatch }: { state: StudioState; dispatch: Dis
       <EquationBlock />
       <div className="prompt-note"><span>Trace</span> Every way x can change y.</div>
       <AnswerForm
-        value={state.initial_answer}
-        on_change={(value) => dispatch({ type: 'SET_INITIAL', value })}
-        on_submit={() => dispatch({ type: 'SUBMIT_INITIAL' })}
-        message={state.initial_message}
+        value={draft}
+        on_change={setDraft}
+        on_submit={onCheck}
+        message={message}
         label="Your answer"
       />
     </section>
   )
 }
 
-function Diagnosis({ dispatch }: { dispatch: Dispatch<StudioAction> }) {
+function Diagnosis({ onOpenLesson }: { onOpenLesson: () => void }) {
   return (
     <section className="work-card diagnosis-card enter-panel">
       <div className="result-mark" aria-hidden="true">×</div>
       <p className="result-label">Incorrect · useful signal</p>
       <h1>You found one path.<br /><em>There are two.</em></h1>
       <div className="diagnosis-box">
-        <span className="diagnosis-code">shared-path omission</span>
+        <span className="diagnosis-code">{DIAGNOSIS_ID}</span>
         <p>You differentiated the product path, but missed the direct <strong>+ a</strong> path into y.</p>
       </div>
       <div className="mini-equation"><span>product path</span><b>36</b><i>+</i><span>direct path</span><b>4</b><i>=</i><strong>40</strong></div>
-      <button className="primary-action" onClick={() => dispatch({ type: 'OPEN_LESSON' })}>Repair this idea <span aria-hidden="true">→</span></button>
+      <button className="primary-action" onClick={onOpenLesson}>Repair this idea <span aria-hidden="true">→</span></button>
     </section>
   )
 }
 
-function Lesson({ dispatch }: { dispatch: Dispatch<StudioAction> }) {
+function Lesson({ onStartTransfer }: { onStartTransfer: () => void }) {
   return (
     <section className="work-card lesson-card enter-panel">
-      <div className="section-kicker green"><span>Local lesson · 90 sec</span><span>Rerouted from Problem 01</span></div>
+      <div className="section-kicker green"><span>Local lesson · 90 sec</span><span>{LESSON_ID}</span></div>
       <h1>One value can reach<br />the result <em>twice.</em></h1>
       <p className="lesson-lede">Plainly: changing <strong>a</strong> changes the product, and it also changes the final <strong>+ a</strong>. Both effects reach y, so both count.</p>
       <GraphLesson />
       <p className="technical-note"><span>Technical name</span> The multivariable chain rule adds the derivative contribution from every directed path.</p>
-      <button className="primary-action green-action" onClick={() => dispatch({ type: 'START_TRANSFER' })}>Try a fresh problem <span aria-hidden="true">→</span></button>
+      <button className="primary-action green-action" onClick={onStartTransfer}>Try a fresh problem <span aria-hidden="true">→</span></button>
     </section>
   )
 }
 
-function InitialCorrect({ dispatch }: { dispatch: Dispatch<StudioAction> }) {
+function InitialCorrect({ onStartTransfer }: { onStartTransfer: () => void }) {
   return (
     <section className="work-card success-card enter-panel">
       <div className="result-mark success" aria-hidden="true">✓</div>
       <p className="result-label">Correct · 40</p>
       <h1>You counted<br /><em>both paths.</em></h1>
       <p className="lesson-lede">The product contributes 36. The direct +a path contributes 4. Together, dy/dx = 40.</p>
-      <button className="primary-action green-action" onClick={() => dispatch({ type: 'START_TRANSFER' })}>Advance to transfer <span aria-hidden="true">→</span></button>
+      <button className="primary-action green-action" onClick={onStartTransfer}>Advance to transfer <span aria-hidden="true">→</span></button>
     </section>
   )
 }
 
-function TransferProblem({ state, dispatch }: { state: StudioState; dispatch: Dispatch<StudioAction> }) {
+function TransferProblem({ draft, setDraft, onCheck, message }: { draft: string; setDraft: (value: string) => void; onCheck: () => void; message: string }) {
   return (
     <section className="work-card transfer-card enter-panel">
       <div className="section-kicker green"><span>Transfer check</span><span>Fresh problem · no hints</span></div>
@@ -241,17 +268,17 @@ function TransferProblem({ state, dispatch }: { state: StudioState; dispatch: Di
       <EquationBlock transfer />
       <div className="prompt-note green-note"><span>Prove it</span> Use the same idea in a new setting.</div>
       <AnswerForm
-        value={state.transfer_answer}
-        on_change={(value) => dispatch({ type: 'SET_TRANSFER', value })}
-        on_submit={() => dispatch({ type: 'SUBMIT_TRANSFER' })}
-        message={state.transfer_message}
+        value={draft}
+        on_change={setDraft}
+        on_submit={onCheck}
+        message={message}
         label="Your transfer answer"
       />
     </section>
   )
 }
 
-function Receipt({ state, dispatch }: { state: StudioState; dispatch: Dispatch<StudioAction> }) {
+function Receipt({ state, onReset }: { state: StudioState; onReset: () => void }) {
   return (
     <section className="work-card receipt-card enter-panel">
       <div className="receipt-topline"><span>Mathos evidence receipt</span><span>Session 001</span></div>
@@ -268,7 +295,7 @@ function Receipt({ state, dispatch }: { state: StudioState; dispatch: Dispatch<S
       </div>
       <div className="receipt-actions">
         <a className="continue-path" href="#pathway">Continue the path <span aria-hidden="true">→</span></a>
-        <button className="text-action" onClick={() => dispatch({ type: 'RESET' })}>Restart session ↺</button>
+        <button className="text-action" onClick={onReset}>Restart session ↺</button>
       </div>
     </section>
   )
@@ -284,13 +311,6 @@ function ContextPanel({ state }: { state: StudioState }) {
     receipt: { title: 'Claim boundary', body: 'The evidence is real and narrow: success on one fresh problem in this session.', signal: 'Evidence issued' },
   }
   const current = contexts[state.stage]
-  const activities = [
-    { label: 'Session opened', done: true },
-    { label: 'Initial answer checked', done: state.stage !== 'initial' },
-    { label: 'Targeted lesson viewed', done: state.used_lesson },
-    { label: 'Fresh transfer passed', done: state.stage === 'receipt' },
-  ]
-
   return (
     <aside className="context-panel">
       <div>
@@ -301,13 +321,14 @@ function ContextPanel({ state }: { state: StudioState }) {
       </div>
       <div className="activity-block">
         <p className="aside-label">Session activity</p>
-        <ol>
-          {activities.map((activity) => (
-            <li className={activity.done ? 'done' : ''} key={activity.label}>
-              <span aria-hidden="true">{activity.done ? '✓' : '·'}</span>{activity.label}
+        {state.activities.length === 0 ? <p className="empty-activity">No actions yet.</p> : <ol>
+          {state.activities.slice(-6).map((activity) => (
+            <li className="done" key={activity.id}>
+              <span aria-hidden="true">✓</span>
+              <div><small>{activity.source} · r{activity.revision}</small>{activity.action}</div>
             </li>
           ))}
-        </ol>
+        </ol>}
       </div>
       <p className="session-note">Nothing here claims more than this session observed.</p>
     </aside>
@@ -315,7 +336,57 @@ function ContextPanel({ state }: { state: StudioState }) {
 }
 
 export default function LearningStudio() {
-  const [state, dispatch] = useReducer(reduceStudio, INITIAL_STATE)
+  const [state, setState] = useState(createInitialState)
+  const [initialDraft, setInitialDraft] = useState('')
+  const [transferDraft, setTransferDraft] = useState('')
+  const [toolStatus, setToolStatus] = useState<'unsupported' | 'live'>('unsupported')
+  const stateRef = useRef(state)
+  const requestCache = useRef(new Map<string, ToolEnvelope>())
+
+  const runAction = useCallback((action: SemanticAction, source: ActivitySource) => {
+    const result = transitionStudio(stateRef.current, action, source)
+    if (result.ok) {
+      stateRef.current = result.state
+      setState(result.state)
+    }
+    return result
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const tools = createLearningTools({ getState: () => stateRef.current, runAction, requestCache: requestCache.current })
+    registerLearningTools(tools, controller.signal)
+      .then((registered) => {
+        if (!controller.signal.aborted) setToolStatus(registered ? 'live' : 'unsupported')
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          controller.abort()
+          setToolStatus('unsupported')
+        }
+      })
+    return () => controller.abort()
+  }, [runAction])
+
+  function checkInitial() {
+    runAction({ type: 'CHECK_ATTEMPT', attempt: initialDraft }, 'learner')
+  }
+
+  function checkTransfer() {
+    runAction({ type: 'CHECK_ATTEMPT', attempt: transferDraft }, 'learner')
+  }
+
+  function startTransfer(lessonId?: string) {
+    setTransferDraft('')
+    runAction({ type: 'START_TRANSFER', lessonId }, 'learner')
+  }
+
+  function resetSession() {
+    setInitialDraft('')
+    setTransferDraft('')
+    runAction({ type: 'RESET' }, 'learner')
+  }
+
   const pathway_proven = state.stage === 'receipt'
 
   return (
@@ -323,7 +394,7 @@ export default function LearningStudio() {
       <header className="studio-header">
         <a className="studio-wordmark" href="/">MATHOS<span>·</span></a>
         <p>Learning studio <span>/</span> Session 001</p>
-        <div className="session-status"><i></i> Local session</div>
+        <div className={`session-status ${toolStatus === 'live' ? 'tools-live' : 'tools-fallback'}`}><i></i>{toolStatus === 'live' ? '5 agent tools live' : 'Use Chrome 149+ or the ChatGPT browser for agent tools'}</div>
       </header>
       <div className="studio-grid">
         <aside className={`pathway-rail ${pathway_proven ? 'pathway-unlocked' : ''}`} id="pathway">
@@ -342,12 +413,12 @@ export default function LearningStudio() {
           </div>
         </aside>
         <main id="main-content">
-          {state.stage === 'initial' && <InitialProblem state={state} dispatch={dispatch} />}
-          {state.stage === 'diagnosis' && <Diagnosis dispatch={dispatch} />}
-          {state.stage === 'lesson' && <Lesson dispatch={dispatch} />}
-          {state.stage === 'initial_correct' && <InitialCorrect dispatch={dispatch} />}
-          {state.stage === 'transfer' && <TransferProblem state={state} dispatch={dispatch} />}
-          {state.stage === 'receipt' && <Receipt state={state} dispatch={dispatch} />}
+          {state.stage === 'initial' && <InitialProblem draft={initialDraft} setDraft={(value) => { setInitialDraft(value); if (state.initial_message) setState((current) => ({ ...current, initial_message: '' })) }} onCheck={checkInitial} message={state.initial_message} />}
+          {state.stage === 'diagnosis' && <Diagnosis onOpenLesson={() => runAction({ type: 'SHOW_LESSON', diagnosisId: DIAGNOSIS_ID }, 'learner')} />}
+          {state.stage === 'lesson' && <Lesson onStartTransfer={() => startTransfer(LESSON_ID)} />}
+          {state.stage === 'initial_correct' && <InitialCorrect onStartTransfer={() => startTransfer()} />}
+          {state.stage === 'transfer' && <TransferProblem draft={transferDraft} setDraft={(value) => { setTransferDraft(value); if (state.transfer_message) setState((current) => ({ ...current, transfer_message: '' })) }} onCheck={checkTransfer} message={state.transfer_message} />}
+          {state.stage === 'receipt' && <Receipt state={state} onReset={resetSession} />}
         </main>
         <ContextPanel state={state} />
       </div>
