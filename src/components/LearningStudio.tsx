@@ -3,7 +3,7 @@ import type { SyntheticEvent } from 'react'
 import {
   DIAGNOSIS_ID,
   LESSON_ID,
-  registerLearningTools,
+  mountLearningTools,
 } from '../lib/webmcp'
 import type {
   ActionResult,
@@ -11,8 +11,6 @@ import type {
   SemanticAction,
   Stage,
   StudioState,
-  ToolBridge,
-  ToolEnvelope,
 } from '../lib/webmcp'
 import './learning-studio.css'
 
@@ -340,27 +338,26 @@ export default function LearningStudio() {
   const [transferDraft, setTransferDraft] = useState('')
   const [toolStatus, setToolStatus] = useState<'unsupported' | 'live'>('unsupported')
   const stateRef = useRef(state)
-  const requestCache = useRef(new Map<string, ToolEnvelope | Promise<ToolEnvelope>>())
   const committedRevision = useRef(state.revision)
   const commitWaiters = useRef(new Map<number, Set<() => void>>())
 
-  const runAction = useCallback(async (action: SemanticAction, source: ActivitySource) => {
+  const runAction = useCallback((action: SemanticAction, source: ActivitySource) => {
     const result = transitionStudio(stateRef.current, action, source)
     if (result.ok) {
       stateRef.current = result.state
       setState(result.state)
-      if (committedRevision.current < result.state.revision) {
-        await new Promise<void>((resolve) => {
-          const waiters = commitWaiters.current.get(result.state.revision) ?? new Set()
-          waiters.add(resolve)
-          commitWaiters.current.set(result.state.revision, waiters)
-        })
-      }
     }
     return result
   }, [])
-  const bridgeRef = useRef<ToolBridge | null>(null)
-  if (!bridgeRef.current) bridgeRef.current = { getState: () => stateRef.current, runAction, requestCache: requestCache.current }
+
+  const afterCommit = useCallback((revision: number) => {
+    if (committedRevision.current >= revision) return Promise.resolve()
+    return new Promise<void>((resolve) => {
+      const waiters = commitWaiters.current.get(revision) ?? new Set()
+      waiters.add(resolve)
+      commitWaiters.current.set(revision, waiters)
+    })
+  }, [])
 
   useEffect(() => {
     committedRevision.current = state.revision
@@ -374,15 +371,21 @@ export default function LearningStudio() {
 
   useEffect(() => {
     let active = true
-    registerLearningTools(bridgeRef.current!)
+    const mounted = mountLearningTools({ getState: () => stateRef.current, runAction, afterCommit })
+    mounted.registration
       .then((registered) => {
         if (active) setToolStatus(registered ? 'live' : 'unsupported')
       })
       .catch(() => {
         if (active) setToolStatus('unsupported')
       })
-    return () => { active = false }
-  }, [runAction])
+    return () => {
+      active = false
+      mounted.disconnect()
+      for (const waiters of commitWaiters.current.values()) waiters.forEach((resolve) => resolve())
+      commitWaiters.current.clear()
+    }
+  }, [afterCommit, runAction])
 
   function checkInitial() {
     runAction({ type: 'CHECK_ATTEMPT', attempt: initialDraft }, 'learner')

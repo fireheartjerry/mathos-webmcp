@@ -68,10 +68,16 @@ type WebMcpTool = {
   execute: (input: unknown, context: ToolExecutionContext) => Promise<ToolEnvelope>
 }
 
-export type ToolBridge = {
+type ToolBridge = {
   getState: () => StudioState
   runAction: (action: SemanticAction, source: ActivitySource) => Promise<ActionResult>
   requestCache: Map<string, ToolEnvelope | Promise<ToolEnvelope>>
+}
+
+export type LearningBridgeDelegates = {
+  getState: () => StudioState
+  runAction: (action: SemanticAction, source: ActivitySource) => ActionResult
+  afterCommit: (revision: number) => Promise<void>
 }
 
 const EMPTY_SCHEMA = {
@@ -276,25 +282,45 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
   ]
 }
 
-let registration: { bridge: ToolBridge; controller: AbortController; promise: Promise<boolean> } | undefined
+let delegates: LearningBridgeDelegates | undefined
+let lastState: StudioState | undefined
+const pageRequestCache = new Map<string, ToolEnvelope | Promise<ToolEnvelope>>()
+const pageBridge: ToolBridge = {
+  getState() {
+    if (delegates) lastState = delegates.getState()
+    if (!lastState) throw new Error('The learning studio is not mounted.')
+    return lastState
+  },
+  async runAction(action, source) {
+    const mounted = delegates
+    if (!mounted) return { ok: false, code: 'invalid_phase', message: 'The learning studio is not mounted.', recovery: 'Wait for the learning studio to finish loading.' }
+    const result = mounted.runAction(action, source)
+    if (result.ok) {
+      lastState = result.state
+      await mounted.afterCommit(result.state.revision)
+    }
+    return result
+  },
+  requestCache: pageRequestCache,
+}
+let registration: { controller: AbortController; promise: Promise<boolean> } | undefined
 
-export function registerLearningTools(bridge: ToolBridge) {
+function ensureRegistration() {
   if (!document.modelContext) return Promise.resolve(false)
-  if (registration) {
-    if (registration.bridge !== bridge) return Promise.reject(new Error('WebMCP tools already belong to another learning store.'))
-    return registration.promise
-  }
+  if (registration) return registration.promise
 
   const controller = new AbortController()
-  const tools = createLearningTools(bridge)
+  const tools = createLearningTools(pageBridge)
   const current = {
-    bridge,
     controller,
     promise: Promise.all(tools.map((tool) => document.modelContext!.registerTool(tool, { signal: controller.signal }))).then(() => true),
   }
   registration = current
   const onPageHide = () => {
     controller.abort()
+    delegates = undefined
+    lastState = undefined
+    pageRequestCache.clear()
     if (registration === current) registration = undefined
   }
   window.addEventListener('pagehide', onPageHide, { once: true })
@@ -304,6 +330,22 @@ export function registerLearningTools(bridge: ToolBridge) {
     if (registration === current) registration = undefined
   })
   return current.promise
+}
+
+export function mountLearningTools(nextDelegates: LearningBridgeDelegates) {
+  const nextState = nextDelegates.getState()
+  if (lastState && lastState.session_id !== nextState.session_id) pageRequestCache.clear()
+  delegates = nextDelegates
+  lastState = nextState
+  return {
+    registration: ensureRegistration(),
+    disconnect() {
+      if (delegates === nextDelegates) {
+        lastState = nextDelegates.getState()
+        delegates = undefined
+      }
+    },
+  }
 }
 
 declare global {
