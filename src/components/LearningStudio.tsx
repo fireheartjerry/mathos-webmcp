@@ -12,6 +12,7 @@ import type {
   Stage,
   StudioState,
 } from '../lib/webmcp'
+import MathosVideoPanel from './MathosVideoPanel'
 import './learning-studio.css'
 
 const PATHWAY = [
@@ -235,11 +236,12 @@ function Diagnosis({ onOpenLesson }: { onOpenLesson: () => void }) {
 function Lesson({ onStartTransfer }: { onStartTransfer: () => void }) {
   return (
     <section className="work-card lesson-card enter-panel">
-      <div className="section-kicker green"><span>Local lesson · 90 sec</span><span>{LESSON_ID}</span></div>
+      <div className="section-kicker green"><span>Targeted repair · shared path</span><span>{LESSON_ID}</span></div>
       <h1>One value can reach<br />the result <em>twice.</em></h1>
       <p className="lesson-lede">Plainly: changing <strong>a</strong> changes the product, and it also changes the final <strong>+ a</strong>. Both effects reach y, so both count.</p>
       <GraphLesson />
       <p className="technical-note"><span>Technical name</span> The multivariable chain rule adds the derivative contribution from every directed path.</p>
+      <MathosVideoPanel />
       <button className="primary-action green-action" onClick={onStartTransfer}>Try a fresh problem <span aria-hidden="true">→</span></button>
     </section>
   )

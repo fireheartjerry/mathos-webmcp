@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/video-api/:path*",
+      "destination": "http://18.216.62.146:8001/:path*"
+    }
+  ]
+}
