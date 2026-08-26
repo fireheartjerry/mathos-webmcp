@@ -70,7 +70,7 @@ type WebMcpTool = {
 
 type ToolBridge = {
   getState: () => StudioState
-  runAction: (action: SemanticAction, source: ActivitySource) => ActionResult
+  runAction: (action: SemanticAction, source: ActivitySource) => Promise<ActionResult>
   requestCache: Map<string, ToolEnvelope>
 }
 
@@ -95,11 +95,15 @@ function hasOnlyKeys(input: Record<string, unknown>, keys: string[]) {
 }
 
 function validRevision(value: unknown): value is number {
-  return Number.isInteger(value) && Number(value) >= 0
+  return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 1_000_000_000
 }
 
 function validRequestId(value: unknown): value is string {
   return typeof value === 'string' && REQUEST_ID.test(value)
+}
+
+function validId(value: unknown): value is string {
+  return typeof value === 'string' && value.length >= 1 && value.length <= 96
 }
 
 function workspaceData(state: StudioState) {
@@ -140,13 +144,13 @@ function receiptData() {
   }
 }
 
-function mutationExecutor(
+async function mutationExecutor(
   bridge: ToolBridge,
   input: unknown,
   context: ToolExecutionContext,
   keys: string[],
   action: (values: Record<string, unknown>) => SemanticAction,
-): ToolEnvelope {
+): Promise<ToolEnvelope> {
   const state = bridge.getState()
   if (context.signal?.aborted) return failure(state, 'aborted', 'The tool call was cancelled.', 'Call the tool again when ready.')
   if (!isRecord(input) || !hasOnlyKeys(input, keys) || !validRevision(input.expectedRevision) || !validRequestId(input.requestId)) {
@@ -159,7 +163,7 @@ function mutationExecutor(
     return failure(state, 'stale_revision', 'The learning workspace changed.', 'Read the workspace again and use its current revision.')
   }
 
-  const result = bridge.runAction(action(input), 'agent')
+  const result = await bridge.runAction(action(input), 'agent')
   if (!result.ok) return failure(state, result.code, result.message, result.recovery)
   const envelope: ToolEnvelope = { ok: true, revision: result.state.revision, activityId: result.activity.id, data: result.data }
   bridge.requestCache.set(input.requestId, envelope)
@@ -187,7 +191,7 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
         type: 'object',
         properties: {
           attempt: { type: 'string', minLength: 1, maxLength: 256 },
-          expectedRevision: { type: 'integer', minimum: 0 },
+          expectedRevision: { type: 'integer', minimum: 0, maximum: 1_000_000_000 },
           requestId: { type: 'string', minLength: 8, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' },
         },
         required: ['attempt', 'expectedRevision', 'requestId'],
@@ -209,8 +213,8 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
       inputSchema: {
         type: 'object',
         properties: {
-          diagnosisId: { type: 'string' },
-          expectedRevision: { type: 'integer', minimum: 0 },
+          diagnosisId: { type: 'string', minLength: 1, maxLength: 96 },
+          expectedRevision: { type: 'integer', minimum: 0, maximum: 1_000_000_000 },
           requestId: { type: 'string', minLength: 8, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' },
         },
         required: ['diagnosisId', 'expectedRevision', 'requestId'],
@@ -220,8 +224,8 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
       async execute(input, context) {
         const state = bridge.getState()
         if (context.signal?.aborted) return failure(state, 'aborted', 'The tool call was cancelled.', 'Call the tool again when ready.')
-        if (!isRecord(input) || typeof input.diagnosisId !== 'string') {
-          return failure(state, 'invalid_input', 'A diagnosis ID is required.', 'Use the visible diagnosis ID from the workspace.')
+        if (!isRecord(input) || !validId(input.diagnosisId)) {
+          return failure(state, 'invalid_input', 'The diagnosis ID must be 1 to 96 characters.', 'Use the visible diagnosis ID from the workspace.')
         }
         return mutationExecutor(bridge, input, context, ['diagnosisId', 'expectedRevision', 'requestId'], (values) => ({ type: 'SHOW_LESSON', diagnosisId: values.diagnosisId as string }))
       },
@@ -232,8 +236,8 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
       inputSchema: {
         type: 'object',
         properties: {
-          lessonId: { type: 'string' },
-          expectedRevision: { type: 'integer', minimum: 0 },
+          lessonId: { type: 'string', minLength: 1, maxLength: 96 },
+          expectedRevision: { type: 'integer', minimum: 0, maximum: 1_000_000_000 },
           requestId: { type: 'string', minLength: 8, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' },
         },
         required: ['lessonId', 'expectedRevision', 'requestId'],
@@ -243,8 +247,8 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
       async execute(input, context) {
         const state = bridge.getState()
         if (context.signal?.aborted) return failure(state, 'aborted', 'The tool call was cancelled.', 'Call the tool again when ready.')
-        if (!isRecord(input) || typeof input.lessonId !== 'string') {
-          return failure(state, 'invalid_input', 'A lesson ID is required.', 'Use the visible lesson ID from the workspace.')
+        if (!isRecord(input) || !validId(input.lessonId)) {
+          return failure(state, 'invalid_input', 'The lesson ID must be 1 to 96 characters.', 'Use the visible lesson ID from the workspace.')
         }
         return mutationExecutor(bridge, input, context, ['lessonId', 'expectedRevision', 'requestId'], (values) => ({ type: 'START_TRANSFER', lessonId: values.lessonId as string }))
       },

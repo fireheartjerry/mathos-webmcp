@@ -342,15 +342,34 @@ export default function LearningStudio() {
   const [toolStatus, setToolStatus] = useState<'unsupported' | 'live'>('unsupported')
   const stateRef = useRef(state)
   const requestCache = useRef(new Map<string, ToolEnvelope>())
+  const committedRevision = useRef(state.revision)
+  const commitWaiters = useRef(new Map<number, Set<() => void>>())
 
-  const runAction = useCallback((action: SemanticAction, source: ActivitySource) => {
+  const runAction = useCallback(async (action: SemanticAction, source: ActivitySource) => {
     const result = transitionStudio(stateRef.current, action, source)
     if (result.ok) {
       stateRef.current = result.state
       setState(result.state)
+      if (committedRevision.current < result.state.revision) {
+        await new Promise<void>((resolve) => {
+          const waiters = commitWaiters.current.get(result.state.revision) ?? new Set()
+          waiters.add(resolve)
+          commitWaiters.current.set(result.state.revision, waiters)
+        })
+      }
     }
     return result
   }, [])
+
+  useEffect(() => {
+    committedRevision.current = state.revision
+    for (const [revision, waiters] of commitWaiters.current) {
+      if (revision <= state.revision) {
+        waiters.forEach((resolve) => resolve())
+        commitWaiters.current.delete(revision)
+      }
+    }
+  }, [state.revision])
 
   useEffect(() => {
     const controller = new AbortController()
