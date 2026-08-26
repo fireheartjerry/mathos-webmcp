@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import {
   DIAGNOSIS_ID,
@@ -345,6 +345,7 @@ export default function LearningStudio() {
   const stateRef = useRef(state)
   const committedRevision = useRef(state.revision)
   const commitWaiters = useRef(new Map<number, Set<() => void>>())
+  const mainRef = useRef<HTMLElement | null>(null)
 
   const runAction = useCallback((action: SemanticAction, source: ActivitySource) => {
     const result = transitionStudio(stateRef.current, action, source)
@@ -392,6 +393,14 @@ export default function LearningStudio() {
     }
   }, [afterCommit, runAction])
 
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    const heading = mainRef.current?.querySelector<HTMLElement>('h1')
+    if (!heading) return
+    heading.tabIndex = -1
+    heading.focus({ preventScroll: true })
+  }, [state.stage, uiMode])
+
   function checkInitial() {
     runAction({ type: 'CHECK_ATTEMPT', attempt: initialDraft }, 'learner')
   }
@@ -437,7 +446,7 @@ export default function LearningStudio() {
             <strong>{pathway_proven ? 'The next nine are within reach.' : '01 / 10 · calculus'}</strong>
           </div>
         </aside>
-        <main id="main-content">
+        <main id="main-content" ref={mainRef}>
           {uiMode === 'lesson' && state.stage === 'initial' && <InitialProblem draft={initialDraft} setDraft={(value) => { setInitialDraft(value); if (state.initial_message) setState((current) => ({ ...current, initial_message: '' })) }} onCheck={checkInitial} message={state.initial_message} />}
           {uiMode === 'lesson' && state.stage === 'diagnosis' && <Diagnosis onOpenLesson={() => runAction({ type: 'SHOW_LESSON', diagnosisId: DIAGNOSIS_ID }, 'learner')} />}
           {uiMode === 'lesson' && state.stage === 'lesson' && <Lesson onStartTransfer={() => startTransfer(LESSON_ID)} />}
