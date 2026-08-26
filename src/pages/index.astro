@@ -1,5 +1,19 @@
 ---
 import '../styles/global.css'
+import '../styles/landing.css'
+
+const PATHWAY = [
+  ['01', 'From slopes to learning', 'calculus'],
+  ['02', 'Numbers with direction', 'vectors'],
+  ['03', 'Following cause and effect', 'computation graphs'],
+  ['04', 'Learning from mistakes', 'backpropagation'],
+  ['05', 'Getting better step by step', 'optimization'],
+  ['06', 'Choosing among possibilities', 'probability'],
+  ['07', 'Turning words into meaning', 'tokens and embeddings'],
+  ['08', 'Deciding what matters', 'attention'],
+  ['09', 'Building a transformer', 'transformer blocks'],
+  ['10', 'Teach your own tiny model', 'training lab'],
+]
 ---
 
 <!doctype html>
@@ -7,156 +21,147 @@ import '../styles/global.css'
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="Mathos turns mistakes into evidence-backed learning paths." />
-    <title>Mathos — Learn what your answer reveals</title>
+    <meta name="description" content="Begin with calculus. End with a transformer that you trained. Mathos turns every answer into a better path forward." />
+    <title>Mathos — From calculus to your own tiny transformer</title>
   </head>
-  <body>
-    <main class="entry-shell">
-      <nav aria-label="Primary">
-        <a class="wordmark" href="/">MATHOS<span>·</span></a>
-        <span class="edition">Learning system / 01</span>
-      </nav>
-      <section>
-        <p class="eyebrow">Adaptive mathematics, without the theater</p>
-        <h1>Your wrong answer<br />is <em>useful evidence.</em></h1>
-        <p class="intro">Mathos reads the structure behind an answer, teaches the missing idea, and checks it on something new.</p>
-        <a class="enter" href="/learn">
-          Enter the learning studio
-          <span aria-hidden="true">↗</span>
-        </a>
+  <body class="landing-page" data-story="1">
+    <a class="skip-link" href="#story">Skip to the story</a>
+    <header class="landing-header">
+      <a class="wordmark" href="/" aria-label="Mathos home">MATHOS<span>·</span></a>
+      <p>Calculus <span>→</span> transformer</p>
+      <a class="header-cta" href="/learn">Enter the studio <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <aside class="path-motif" aria-hidden="true">
+      <p><span>01</span> Learning path <b>10</b></p>
+      <svg viewBox="0 0 180 610" role="presentation">
+        <path class="motif-base" d="M90 18 C90 66 36 72 36 126 C36 180 144 176 144 234 C144 292 63 298 63 354 C63 416 132 414 132 470 C132 524 90 530 90 590" />
+        <path class="motif-progress" pathLength="1" d="M90 18 C90 66 36 72 36 126 C36 180 144 176 144 234 C144 292 63 298 63 354 C63 416 132 414 132 470 C132 524 90 530 90 590" />
+        <g class="motif-nodes">
+          <circle cx="90" cy="18" r="5" />
+          <circle cx="36" cy="126" r="5" />
+          <circle cx="144" cy="234" r="5" />
+          <circle cx="63" cy="354" r="5" />
+          <circle cx="132" cy="470" r="5" />
+          <circle cx="90" cy="590" r="7" />
+        </g>
+      </svg>
+      <div class="motif-state"><span>Now</span><strong>Slopes</strong></div>
+      <div class="motif-state end"><span>Then</span><strong>Your model</strong></div>
+    </aside>
+
+    <main id="story">
+      <section class="story-section hero-section is-visible" data-story-step="1">
+        <div class="section-inner hero-inner">
+          <p class="eyebrow"><span>Mathos learning system</span><span>Chapter 01 / 05</span></p>
+          <h1>Begin with<br /><em>calculus.</em><br />End with a transformer<br />that <i>you trained.</i></h1>
+          <div class="hero-bottom">
+            <p>One connected path from the mathematics you can see to the intelligence you can build.</p>
+            <a class="primary-link" href="/learn">Start with calculus <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <p class="scroll-cue">Scroll to follow the calculation <span>↓</span></p>
       </section>
-      <footer>
-        <span>Calculus → vectors → a tiny transformer</span>
-        <span>Session 001</span>
-      </footer>
+
+      <section class="story-section evidence-section" data-story-step="2">
+        <div class="section-inner evidence-layout">
+          <div class="section-index"><span>02</span><p>One answer changes the path</p></div>
+          <div class="answer-evidence" aria-label="An answer of 36 becomes evidence for a missed path">
+            <p class="answer-number">36</p>
+            <p class="answer-label">Not just wrong.<br /><strong>Specific.</strong></p>
+          </div>
+          <div class="evidence-copy">
+            <p class="lead">36 tells Mathos you followed the product path—and missed the direct one.</p>
+            <div class="decision-line">
+              <span>Answer</span><b>→</b><span>Evidence</span><b>→</b><span>New path</span>
+            </div>
+            <p>So the lesson changes. The representation changes. Then a fresh problem checks whether the idea can travel.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="story-section representation-section" data-story-step="3">
+        <div class="section-inner">
+          <div class="section-index light"><span>03</span><p>The same idea changes representation</p></div>
+          <h2>Follow the path.<br /><em>Change the lens.</em></h2>
+          <div class="representation-sequence">
+            <article>
+              <span class="rep-number">01</span>
+              <div><strong>dy/dx</strong><i> = 40</i></div>
+              <p>Equation</p>
+            </article>
+            <article>
+              <span class="rep-number">02</span>
+              <div class="branch-mark"><i></i><i></i><b></b><i></i></div>
+              <p>Computation graph</p>
+            </article>
+            <article>
+              <span class="rep-number">03</span>
+              <div class="vector-mark"><i></i><i></i><i></i><i></i><i></i></div>
+              <p>Vectors + attention</p>
+            </article>
+            <article>
+              <span class="rep-number">04</span>
+              <div class="transformer-mark"><i></i><i></i><i></i></div>
+              <p>Transformer</p>
+            </article>
+          </div>
+          <p class="representation-note">The notation gets more powerful. The underlying habit stays the same: trace influence, combine evidence, update what happens next.</p>
+        </div>
+      </section>
+
+      <section class="story-section pathway-section" data-story-step="4">
+        <div class="section-inner pathway-layout">
+          <div class="pathway-intro">
+            <div class="section-index"><span>04</span><p>Ten stages. One climb.</p></div>
+            <h2>From a slope<br />to a system<br /><em>that learns.</em></h2>
+            <p>Mathos already lives where mathematical reasoning happens. That makes it the right place to connect explanation, evidence, practice, and a real model you can inspect.</p>
+            <strong>Built by Mathos.</strong>
+          </div>
+          <ol class="landing-pathway">
+            {PATHWAY.map(([number, label, meta]) => (
+              <li>
+                <span>{number}</span>
+                <div><strong>{label}</strong><small>{meta}</small></div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section class="story-section finale-section" data-story-step="5">
+        <div class="section-inner finale-inner">
+          <div class="section-index light"><span>05</span><p>The final challenge</p></div>
+          <p class="finale-kicker">A real learning system, not a course playlist.</p>
+          <h2>Teach a tiny<br />transformer to<br /><em>finish the pattern.</em></h2>
+          <div class="finale-bottom">
+            <p>First, show us how you think about a derivative. Mathos will take it from there.</p>
+            <a class="primary-link light-link" href="/learn">Start with calculus <span aria-hidden="true">→</span></a>
+          </div>
+          <footer><span>MATHOS·</span><span>Built for the path between knowing and building.</span></footer>
+        </div>
+      </section>
     </main>
+
+    <script is:inline>
+      const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const STORY_SECTIONS = [...document.querySelectorAll('[data-story-step]')]
+
+      if (REDUCED_MOTION) {
+        STORY_SECTIONS.forEach((section) => section.classList.add('is-visible'))
+        document.body.dataset.story = '5'
+      } else {
+        document.body.classList.add('motion-ready')
+        const reveal_observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return
+            entry.target.classList.add('is-visible')
+            document.body.dataset.story = entry.target.dataset.storyStep
+          })
+        }, { rootMargin: '-20% 0px -45%', threshold: 0.08 })
+
+        STORY_SECTIONS.forEach((section) => reveal_observer.observe(section))
+      }
+    </script>
   </body>
 </html>
-
-<style>
-  .entry-shell {
-    width: min(1240px, calc(100% - 40px));
-    min-height: 100vh;
-    margin: 0 auto;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-  }
-
-  nav,
-  footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--ink);
-    font-size: 11px;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-  }
-
-  .wordmark {
-    color: var(--ink);
-    font-weight: 800;
-    text-decoration: none;
-    letter-spacing: 0.16em;
-  }
-
-  .wordmark span {
-    color: var(--orange);
-  }
-
-  .edition {
-    color: var(--muted);
-  }
-
-  section {
-    align-self: center;
-    padding: 72px 0;
-  }
-
-  .eyebrow {
-    margin: 0 0 22px;
-    color: var(--orange);
-    font-size: 11px;
-    font-weight: 750;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  h1 {
-    max-width: 950px;
-    margin: 0;
-    font: 400 clamp(54px, 8.5vw, 124px) / 0.88 var(--serif);
-    letter-spacing: -0.065em;
-  }
-
-  h1 em {
-    color: var(--orange);
-    font-weight: 400;
-  }
-
-  .intro {
-    max-width: 580px;
-    margin: 34px 0 0 20%;
-    color: var(--muted);
-    font: 400 clamp(18px, 2vw, 24px) / 1.45 var(--serif);
-  }
-
-  .enter {
-    width: fit-content;
-    margin: 44px 0 0 20%;
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    padding: 15px 18px;
-    border: 1px solid var(--ink);
-    background: var(--ink);
-    color: var(--paper);
-    font-size: 12px;
-    font-weight: 750;
-    letter-spacing: 0.08em;
-    text-decoration: none;
-    text-transform: uppercase;
-    transition: transform 180ms ease, background 180ms ease, color 180ms ease;
-  }
-
-  .enter:hover {
-    background: var(--orange);
-    color: white;
-    transform: translateY(-2px);
-  }
-
-  footer {
-    border-top: 1px solid var(--rule);
-    border-bottom: 0;
-    color: var(--muted);
-  }
-
-  @media (max-width: 600px) {
-    .entry-shell {
-      width: min(100% - 32px, 1240px);
-    }
-
-    .edition,
-    footer span:last-child {
-      display: none;
-    }
-
-    section {
-      padding: 56px 0;
-    }
-
-    h1 {
-      font-size: clamp(48px, 16vw, 70px);
-    }
-
-    .intro,
-    .enter {
-      margin-left: 0;
-    }
-
-    .intro {
-      font-size: 19px;
-    }
-  }
-</style>

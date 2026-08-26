@@ -32,10 +32,16 @@ const INITIAL_STATE: StudioState = {
 }
 
 const PATHWAY = [
-  { number: '01', label: 'Differentiate a graph', meta: 'Calculus', tone: 'orange' },
-  { number: '02', label: 'Track every path', meta: 'Local lesson', tone: 'green' },
-  { number: '03', label: 'Move through vectors', meta: 'Next', tone: 'blue' },
-  { number: '04', label: 'Build attention', meta: 'Tiny transformer', tone: 'ink' },
+  { number: '01', label: 'From slopes to learning', meta: 'calculus' },
+  { number: '02', label: 'Numbers with direction', meta: 'vectors' },
+  { number: '03', label: 'Following cause and effect', meta: 'computation graphs' },
+  { number: '04', label: 'Learning from mistakes', meta: 'backpropagation' },
+  { number: '05', label: 'Getting better step by step', meta: 'optimization' },
+  { number: '06', label: 'Choosing among possibilities', meta: 'probability' },
+  { number: '07', label: 'Turning words into meaning', meta: 'tokens and embeddings' },
+  { number: '08', label: 'Deciding what matters', meta: 'attention' },
+  { number: '09', label: 'Building a transformer', meta: 'transformer blocks' },
+  { number: '10', label: 'Teach your own tiny model', meta: 'training lab' },
 ]
 
 function reduceStudio(state: StudioState, action: StudioAction): StudioState {
@@ -260,7 +266,10 @@ function Receipt({ state, dispatch }: { state: StudioState; dispatch: Dispatch<S
         <span>Observed sequence</span>
         <strong>{state.used_lesson ? '36 → lesson → 8' : '40 → 8'}</strong>
       </div>
-      <button className="text-action" onClick={() => dispatch({ type: 'RESET' })}>Restart session ↺</button>
+      <div className="receipt-actions">
+        <a className="continue-path" href="#pathway">Continue the path <span aria-hidden="true">→</span></a>
+        <button className="text-action" onClick={() => dispatch({ type: 'RESET' })}>Restart session ↺</button>
+      </div>
     </section>
   )
 }
@@ -307,7 +316,7 @@ function ContextPanel({ state }: { state: StudioState }) {
 
 export default function LearningStudio() {
   const [state, dispatch] = useReducer(reduceStudio, INITIAL_STATE)
-  const active_index = state.stage === 'initial' || state.stage === 'diagnosis' || state.stage === 'initial_correct' ? 0 : state.stage === 'lesson' ? 1 : 2
+  const pathway_proven = state.stage === 'receipt'
 
   return (
     <div className="studio-shell">
@@ -317,17 +326,20 @@ export default function LearningStudio() {
         <div className="session-status"><i></i> Local session</div>
       </header>
       <div className="studio-grid">
-        <aside className="pathway-rail">
-          <p className="rail-label">Your pathway</p>
+        <aside className={`pathway-rail ${pathway_proven ? 'pathway-unlocked' : ''}`} id="pathway">
+          <div className="rail-heading"><p className="rail-label">Your pathway</p><span>10 stages</span></div>
           <ol>
             {PATHWAY.map((item, index) => (
-              <li key={item.number} className={`${item.tone} ${index === active_index ? 'active' : ''} ${index < active_index ? 'complete' : ''}`}>
-                <span className="path-number">{index < active_index ? '✓' : item.number}</span>
+              <li key={item.number} className={`${index === 0 && !pathway_proven ? 'active' : ''} ${index === 0 && pathway_proven ? 'proven' : ''} ${index > 0 && pathway_proven ? 'unlocked' : ''}`}>
+                <span className="path-number">{index === 0 && pathway_proven ? '✓' : item.number}</span>
                 <div><strong>{item.label}</strong><small>{item.meta}</small></div>
               </li>
             ))}
           </ol>
-          <div className="rail-footer"><span>Course horizon</span><strong>4 / 18 ideas</strong></div>
+          <div className="rail-footer">
+            <span>{pathway_proven ? 'Stage 01 proven' : 'Current stage'}</span>
+            <strong>{pathway_proven ? 'The next nine are within reach.' : '01 / 10 · calculus'}</strong>
+          </div>
         </aside>
         <main id="main-content">
           {state.stage === 'initial' && <InitialProblem state={state} dispatch={dispatch} />}

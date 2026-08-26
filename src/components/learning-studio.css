@@ -9,7 +9,7 @@
   height: 64px;
   padding: 0 28px;
   display: grid;
-  grid-template-columns: 240px 1fr auto;
+  grid-template-columns: 250px 1fr auto;
   align-items: center;
   border-bottom: 1px solid var(--ink);
 }
@@ -59,7 +59,7 @@
 .studio-grid {
   min-height: calc(100vh - 64px);
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr) 300px;
+  grid-template-columns: 250px minmax(0, 1fr) 300px;
 }
 
 .pathway-rail,
@@ -71,6 +71,25 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--rule);
+  scroll-margin-top: 20px;
+  transition: background 300ms ease;
+}
+
+.pathway-rail.pathway-unlocked {
+  background: linear-gradient(180deg, rgba(220, 232, 223, 0.45), transparent 72%);
+}
+
+.rail-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.rail-heading > span {
+  color: var(--muted);
+  font: 700 7px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .rail-label,
@@ -94,7 +113,7 @@
   content: '';
   position: absolute;
   top: 17px;
-  bottom: 42px;
+  bottom: 32px;
   left: 14px;
   width: 1px;
   background: var(--rule);
@@ -105,8 +124,9 @@
   display: grid;
   grid-template-columns: 30px 1fr;
   gap: 12px;
-  min-height: 88px;
+  min-height: 58px;
   color: #99978f;
+  transition: color 260ms ease;
 }
 
 .path-number {
@@ -127,13 +147,13 @@
 }
 
 .pathway-rail li strong {
-  padding-top: 2px;
-  font: 600 13px/1.25 var(--serif);
+  padding-top: 0;
+  font: 600 11px/1.18 var(--serif);
 }
 
 .pathway-rail li small {
-  margin-top: 7px;
-  font-size: 8px;
+  margin-top: 4px;
+  font-size: 7px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -144,25 +164,28 @@
 }
 
 .pathway-rail li.active .path-number {
-  border-color: currentColor;
+  border-color: var(--orange);
+  background: var(--orange);
   color: white;
 }
 
-.pathway-rail li.active.orange .path-number {
-  background: var(--orange);
-}
-
-.pathway-rail li.active.green .path-number,
-.pathway-rail li.complete .path-number {
+.pathway-rail li.proven .path-number {
+  border-color: var(--green);
   background: var(--green);
+  color: white;
 }
 
-.pathway-rail li.active.blue .path-number {
-  background: var(--blue);
-}
-
-.pathway-rail li.complete {
+.pathway-rail li.proven {
   color: var(--green);
+}
+
+.pathway-rail li.unlocked {
+  color: var(--ink);
+}
+
+.pathway-rail li.unlocked .path-number {
+  border-color: rgba(62, 111, 157, 0.6);
+  color: var(--blue);
 }
 
 .rail-footer {
@@ -186,7 +209,7 @@
 
 .rail-footer strong {
   margin-top: 8px;
-  font: 400 16px var(--serif);
+  font: 400 14px/1.3 var(--serif);
 }
 
 .studio-grid main {
@@ -640,7 +663,7 @@
 }
 
 .text-action {
-  margin-top: 30px;
+  margin: 0;
   padding: 0;
   border: 0;
   border-bottom: 1px solid currentColor;
@@ -651,6 +674,35 @@
   font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.receipt-actions {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.continue-path {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 14px;
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.continue-path:hover {
+  background: var(--ink);
+  transform: translateY(-2px);
 }
 
 .context-panel {
@@ -743,7 +795,7 @@
 
 @media (max-width: 1080px) {
   .studio-grid {
-    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   .context-panel {
@@ -751,7 +803,7 @@
   }
 
   .studio-header {
-    grid-template-columns: 190px 1fr auto;
+    grid-template-columns: 220px 1fr auto;
   }
 }
 
@@ -781,13 +833,14 @@
 
   .rail-label,
   .rail-footer,
+  .rail-heading,
   .pathway-rail li div {
     display: none;
   }
 
   .pathway-rail ol {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(10, 1fr);
   }
 
   .pathway-rail ol::before {
@@ -858,5 +911,11 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .receipt-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
   }
 }
