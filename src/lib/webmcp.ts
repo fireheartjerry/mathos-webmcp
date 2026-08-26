@@ -68,10 +68,10 @@ type WebMcpTool = {
   execute: (input: unknown, context: ToolExecutionContext) => Promise<ToolEnvelope>
 }
 
-type ToolBridge = {
+export type ToolBridge = {
   getState: () => StudioState
   runAction: (action: SemanticAction, source: ActivitySource) => Promise<ActionResult>
-  requestCache: Map<string, ToolEnvelope>
+  requestCache: Map<string, ToolEnvelope | Promise<ToolEnvelope>>
 }
 
 const EMPTY_SCHEMA = {
@@ -112,7 +112,7 @@ function workspaceData(state: StudioState) {
     initial: ['check_current_attempt'],
     diagnosis: ['show_targeted_lesson'],
     lesson: ['start_transfer_problem'],
-    initial_correct: [],
+    initial_correct: ['start_transfer_problem'],
     transfer: ['check_current_attempt'],
     receipt: ['get_learning_receipt'],
   }
@@ -129,16 +129,16 @@ function workspaceData(state: StudioState) {
     activeConcept: 'Add the derivative contribution from every path through a shared value.',
     visibleIds: {
       diagnosisId: state.stage === 'diagnosis' ? DIAGNOSIS_ID : null,
-      lessonId: state.stage === 'lesson' ? LESSON_ID : null,
+      lessonId: state.stage === 'lesson' || state.stage === 'initial_correct' ? LESSON_ID : null,
     },
   }
 }
 
-function receiptData() {
+function receiptData(state: StudioState) {
   return {
     claims: [
       'You found both paths through a shared value.',
-      'You solved a fresh problem after the lesson during this session.',
+      state.used_lesson ? 'You solved a fresh problem after the lesson during this session.' : 'You solved a fresh problem without a remedial lesson during this session.',
       'This receipt does not prove permanent mastery.',
     ],
   }
@@ -163,10 +163,17 @@ async function mutationExecutor(
     return failure(state, 'stale_revision', 'The learning workspace changed.', 'Read the workspace again and use its current revision.')
   }
 
-  const result = await bridge.runAction(action(input), 'agent')
-  if (!result.ok) return failure(state, result.code, result.message, result.recovery)
-  const envelope: ToolEnvelope = { ok: true, revision: result.state.revision, activityId: result.activity.id, data: result.data }
-  bridge.requestCache.set(input.requestId, envelope)
+  const pending = (async (): Promise<ToolEnvelope> => {
+    const result = await bridge.runAction(action(input), 'agent')
+    if (!result.ok) return failure(state, result.code, result.message, result.recovery)
+    return { ok: true, revision: result.state.revision, activityId: result.activity.id, data: result.data }
+  })()
+  bridge.requestCache.set(input.requestId, pending)
+  const envelope = await pending
+  if (bridge.requestCache.get(input.requestId) === pending) {
+    if (envelope.ok) bridge.requestCache.set(input.requestId, envelope)
+    else bridge.requestCache.delete(input.requestId)
+  }
   return envelope
 }
 
@@ -232,7 +239,7 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
     },
     {
       name: 'start_transfer_problem',
-      description: 'Start a fresh problem after the targeted lesson is visible.',
+      description: 'Start a fresh problem after the lesson or a correct first answer.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -263,16 +270,40 @@ export function createLearningTools(bridge: ToolBridge): WebMcpTool[] {
         if (context.signal?.aborted) return failure(state, 'aborted', 'The tool call was cancelled.', 'Call the tool again when ready.')
         if (!isRecord(input) || !hasOnlyKeys(input, [])) return failure(state, 'invalid_input', 'This tool takes an empty object.', 'Call the tool with {}.')
         if (state.stage !== 'receipt') return failure(state, 'invalid_phase', 'The learning receipt is not ready.', 'Pass the transfer problem first.')
-        return { ok: true, revision: state.revision, activityId: null, data: receiptData() }
+        return { ok: true, revision: state.revision, activityId: null, data: receiptData(state) }
       },
     },
   ]
 }
 
-export async function registerLearningTools(tools: WebMcpTool[], signal: AbortSignal) {
-  if (!document.modelContext) return false
-  await Promise.all(tools.map((tool) => document.modelContext!.registerTool(tool, { signal })))
-  return true
+let registration: { bridge: ToolBridge; controller: AbortController; promise: Promise<boolean> } | undefined
+
+export function registerLearningTools(bridge: ToolBridge) {
+  if (!document.modelContext) return Promise.resolve(false)
+  if (registration) {
+    if (registration.bridge !== bridge) return Promise.reject(new Error('WebMCP tools already belong to another learning store.'))
+    return registration.promise
+  }
+
+  const controller = new AbortController()
+  const tools = createLearningTools(bridge)
+  const current = {
+    bridge,
+    controller,
+    promise: Promise.all(tools.map((tool) => document.modelContext!.registerTool(tool, { signal: controller.signal }))).then(() => true),
+  }
+  registration = current
+  const onPageHide = () => {
+    controller.abort()
+    if (registration === current) registration = undefined
+  }
+  window.addEventListener('pagehide', onPageHide, { once: true })
+  current.promise.catch(() => {
+    controller.abort()
+    window.removeEventListener('pagehide', onPageHide)
+    if (registration === current) registration = undefined
+  })
+  return current.promise
 }
 
 declare global {

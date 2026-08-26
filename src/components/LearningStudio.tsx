@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import {
-  createLearningTools,
   DIAGNOSIS_ID,
   LESSON_ID,
   registerLearningTools,
@@ -12,6 +11,7 @@ import type {
   SemanticAction,
   Stage,
   StudioState,
+  ToolBridge,
   ToolEnvelope,
 } from '../lib/webmcp'
 import './learning-studio.css'
@@ -90,9 +90,8 @@ function transitionStudio(state: StudioState, action: SemanticAction, source: Ac
       if (state.stage !== 'diagnosis') return { ok: false, code: 'invalid_phase', message: 'The shared-path diagnosis is not visible.', recovery: 'Check the current attempt before opening this lesson.' }
       return successfulAction(state, source, 'Opened targeted lesson', { stage: 'lesson', used_lesson: true }, { stage: 'lesson', lessonId: LESSON_ID })
     case 'START_TRANSFER':
-      if (source === 'agent' && state.stage !== 'lesson') return { ok: false, code: 'invalid_phase', message: 'The targeted lesson is not visible.', recovery: 'Show the targeted lesson before starting transfer.' }
       if (state.stage !== 'lesson' && state.stage !== 'initial_correct') return { ok: false, code: 'invalid_phase', message: 'The session is not ready for transfer.', recovery: 'Complete the current problem or lesson first.' }
-      if (state.stage === 'lesson' && action.lessonId !== LESSON_ID) return { ok: false, code: 'invalid_input', message: 'The lesson ID does not match the visible lesson.', recovery: 'Use the lesson ID from the current workspace.' }
+      if ((source === 'agent' || state.stage === 'lesson') && action.lessonId !== LESSON_ID) return { ok: false, code: 'invalid_input', message: 'The lesson ID does not match the visible bridge.', recovery: 'Use the lesson ID from the current workspace.' }
       return successfulAction(state, source, 'Started fresh transfer problem', { stage: 'transfer', transfer_attempted: false, transfer_message: '' }, { stage: 'transfer', problemId: 'transfer-shared-path-v1' })
     case 'RESET':
       return successfulAction(state, source, 'Restarted learning path', { stage: 'initial', initial_attempted: false, transfer_attempted: false, initial_message: '', transfer_message: '', used_lesson: false }, { stage: 'initial' })
@@ -286,7 +285,7 @@ function Receipt({ state, onReset }: { state: StudioState; onReset: () => void }
       <h1>Evidence,<br /><em>not a trophy.</em></h1>
       <div className="claim-list">
         <div><span>01</span><p>You found both paths through a shared value.</p></div>
-        <div><span>02</span><p>You solved a fresh problem after the lesson during this session.</p></div>
+        <div><span>02</span><p>{state.used_lesson ? 'You solved a fresh problem after the lesson during this session.' : 'You solved a fresh problem without a remedial lesson during this session.'}</p></div>
         <div className="limit-claim"><span>03</span><p>This receipt does not prove permanent mastery.</p></div>
       </div>
       <div className="receipt-footer">
@@ -341,7 +340,7 @@ export default function LearningStudio() {
   const [transferDraft, setTransferDraft] = useState('')
   const [toolStatus, setToolStatus] = useState<'unsupported' | 'live'>('unsupported')
   const stateRef = useRef(state)
-  const requestCache = useRef(new Map<string, ToolEnvelope>())
+  const requestCache = useRef(new Map<string, ToolEnvelope | Promise<ToolEnvelope>>())
   const committedRevision = useRef(state.revision)
   const commitWaiters = useRef(new Map<number, Set<() => void>>())
 
@@ -360,6 +359,8 @@ export default function LearningStudio() {
     }
     return result
   }, [])
+  const bridgeRef = useRef<ToolBridge | null>(null)
+  if (!bridgeRef.current) bridgeRef.current = { getState: () => stateRef.current, runAction, requestCache: requestCache.current }
 
   useEffect(() => {
     committedRevision.current = state.revision
@@ -372,19 +373,15 @@ export default function LearningStudio() {
   }, [state.revision])
 
   useEffect(() => {
-    const controller = new AbortController()
-    const tools = createLearningTools({ getState: () => stateRef.current, runAction, requestCache: requestCache.current })
-    registerLearningTools(tools, controller.signal)
+    let active = true
+    registerLearningTools(bridgeRef.current!)
       .then((registered) => {
-        if (!controller.signal.aborted) setToolStatus(registered ? 'live' : 'unsupported')
+        if (active) setToolStatus(registered ? 'live' : 'unsupported')
       })
       .catch(() => {
-        if (!controller.signal.aborted) {
-          controller.abort()
-          setToolStatus('unsupported')
-        }
+        if (active) setToolStatus('unsupported')
       })
-    return () => controller.abort()
+    return () => { active = false }
   }, [runAction])
 
   function checkInitial() {
