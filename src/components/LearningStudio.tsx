@@ -13,6 +13,8 @@ import type {
   StudioState,
 } from '../lib/webmcp'
 import MathosVideoPanel from './MathosVideoPanel'
+import PathwayBridge from './PathwayBridge'
+import TransformerLab from './TransformerLab'
 import './learning-studio.css'
 
 const PATHWAY = [
@@ -277,7 +279,7 @@ function TransferProblem({ draft, setDraft, onCheck, message }: { draft: string;
   )
 }
 
-function Receipt({ state, onReset }: { state: StudioState; onReset: () => void }) {
+function Receipt({ state, onReset, onContinue }: { state: StudioState; onReset: () => void; onContinue: () => void }) {
   return (
     <section className="work-card receipt-card enter-panel">
       <div className="receipt-topline"><span>Mathos evidence receipt</span><span>Session 001</span></div>
@@ -293,7 +295,7 @@ function Receipt({ state, onReset }: { state: StudioState; onReset: () => void }
         <strong>{state.used_lesson ? '36 → lesson → 8' : '40 → 8'}</strong>
       </div>
       <div className="receipt-actions">
-        <a className="continue-path" href="#pathway">Continue the path <span aria-hidden="true">→</span></a>
+        <button className="continue-path" onClick={onContinue}>Continue the path <span aria-hidden="true">→</span></button>
         <button className="text-action" onClick={onReset}>Restart session ↺</button>
       </div>
     </section>
@@ -339,6 +341,7 @@ export default function LearningStudio() {
   const [initialDraft, setInitialDraft] = useState('')
   const [transferDraft, setTransferDraft] = useState('')
   const [toolStatus, setToolStatus] = useState<'unsupported' | 'live'>('unsupported')
+  const [uiMode, setUiMode] = useState<'lesson' | 'pathway' | 'lab'>('lesson')
   const stateRef = useRef(state)
   const committedRevision = useRef(state.revision)
   const commitWaiters = useRef(new Map<number, Set<() => void>>())
@@ -403,6 +406,7 @@ export default function LearningStudio() {
   }
 
   function resetSession() {
+    setUiMode('lesson')
     setInitialDraft('')
     setTransferDraft('')
     runAction({ type: 'RESET' }, 'learner')
@@ -417,7 +421,7 @@ export default function LearningStudio() {
         <p>Learning studio <span>/</span> Session 001</p>
         <div className={`session-status ${toolStatus === 'live' ? 'tools-live' : 'tools-fallback'}`}><i></i>{toolStatus === 'live' ? '5 agent tools live' : 'Use Chrome 149+ or the ChatGPT browser for agent tools'}</div>
       </header>
-      <div className="studio-grid">
+      <div className={`studio-grid ${uiMode !== 'lesson' ? 'studio-grid-immersive' : ''}`}>
         <aside className={`pathway-rail ${pathway_proven ? 'pathway-unlocked' : ''}`} id="pathway">
           <div className="rail-heading"><p className="rail-label">Your pathway</p><span>10 stages</span></div>
           <ol>
@@ -434,14 +438,16 @@ export default function LearningStudio() {
           </div>
         </aside>
         <main id="main-content">
-          {state.stage === 'initial' && <InitialProblem draft={initialDraft} setDraft={(value) => { setInitialDraft(value); if (state.initial_message) setState((current) => ({ ...current, initial_message: '' })) }} onCheck={checkInitial} message={state.initial_message} />}
-          {state.stage === 'diagnosis' && <Diagnosis onOpenLesson={() => runAction({ type: 'SHOW_LESSON', diagnosisId: DIAGNOSIS_ID }, 'learner')} />}
-          {state.stage === 'lesson' && <Lesson onStartTransfer={() => startTransfer(LESSON_ID)} />}
-          {state.stage === 'initial_correct' && <InitialCorrect onStartTransfer={() => startTransfer()} />}
-          {state.stage === 'transfer' && <TransferProblem draft={transferDraft} setDraft={(value) => { setTransferDraft(value); if (state.transfer_message) setState((current) => ({ ...current, transfer_message: '' })) }} onCheck={checkTransfer} message={state.transfer_message} />}
-          {state.stage === 'receipt' && <Receipt state={state} onReset={resetSession} />}
+          {uiMode === 'lesson' && state.stage === 'initial' && <InitialProblem draft={initialDraft} setDraft={(value) => { setInitialDraft(value); if (state.initial_message) setState((current) => ({ ...current, initial_message: '' })) }} onCheck={checkInitial} message={state.initial_message} />}
+          {uiMode === 'lesson' && state.stage === 'diagnosis' && <Diagnosis onOpenLesson={() => runAction({ type: 'SHOW_LESSON', diagnosisId: DIAGNOSIS_ID }, 'learner')} />}
+          {uiMode === 'lesson' && state.stage === 'lesson' && <Lesson onStartTransfer={() => startTransfer(LESSON_ID)} />}
+          {uiMode === 'lesson' && state.stage === 'initial_correct' && <InitialCorrect onStartTransfer={() => startTransfer()} />}
+          {uiMode === 'lesson' && state.stage === 'transfer' && <TransferProblem draft={transferDraft} setDraft={(value) => { setTransferDraft(value); if (state.transfer_message) setState((current) => ({ ...current, transfer_message: '' })) }} onCheck={checkTransfer} message={state.transfer_message} />}
+          {uiMode === 'lesson' && state.stage === 'receipt' && <Receipt state={state} onReset={resetSession} onContinue={() => setUiMode('pathway')} />}
+          {uiMode === 'pathway' && <PathwayBridge onOpenLab={() => setUiMode('lab')} onBackReceipt={() => setUiMode('lesson')} />}
+          {uiMode === 'lab' && <TransformerLab onBackPathway={() => setUiMode('pathway')} onBackReceipt={() => setUiMode('lesson')} />}
         </main>
-        <ContextPanel state={state} />
+        {uiMode === 'lesson' && <ContextPanel state={state} />}
       </div>
     </div>
   )
