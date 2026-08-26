@@ -7,7 +7,7 @@ type LabStatus = 'loading' | 'ready' | 'training' | 'paused' | 'complete' | 'err
 const STATIONS = [
   ['Characters become coordinates', 'Token embeddings', 'Each character looks up a trainable 24-number vector.'],
   ['Order gets a signal', 'Position embeddings', 'A second vector marks where each character sits in the 16-character window.'],
-  ['Useful paths get mixed', '2-head causal attention', 'Every character weighs earlier characters; the future stays hidden.'],
+  ['Useful paths get mixed', '2-head causal attention', 'Every character weighs earlier characters. The future stays hidden.'],
   ['The old route stays open', 'Residual connection', 'New context is added without erasing the incoming information path.'],
   ['Each position thinks', '24 → 48 → 24 feed-forward', 'A small neural network reshapes every position independently.'],
   ['Error moves backward', 'Cross-entropy + Adam', 'Measured prediction loss sends gradients through every trainable weight.'],
@@ -199,7 +199,7 @@ export default function TransformerLab({ onBackPathway, onBackReceipt }: { onBac
         </section>
 
         <section className="lab-section measurement-section">
-          <div className="lab-section-heading"><span>02 / Measurement</span><h2>Loss leaves<br /><em>a trace.</em></h2><p>Every point is evaluated from the current weights on the same held-out windows. It can wobble; learning is not a staircase.</p></div>
+          <div className="lab-section-heading"><span>02 / Measurement</span><h2>Loss leaves<br /><em>a trace.</em></h2><p>Every point is evaluated from the current weights on the same fixed windows. It can wobble. Learning is not a staircase.</p></div>
           <div className="loss-panel">
             <div className="loss-numbers"><span>Initial <strong>{points[0]?.loss.toFixed(4)}</strong></span><span>Current <strong>{snapshot.loss.toFixed(4)}</strong></span><span>Change <strong>{(snapshot.loss - (points[0]?.loss ?? snapshot.loss)).toFixed(4)}</strong></span></div>
             <LossChart points={points} />
@@ -215,7 +215,7 @@ export default function TransformerLab({ onBackPathway, onBackReceipt }: { onBac
         </section>
 
         <section className="lab-section attention-section">
-          <div className="lab-section-heading"><span>04 / One real head</span><h2>See where<br /><em>attention goes.</em></h2><p>Rows are querying characters; columns are earlier context. Blank upper cells are the causal mask blocking future information.</p></div>
+          <div className="lab-section-heading"><span>04 / One real head</span><h2>See where<br /><em>attention goes.</em></h2><p>Rows are querying characters. Columns are earlier context. Blank upper cells are the causal mask blocking future information.</p></div>
           <AttentionHeatmap snapshot={snapshot} />
         </section>
       </>}
