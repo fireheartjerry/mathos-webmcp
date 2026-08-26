@@ -235,6 +235,34 @@ body[data-story='5'] .motif-nodes circle:last-child { fill: var(--landing-acid);
   margin: 0;
 }
 
+.company-proof {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px 24px;
+  color: #74756f;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.company-proof span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.company-proof span + span::before {
+  content: '·';
+  margin-right: 16px;
+  color: var(--landing-orange);
+}
+
+.company-proof strong {
+  color: var(--landing-ink);
+  font-weight: 850;
+}
+
 .hero-inner {
   display: flex;
   flex-direction: column;
@@ -754,12 +782,24 @@ body[data-story='5'] .motif-nodes circle:last-child { fill: var(--landing-acid);
   }
 
   .hero-section h1 {
-    margin: 46px 0;
+    margin: 36px 0;
     font-size: clamp(49px, 15vw, 66px);
     line-height: 0.89;
   }
 
   .eyebrow span:last-child {
+    display: none;
+  }
+
+  .company-proof {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    line-height: 1.35;
+  }
+
+  .company-proof span + span::before {
     display: none;
   }
 

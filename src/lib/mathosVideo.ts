@@ -42,15 +42,15 @@ export function parseMathosSseBlock(block: string): MathosSseEvent | null {
 
 function statusFor(event: MathosSseEvent) {
   const kind = String(event.data.kind ?? '')
-  if (kind === 'projects_bootstrapped') return 'Lesson workspace prepared.'
-  if (kind === 'script_llm_start') return 'Writing the lesson script.'
-  if (kind === 'section_opened' && event.data.section === 'opening') return 'Opening narration started.'
+  if (kind === 'projects_bootstrapped') return 'Verifying the math.'
+  if (kind === 'script_llm_start') return 'Writing the script.'
+  if (kind === 'section_opened' && event.data.section === 'opening') return 'Building the opening.'
   if (kind === 'section_opened' && event.data.section === 'body') return 'Building the shared-path explanation.'
-  if (kind === 'upload_opening_end') return 'Opening preview published.'
-  if (kind === 'full_build_start') return 'Assembling the complete lesson.'
-  if (kind === 'upload_full_start') return 'Publishing the complete lesson.'
-  if (kind === 'upload_full_end') return 'Complete lesson published.'
-  if (kind === 'pipeline_end') return 'Generation complete.'
+  if (kind === 'upload_opening_end') return 'Opening ready. The full lesson is building.'
+  if (kind === 'full_build_start') return 'Building the full lesson.'
+  if (kind === 'upload_full_start') return 'Publishing the full lesson.'
+  if (kind === 'upload_full_end') return 'Full lesson ready.'
+  if (kind === 'pipeline_end') return 'Video complete.'
   return null
 }
 
