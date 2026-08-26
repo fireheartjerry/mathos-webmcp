@@ -127,6 +127,7 @@ export default function TransformerLab({ onBackPathway, onBackReceipt }: { onBac
       }
       if (generation === generationRef.current) setStatus(current >= 100 ? 'complete' : 'paused')
     } catch (reason) {
+      if (generation !== generationRef.current) return
       runRef.current = false
       setError(reason instanceof Error ? reason.message : 'Training stopped unexpectedly.')
       setStatus('error')
