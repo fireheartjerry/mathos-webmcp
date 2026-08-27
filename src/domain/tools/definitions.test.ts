@@ -6,7 +6,7 @@ import type { SessionAction, SessionState } from '../session/types'
 
 const ENV = { now: () => 1_000_000 }
 
-function harness(initial?: SessionState) {
+function harness(initial?: SessionState, onToolSuccess: () => void = () => {}) {
   let state: SessionState | null = initial ?? createSession(2026, 'session-tools')
   const bridge: ToolBridge = {
     getState: () => state,
@@ -16,6 +16,7 @@ function harness(initial?: SessionState) {
       return result
     },
     requestCache: new Map(),
+    onToolSuccess,
   }
   const tools = createTools(bridge)
   const byName = (name: string) => tools.find((t) => t.name === name) as ToolDefinition
@@ -58,6 +59,40 @@ describe('the tool surface itself', () => {
     expect(h.byName('propose_step').description).toContain(
       'after two learner attempts since the most recent check',
     )
+  })
+
+  it('reports read-only and cached mutation successes, but not failed calls', async () => {
+    let successes = 0
+    const local = harness(undefined, () => {
+      successes += 1
+    })
+
+    expect((await call(local.byName('get_scratchpad'), {})).ok).toBe(true)
+    expect(successes).toBe(1)
+
+    expect((await call(local.byName('get_scratchpad'), { unexpected: true })).ok).toBe(false)
+    expect(successes).toBe(1)
+
+    local.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const args = {
+      expectedRevision: local.state.revision,
+      requestId: 'cached-check',
+    }
+    expect((await call(local.byName('check_work'), args)).ok).toBe(true)
+    expect(successes).toBe(2)
+
+    expect((await call(local.byName('check_work'), args)).ok).toBe(true)
+    expect(successes).toBe(3)
+
+    expect(
+      (
+        await call(local.byName('check_work'), {
+          expectedRevision: 0,
+          requestId: 'stale-check',
+        })
+      ).ok,
+    ).toBe(false)
+    expect(successes).toBe(3)
   })
 
   it('describes every input property, because agents read those descriptions', () => {
@@ -264,6 +299,7 @@ describe('unexpected bridge failures', () => {
         throw new Error('bridge exploded')
       },
       requestCache: new Map(),
+      onToolSuccess: () => {},
     }
     const tool = createTools(bridge).find((candidate) => candidate.name === 'check_work')!
     const result = await tool.execute({

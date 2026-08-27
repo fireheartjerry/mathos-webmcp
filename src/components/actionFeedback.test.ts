@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { applyAction, createSession } from '../domain/session/reducer'
-import { actionFeedbackAfterResult, EMPTY_ACTION_FEEDBACK } from './actionFeedback'
+import {
+  actionFeedbackAfterResult,
+  actionFeedbackAfterToolSuccess,
+  EMPTY_ACTION_FEEDBACK,
+} from './actionFeedback'
+
+const STALE_FEEDBACK = {
+  flash: 'Keep a step under 256 characters.',
+  refusal: {
+    source: 'agent' as const,
+    message: 'A policy refusal.',
+    recovery: 'Try a permitted action.',
+  },
+}
 
 describe('actionFeedbackAfterResult', () => {
   it('clears a stale invalid-input message after a valid learner action succeeds', () => {
@@ -46,5 +59,41 @@ describe('actionFeedbackAfterResult', () => {
     expect(actionFeedbackAfterResult(visibleRefusal, revised, 'learner')).toEqual(
       EMPTY_ACTION_FEEDBACK,
     )
+  })
+
+  it('preserves learner input feedback but clears refusal after a tool action succeeds', () => {
+    let session = createSession(2026, 'tool-success-feedback-test')
+    const added = applyAction(session, { type: 'ADD_STEP', latex: 'x^2' }, 'learner')
+    if (!added.ok) throw new Error('test setup failed')
+    session = added.state
+
+    const checked = applyAction(session, { type: 'CHECK_WORK' }, 'agent')
+    expect(actionFeedbackAfterResult(STALE_FEEDBACK, checked, 'agent')).toEqual({
+      flash: STALE_FEEDBACK.flash,
+      refusal: null,
+    })
+  })
+
+  it('preserves learner input feedback while replacing a failed tool policy refusal', () => {
+    let session = createSession(2026, 'tool-refusal-feedback-test')
+    const added = applyAction(session, { type: 'ADD_STEP', latex: 'x^2' }, 'learner')
+    if (!added.ok) throw new Error('test setup failed')
+    session = added.state
+
+    const refused = applyAction(
+      session,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '2x', rationale: 'power rule' },
+      'agent',
+    )
+    const feedback = actionFeedbackAfterResult(STALE_FEEDBACK, refused, 'agent')
+    expect(feedback.flash).toBe(STALE_FEEDBACK.flash)
+    expect(feedback.refusal?.message).toContain('two learner attempts')
+  })
+
+  it('clears only refusal after a read-only or cached tool envelope succeeds', () => {
+    expect(actionFeedbackAfterToolSuccess(STALE_FEEDBACK)).toEqual({
+      flash: STALE_FEEDBACK.flash,
+      refusal: null,
+    })
   })
 })

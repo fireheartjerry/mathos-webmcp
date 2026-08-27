@@ -12,6 +12,7 @@ import { Tex } from './Tex'
 import SessionDetails from './SessionDetails'
 import {
   actionFeedbackAfterResult,
+  actionFeedbackAfterToolSuccess,
   EMPTY_ACTION_FEEDBACK,
 } from './actionFeedback'
 import {
@@ -213,6 +214,8 @@ export default function Scratchpad() {
         return result
       },
       requestCache: cacheFor(source),
+      onToolSuccess: () =>
+        setFeedback((current) => actionFeedbackAfterToolSuccess(current)),
     }),
     [awaitPaint, cacheFor],
   )

@@ -54,6 +54,8 @@ export type ToolBridge = {
   /** Runs an action through the one shared reducer and awaits the repaint. */
   run: (action: SessionAction) => Promise<ActionResult>
   requestCache: Map<string, ToolEnvelope | Promise<ToolEnvelope>>
+  /** Called for every successful envelope, including reads and cached retries. */
+  onToolSuccess: () => void
 }
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/
@@ -307,7 +309,7 @@ async function mutate(
 const EMPTY_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const
 
 export function createTools(bridge: ToolBridge): ToolDefinition[] {
-  return [
+  const tools: ToolDefinition[] = [
     {
       name: 'get_scratchpad',
       title: 'Read the scratchpad',
@@ -482,4 +484,13 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       },
     },
   ]
+
+  return tools.map((tool) => ({
+    ...tool,
+    async execute(input) {
+      const envelope = await tool.execute(input)
+      if (envelope.ok) bridge.onToolSuccess()
+      return envelope
+    },
+  }))
 }

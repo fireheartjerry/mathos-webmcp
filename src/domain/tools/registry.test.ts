@@ -8,6 +8,7 @@ const bridge: ToolBridge = {
     throw new Error('not used')
   },
   requestCache: new Map(),
+  onToolSuccess: () => {},
 }
 
 afterEach(() => vi.unstubAllGlobals())
