@@ -105,7 +105,7 @@ export async function registerTools(bridge: ToolBridge): Promise<Registration> {
     // Report what the browser says it holds, not what we believe we sent it. The
     // badge should be a reading, not an assumption.
     const confirmed = await readBack()
-    const registered = confirmed.length > 0 ? confirmed.length : tools.length
+    const registered = confirmed.length
     if (registered < tools.length) {
       return {
         status: {

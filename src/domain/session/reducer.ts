@@ -146,6 +146,13 @@ export function applyAction(
       if (latex.length > MAX_STEP_CHARS) {
         return fail('invalid_input', `Keep a step under ${MAX_STEP_CHARS} characters.`, 'Shorten the line.')
       }
+      if (latex === state.steps[index].latex) {
+        return fail(
+          'invalid_input',
+          'That line is unchanged.',
+          'Make a genuine revision before saving it as another attempt.',
+        )
+      }
       const steps = state.steps.map((s, i) =>
         i === index ? { ...s, latex, attempts: s.attempts + 1 } : s,
       )
@@ -199,6 +206,9 @@ export function applyAction(
         : report.firstBrokenId
           ? `Checked the derivation · first break at step ${(report.firstBrokenIndex ?? 0) + 1}`
           : 'Checked the derivation'
+      const firstBrokenDetail = report.firstBrokenId
+        ? report.verdicts[report.firstBrokenId] ?? null
+        : null
       return commit(
         state,
         source,
@@ -209,6 +219,7 @@ export function applyAction(
           reachesAnswer: report.reachesAnswer,
           firstBrokenStep: report.firstBrokenIndex === null ? null : report.firstBrokenIndex + 1,
           firstBrokenId: report.firstBrokenId,
+          firstBrokenDetail,
         },
         env,
       )
@@ -258,6 +269,13 @@ export function applyAction(
           'Wait for the learner to finish, then read the receipt.',
         )
       }
+      if (state.proposal) {
+        return fail(
+          'invalid_phase',
+          'The learner is already deciding on a proposal.',
+          'Wait for the learner to accept or reject it before offering another replacement.',
+        )
+      }
       const index = state.steps.findIndex((s) => s.id === action.stepId)
       if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.')
       const step = state.steps[index]
@@ -303,16 +321,25 @@ export function applyAction(
       if (!proposal) return fail('invalid_phase', 'There is no pending proposal.', 'Nothing to accept or reject.')
       const index = state.steps.findIndex((s) => s.id === proposal.stepId)
       if (!action.accept) {
+        // Rejecting a replacement closes this intervention cycle. The learner must
+        // genuinely work on the line again before an agent may make another offer.
+        const steps = state.steps.map((s) =>
+          s.id === proposal.stepId ? { ...s, attempts: 0 } : s,
+        )
         return commit(
           state,
           source,
           `Rejected the proposal for step ${index + 1}`,
-          { proposal: null },
+          { steps, proposal: null },
           { accepted: false },
           env,
         )
       }
-      const steps = state.steps.map((s) => (s.id === proposal.stepId ? { ...s, latex: proposal.latex } : s))
+      // Accepting an offered replacement is not a new learner attempt. Reset the
+      // gate so another proposal requires the learner to work on this line again.
+      const steps = state.steps.map((s) =>
+        s.id === proposal.stepId ? { ...s, latex: proposal.latex, attempts: 0 } : s,
+      )
       return commit(
         state,
         source,
@@ -334,6 +361,15 @@ export function applyAction(
           'invalid_phase',
           'The current work has not been checked yet.',
           'Call check_work first, so the fresh problem can target what actually broke.',
+        )
+      }
+      if (!state.report.allSound || !state.report.reachesAnswer) {
+        return fail(
+          'invalid_phase',
+          'The practice derivation is not complete yet.',
+          state.report.firstBrokenId
+            ? 'Help the learner repair the first broken step, then call check_work again.'
+            : 'Help the learner reach the requested answer, then call check_work again.',
         )
       }
       let problem: Problem

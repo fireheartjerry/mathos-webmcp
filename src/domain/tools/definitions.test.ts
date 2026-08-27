@@ -113,6 +113,12 @@ describe('handlers never throw and never return undefined', () => {
 })
 
 describe('get_scratchpad', () => {
+  it('does not advertise actions that are invalid before the learner writes', async () => {
+    const result = await call(h.byName('get_scratchpad'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.availableActions).toEqual([])
+  })
+
   it('reads the problem and the steps', async () => {
     h.learner({ type: 'ADD_STEP', latex: 'x^2' })
     const result = await call(h.byName('get_scratchpad'), {})
@@ -230,6 +236,55 @@ describe('idempotency', () => {
     ])
     expect(a).toEqual(b)
   })
+
+  it('does not replay an old cached success after the learner has moved on', async () => {
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    const input = { expectedRevision: h.state.revision, requestId: 'req-old-success' }
+    const first = await call(h.byName('check_work'), input)
+    expect(first.ok).toBe(true)
+    h.learner({ type: 'ADD_STEP', latex: '999' })
+    const replay = await call(h.byName('check_work'), input)
+    expect(replay.ok).toBe(false)
+    if (!replay.ok) expect(replay.error.code).toBe('stale_revision')
+  })
+})
+
+describe('unexpected bridge failures', () => {
+  it('returns a recoverable envelope instead of throwing', async () => {
+    const state = createSession(2026, 'bridge-failure')
+    const bridge: ToolBridge = {
+      getState: () => state,
+      run: async () => {
+        throw new Error('bridge exploded')
+      },
+      requestCache: new Map(),
+    }
+    const tool = createTools(bridge).find((candidate) => candidate.name === 'check_work')!
+    const result = await tool.execute({
+      expectedRevision: state.revision,
+      requestId: 'req-bridge-failure',
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('internal_error')
+      expect(result.error.recovery).toContain('scratchpad')
+    }
+  })
+
+  it('includes the broken target even when it falls beyond the normal preview', async () => {
+    for (let i = 0; i < 8; i++) {
+      h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    }
+    h.learner({ type: 'ADD_STEP', latex: '999' })
+    h.learner({ type: 'CHECK_WORK' })
+    const result = await call(h.byName('get_scratchpad'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const broken = result.data.firstBrokenStep as { stepId: string }
+      const steps = result.data.steps as Array<{ id: string }>
+      expect(steps.some((step) => step.id === broken.stepId)).toBe(true)
+    }
+  })
 })
 
 describe('the policy layer is visible to the agent', () => {
@@ -265,7 +320,9 @@ describe('the policy layer is visible to the agent', () => {
   })
 
   it('refuses annotation during the unaided attempt', async () => {
-    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.answer.latex })
+    h.learner({ type: 'ADD_STEP', latex: String(h.state.problem.answer.value) })
     h.learner({ type: 'CHECK_WORK' })
     await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-new-1' })
     h.learner({ type: 'ADD_STEP', latex: 'x^2' })
@@ -326,11 +383,28 @@ describe('the verdict belongs to the engine, not the agent', () => {
     }
     expect(h.state.report?.verdicts['step-2'].status).toBe('broken')
   })
+
+  it('returns a bounded engine-owned diagnosis for the first break', async () => {
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.errorModes[0].latex })
+    const result = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-diagnosis-1',
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.firstBrokenDetail).toEqual(
+        expect.objectContaining({ status: 'broken', reason: 'not_equivalent' }),
+      )
+    }
+  })
 })
 
 describe('the receipt', () => {
   it('states its own limits', async () => {
-    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.answer.latex })
+    h.learner({ type: 'ADD_STEP', latex: String(h.state.problem.answer.value) })
     h.learner({ type: 'CHECK_WORK' })
     await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-r-1' })
     const result = await call(h.byName('get_receipt'), {})
@@ -356,6 +430,91 @@ describe('the receipt', () => {
     if (result.ok) {
       const rounds = result.data.rounds as Array<{ agentAnnotations: number }>
       expect(rounds[0].agentAnnotations).toBe(1)
+    }
+  })
+
+  it('does not call internally sound but incomplete transfer work successful', async () => {
+    let state = h.state
+    const practice = [
+      state.problem.premiseLatex,
+      state.problem.answer.latex,
+      String(state.problem.answer.value),
+    ]
+    for (const latex of practice) h.learner({ type: 'ADD_STEP', latex })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-transfer-incomplete',
+    })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    h.learner({ type: 'CHECK_WORK' })
+    expect(h.state.report?.allSound).toBe(true)
+    expect(h.state.report?.reachesAnswer).toBe(false)
+    const result = await call(h.byName('get_receipt'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.unaidedTransfer).toBe('attempted, not yet sound')
+  })
+
+  it('retains completed transfer evidence after another fresh problem starts', async () => {
+    for (const latex of [
+      h.state.problem.premiseLatex,
+      h.state.problem.answer.latex,
+      String(h.state.problem.answer.value),
+    ]) h.learner({ type: 'ADD_STEP', latex })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-transfer-first',
+    })
+    for (const latex of [
+      h.state.problem.premiseLatex,
+      h.state.problem.answer.latex,
+      String(h.state.problem.answer.value),
+    ]) h.learner({ type: 'ADD_STEP', latex })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-transfer-second',
+    })
+
+    const result = await call(h.byName('get_receipt'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.unaidedTransfer).toBe(
+        'every step sound, with no agent annotations or proposals',
+      )
+    }
+  })
+
+  it('retains observed transfer evidence when the learner edits afterward', async () => {
+    for (const latex of [
+      h.state.problem.premiseLatex,
+      h.state.problem.answer.latex,
+      String(h.state.problem.answer.value),
+    ]) h.learner({ type: 'ADD_STEP', latex })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-transfer-edit-practice',
+    })
+    for (const latex of [
+      h.state.problem.premiseLatex,
+      h.state.problem.answer.latex,
+      String(h.state.problem.answer.value),
+    ]) h.learner({ type: 'ADD_STEP', latex })
+    h.learner({ type: 'CHECK_WORK' })
+    h.learner({
+      type: 'EDIT_STEP',
+      stepId: h.state.steps.at(-1)!.id,
+      latex: String(h.state.problem.answer.value + 1),
+    })
+
+    const result = await call(h.byName('get_receipt'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.unaidedTransfer).toBe(
+        'previously checked sound; current work changed afterward',
+      )
     }
   })
 })

@@ -159,6 +159,12 @@ describe('answering the question, not merely being self-consistent', () => {
     expect(report.reachesAnswer).toBe(true)
   })
 
+  it('does not count the derivative function as the requested value at a point', () => {
+    const report = checkDerivation(lines(PREMISE, '12x^2 + 2x'), 'x', 2, PREMISE, ANSWER)
+    expect(report.allSound).toBe(true)
+    expect(report.reachesAnswer).toBe(false)
+  })
+
   it('never claims to reach the answer when a line is broken', () => {
     const report = checkDerivation(lines(PREMISE, '12x^2 + 2x', '0', '52'), 'x', 2, PREMISE, ANSWER)
     expect(report.allSound).toBe(false)

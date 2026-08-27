@@ -27,6 +27,7 @@ export type ToolErrorCode =
   | 'refused_policy'
   | 'not_found'
   | 'not_ready'
+  | 'internal_error'
 
 export type ToolEnvelope =
   | { ok: true; revision: number; data: Record<string, unknown> }
@@ -106,14 +107,18 @@ const requestIdField = {
   maxLength: 64,
   pattern: '^[A-Za-z0-9_-]+$',
   description:
-    'A new unique id for each distinct call. Reusing one returns the earlier result instead of acting again, which is what makes a retry safe.',
+    'Unique per intent. The same id and revision replay safely; use a new id for a deliberate re-check. This cache resets on page reload.',
 } as const
 
 /** Keeps tool output small. Context is the scarce resource, not the transport. */
 function summariseSteps(state: SessionState) {
   const limit = 8
-  const shown = state.steps.slice(0, limit)
-  const steps = shown.map((step, index) => {
+  const brokenIndex = state.report?.firstBrokenIndex ?? -1
+  const shown = state.steps.slice(0, limit).map((step, index) => ({ step, index }))
+  if (brokenIndex >= limit && state.steps[brokenIndex]) {
+    shown[limit - 1] = { step: state.steps[brokenIndex], index: brokenIndex }
+  }
+  const steps = shown.map(({ step, index }) => {
     const verdict = state.report?.verdicts[step.id]
     return {
       id: step.id,
@@ -133,12 +138,13 @@ function scratchpadData(state: SessionState): Record<string, unknown> {
       ? { position: state.report.firstBrokenIndex + 1, stepId: state.report.firstBrokenId }
       : null
 
-  const available: string[] = ['check_work']
-  if (state.round === 'practice') {
+  const available: string[] = []
+  if (state.steps.length > 0) available.push('check_work')
+  if (state.round === 'practice' && state.steps.length > 0) {
     available.push('annotate_step')
     if (state.steps.some((s) => s.attempts >= 2)) available.push('propose_step')
   }
-  if (state.report) available.push('new_problem')
+  if (state.report?.allSound && state.report.reachesAnswer) available.push('new_problem')
   if (state.history.length > 0) available.push('get_receipt')
 
   return {
@@ -172,12 +178,30 @@ function receiptData(state: SessionState): Record<string, unknown> {
     agentProposalsOffered: round.agentProposalsOffered,
     agentProposalsAccepted: round.agentProposalsAccepted,
   }))
-  const transfer = state.round === 'transfer' && state.report ? state.report.allSound : null
+  const previousTransfer = [...state.history].reverse().find((round) => round.round === 'transfer')
+  const currentRoundStart = state.activities.findLastIndex(
+    (activity) =>
+      activity.action === 'Started the unaided transfer problem' ||
+      activity.action === 'Started a fresh problem',
+  )
+  const currentRoundActivities = state.activities.slice(Math.max(0, currentRoundStart))
+  const observedSoundBeforeEdit =
+    state.round === 'transfer' &&
+    !state.report &&
+    currentRoundActivities.some(
+      (activity) => activity.action === 'Checked the derivation · sound, and it reaches the answer',
+    )
+  const transfer =
+    state.round === 'transfer' && state.report
+      ? state.report.allSound && state.report.reachesAnswer
+      : previousTransfer?.sound ?? null
   return {
     sessionId: state.sessionId,
     rounds,
     unaidedTransfer:
-      transfer === null
+      observedSoundBeforeEdit && transfer === null
+        ? 'previously checked sound; current work changed afterward'
+        : transfer === null
         ? 'not attempted yet'
         : transfer
           ? 'every step sound, with no agent annotations or proposals'
@@ -228,7 +252,15 @@ async function mutate(
   // which is what it actually is.
   const cacheKey = `${requestId}@${String(expectedRevision)}`
   const cached = bridge.requestCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) {
+    // An in-flight duplicate must await the original. A completed duplicate is safe
+    // only while the document is still at the revision produced by that operation;
+    // once the learner moves on, replaying the old success would lie about current
+    // state and must become a stale write instead.
+    if ('then' in cached) return cached
+    if (cached.ok && cached.revision === state.revision) return cached
+    bridge.requestCache.delete(cacheKey)
+  }
 
   if (!Number.isInteger(expectedRevision)) {
     return failure(state.revision, 'invalid_input', 'expectedRevision must be an integer.', `Read the scratchpad and send its revision, currently ${state.revision}.`)
@@ -243,12 +275,22 @@ async function mutate(
   }
 
   const pending = (async (): Promise<ToolEnvelope> => {
-    const result = await bridge.run(action)
-    if (!result.ok) {
+    try {
+      const result = await bridge.run(action)
+      if (!result.ok) {
+        const after = bridge.getState()
+        return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery)
+      }
+      return { ok: true, revision: result.state.revision, data: result.data }
+    } catch {
       const after = bridge.getState()
-      return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery)
+      return failure(
+        after?.revision ?? state.revision,
+        'internal_error',
+        'The page could not complete that action.',
+        'Read the scratchpad again. If the state is intact, retry once with a new requestId.',
+      )
     }
-    return { ok: true, revision: result.state.revision, data: result.data }
   })()
 
   bridge.requestCache.set(cacheKey, pending)
@@ -307,7 +349,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'annotate_step',
       title: 'Explain one step',
       description:
-        "Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message.",
+        "During guided practice, attach a short explanation beside one learner-written line. Use this to teach without solving; unavailable in the unaided round.",
       inputSchema: {
         type: 'object',
         properties: {
@@ -329,6 +371,12 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
           if (typeof values.note !== 'string' || !values.note.trim()) {
             return { invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
           }
+          if (values.note.length > 400) {
+            return { invalid: 'note must be 400 characters or fewer.', recovery: 'Shorten the explanation and try again.' }
+          }
+          if (values.focus !== undefined && typeof values.focus !== 'boolean') {
+            return { invalid: 'focus must be true or false.', recovery: 'Omit focus, or send a boolean.' }
+          }
           return {
             type: 'ANNOTATE_STEP',
             stepId: values.stepId,
@@ -342,7 +390,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'propose_step',
       title: 'Offer a replacement step',
       description:
-        'Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step.',
+        'During guided practice, offer a replacement after the learner has edited that step twice since the last check. The learner must accept or reject it; you cannot apply it.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -367,6 +415,12 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
           if (typeof values.rationale !== 'string' || !values.rationale.trim()) {
             return { invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
           }
+          if (values.latex.length > 256) {
+            return { invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the replacement expression.' }
+          }
+          if (values.rationale.length > 400) {
+            return { invalid: 'rationale must be 400 characters or fewer.', recovery: 'Shorten the rationale.' }
+          }
           return {
             type: 'PROPOSE_STEP',
             stepId: values.stepId,
@@ -380,7 +434,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'new_problem',
       title: 'Start a fresh problem',
       description:
-        'End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: annotate_step and propose_step close for the new round. Requires a check first.',
+        'Clear this round only after checked lines are sound and reach the requested answer. Start a fresh unaided problem; annotation and proposal tools then close.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -393,17 +447,25 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       execute: (input) =>
-        mutate(bridge, input, ['familyId', 'expectedRevision', 'requestId'], (values) => ({
-          type: 'NEW_PROBLEM',
-          ...(typeof values.familyId === 'string' ? { familyId: values.familyId } : {}),
-        })),
+        mutate(bridge, input, ['familyId', 'expectedRevision', 'requestId'], (values) => {
+          if (values.familyId !== undefined && typeof values.familyId !== 'string') {
+            return { invalid: 'familyId must be a string.', recovery: 'Omit familyId to stay in the current skill family.' }
+          }
+          if (typeof values.familyId === 'string' && values.familyId.length > 64) {
+            return { invalid: 'familyId must be 64 characters or fewer.', recovery: 'Use a current family id from get_scratchpad.' }
+          }
+          return {
+            type: 'NEW_PROBLEM',
+            ...(typeof values.familyId === 'string' ? { familyId: values.familyId } : {}),
+          }
+        }),
     },
 
     {
       name: 'get_receipt',
       title: 'Read the session evidence',
       description:
-        'Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven.',
+        'Read completed-round history and bounded transfer evidence. Use get_scratchpad for the current on-screen derivation and its verdicts.',
       inputSchema: EMPTY_SCHEMA,
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input) {

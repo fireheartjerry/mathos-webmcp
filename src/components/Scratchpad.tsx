@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { SyntheticEvent } from 'react'
 import { applyAction, createSession } from '../domain/session/reducer'
 import { clearSession, loadSession, saveSession, STORAGE_KEY } from '../domain/session/persistence'
-import type { ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
+import { createPaintBarrier } from '../domain/session/paintBarrier'
+import type { ActionResult, ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
 import type { StepVerdict } from '../domain/math/derivation'
 import { registerTools } from '../domain/tools/registry'
-import type { Registration, RegistrationStatus } from '../domain/tools/registry'
+import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
@@ -19,6 +20,15 @@ function newSessionId() {
       ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
       : Date.now().toString(36)
   return `st_${random}`
+}
+
+function conflictFailure(): ActionResult {
+  return {
+    ok: false,
+    code: 'invalid_phase',
+    message: 'Another tab changed this session, so this copy is paused.',
+    recovery: 'Close one tab, then choose Start over here to continue safely.',
+  }
 }
 
 const VERDICT_LABEL: Record<StepVerdict['status'], string> = {
@@ -46,15 +56,15 @@ function StepBadge({ verdict }: { verdict: StepVerdict | undefined }) {
  * its claims - because the honest reading and the flattering reading should not be
  * typographically ranked.
  */
-function Receipt({ state }: { state: SessionState }) {
+function TransferSignal({ state }: { state: SessionState }) {
   const practice = state.history[0]
   const assisted = practice
-    ? practice.agentAnnotations + practice.agentProposalsAccepted > 0
+    ? practice.agentAnnotations + practice.agentProposalsOffered > 0
     : false
   return (
     <section className="receipt" aria-labelledby="receipt-heading">
       <p className="kicker" id="receipt-heading">
-        What this session observed
+        Immediate transfer signal
       </p>
       <hr className="rule" />
       <ul className="receipt-claims">
@@ -92,8 +102,8 @@ function Receipt({ state }: { state: SessionState }) {
         )}
       </ul>
       <p className="receipt-limits">
-        This is a record of one browser session. It does not establish that the learner could do
-        this again tomorrow, or without help elsewhere, and it is not a claim about understanding.
+        Evidence consistent with immediate transfer in this browser session. It is not proof of
+        independent reasoning, long-term retention, or mastery.
       </p>
     </section>
   )
@@ -120,7 +130,6 @@ export default function Scratchpad() {
     state: 'unsupported',
     detail: 'Checking this browser…',
   })
-  const [registration, setRegistration] = useState<Registration | null>(null)
   const [flash, setFlash] = useState<string>('')
   // The first problem renders server-side, so the page is readable immediately. The
   // controls only become live once the island has hydrated; say so rather than
@@ -132,15 +141,16 @@ export default function Scratchpad() {
   const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
 
   const stateRef = useRef(state)
-  const paintedRevision = useRef(state.revision)
-  const paintWaiters = useRef(new Map<number, Set<() => void>>())
+  const paintBarrier = useRef(createPaintBarrier(state.sessionId, state.revision))
   const composerRef = useRef<HTMLInputElement | null>(null)
   const hydrated = useRef(false)
+  const tabConflictRef = useRef(false)
 
   stateRef.current = state
 
   /** The one path. Learner clicks, agent tool calls and the inspector all land here. */
   const run = useCallback((action: SessionAction, source: ActionSource) => {
+    if (tabConflictRef.current) return conflictFailure()
     const result = applyAction(stateRef.current, action, source)
     if (result.ok) {
       stateRef.current = result.state
@@ -150,27 +160,17 @@ export default function Scratchpad() {
   }, [])
 
   /** A tool must not return before the human can see what it did. */
-  const awaitPaint = useCallback((revision: number) => {
-    if (paintedRevision.current >= revision) return Promise.resolve()
-    return new Promise<void>((resolve) => {
-      const waiters = paintWaiters.current.get(revision) ?? new Set()
-      waiters.add(resolve)
-      paintWaiters.current.set(revision, waiters)
-    })
-  }, [])
+  const awaitPaint = useCallback(
+    (sessionId: string, revision: number) => paintBarrier.current.wait(sessionId, revision),
+    [],
+  )
 
   useEffect(() => {
-    paintedRevision.current = state.revision
-    for (const [revision, waiters] of paintWaiters.current) {
-      if (revision <= state.revision) {
-        waiters.forEach((resolve) => resolve())
-        paintWaiters.current.delete(revision)
-      }
-    }
+    paintBarrier.current.mark(state.sessionId, state.revision)
     // Not before the real session has been adopted. This effect is declared above the
     // adoption effect, so without the guard it persists the SSR placeholder first - and
     // then adoption restores that placeholder from storage and makes it permanent.
-    if (hydrated.current) saveSession(state)
+    if (hydrated.current && !tabConflictRef.current) saveSession(state)
   }, [state])
 
   /**
@@ -192,11 +192,20 @@ export default function Scratchpad() {
     (source: ActionSource): ToolBridge => ({
       getState: () => stateRef.current,
       run: async (action) => {
+        if (tabConflictRef.current) return conflictFailure()
         const result = applyAction(stateRef.current, action, source)
         if (result.ok) {
           stateRef.current = result.state
           setState(result.state)
-          await awaitPaint(result.state.revision)
+          await awaitPaint(result.state.sessionId, result.state.revision)
+          if (stateRef.current.sessionId !== result.state.sessionId) {
+            return {
+              ok: false,
+              code: 'invalid_phase',
+              message: 'The learner started over before that action finished painting.',
+              recovery: 'Read the new scratchpad before taking another action.',
+            }
+          }
           // `focus: true` is a real effect, not a decoration: it puts the line the
           // agent is talking about in front of the person reading the annotation.
           if (action.type === 'ANNOTATE_STEP' && action.focus) {
@@ -220,21 +229,14 @@ export default function Scratchpad() {
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
   const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
 
-  // Two tabs share one storage key, so the second one to write wins and the first
-  // would silently fail to restore on reload. We cannot merge two live derivations
-  // sensibly, so we say what happened instead of losing work quietly.
+  // Storage events only fire in the *other* tab. Any external write to this session
+  // key means two live documents can now race, even when both restored the same
+  // session id. We cannot merge derivations safely, so stop and say what happened.
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY || !event.newValue) return
-      try {
-        const incoming: unknown = JSON.parse(event.newValue)
-        const id =
-          incoming && typeof incoming === 'object' && 'sessionId' in incoming
-            ? String((incoming as { sessionId: unknown }).sessionId)
-            : null
-        if (id && id !== stateRef.current.sessionId) setTabConflict(true)
-      } catch {
-        /* an unreadable payload is handled on the next load */
+      if (event.key === STORAGE_KEY) {
+        tabConflictRef.current = true
+        setTabConflict(true)
       }
     }
     window.addEventListener('storage', onStorage)
@@ -254,7 +256,6 @@ export default function Scratchpad() {
     hydrated.current = true
     setReady(true)
     stateRef.current = next
-    paintedRevision.current = next.revision
     setState(next)
   }, [])
 
@@ -263,7 +264,6 @@ export default function Scratchpad() {
     registerTools(bridge)
       .then((result) => {
         if (!live) return
-        setRegistration(result)
         setStatus(result.status)
       })
       .catch(() => {
@@ -292,7 +292,7 @@ export default function Scratchpad() {
     [inspectorTools],
   )
 
-  function submitStep(event: FormEvent) {
+  function submitStep(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     const latex = draft.trim()
     if (!latex) return
@@ -328,15 +328,18 @@ export default function Scratchpad() {
           Mathos
         </a>
         <p className="scratch-title">
-          Second&nbsp;Try <span aria-hidden="true">/</span> <span className="scratch-session" suppressHydrationWarning>{state.sessionId}</span>
+          Second&nbsp;Try <span aria-hidden="true">/</span>{' '}
+          <span>{state.round === 'transfer' ? 'Fresh problem' : 'Guided practice'}</span>
         </p>
         <p className={`header-status header-${status.state}`}>
           <span className="dot" aria-hidden="true" />
           {status.state === 'live'
-            ? '6 agent tools live'
+            ? `${status.registered} page tools registered`
             : status.state === 'partial'
-              ? `${status.registered}/${status.total} tools live`
-              : 'No agent connected'}
+              ? `${status.registered}/${status.total} page tools registered`
+              : status.state === 'failed'
+                ? 'Page tools failed to register'
+                : 'WebMCP unavailable here'}
         </p>
       </header>
 
@@ -367,48 +370,24 @@ export default function Scratchpad() {
             <p className="round-banner">
               <strong>Unaided.</strong>
               <span>
-                This problem was generated after your first round. <code>annotate_step</code> and{' '}
-                <code>propose_step</code> are closed until it ends, so whatever happens here is
-                yours.
+                This problem was generated after your repaired first round. Coaching and suggested
+                replacements are locked for every caller until this attempt ends.
               </span>
             </p>
           )}
 
           {state.steps.length === 0 && (
-            <>
-              <p className="how how-lead">
-                Write your working one line at a time. Each line should be equal to the line above
-                it, or its derivative, or its value at the point in the question. Second Try checks
-                every line against the one above and marks the first that stops being true.
+            <div className="start-cue" aria-label="How to structure your derivation">
+              <p>
+                Write one true line at a time. The page checks the chain and stops at the first
+                break—not at every consequence of it.
               </p>
-              <figure className="example">
-                <figcaption>
-                  The three moves, on a different problem —{' '}
-                  <Tex latex="y = x^2 \cdot 5x + x^2" /> at <Tex latex="x = 1" />
-                </figcaption>
-                <ol>
-                  <li>
-                    <span className="example-n">1</span>
-                    <Tex latex="5x^3 + x^2" />
-                    <span className="badge badge-sound">equals</span>
-                  </li>
-                  <li>
-                    <span className="example-n">2</span>
-                    <Tex latex="15x^2 + 2x" />
-                    <span className="badge badge-sound">differentiates</span>
-                  </li>
-                  <li>
-                    <span className="example-n">3</span>
-                    <Tex latex="17" />
-                    <span className="badge badge-sound">evaluates</span>
-                  </li>
-                </ol>
-                <p>
-                  Deliberately not your problem. Yours is above, and the point is the line where
-                  it goes wrong.
-                </p>
-              </figure>
-            </>
+              <ol>
+                <li><span>01</span> Rewrite in terms of {state.problem.variable}</li>
+                <li><span>02</span> Differentiate</li>
+                <li><span>03</span> Evaluate at {state.problem.variable} = {state.problem.evaluationPoint}</li>
+              </ol>
+            </div>
           )}
 
           <ol className="steps" aria-label="Your working">
@@ -592,7 +571,7 @@ export default function Scratchpad() {
             >
               Check my work
             </button>
-            {report && state.round === 'practice' && (
+            {report?.allSound && report.reachesAnswer && state.round === 'practice' && (
               <button
                 type="button"
                 className="button-text"
@@ -609,6 +588,8 @@ export default function Scratchpad() {
               type="button"
               className="button-text"
               onClick={() => {
+                tabConflictRef.current = false
+                setTabConflict(false)
                 clearSession()
                 // Starting over gives a different problem on purpose; only the very
                 // first problem of a session is fixed.
@@ -626,7 +607,7 @@ export default function Scratchpad() {
           </div>
 
           {refusal && (
-            <div className="refusal" role="status">
+            <div className="refusal" role="alert">
               <p className="refusal-head">
                 Second Try declined the {refusal.source === 'agent' ? 'agent' : 'inspector'}
               </p>
@@ -638,7 +619,7 @@ export default function Scratchpad() {
             </div>
           )}
 
-          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <Receipt state={state} />}
+          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <TransferSignal state={state} />}
 
           {state.steps.length > 0 && (
             <p className="how how-foot">
@@ -650,9 +631,9 @@ export default function Scratchpad() {
           {!ready && <p className="is-empty">Loading the mathematics engine…</p>}
 
           {tabConflict && (
-            <p className="is-error" role="status">
-              Another tab has started a different session. This one still works, but it is no
-              longer the session that will be restored if you reload.
+            <p className="is-error" role="alert">
+              Another tab changed this session, so work here is paused to prevent an overwrite.
+              Close one tab, then choose Start over here to continue safely.
             </p>
           )}
 
@@ -691,7 +672,6 @@ export default function Scratchpad() {
                   <li key={activity.id}>
                     <span className={`activity-source source-${activity.source}`}>{activity.source}</span>
                     <span className="activity-action">{activity.action}</span>
-                    <span className="activity-rev">r{activity.revision}</span>
                   </li>
                 ))}
               </ol>

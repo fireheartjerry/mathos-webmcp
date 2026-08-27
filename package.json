@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "typecheck": "astro check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:webmcp": "node scripts/final-webmcp-e2e.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.4",

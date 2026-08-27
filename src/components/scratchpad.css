@@ -625,3 +625,185 @@
 .example li:last-child { border-bottom: 0; }
 .example-n { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink-meta); }
 .example > p { font-size: var(--fs-sm); line-height: var(--lh-prose); color: var(--ink-meta); margin: 0; }
+
+/* ---------- rescue pass: the proof ledger ---------- */
+
+.scratch-grid {
+  max-width: 1200px;
+  padding-top: var(--s-8);
+}
+
+.problem-prompt { margin-bottom: var(--s-4); }
+.given { margin-bottom: var(--s-6); }
+
+/* The first legal action stays in the first viewport. The old worked example was
+   useful content in the wrong place: it pushed the actual composer below the fold. */
+.start-cue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.9fr);
+  gap: var(--s-6);
+  align-items: start;
+  margin: 0 0 var(--s-6);
+  padding: var(--s-4) 0;
+  border-top: var(--bw-hairline) solid var(--hairline);
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+}
+.start-cue > p {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.start-cue ol { list-style: none; margin: 0; padding: 0; }
+.start-cue li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: var(--s-2);
+  padding: 2px 0;
+  font-size: var(--fs-meta);
+  color: var(--ink-70);
+}
+.start-cue li span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--brand);
+}
+
+/* One continuous proof thread, not a stack of unrelated rows. */
+.steps {
+  position: relative;
+  border-top: 0;
+}
+.steps::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--hairline-strong);
+}
+.step {
+  position: relative;
+  grid-template-columns: 28px minmax(0, 1fr) auto 44px;
+}
+.step-n {
+  position: relative;
+  z-index: 1;
+  width: 27px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+}
+.step-n::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: var(--bw-node) solid var(--ink-35);
+  z-index: -1;
+}
+.step-broken .step-n::before { border-color: var(--path-a); background: var(--panel-path); }
+.step:has(.badge-sound) .step-n::before { border-color: var(--verify); background: var(--panel-verify); }
+.step-note {
+  position: relative;
+  border-left: var(--bw-track) solid var(--brand);
+  border-radius: 0 var(--r-chip) var(--r-chip) 0;
+}
+.step-note::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 15px;
+  width: 8px;
+  border-top: var(--bw-hairline) solid var(--brand);
+}
+.step-focused {
+  border-left: var(--bw-track) solid var(--brand);
+  animation: proof-focus var(--d-signature) var(--ease-out) both;
+}
+@keyframes proof-focus {
+  from { background: var(--brand-tint); }
+  to { background: transparent; }
+}
+
+.step-remove,
+.step-edit input { min-width: 44px; min-height: 44px; }
+.step-remove { padding: 0; }
+
+.capability-thesis {
+  margin: 0 0 var(--s-5);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.capability-inspector {
+  border-top: var(--bw-hairline) solid var(--hairline);
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+}
+.capability-inspector > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--ink-70);
+}
+.capability-inspector > summary::-webkit-details-marker { display: none; }
+.capability-inspector > summary::after { content: '+'; font-family: var(--font-mono); }
+.capability-inspector[open] > summary::after { content: '−'; }
+.capability-inspector > summary:hover { color: var(--ink); }
+.capability-inspector > summary:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.capability-inspector > summary:active { color: var(--brand-deep); }
+.inspector-intro {
+  margin: 0 0 var(--s-4);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-prose);
+  color: var(--ink-60);
+}
+.console-tools { border-top: 0; }
+.console-tool-head { min-height: 44px; }
+.console-connect { margin-top: var(--s-5); }
+
+.activity li { grid-template-columns: auto minmax(0, 1fr); }
+
+@media (max-width: 1100px) {
+  .scratch-grid { grid-template-columns: minmax(0, 1fr); padding: var(--s-8) var(--s-6) var(--s-12); }
+  .work { padding-right: 0; }
+  .margin {
+    padding-left: 0;
+    border-left: 0;
+    border-top: var(--bw-hairline) solid var(--hairline);
+    padding-top: var(--s-9);
+    margin-top: var(--s-11);
+  }
+}
+
+@media (max-width: 980px) {
+  .start-cue { grid-template-columns: 1fr; gap: 0; margin-bottom: var(--s-4); padding: var(--s-3) 0; }
+  .start-cue ol { display: none; }
+  .header-status { justify-self: end; }
+}
+
+@media (max-width: 640px) {
+  .scratch-header { gap: var(--s-3); }
+  .header-status { font-size: var(--fs-micro); }
+  .scratch-grid { padding: var(--s-6) var(--s-4) var(--s-11); }
+  .problem-prompt { font-size: clamp(26px, 8vw, 34px); }
+  .given { padding: var(--s-4); }
+  .composer-row { align-items: stretch; }
+  .composer-row .button { min-width: 92px; justify-content: center; }
+  .work-actions { align-items: flex-start; flex-direction: column; gap: var(--s-4); }
+  .step { grid-template-columns: 28px minmax(0, 1fr) 44px; gap: var(--s-2); }
+  .step .badge { grid-column: 2; justify-self: start; }
+  .step-remove { grid-column: 3; grid-row: 1; }
+}

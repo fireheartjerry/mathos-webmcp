@@ -228,9 +228,12 @@ export function checkDerivation(
   const last = lines[lines.length - 1]
   let reachesAnswer = false
   if (allSound && answer && last) {
-    reachesAnswer =
-      compareExpressions(last.latex, answer.latex, allowed).status === 'match' ||
-      compareExpressions(last.latex, String(answer.value), []).status === 'match'
+    // A prompt asking for the derivative *at a point* asks for a value. Stopping at
+    // the derivative function is sound work, but it has not answered that question.
+    // Without an evaluation point, the symbolic derivative is the requested answer.
+    reachesAnswer = evaluationPoint === undefined
+      ? compareExpressions(last.latex, answer.latex, allowed).status === 'match'
+      : compareExpressions(last.latex, String(answer.value), []).status === 'match'
   }
 
   return {

@@ -17,7 +17,11 @@ function run(state: SessionState, action: SessionAction, source: ActionSource = 
 function soundWork(state: SessionState) {
   const a = state.problem.definitions[0].latex
   const b = state.problem.definitions[1].latex
-  return [`(${a})\\cdot(${b}) + (${a})`, state.problem.answer.latex]
+  return [
+    `(${a})\\cdot(${b}) + (${a})`,
+    state.problem.answer.latex,
+    String(state.problem.answer.value),
+  ]
 }
 
 describe('revisions and the activity log', () => {
@@ -128,6 +132,22 @@ describe('the pedagogy firewall', () => {
     expect(state.proposal).toBeNull()
   })
 
+  it('requires a new genuine attempt before another proposal after acceptance', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^3' })
+    state = run(state, { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '5x', rationale: 'r' }, 'agent')
+    state = run(state, { type: 'RESOLVE_PROPOSAL', accept: true })
+    const second = applyAction(
+      state,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '6x', rationale: 'again' },
+      'agent',
+      ENV,
+    )
+    expect(second.ok).toBe(false)
+    if (!second.ok) expect(second.code).toBe('refused_policy')
+  })
+
   it('discards a proposal the learner rejects', () => {
     let state = start()
     state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
@@ -138,6 +158,43 @@ describe('the pedagogy firewall', () => {
     expect(state.proposal).toBeNull()
   })
 
+  it('requires a new genuine attempt before another proposal after rejection', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^3' })
+    state = run(state, { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '5x', rationale: 'r' }, 'agent')
+    state = run(state, { type: 'RESOLVE_PROPOSAL', accept: false })
+
+    const second = applyAction(
+      state,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '6x', rationale: 'again' },
+      'agent',
+      ENV,
+    )
+
+    expect(second.ok).toBe(false)
+    if (!second.ok) expect(second.code).toBe('refused_policy')
+  })
+
+  it('does not overwrite a proposal while the learner is deciding', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^3' })
+    state = run(state, { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '5x', rationale: 'first' }, 'agent')
+    const original = state.proposal
+
+    const second = applyAction(
+      state,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '6x', rationale: 'second' },
+      'agent',
+      ENV,
+    )
+
+    expect(second.ok).toBe(false)
+    if (!second.ok) expect(second.code).toBe('invalid_phase')
+    expect(state.proposal).toEqual(original)
+  })
+
   it('drops a proposal that the learner has edited past', () => {
     let state = start()
     state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
@@ -146,12 +203,27 @@ describe('the pedagogy firewall', () => {
     state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^4' })
     expect(state.proposal).toBeNull()
   })
+
+  it('does not count saving the identical expression as another learner attempt', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    const before = state
+    const result = applyAction(
+      state,
+      { type: 'EDIT_STEP', stepId: 'step-1', latex: '  x^2  ' },
+      'learner',
+      ENV,
+    )
+    expect(result.ok).toBe(false)
+    expect(state.steps[0].attempts).toBe(before.steps[0].attempts)
+    expect(state.revision).toBe(before.revision)
+  })
 })
 
 describe('checking', () => {
   it('finds the first broken step and reports its 1-based position', () => {
     let state = start()
-    for (const latex of soundWork(state)) state = run(state, { type: 'ADD_STEP', latex })
+    for (const latex of soundWork(state).slice(0, 2)) state = run(state, { type: 'ADD_STEP', latex })
     state = run(state, { type: 'ADD_STEP', latex: '0' })
     const result = applyAction(state, { type: 'CHECK_WORK' }, 'learner', ENV)
     expect(result.ok).toBe(true)
@@ -200,6 +272,18 @@ describe('the transfer round', () => {
     if (!result.ok) expect(result.code).toBe('invalid_phase')
   })
 
+  it('refuses transfer until the practice derivation is sound and reaches the answer', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: '999x' })
+    state = run(state, { type: 'CHECK_WORK' })
+    const result = applyAction(state, { type: 'NEW_PROBLEM' }, 'agent', ENV)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.code).toBe('invalid_phase')
+      expect(result.recovery).toContain('repair')
+    }
+  })
+
   it('serves a genuinely different problem', () => {
     const before = start()
     const after = reachTransfer()
@@ -237,7 +321,7 @@ describe('the transfer round', () => {
 
   it('records what the agent did in the practice round', () => {
     let state = start()
-    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    for (const latex of soundWork(state)) state = run(state, { type: 'ADD_STEP', latex })
     state = run(state, { type: 'ANNOTATE_STEP', stepId: 'step-1', note: 'look again' }, 'agent')
     state = run(state, { type: 'CHECK_WORK' })
     state = run(state, { type: 'NEW_PROBLEM' }, 'agent')
