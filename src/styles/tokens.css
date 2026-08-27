@@ -392,13 +392,6 @@ button {
   background: var(--blue-active);
 }
 
-.is-loading {
-  min-height: 1em;
-  border-radius: var(--r-chip);
-  background: var(--surface-subtle);
-  color: transparent;
-}
-
 .is-empty {
   color: var(--ink-muted);
   font-size: var(--fs-sm);

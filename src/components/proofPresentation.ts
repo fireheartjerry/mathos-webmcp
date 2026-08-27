@@ -44,3 +44,16 @@ export function relationLabel(verdict: StepVerdict | undefined): string {
       return verdict.relation === 'first' ? 'Starting line' : verdict.relation
   }
 }
+
+export function relationDetail(verdict: StepVerdict | undefined): string | null {
+  if (!verdict) return null
+
+  switch (verdict.status) {
+    case 'uncertain':
+      return 'The page engine could not verify this relation. Rewrite it in a simpler equivalent form, then check again.'
+    case 'unreadable':
+      return verdict.message
+    default:
+      return null
+  }
+}

@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
-import { actorLabel, registrationStatusLabel, relationLabel } from './proofPresentation'
+import {
+  actorLabel,
+  registrationStatusLabel,
+  relationDetail,
+  relationLabel,
+} from './proofPresentation'
 
 describe('registrationStatusLabel', () => {
   it.each<[RegistrationStatus, string]>([
@@ -58,6 +63,29 @@ describe('relationLabel', () => {
   it('labels an uncertain step as could not determine', () => {
     const verdict: StepVerdict = { status: 'uncertain' }
     expect(relationLabel(verdict)).toBe('Could not determine')
+  })
+})
+
+describe('relationDetail', () => {
+  it('gives an uncertain step a useful recovery path', () => {
+    const verdict: StepVerdict = { status: 'uncertain' }
+    expect(relationDetail(verdict)).toBe(
+      'The page engine could not verify this relation. Rewrite it in a simpler equivalent form, then check again.',
+    )
+  })
+
+  it('preserves the parser detail for an unreadable step', () => {
+    const verdict: StepVerdict = {
+      status: 'unreadable',
+      code: 'parse_error',
+      message: 'Use a complete expression.',
+    }
+    expect(relationDetail(verdict)).toBe('Use a complete expression.')
+  })
+
+  it('does not invent detail for a checked step', () => {
+    const verdict: StepVerdict = { status: 'sound', relation: 'equals' }
+    expect(relationDetail(verdict)).toBeNull()
   })
 })
 

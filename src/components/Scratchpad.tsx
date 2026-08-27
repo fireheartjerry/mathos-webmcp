@@ -10,7 +10,12 @@ import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import SessionDetails from './SessionDetails'
-import { actorLabel, registrationStatusLabel, relationLabel } from './proofPresentation'
+import {
+  actorLabel,
+  registrationStatusLabel,
+  relationDetail,
+  relationLabel,
+} from './proofPresentation'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
@@ -376,6 +381,7 @@ export default function Scratchpad() {
               const verdict = report?.verdicts[step.id]
               const broken = step.id === firstBrokenId
               const notes = annotationsFor(step.id)
+              const verdictDetail = relationDetail(verdict)
               return (
                 <li
                   key={step.id}
@@ -455,9 +461,7 @@ export default function Scratchpad() {
                     <span>{relationLabel(verdict)}</span>
                   </p>
                   <div className="line-evidence">
-                    {verdict?.status === 'unreadable' && (
-                      <p className="step-detail">{verdict.message}</p>
-                    )}
+                    {verdictDetail && <p className="step-detail">{verdictDetail}</p>}
                     {broken && verdict?.status === 'broken' && (
                       <p className="step-detail">
                         {verdict.difference ? (
@@ -478,7 +482,7 @@ export default function Scratchpad() {
                       </p>
                     )}
                     {notes.map((note) => (
-                      <p key={note.id} className="step-note">
+                      <p key={note.id} className={`step-note note-${note.source}`}>
                         <span className="note-source">{actorLabel(note.source)}</span>
                         {note.note}
                       </p>
