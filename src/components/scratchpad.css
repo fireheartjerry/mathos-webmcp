@@ -498,3 +498,28 @@
   line-height: var(--lh-prose);
   color: var(--ink-60);
 }
+
+/* The page declining the agent is a product event, not an internal detail. */
+.refusal {
+  margin-top: var(--s-8);
+  padding: var(--s-5) var(--s-6);
+  background: var(--panel);
+  border: var(--bw-hairline) solid var(--warn);
+  border-left: var(--bw-track) solid var(--warn);
+  border-radius: var(--r-control);
+  max-width: var(--measure-prose);
+}
+.refusal-head {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  color: var(--warn);
+}
+.refusal-body { margin: 0 0 var(--s-2); font-size: var(--fs-sm); line-height: var(--lh-prose); }
+.refusal-recovery {
+  margin: 0 0 var(--s-4);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-60);
+}

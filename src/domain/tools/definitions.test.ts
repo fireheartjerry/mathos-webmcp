@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { createTools } from './definitions'
-import type { ToolBridge, ToolDefinition, ToolEnvelope } from './definitions'
+import type { ToolBridge, ToolDefinition } from './definitions'
 import { applyAction, createSession } from '../session/reducer'
 import type { SessionAction, SessionState } from '../session/types'
 

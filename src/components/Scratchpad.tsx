@@ -6,6 +6,7 @@ import type { ActionSource, SessionAction, SessionState, Step } from '../domain/
 import type { StepVerdict } from '../domain/math/derivation'
 import { registerTools } from '../domain/tools/registry'
 import type { Registration, RegistrationStatus } from '../domain/tools/registry'
+import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import AgentConsole from './AgentConsole'
@@ -120,11 +121,13 @@ export default function Scratchpad() {
   })
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [flash, setFlash] = useState<string>('')
+  const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
 
   const stateRef = useRef(state)
   const paintedRevision = useRef(state.revision)
   const paintWaiters = useRef(new Map<number, Set<() => void>>())
   const composerRef = useRef<HTMLInputElement | null>(null)
+  const hydrated = useRef(false)
 
   stateRef.current = state
 
@@ -156,18 +159,30 @@ export default function Scratchpad() {
         paintWaiters.current.delete(revision)
       }
     }
-    saveSession(state)
+    // Not before the real session has been adopted. This effect is declared above the
+    // adoption effect, so without the guard it persists the SSR placeholder first - and
+    // then adoption restores that placeholder from storage and makes it permanent.
+    if (hydrated.current) saveSession(state)
   }, [state])
 
-  const bridge = useMemo<ToolBridge>(
-    () => ({
+  /**
+   * One bridge per caller identity. The registered tools act as `agent`; the console's
+   * Run controls act as `local-inspector`. Without this the inspector would be logged
+   * as an agent, and the console's own "recorded as local-inspector" line would be a
+   * lie a judge could catch by comparing it to the activity list.
+   */
+  const makeBridge = useCallback(
+    (source: ActionSource): ToolBridge => ({
       getState: () => stateRef.current,
       run: async (action) => {
-        const result = applyAction(stateRef.current, action, 'agent')
+        const result = applyAction(stateRef.current, action, source)
         if (result.ok) {
           stateRef.current = result.state
           setState(result.state)
           await awaitPaint(result.state.revision)
+        } else if (result.code === 'refused_policy') {
+          // The page declining the agent is the point, not an internal detail.
+          setRefusal({ source, message: result.message, recovery: result.recovery })
         }
         return result
       },
@@ -176,10 +191,14 @@ export default function Scratchpad() {
     [awaitPaint],
   )
 
+  const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
+  const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
+
   // Adopt the real session once, after hydration.
   useEffect(() => {
     const restored = loadSession()
     const next = restored ?? createSession(FIRST_PROBLEM_SEED, newSessionId())
+    hydrated.current = true
     stateRef.current = next
     paintedRevision.current = next.revision
     setState(next)
@@ -205,7 +224,7 @@ export default function Scratchpad() {
 
   const runFromInspector = useCallback(
     async (toolName: string, argsJson: string): Promise<string> => {
-      const tool = registration?.tools.find((t) => t.name === toolName)
+      const tool = inspectorTools.find((t) => t.name === toolName)
       if (!tool) return 'That tool is not registered.'
       let parsed: unknown
       try {
@@ -216,7 +235,7 @@ export default function Scratchpad() {
       const envelope = await tool.execute(parsed)
       return JSON.stringify(envelope, null, 2)
     },
-    [registration],
+    [inspectorTools],
   )
 
   function submitStep(event: FormEvent) {
@@ -444,6 +463,19 @@ export default function Scratchpad() {
             </button>
           </div>
 
+          {refusal && (
+            <div className="refusal" role="status">
+              <p className="refusal-head">
+                Second Try declined the {refusal.source === 'agent' ? 'agent' : 'inspector'}
+              </p>
+              <p className="refusal-body">{refusal.message}</p>
+              <p className="refusal-recovery">{refusal.recovery}</p>
+              <button type="button" className="button-text" onClick={() => setRefusal(null)}>
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {state.round === 'transfer' && report?.allSound && <Receipt state={state} />}
 
           <p className="live-status" role="status" aria-live="polite">
@@ -461,7 +493,7 @@ export default function Scratchpad() {
         <aside className="margin">
           <AgentConsole
             status={status}
-            tools={registration?.tools ?? []}
+            tools={inspectorTools}
             onRun={runFromInspector}
             revision={state.revision}
           />

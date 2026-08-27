@@ -194,17 +194,22 @@ and accepted, and the unaided result.
 
 Cut to the same page in **stock Chrome with no flag**. The header states the detection result
 plainly. The Agent Console still lists all six real tools with their schemas and annotations.
-Click **Run** on `get_scratchpad`; the real envelope appears, logged as
-`source: 'local-inspector'` and visibly labelled as not-an-agent.
+Click **Run this tool** on `get_scratchpad`; the real envelope appears in the console output
+pane, and the page's revision advances for real.
 
 Final frame: hold on the console showing **six tools — two read, four write**, beside the red
 `not equivalent` badge from earlier still in frame.
 
+> **Capture note.** Do not pan to the Session Activity list during this shot. Inspector runs
+> are currently attributed to `agent` in the log, which contradicts the console's own
+> attribution line. Either fix the bridge before the shoot and show the log proudly, or keep
+> it out of frame. Do not narrate an attribution the log does not show.
+
 **Audio**
 
 > Most browsers do not have WebMCP yet. So the console is a permanent part of the product,
-> not an apology. It lists the six real tools, and every Run control invokes the identical
-> execute path — logged as the inspector, never dressed up as an agent.
+> not an apology. It lists the six real tools with their real schemas, and every Run control
+> invokes the identical execute path. The page actually changes. Nothing here is simulated.
 >
 > Six tools. Two read, four write. All of them page-native, because all of them touch work
 > that only this page can see.
@@ -240,7 +245,7 @@ Tick every one before publishing. Anything unticked is a re-shoot, not a caption
 | 7 | The learner correcting their own line, and the chain going sound | 1:40 |
 | 8 | A generated fresh problem with the teaching tools closed | 1:56 |
 | 9 | `get_receipt` output including its `limits` array | 2:22 |
-| 10 | The Agent Console and local inspector working with no WebMCP present | 2:42 |
+| 10 | The Agent Console running a real tool with no WebMCP present | 2:42 |
 
 ## Things that must not appear
 

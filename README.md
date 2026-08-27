@@ -11,7 +11,11 @@ asks the page to check it, and teaches to that exact step.
 The agent never grades. It cannot. Grading is done by the page's CAS, and the badge on screen
 is rendered from that engine's return value — not from anything the model says.
 
-Published by Mathos (Y Combinator W24 · Forbes 30 Under 30).
+Published by Mathos (Y Combinator W24 · Forbes 30 Under 30). MIT licensed.
+
+<!-- Before submission: paste the production URL on the line below, or delete the line. -->
+**Deployed build:** see the link in this repository's About section. To run it yourself,
+[jump to Run it locally](#run-it-locally) — it is three commands.
 
 ---
 
@@ -37,9 +41,16 @@ learner writes multi-line working, not a single number.
    establish.
 
 You do not need an agent for any of that. If your browser has no WebMCP, the **Agent
-Console** in the margin still lists all six real tools with their schemas, and each has a
-**Run** control that invokes the *identical* `execute` path — logged as
-`source: 'local-inspector'` and labelled as not-an-agent. Nothing is simulated.
+Console** in the margin still lists all six real tools with their schemas and annotations,
+states the detection result verbatim, and gives each tool a **Run this tool** control that
+invokes the *identical* `execute` path with a pre-filled argument set. The page really
+mutates. Nothing is simulated and no agent is faked.
+
+*Known gap:* inspector-initiated calls are currently attributed to `agent` in the session
+activity log rather than to `local-inspector`, because the tool bridge passes a fixed source.
+The `local-inspector` source exists in the domain model and is what the console text
+promises; the bridge does not yet pass it. Treat the console's attribution line as aspirational
+until that is fixed.
 
 ---
 
