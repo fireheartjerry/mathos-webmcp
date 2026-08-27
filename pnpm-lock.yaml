@@ -11,6 +11,9 @@ importers:
       '@astrojs/react':
         specifier: ^6.0.4
         version: 6.0.4(@types/node@26.3.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(esbuild@0.28.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yaml@2.9.0)
+      '@cortex-js/compute-engine':
+        specifier: 0.119.0
+        version: 0.119.0
       '@tensorflow/tfjs':
         specifier: 4.22.0
         version: 4.22.0(seedrandom@3.0.5)
@@ -38,6 +41,9 @@ importers:
         version: 6.0.3
 
 packages:
+
+  '@arnog/colors@0.5.0':
+    resolution: {integrity: sha512-NB7yqrO7qvInsqJdqz6C6mDU+2oiKmbBbk3czMS0E7KkGxLRy538tEHCsB5TKqmaxxXpi6/U120TnGl8NsDePg==}
 
   '@astrojs/check@0.9.10':
     resolution: {integrity: sha512-zgx/UQMozdjOa3bOxjgeCFdtpE3c9rRX6xHwa+2QXvy8z8Akifu2AtubHyv/zzC2znO8dl8fFWL4K+Ba9kS8HQ==}
@@ -294,6 +300,11 @@ packages:
   '@clack/prompts@1.7.0':
     resolution: {integrity: sha512-y7/yvZ2TPAnR9+jnc00klvNNLkJiXFFrQA/hlLCcxA9a2A4zQIOimyFQ9XfwYKiGD1fb5GY8vbKIIgO8d5Tb2A==}
     engines: {node: '>= 20.12.0'}
+
+  '@cortex-js/compute-engine@0.119.0':
+    resolution: {integrity: sha512-J9fj/DAOQ9Ibsn8+iuAbxH5Nz0nvHskjORL6/3yBWiAsM2nvoT3qep/RQ4pXSYokVl49EIYX3lkVnw+iY9j+9w==}
+    engines: {node: '>=22.3.0', npm: '>=10.5.0'}
+    hasBin: true
 
   '@emmetio/abbreviation@2.3.3':
     resolution: {integrity: sha512-mgv58UrU3rh4YgbE/TzgLQwJ3pFsHHhCLqY20aJq+9comytTXUDNGG/SMtSeMJdkpxgXSXunBGLD8Boka3JyVA==}
@@ -1092,6 +1103,10 @@ packages:
   common-ancestor-path@2.0.0:
     resolution: {integrity: sha512-dnN3ibLeoRf2HNC+OlCiNc5d2zxbLJXOtiZUudNFSXZrNSydxcCsSpRzXwfu7BBWCIfHPw+xTayeBvJCP/D8Ng==}
     engines: {node: '>= 18'}
+
+  complex-esm@2.1.1-esm1:
+    resolution: {integrity: sha512-IShBEWHILB9s7MnfyevqNGxV0A1cfcSnewL/4uPFiSxkcQL4Mm3FxJ0pXMtCXuWLjYz3lRRyk6OfkeDZcjD6nw==}
+    engines: {node: '>=16.14.2', npm: '>=8.5.0'}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -2166,6 +2181,8 @@ packages:
 
 snapshots:
 
+  '@arnog/colors@0.5.0': {}
+
   '@astrojs/check@0.9.10(prettier@3.9.6)(typescript@6.0.3)':
     dependencies:
       '@astrojs/language-server': 2.16.15(prettier@3.9.6)(typescript@6.0.3)
@@ -2475,6 +2492,11 @@ snapshots:
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
+
+  '@cortex-js/compute-engine@0.119.0':
+    dependencies:
+      '@arnog/colors': 0.5.0
+      complex-esm: 2.1.1-esm1
 
   '@emmetio/abbreviation@2.3.3':
     dependencies:
@@ -3239,6 +3261,8 @@ snapshots:
   commander@14.0.3: {}
 
   common-ancestor-path@2.0.0: {}
+
+  complex-esm@2.1.1-esm1: {}
 
   convert-source-map@2.0.0: {}
 
