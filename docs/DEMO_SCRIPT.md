@@ -1,5 +1,9 @@
 # Demo script — Second Try
 
+> **Superseded on 2026-08-27.** Use
+> `docs/overnight-audit/21_DEMO_VIDEO_RUNBOOK.md` for the current proof-ledger UI and copy.
+> The historical script below is retained only as provenance.
+
 **Target length:** 2:52
 **Format:** screen recording, one narrator, no music.
 **Hard rules:**

@@ -36,15 +36,16 @@ learner writes multi-line working, not a single number.
    an agent that tries is refused, and it may not offer a replacement until you have genuinely
    attempted the step yourself.
 6. Press **Try a fresh problem, unaided.** A new problem in the same skill family is
-   generated with its answer derived by the engine. `annotate_step` and `propose_step` are
+   unlocked only after every checked line is sound **and the work reaches the requested answer**.
+   The new answer is derived by the engine. `annotate_step` and `propose_step` are
    closed for this round — the page returns `refused_policy` to any caller, so the attempt
    means something.
 7. Complete it. Read the receipt. It says what this session observed and what it does not
    establish.
 
 You do not need an agent for any of that. If your browser has no WebMCP, the **Agent
-Console** in the margin still lists all six real tools with their schemas and annotations,
-states the detection result verbatim, and gives each tool a **Run this tool** control that
+Console** in the margin still lists all six real tools with their descriptions and read/write roles,
+states the capability result honestly, and gives each tool a **Run locally** control that
 invokes the *identical* `execute` path with a pre-filled argument set. The page really
 mutates. Nothing is simulated and no agent is faked.
 
@@ -114,7 +115,7 @@ the ones in `src/domain/tools/definitions.ts`.
 | 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
 | 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message. |
 | 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step. |
-| 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires a check first. |
+| 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires checked work in which every line is sound and the requested answer is reached. |
 | 6 | `get_receipt` — *Read the session evidence* | **read** | Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven. |
 
 Required arguments:
@@ -137,8 +138,9 @@ Notes an agent author will want:
   time. If the learner has typed since you read the scratchpad, your write is rejected with
   `stale_revision` and a `recovery` string naming the current revision.
 - **`requestId`** caches the in-flight promise, so a retried call awaits the original rather
-  than racing it. Successful envelopes stay cached; failures are evicted so a corrected retry
-  can succeed.
+  than racing it. A completed success is replayed only while the document is still at that
+  revision; once the learner moves on, the caller gets `stale_revision`, never an old success
+  presented as current. Failures are evicted so a corrected retry can succeed.
 - **`get_scratchpad` and `get_receipt` carry `untrustedContentHint: true`**, because every
   step they return is text the learner typed. That is Chrome's published guidance for
   tool output containing user-authored content, and it applies to us literally.
@@ -153,9 +155,10 @@ Notes an agent author will want:
 
 Two paths work today.
 
-**ChatGPT's built-in browser** — on **GPT‑5.6 Sol or Terra**. **Luna has WebMCP disabled.**
-Open `/learn` in the in-app browser; the six tools appear in the site-tools panel with their
-titles.
+**ChatGPT Desktop's built-in browser** — use an account and model for which Site Tools are
+available, then open `/learn` in that browser. The six tools appear in the site-tools panel
+with their titles. Availability is product- and account-dependent; this repository does not
+claim a public per-model support matrix.
 
 **Chrome 149 or later** — enable `chrome://flags/#enable-webmcp-testing` and restart.
 
@@ -243,7 +246,12 @@ Full transcript with the probe code and exact return values:
 ```bash
 pnpm install
 pnpm dev        # http://localhost:4321/learn
-pnpm test       # 141 tests
+pnpm test       # 178 tests
+pnpm typecheck  # Astro + TypeScript diagnostics
+pnpm build      # static production build
+
+# Optional: with flagged Chrome already running on CDP port 9444
+pnpm test:webmcp
 ```
 
 `pnpm test` runs the whole domain: the parser contract, the dual-route equivalence oracle,

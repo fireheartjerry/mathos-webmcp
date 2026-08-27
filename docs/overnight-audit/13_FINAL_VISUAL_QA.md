@@ -1,5 +1,26 @@
 # 13 — Final Visual QA (hostile, measured)
 
+## 2026-08-27 post-rescue visual acceptance
+
+The current proof-ledger build was reloaded and inspected at 1440×900, 390×844 mobile and a
+720×450 CSS viewport representing a 200% zoom stress case.
+
+**Pass:**
+
+- the checked derivation, composer and main actions form one legible desktop composition;
+- the capability inspector is collapsed on first paint;
+- transfer coaching is visibly locked and the proof ledger remains the hero;
+- the Immediate transfer signal states both its positive evidence and its limits;
+- mobile becomes one linear column;
+- no horizontal overflow at 390 px or 720 px;
+- edit/remove targets are at least 44 px;
+- no raw session IDs or revision counters appear in the learner UI;
+- unsupported WebMCP copy is truthful and does not imply a disconnected agent.
+
+The first viewport at 200% necessarily shows the problem before the composer; the composer is
+reachable by ordinary vertical scroll and no content overlaps or disappears. The first 20-second
+video should open on existing learner work, not the cold empty state.
+
 **Verdict: 37 / 40 on the `05` PART 4 anti-slop checklist. The `10` §5.2 gate is ≥ 36/40. It passes, with one point of margin.**
 
 Three rules still fail: **6** (contrast), **26** (empty regions), **32** (interactive states). Rules 6 and 26 are the two the previous round called "real work", and they are still real work — the fixes applied to both moved the numbers materially but stopped short of the threshold. Rule 32's fix was correct and incomplete: the two selectors that were named are fixed; three text-field selectors that were never measured are not.

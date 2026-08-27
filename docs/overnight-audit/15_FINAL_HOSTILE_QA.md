@@ -1,5 +1,32 @@
 # 15 — Final Hostile QA
 
+## 2026-08-27 rescue recheck — authoritative verdict
+
+Two fresh Luna hostile reviews attacked the rebuilt product after the original audit below. They
+found one release-blocking correctness defect and seven high-value state/runtime gaps. All were
+reproduced, repaired and regression-tested:
+
+| Attack | Final disposition |
+| --- | --- |
+| A derivative function could pass a problem asking for its value at a point | Fixed at the math, reducer and real-Chrome WebMCP layers. Incomplete work is sound but cannot transfer. |
+| Registration could claim “live” after an empty tool readback | Fixed; runtime status remains unsupported/partial instead of optimistic. |
+| A reset could strand a pending paint waiter | Fixed with a session-aware barrier and three focused tests. |
+| Accepted or rejected proposals could immediately reopen the replacement gate | Fixed; both decisions require fresh learner work. |
+| A second proposal could overwrite the one the learner was reading | Fixed; it is refused until the learner decides. |
+| Two tabs could silently overwrite each other | Fixed; the stale tab freezes learner and tool writes until an explicit Start over. |
+| Successful transfer evidence could disappear after a later edit | Fixed; the receipt truthfully records that it was previously checked and then changed. |
+| Historical transfer evidence could disappear after another round | Fixed; the latest completed transfer remains reportable. |
+
+Current automated result: **9 files, 178 tests, all passing**. Type checking has zero errors.
+The durable Chrome 151 journey is in `14_FINAL_WEBMCP_EVAL.md`; ChatGPT Desktop remains explicitly
+untested in `17_CHATGPT_DESKTOP_TEST_RECORD.md`.
+
+**Current code verdict: release candidate. Current submission verdict: not ready until the public
+URL, repository publication, demo recording and eligible ChatGPT Desktop check are completed.**
+
+> Everything below is the retained 2026-08-26 hostile record against an earlier build. Findings in
+> it are valuable provenance, not the current defect register.
+
 I was asked to assume this submission should lose and to try to prove it. I could not. What I found instead is one blocking demo defect, one real correctness gap, a handful of accessibility failures, and a great deal of work that stands up to deliberate abuse. Three of the five judge attacks are cleanly rebutted with runtime evidence; one lands partially; one lands.
 
 ---

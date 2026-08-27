@@ -1,5 +1,26 @@
 # 16 — Final Acceptance
 
+## 2026-08-27 frontier-rescue verdict
+
+**NOT SUBMISSION READY.**
+
+The current code is a release candidate: 178 tests, type checks and build pass; the human fallback
+journey passes; Chrome 151 registers all six real WebMCP tools and completes the full production
+journey; accessibility and performance gates pass. The remaining blockers are external submission
+work:
+
+1. publish the current branch to the authorized public repository;
+2. publish and verify a stable working URL;
+3. replace the README deployment placeholder;
+4. record the 1:50–2:00 product-first demo video;
+5. run ChatGPT Desktop Site Tools against the public URL if an eligible client/account is
+   available, recording exact client/model/date/outcome.
+
+No deployment, push, or client-compatibility result was fabricated during this rescue.
+
+> The remainder of this file is the retained 2026-08-26 acceptance record. Where its build counts,
+> blocker count or runtime details differ, the 2026-08-27 verdict above is authoritative.
+
 Written 2026-08-27. This answers the acceptance questions directly, with evidence, and
 says plainly what is not done.
 

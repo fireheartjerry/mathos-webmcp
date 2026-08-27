@@ -1,5 +1,37 @@
 # Final WebMCP evaluation — the six tools, executed in Chrome 151
 
+## 2026-08-27 production-build rerun
+
+The current rescue build was rebuilt, served by Astro preview at
+`http://127.0.0.1:4322/learn`, and driven by
+`scripts/final-webmcp-e2e.mjs` through raw CDP into a separate Chrome
+151.0.7922.174 profile launched with `--enable-features=WebMCPTesting`.
+
+`pnpm test:webmcp` passed. It confirmed:
+
+- `document.modelContext.getTools()` returns six tools;
+- exactly `get_scratchpad` and `get_receipt` are read-only and untrusted-output-bearing;
+- the rendered header reads **“6 page tools registered”**;
+- `get_scratchpad` reads revision 0;
+- `check_work` marks line 2 as the first break;
+- `annotate_step` writes an agent note;
+- `propose_step` is used only after two genuine post-check learner revisions;
+- the learner, not the tool, clicks **Use this**;
+- a premature transfer call after the derivative function—but before evaluating at the requested
+  point—returns `invalid_phase`;
+- repaired practice work is both sound and complete;
+- `new_problem` starts a generated transfer round;
+- all three unaided transfer lines are checked sound and complete;
+- `get_receipt` reports exactly one assisted practice round and a sound unaided transfer,
+  while retaining its long-term-learning limits.
+
+This rerun specifically exercises the new cache, transfer and evidence semantics. The executable
+harness is now durable and can be rerun before submission.
+
+> The detailed 2026-08-26 transcript below is retained as historical runtime evidence. Its build
+> paths, timestamps and superseded findings do not describe the current rescue build; the rerun
+> above is authoritative.
+
 **Method:** execution, not reading. Every line below was produced by driving a real Chrome
 151.0.7922.174 process with WebMCP enabled, on 2026-08-26, and recording the actual return
 values. Nothing is inferred from source. Where something could not be executed it is marked

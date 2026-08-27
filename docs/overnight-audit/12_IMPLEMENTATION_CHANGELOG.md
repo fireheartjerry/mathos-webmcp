@@ -1,5 +1,41 @@
 # 12 — Implementation Changelog
 
+## 2026-08-27 frontier-rescue addendum
+
+The second overnight pass kept the rebuilt mathematics and state architecture, then fixed the
+remaining product and correctness defects found by three independent Luna audits.
+
+### Product and interface
+
+- Recast the scratchpad as a continuous proof ledger with a semantic rail.
+- Removed the giant worked example from the cold state; the composer now follows a compact
+  three-move cue.
+- Moved schemas, local runner and connection instructions behind a collapsed capability
+  inspector.
+- Replaced session IDs and raw revision chrome with product-language state.
+- Split unsupported, partial, failed and live WebMCP copy truthfully.
+- Renamed the learner-facing receipt to **Immediate transfer signal** and tightened every claim.
+- Raised edit/remove controls to the 44 px target and added explicit alert/disclosure semantics.
+
+### State and WebMCP correctness
+
+- Transfer now requires `allSound && reachesAnswer` in reducer, tool availability, UI and
+  evidence.
+- Completed idempotency results are replayed only while their produced revision is current.
+- Unexpected bridge failures become recoverable `internal_error` envelopes.
+- Long derivations retain a late first-broken target in bounded tool output.
+- No-op edits no longer increment attempts.
+- Tool runtime validators now match schema length/type constraints.
+- Persistence restoration now validates problems, reports, verdicts, annotations, proposals,
+  activity, history, tallies, counters and signatures.
+
+### Verification added
+
+- 24 new regression tests; total now **178**.
+- `scripts/final-webmcp-e2e.mjs` and `pnpm test:webmcp` reproduce the complete Chrome 151
+  production-build journey through `document.modelContext`.
+- Required audit filenames were normalized without deleting the deeper prior evidence.
+
 What was actually built on the night of 2026-08-26, and why. Ordered by commit.
 
 ---

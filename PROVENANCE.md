@@ -26,7 +26,7 @@ All application source in this repository is new challenge-period work. This wor
 - The scratchpad interface, the Agent Console, and the local inspector.
 - The evidence receipt and its stated claim boundary.
 - The Astro landing page and the visual system built on the frozen token set.
-- The test suite (141 tests).
+- The test suite (178 tests).
 - The deployment configuration and judge-facing documents.
 
 The first application-source commit is `8150dc4`, dated August 26, 2026. No application source in this repository predates the submission period.
@@ -62,7 +62,7 @@ The application depends on Astro, React, TypeScript, and:
 | --- | --- | --- |
 | `@cortex-js/compute-engine` | The computer algebra system that writes every verdict. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
 | `katex` | Typesetting the problem, the learner's steps, and the engine's expressions. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
-| `vitest` | The test runner for the 141-test suite. | Pre-existing third-party tool |
+| `vitest` | The test runner for the 178-test suite. | Pre-existing third-party tool |
 
 Package names and versions appear in `package.json` and `pnpm-lock.yaml`. No third-party source is vendored, forked, or modified in this repository.
 
