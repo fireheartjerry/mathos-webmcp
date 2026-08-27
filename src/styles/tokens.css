@@ -1,0 +1,304 @@
+/* =========================================================================
+   MATHOS x SARSA - FROZEN DESIGN TOKENS  v1.0  (2026-08-26)
+   Foundation & rhythm: Sarsa (sarsa.app, measured).
+   Identity, typeface, math & product grammar: Mathos (mathos.ai, measured).
+   Rulings: docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md  section 3.3
+   ========================================================================= */
+
+/* Archivo 300/400/500/600 + Fira Code 400/500. Self-host for production. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  /* ---- SURFACES (Sarsa ground, Mathos-compatible) --------------------- */
+  --paper:            #FAFAF7;   /* page ground - Sarsa exact; Mathos #FCFCFB is equivalent */
+  --paper-sunk:       #F4F4F0;   /* recessed rails, table zebra, inert wells */
+  --panel:            #FFFFFF;   /* the ONE raised surface. Both refs agree. */
+  --panel-tint:       #ECF6FE;   /* Mathos --color-brand-50: formula banners, step badges */
+  --panel-verify:     #EEF4F0;   /* verification strip ground (green-tinted paper) */
+  --panel-path:       #FBF2EC;   /* diagnostic / attempted-route ground (rust-tinted paper) */
+
+  /* ---- INK ------------------------------------------------------------ */
+  --ink:              #16150F;   /* Sarsa exact. Headings, primary text, primary button fill */
+  --ink-cool:         #0A0E1B;   /* Mathos --color-ink-900. Dark inline chips only */
+  --ink-70:  rgba(22, 21, 15, 0.68);  /* body prose, nav at rest */
+  --ink-60:  rgba(22, 21, 15, 0.62);  /* kickers, numerals, meta */
+  --ink-35:  rgba(22, 21, 15, 0.35);  /* faint strokes, disabled */
+  --hairline:         rgba(22, 21, 15, 0.12);  /* EVERY divider and card border */
+  --hairline-strong:  rgba(22, 21, 15, 0.22);
+  --wash:             rgba(22, 21, 15, 0.06);  /* hover ground, unfilled progress track */
+
+  /* ---- BRAND (Mathos identity, at Sarsa's saturation) ------------------ */
+  --brand:            #155D97;   /* Mathos --color-brand-700. Links, active state, identity */
+  --brand-deep:       #144D7C;   /* Mathos --color-brand-800. Hover on brand text */
+  --brand-bright:     #339AEF;   /* Mathos --color-brand-500. RATIONED: wordmark + focus/selected ONLY */
+  --brand-line:       #AEDAFB;   /* Mathos --color-brand-200. Tinted-panel borders */
+  --brand-tint:       #ECF6FE;   /* Mathos --color-brand-50 */
+
+  /* ---- SEMANTIC ------------------------------------------------------- */
+  --verify:           #33724F;   /* Sarsa --verify. CHECKED/PASSED ONLY. Never a button. */
+  --verify-deep:      #2A5E41;
+  --warn:             #8A6A1F;   /* derived; muted to Sarsa register. Use sparingly. */
+
+  /* ---- PATH / DATA ENCODING (Sarsa exact - NEVER type, buttons, links) - */
+  --path-human:       #16150F;   /* the learner's own route */
+  --path-a:           #C2541E;   /* rust  - the route under discussion / attempted route */
+  --path-b:           #2E5E8C;   /* steel - alternative route */
+  --path-c:           #33724F;   /* green - verified route */
+  --path-d:           #7A5C9E;   /* violet - fourth route */
+  --path-faint:       rgba(22, 21, 15, 0.42);  /* de-emphasise by ALPHA, never by hue */
+
+  /* ---- TYPE FAMILIES -------------------------------------------------- */
+  --font-sans: "Archivo", "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-math: KaTeX_Main, KaTeX_Math, serif;  /* KaTeX owns this. Never set math in --font-sans. */
+  /* NO SERIF TOKEN EXISTS. This is deliberate - see section 4.2 M1. */
+
+  /* ---- TYPE SIZES ----------------------------------------------------- */
+  --fs-micro:   11px;  /* pills, legends */
+  --fs-kicker:  12px;  /* uppercase eyebrow */
+  --fs-num:     13px;  /* step indices, tnum meta */
+  --fs-meta:    14px;  /* footer meta, nav CTA */
+  --fs-ui:      15px;  /* nav links, button label, dense body */
+  --fs-sm:      16px;  /* column body */
+  --fs-body:    17px;  /* BASE */
+  --fs-lg:      18px;  /* section prose */
+  --fs-xl:      19px;  /* wordmark, hero sub */
+  --fs-2xl:     21px;  /* premise paragraph */
+  --fs-3xl:     22px;  /* card / pillar h3 */
+  --fs-pull:    clamp(24px, 3.0vw, 36px);   /* pull quote */
+  --fs-section: clamp(28px, 3.4vw, 44px);   /* Sarsa --display-section */
+  --fs-hero:    clamp(40px, 5.6vw, 76px);   /* Sarsa --display-hero */
+  --fs-lede:    clamp(46px, 7.0vw, 92px);   /* full-bleed lede */
+
+  /* ---- TYPE WEIGHTS - big is Sarsa-light, small is Mathos-strong ------- */
+  --fw-display: 300;   /* EVERYTHING >= 26px */
+  --fw-body:    400;
+  --fw-medium:  500;   /* h3, wordmark, emphasis inside prose */
+  --fw-ui:      600;   /* buttons, kickers, step labels, table heads */
+
+  /* ---- TRACKING ------------------------------------------------------- */
+  --ls-lede:    -0.022em;
+  --ls-hero:    -0.015em;
+  --ls-section: -0.012em;
+  --ls-h3:      -0.010em;
+  --ls-body:     0em;
+  --ls-kicker:   0.14em;   /* uppercase 12px */
+  --ls-pill:     0.08em;   /* uppercase 11px */
+
+  /* ---- LINE HEIGHTS --------------------------------------------------- */
+  --lh-lede:    0.98;
+  --lh-hero:    1.08;
+  --lh-section: 1.12;
+  --lh-h3:      1.25;
+  --lh-tight:   1.35;
+  --lh-prose:   1.55;
+  --lh-body:    1.65;   /* 17px -> 28.05px, Sarsa exact */
+
+  /* ---- MEASURE (hard caps - Sarsa exact) ------------------------------ */
+  --measure-lede:     14ch;
+  --measure-headline: 640px;
+  --measure-prose:    620px;
+  --measure-hero:     720px;
+  --measure-pull:     760px;
+  --measure-premise:  680px;
+
+  /* ---- LAYOUT --------------------------------------------------------- */
+  --container:      min(1120px, 92vw);   /* Sarsa exact; gutter = 4vw per side */
+  --container-wide: min(1120px, 94vw);   /* hero panel */
+  --nav-h:          64px;
+  --space-section:       clamp(96px, 14vh, 160px);
+  --space-section-tight: calc(var(--space-section) * 0.6);  /* in-app DEFAULT */
+  --space-section-cta:   calc(var(--space-section) * 0.8);
+  --col-pad:        36px;   /* padding inside hairline-divided columns */
+  --col-gap:        48px;   /* pillar grid gap */
+  --stagger:        28px;   /* pillar nth-child(2); nth-child(3) = 2x */
+
+  /* ---- SPACING SCALE (4px base) --------------------------------------- */
+  --s-1:   4px;  --s-2:   8px;  --s-3:  12px;  --s-4:  16px;
+  --s-5:  20px;  --s-6:  24px;  --s-7:  28px;  --s-8:  32px;
+  --s-9:  40px;  --s-10: 48px;  --s-11: 56px;  --s-12: 72px;
+  --s-13: 96px;  --s-14: 120px; --s-15: 160px;
+  --rule-margin: 18px 0 40px;   /* the kicker -> rule -> headline gap. Sarsa exact. */
+
+  /* ---- GEOMETRY (Sarsa wins - section 3.3 Conflict 4) ------------------ */
+  --r-focus:     2px;
+  --r-chip:      4px;
+  --r-control:   8px;    /* buttons, inputs, selects */
+  --r-panel:    12px;    /* cards, hero panel, code wells */
+  --r-pill:    999px;
+  --r-dot:       50%;
+
+  --bw-hairline: 1px;
+  --bw-rule:     1px;    /* structural ink top-rule */
+  --bw-focus:  1.5px;
+  --bw-node:   1.5px;    /* the 8px waypoint dot ring */
+  --bw-track:    2px;    /* progress segments */
+  --stroke-diagram: 1px; /* SVG default; 1.2-1.9px for emphasis ONLY */
+  --node-size:   8px;
+
+  /* ---- ELEVATION ------------------------------------------------------ */
+  --shadow-none: none;   /* THE ONLY ELEVATION TOKEN. Both references measure zero shadows. */
+
+  /* ---- MOTION (Sarsa exact) ------------------------------------------- */
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-emph:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --d-instant:    150ms;  /* transforms, opacity, press */
+  --d-quick:      250ms;  /* colour */
+  --d-link:       300ms;  /* underline sweep */
+  --d-fill:       350ms;  /* button wipe, arrow nudge */
+  --d-chrome:     400ms;  /* nav background / border */
+  --d-ripple:     600ms;
+  --d-signature:  700ms;
+  --d-pulse:     2000ms;  /* looping scroll hint */
+
+  /* ---- CONTROL GEOMETRY ----------------------------------------------- */
+  --btn-pad-sm: 11px 16px;  --btn-fs-sm: 14px;  /* nav CTA,  ~38px tall */
+  --btn-pad-md: 12px 22px;  --btn-fs-md: 15px;  /* default,  ~45px tall */
+  --btn-pad-lg: 15px 28px;  --btn-fs-lg: 16px;  /* hero/CTA, ~53px tall */
+  --btn-gap:     8px;
+  --pill-pad:   2px 8px;    --pill-fs:   11px;
+}
+
+/* ---- BASE ------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: calc(var(--nav-h) + 24px); }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: -0.011em;              /* Mathos global */
+  font-variant-numeric: tabular-nums;    /* both references */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; }
+::selection { background: var(--ink); color: var(--paper); }
+:focus-visible {
+  outline: var(--bw-focus) solid var(--ink);
+  outline-offset: 3px;
+  border-radius: var(--r-focus);
+}
+
+.container { width: var(--container); margin-inline: auto; }
+
+/* The three-part section opener. Use it everywhere. */
+.kicker {
+  font-size: var(--fs-kicker); font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-kicker); text-transform: uppercase;
+  color: var(--ink-60);
+}
+.rule { border: none; border-top: var(--bw-hairline) solid var(--hairline); margin: var(--rule-margin); }
+.headline {
+  font-size: var(--fs-section); font-weight: var(--fw-display);
+  letter-spacing: var(--ls-section); line-height: var(--lh-section);
+  max-width: var(--measure-headline);
+}
+
+/* The one button. Vary by padding only. */
+.button {
+  display: inline-flex; align-items: center; gap: var(--btn-gap);
+  padding: var(--btn-pad-md); font-size: var(--btn-fs-md); font-weight: var(--fw-ui);
+  background: var(--ink); color: var(--paper);
+  border: var(--bw-hairline) solid var(--ink); border-radius: var(--r-control);
+  box-shadow: var(--shadow-none);
+  position: relative; overflow: hidden;
+  transition: color var(--d-fill) ease, transform var(--d-instant) ease;
+}
+.button::before {
+  content: ""; position: absolute; inset: 0; background: var(--paper);
+  transform: scaleX(0); transform-origin: left center; z-index: 0;
+  transition: transform var(--d-fill) var(--ease-emph);
+}
+.button:hover::before { transform: scaleX(1); }
+.button:hover { color: var(--ink); }
+.button > span, .button .arrow { position: relative; z-index: 1; }
+.button .arrow { transition: transform var(--d-fill) ease; }
+.button:hover .arrow { transform: translateX(4px); }
+.button:active { transform: scale(0.97); }
+
+/* Waypoint node straddling a structural rule. */
+.node-rule { position: relative; border-top: var(--bw-rule) solid var(--ink); padding-top: var(--s-5); }
+.node-rule::before {
+  content: ""; position: absolute; top: calc(var(--node-size) / -2 - 0.5px); left: 0;
+  width: var(--node-size); height: var(--node-size); border-radius: var(--r-dot);
+  background: var(--paper); border: var(--bw-node) solid var(--ink);
+}
+
+/* Hairline-divided columns: the divider IS the gutter. */
+.streams { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+.stream  { padding: 0 var(--col-pad); border-left: var(--bw-hairline) solid var(--hairline); }
+.stream:first-child { padding-left: 0; border-left: none; }
+@media (max-width: 767px) {
+  .streams { grid-template-columns: 1fr; gap: var(--s-8); }
+  .stream, .stream:first-child {
+    padding: 0 0 0 var(--s-5);
+    border-left: var(--bw-hairline) solid var(--hairline);
+  }
+}
+
+/* Diagrams: 1px stroke, no fill, path tokens only, fade by alpha. */
+.diagram path, .diagram line, .diagram circle, .diagram rect {
+  fill: none; stroke-width: var(--stroke-diagram); vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important; scroll-behavior: auto !important;
+  }
+}
+
+/* ---- ADDITIONS FOR THE APPLICATION -----------------------------------
+   The reference is a marketing page; these are the control states an
+   application needs. Scale the one button by padding, per ruling 9. */
+
+.button-sm { padding: var(--btn-pad-sm); font-size: var(--btn-fs-sm); }
+.button-lg { padding: var(--btn-pad-lg); font-size: var(--btn-fs-lg); }
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  background: var(--wash);
+  color: var(--ink-35);
+  border-color: var(--hairline);
+  cursor: not-allowed;
+  transform: none;
+}
+.button:disabled::before { transform: scaleX(0); }
+.button:disabled:hover { color: var(--ink-35); }
+
+/* The secondary affordance. Never a second filled button competing with the first. */
+.button-text {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--ink-60);
+  border-bottom: var(--bw-hairline) solid var(--hairline-strong);
+  transition: color var(--d-instant) var(--ease-out), border-color var(--d-instant) var(--ease-out);
+}
+.button-text:hover { color: var(--ink); border-color: var(--ink); }
+.button-text:active { color: var(--brand-deep); }
+.button-text:disabled { color: var(--ink-35); border-color: var(--hairline); cursor: not-allowed; }
+
+.skip-link {
+  position: absolute;
+  left: var(--s-4);
+  top: calc(var(--s-4) * -6);
+  z-index: 10;
+  padding: var(--btn-pad-sm);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r-control);
+  transition: top var(--d-instant) var(--ease-out);
+}
+.skip-link:focus { top: var(--s-4); }

@@ -1,0 +1,386 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
+import { applyAction, createSession } from '../domain/session/reducer'
+import { clearSession, loadSession, saveSession } from '../domain/session/persistence'
+import type { ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
+import type { StepVerdict } from '../domain/math/derivation'
+import { registerTools } from '../domain/tools/registry'
+import type { Registration, RegistrationStatus } from '../domain/tools/registry'
+import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
+import { Tex } from './Tex'
+import AgentConsole from './AgentConsole'
+import 'katex/dist/katex.min.css'
+import './scratchpad.css'
+
+function newSessionId() {
+  const random =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+      : Date.now().toString(36)
+  return `st_${random}`
+}
+
+const VERDICT_LABEL: Record<StepVerdict['status'], string> = {
+  sound: 'follows',
+  broken: 'not equivalent',
+  uncertain: 'could not determine',
+  unreadable: 'could not read',
+  downstream: 'after the first break',
+}
+
+function StepBadge({ verdict }: { verdict: StepVerdict | undefined }) {
+  if (!verdict) return <span className="badge badge-idle">unchecked</span>
+  const label =
+    verdict.status === 'sound' && verdict.relation === 'differentiates'
+      ? 'differentiates'
+      : VERDICT_LABEL[verdict.status]
+  return <span className={`badge badge-${verdict.status}`}>{label}</span>
+}
+
+export default function Scratchpad() {
+  const [state, setState] = useState<SessionState>(() => {
+    const restored = typeof window === 'undefined' ? null : loadSession()
+    return restored ?? createSession(Date.now() % 100000, newSessionId())
+  })
+  const [draft, setDraft] = useState('')
+  const [status, setStatus] = useState<RegistrationStatus>({
+    state: 'unsupported',
+    detail: 'Checking this browser…',
+  })
+  const [registration, setRegistration] = useState<Registration | null>(null)
+  const [flash, setFlash] = useState<string>('')
+
+  const stateRef = useRef(state)
+  const paintedRevision = useRef(state.revision)
+  const paintWaiters = useRef(new Map<number, Set<() => void>>())
+  const composerRef = useRef<HTMLInputElement | null>(null)
+
+  stateRef.current = state
+
+  /** The one path. Learner clicks, agent tool calls and the inspector all land here. */
+  const run = useCallback((action: SessionAction, source: ActionSource) => {
+    const result = applyAction(stateRef.current, action, source)
+    if (result.ok) {
+      stateRef.current = result.state
+      setState(result.state)
+    }
+    return result
+  }, [])
+
+  /** A tool must not return before the human can see what it did. */
+  const awaitPaint = useCallback((revision: number) => {
+    if (paintedRevision.current >= revision) return Promise.resolve()
+    return new Promise<void>((resolve) => {
+      const waiters = paintWaiters.current.get(revision) ?? new Set()
+      waiters.add(resolve)
+      paintWaiters.current.set(revision, waiters)
+    })
+  }, [])
+
+  useEffect(() => {
+    paintedRevision.current = state.revision
+    for (const [revision, waiters] of paintWaiters.current) {
+      if (revision <= state.revision) {
+        waiters.forEach((resolve) => resolve())
+        paintWaiters.current.delete(revision)
+      }
+    }
+    saveSession(state)
+  }, [state])
+
+  const bridge = useMemo<ToolBridge>(
+    () => ({
+      getState: () => stateRef.current,
+      run: async (action) => {
+        const result = applyAction(stateRef.current, action, 'agent')
+        if (result.ok) {
+          stateRef.current = result.state
+          setState(result.state)
+          await awaitPaint(result.state.revision)
+        }
+        return result
+      },
+      requestCache: new Map<string, ToolEnvelope | Promise<ToolEnvelope>>(),
+    }),
+    [awaitPaint],
+  )
+
+  useEffect(() => {
+    let live = true
+    registerTools(bridge)
+      .then((result) => {
+        if (!live) return
+        setRegistration(result)
+        setStatus(result.status)
+      })
+      .catch(() => {
+        if (live) setStatus({ state: 'failed', detail: 'Registration threw unexpectedly.' })
+      })
+    // Deliberately no pagehide teardown: Chrome preserves registrations across the
+    // back-forward cache, and tearing down here is what made Back show zero tools.
+    return () => {
+      live = false
+    }
+  }, [bridge])
+
+  const runFromInspector = useCallback(
+    async (toolName: string, argsJson: string): Promise<string> => {
+      const tool = registration?.tools.find((t) => t.name === toolName)
+      if (!tool) return 'That tool is not registered.'
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(argsJson)
+      } catch {
+        return 'The arguments are not valid JSON.'
+      }
+      const envelope = await tool.execute(parsed)
+      return JSON.stringify(envelope, null, 2)
+    },
+    [registration],
+  )
+
+  function submitStep(event: FormEvent) {
+    event.preventDefault()
+    const latex = draft.trim()
+    if (!latex) return
+    const result = run({ type: 'ADD_STEP', latex }, 'learner')
+    if (result.ok) {
+      setDraft('')
+      composerRef.current?.focus()
+    } else {
+      setFlash(result.message)
+    }
+  }
+
+  function check() {
+    const result = run({ type: 'CHECK_WORK' }, 'learner')
+    setFlash(result.ok ? '' : result.message)
+  }
+
+  const report = state.report
+  const firstBrokenId = report?.firstBrokenId ?? null
+  const annotationsFor = (stepId: string) => state.annotations.filter((a) => a.stepId === stepId)
+
+  return (
+    <div className="scratch-shell">
+      <header className="scratch-header">
+        <a className="wordmark" href="/">
+          Mathos
+        </a>
+        <p className="scratch-title">
+          Second&nbsp;Try <span aria-hidden="true">/</span> <span className="scratch-session">{state.sessionId}</span>
+        </p>
+        <p className={`header-status header-${status.state}`}>
+          <span className="dot" aria-hidden="true" />
+          {status.state === 'live'
+            ? '6 agent tools live'
+            : status.state === 'partial'
+              ? `${status.registered}/${status.total} tools live`
+              : 'No agent connected'}
+        </p>
+      </header>
+
+      <div className="scratch-grid">
+        <main className="work" id="main">
+          <p className="kicker">
+            {state.round === 'transfer' ? 'Unaided attempt' : 'Practice'} · {state.problem.familyId}
+          </p>
+          <hr className="rule" />
+
+          <h1 className="problem-prompt">
+            Find{' '}
+            <Tex
+              latex={`\\frac{d${state.problem.resultName}}{d${state.problem.variable}}`}
+              ariaLabel={`d ${state.problem.resultName} by d ${state.problem.variable}`}
+            />{' '}
+            at <Tex latex={`${state.problem.variable} = ${state.problem.evaluationPoint}`} />
+          </h1>
+          <div className="given">
+            {state.problem.definitions.map((definition) => (
+              <p key={definition.name}>
+                <Tex latex={`${definition.name} = ${definition.latex}`} />
+              </p>
+            ))}
+          </div>
+
+          {state.steps.length === 0 && (
+            <p className="how">
+              Write your working one line at a time. Each line should either be equal to the line
+              above it, or its derivative. Second Try checks every line against the one above and
+              marks the first that stops being true.
+            </p>
+          )}
+
+          <ol className="steps" aria-label="Your working">
+            {state.steps.map((step: Step, index) => {
+              const verdict = report?.verdicts[step.id]
+              const broken = step.id === firstBrokenId
+              const notes = annotationsFor(step.id)
+              return (
+                <li
+                  key={step.id}
+                  className={[
+                    'step',
+                    broken ? 'step-broken' : '',
+                    verdict?.status === 'downstream' ? 'step-downstream' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <span className="step-n">{index + 1}</span>
+                  <div className="step-body">
+                    <Tex latex={step.latex} />
+                    {verdict?.status === 'unreadable' && (
+                      <p className="step-detail">{verdict.message}</p>
+                    )}
+                    {broken && verdict?.status === 'broken' && (
+                      <p className="step-detail">
+                        {verdict.difference ? (
+                          <>
+                            {verdict.difference.against === 'derivative'
+                              ? 'Short of the derivative by '
+                              : 'Short of the line above by '}
+                            <Tex latex={verdict.difference.latex} />
+                          </>
+                        ) : verdict.counterexample ? (
+                          <>
+                            They differ at{' '}
+                            {Object.entries(verdict.counterexample)
+                              .map(([name, value]) => `${name} = ${Number(value.toFixed(3))}`)
+                              .join(', ')}
+                          </>
+                        ) : null}
+                      </p>
+                    )}
+                    {notes.map((note) => (
+                      <p key={note.id} className="step-note">
+                        <span className="note-source">{note.source === 'agent' ? 'Agent' : 'Inspector'}</span>
+                        {note.note}
+                      </p>
+                    ))}
+                    {state.proposal?.stepId === step.id && (
+                      <div className="proposal">
+                        <p className="proposal-head">The agent suggests</p>
+                        <Tex latex={state.proposal.latex} />
+                        <p className="proposal-why">{state.proposal.rationale}</p>
+                        <div className="proposal-actions">
+                          <button
+                            type="button"
+                            className="button button-sm"
+                            onClick={() => run({ type: 'RESOLVE_PROPOSAL', accept: true }, 'learner')}
+                          >
+                            Use this
+                          </button>
+                          <button
+                            type="button"
+                            className="button-text"
+                            onClick={() => run({ type: 'RESOLVE_PROPOSAL', accept: false }, 'learner')}
+                          >
+                            Keep mine
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <StepBadge verdict={verdict} />
+                  <button
+                    type="button"
+                    className="step-remove"
+                    aria-label={`Remove step ${index + 1}`}
+                    onClick={() => run({ type: 'REMOVE_STEP', stepId: step.id }, 'learner')}
+                  >
+                    ×
+                  </button>
+                </li>
+              )
+            })}
+          </ol>
+
+          <form className="composer" onSubmit={submitStep}>
+            <label htmlFor="next-step" className="composer-label">
+              {state.steps.length === 0 ? 'Write your first line' : `Line ${state.steps.length + 1}`}
+            </label>
+            <div className="composer-row">
+              <input
+                id="next-step"
+                ref={composerRef}
+                value={draft}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={state.steps.length === 0 ? `write ${state.problem.resultName} in terms of ${state.problem.variable}` : 'the next line of your working'}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+              <button type="submit" className="button button-sm" disabled={!draft.trim()}>
+                Add line
+              </button>
+            </div>
+            {draft.trim() && (
+              <p className="composer-preview">
+                <Tex latex={draft} />
+              </p>
+            )}
+          </form>
+
+          <div className="work-actions">
+            <button type="button" className="button" onClick={check} disabled={state.steps.length === 0}>
+              Check my work
+            </button>
+            <button
+              type="button"
+              className="button-text"
+              onClick={() => {
+                clearSession()
+                const fresh = createSession(Date.now() % 100000, newSessionId())
+                stateRef.current = fresh
+                setState(fresh)
+                setDraft('')
+              }}
+            >
+              Start over
+            </button>
+          </div>
+
+          <p className="live-status" role="status" aria-live="polite">
+            {flash ||
+              (report
+                ? report.allSound
+                  ? 'Every line follows from the one above it.'
+                  : report.firstBrokenIndex !== null
+                    ? `Line ${report.firstBrokenIndex + 1} is the first that does not follow.`
+                    : ''
+                : '')}
+          </p>
+        </main>
+
+        <aside className="margin">
+          <AgentConsole
+            status={status}
+            tools={registration?.tools ?? []}
+            onRun={runFromInspector}
+            revision={state.revision}
+          />
+
+          <section className="activity" aria-labelledby="activity-heading">
+            <p className="kicker" id="activity-heading">
+              Session activity
+            </p>
+            <hr className="rule" />
+            {state.activities.length === 0 ? (
+              <p className="activity-empty">Nothing has happened yet.</p>
+            ) : (
+              <ol>
+                {state.activities.slice(-8).map((activity) => (
+                  <li key={activity.id}>
+                    <span className={`activity-source source-${activity.source}`}>{activity.source}</span>
+                    <span className="activity-action">{activity.action}</span>
+                    <span className="activity-rev">r{activity.revision}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </aside>
+      </div>
+    </div>
+  )
+}

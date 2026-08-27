@@ -1,0 +1,456 @@
+/* Second Try - the scratchpad.
+   Every value resolves a token from styles/tokens.css. The four deletions that carry
+   most of the improvement over the previous build: no serif, no box-shadow, no green
+   buttons, no rust type. Rust and green appear only as verdict encoding. */
+
+.scratch-shell {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- header ---------- */
+
+.scratch-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-6);
+  height: var(--nav-h);
+  padding: 0 var(--s-9);
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+}
+
+.wordmark {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-ui);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.wordmark:hover { color: var(--brand); }
+
+.scratch-title {
+  font-size: var(--fs-meta);
+  color: var(--ink-60);
+}
+.scratch-session {
+  font-family: var(--font-mono);
+  font-size: var(--fs-num);
+}
+
+.header-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--ink-60);
+}
+.header-status .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-dot);
+  background: var(--ink-35);
+}
+.header-live .dot { background: var(--verify); }
+.header-live { color: var(--verify-deep); }
+.header-partial .dot { background: var(--warn); }
+
+/* ---------- shell grid ---------- */
+
+.scratch-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--s-10) var(--s-9) var(--s-13);
+  gap: 0;
+}
+
+.work { min-width: 0; padding-right: var(--col-pad); }
+
+.margin {
+  min-width: 0;
+  padding-left: var(--col-pad);
+  border-left: var(--bw-hairline) solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-11);
+}
+
+/* ---------- problem ---------- */
+
+.problem-prompt {
+  font-size: var(--fs-section);
+  font-weight: var(--fw-display);
+  letter-spacing: var(--ls-section);
+  line-height: var(--lh-section);
+  max-width: var(--measure-headline);
+  margin: 0 0 var(--s-6);
+}
+
+.given {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-8);
+  padding: var(--s-5) var(--s-6);
+  background: var(--panel);
+  border: var(--bw-hairline) solid var(--hairline);
+  border-radius: var(--r-panel);
+  margin-bottom: var(--s-10);
+}
+.given p { margin: 0; font-size: var(--fs-lg); }
+
+/* ---------- steps ---------- */
+
+.steps {
+  list-style: none;
+  margin: 0 0 var(--s-8);
+  padding: 0;
+  border-top: var(--bw-hairline) solid var(--hairline);
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 24px;
+  align-items: start;
+  gap: var(--s-4);
+  padding: var(--s-5) 0;
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+  transition: opacity var(--d-quick) var(--ease-out);
+}
+
+.step-n {
+  font-family: var(--font-mono);
+  font-size: var(--fs-num);
+  color: var(--ink-35);
+  padding-top: 2px;
+}
+
+.step-body { min-width: 0; font-size: var(--fs-xl); }
+
+/* The first broken step is the only thing the interface points at. */
+.step-broken {
+  background: var(--panel-path);
+  border-left: var(--bw-track) solid var(--path-a);
+  margin-left: calc(var(--bw-track) * -1);
+  padding-left: var(--s-4);
+}
+/* Everything after it is downstream of a mistake already made - dimmed, not accused. */
+.step-downstream { opacity: 0.45; }
+
+.step-detail {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-meta);
+  color: var(--ink-60);
+  font-family: var(--font-mono);
+}
+
+.step-note {
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3) var(--s-4);
+  background: var(--panel-tint);
+  border-radius: var(--r-chip);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.note-source {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  color: var(--brand);
+  margin-bottom: 2px;
+}
+
+.step-remove {
+  border: 0;
+  background: none;
+  color: var(--ink-35);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--r-chip);
+  transition: color var(--d-instant) var(--ease-out);
+}
+.step-remove:hover { color: var(--path-a); }
+.step-remove:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.step-remove:active { color: var(--ink); }
+
+/* ---------- badges: the verdict, written by the engine ---------- */
+
+.badge {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  padding: var(--pill-pad);
+  border-radius: var(--r-pill);
+  border: var(--bw-hairline) solid transparent;
+  white-space: nowrap;
+}
+.badge-idle { color: var(--ink-35); border-color: var(--hairline); }
+.badge-sound { color: var(--verify-deep); background: var(--panel-verify); border-color: var(--verify); }
+.badge-broken { color: var(--path-a); background: var(--panel-path); border-color: var(--path-a); }
+.badge-uncertain { color: var(--warn); border-color: var(--warn); }
+.badge-unreadable { color: var(--warn); border-color: var(--warn); }
+.badge-downstream { color: var(--ink-35); border-color: var(--hairline); }
+
+/* ---------- proposal: the agent asks, the learner decides ---------- */
+
+.proposal {
+  margin-top: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  background: var(--panel);
+  border: var(--bw-hairline) solid var(--brand-line);
+  border-radius: var(--r-control);
+}
+.proposal-head {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  color: var(--brand);
+}
+.proposal-why {
+  margin: var(--s-3) 0 var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--ink-70);
+  line-height: var(--lh-prose);
+}
+.proposal-actions { display: flex; align-items: center; gap: var(--s-4); }
+
+/* ---------- composer ---------- */
+
+.composer { margin-bottom: var(--s-8); }
+.composer-label {
+  display: block;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--ink-60);
+  margin-bottom: var(--s-2);
+}
+.composer-row { display: flex; gap: var(--s-3); }
+.composer-row input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--s-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  color: var(--ink);
+  background: var(--panel);
+  border: var(--bw-hairline) solid var(--hairline-strong);
+  border-radius: var(--r-control);
+  transition: border-color var(--d-instant) var(--ease-out);
+}
+.composer-row input::placeholder { color: var(--ink-35); }
+.composer-row input:hover { border-color: var(--ink-35); }
+.composer-row input:focus-visible {
+  outline: var(--bw-focus) solid var(--ink);
+  outline-offset: 2px;
+  border-color: var(--ink);
+}
+.composer-preview {
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-lg);
+  color: var(--ink-70);
+}
+
+.work-actions { display: flex; align-items: center; gap: var(--s-6); }
+
+.live-status {
+  margin-top: var(--s-6);
+  font-size: var(--fs-sm);
+  color: var(--ink-70);
+  min-height: 1.4em;
+}
+
+/* ---------- agent console ---------- */
+
+.agent-console { min-width: 0; }
+
+.console-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-meta);
+  margin: 0 0 var(--s-5);
+  color: var(--ink-70);
+}
+.console-status .dot { width: 7px; height: 7px; border-radius: var(--r-dot); background: var(--ink-35); flex: none; }
+.console-live .dot { background: var(--verify); }
+.console-live { color: var(--verify-deep); }
+.console-warn .dot { background: var(--warn); }
+
+.console-tools { list-style: none; margin: 0; padding: 0; border-top: var(--bw-hairline) solid var(--hairline); }
+.console-tools > li { border-bottom: var(--bw-hairline) solid var(--hairline); }
+
+.console-tool-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--d-instant) var(--ease-out);
+}
+.console-tool-head:hover { color: var(--brand); }
+.console-tool-head:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.console-tool-head:active { color: var(--brand-deep); }
+
+.console-tool-name { font-family: var(--font-mono); font-size: var(--fs-num); }
+
+.tag {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  padding: var(--pill-pad);
+  border-radius: var(--r-pill);
+  border: var(--bw-hairline) solid var(--hairline);
+  color: var(--ink-60);
+  flex: none;
+}
+.tag-write { color: var(--brand); border-color: var(--brand-line); }
+
+.console-tool-body { padding: 0 0 var(--s-4); }
+.console-tool-desc {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.console-args-label {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  color: var(--ink-60);
+  margin-bottom: var(--s-2);
+}
+.console-args {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--fs-num);
+  line-height: 1.5;
+  padding: var(--s-3);
+  color: var(--ink);
+  background: var(--paper-sunk);
+  border: var(--bw-hairline) solid var(--hairline);
+  border-radius: var(--r-chip);
+  resize: vertical;
+  margin-bottom: var(--s-3);
+}
+.console-args:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+
+.console-hint {
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-micro);
+  color: var(--ink-60);
+  line-height: var(--lh-prose);
+}
+.console-hint code, .console-connect code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  background: var(--wash);
+  padding: 1px 4px;
+  border-radius: var(--r-chip);
+}
+
+.console-output { margin-top: var(--s-5); }
+.console-output-head {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  color: var(--ink-60);
+}
+.console-output pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.55;
+  background: var(--paper-sunk);
+  border: var(--bw-hairline) solid var(--hairline);
+  border-radius: var(--r-chip);
+}
+
+.console-connect { margin-top: var(--s-6); padding-top: var(--s-5); border-top: var(--bw-hairline) solid var(--hairline); }
+.console-connect-head {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
+.console-connect ul { margin: 0; padding-left: var(--s-5); }
+.console-connect li {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+  margin-bottom: var(--s-2);
+}
+
+/* ---------- activity ---------- */
+
+.activity ol { list-style: none; margin: 0; padding: 0; }
+.activity li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+  font-size: var(--fs-meta);
+}
+.activity-source {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-ui);
+  letter-spacing: var(--ls-pill);
+  color: var(--ink-60);
+}
+.source-agent { color: var(--brand); }
+.source-local-inspector { color: var(--warn); }
+.activity-action { color: var(--ink-70); min-width: 0; }
+.activity-rev { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-35); }
+.activity-empty { font-size: var(--fs-sm); color: var(--ink-35); margin: 0; }
+
+/* ---------- math ---------- */
+
+.math .katex { font-size: 1em; }
+.math-raw { font-family: var(--font-mono); color: var(--path-a); }
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 980px) {
+  .scratch-grid { grid-template-columns: minmax(0, 1fr); padding: var(--s-8) var(--s-6) var(--s-12); }
+  .work { padding-right: 0; }
+  .margin {
+    padding-left: 0;
+    border-left: 0;
+    border-top: var(--bw-hairline) solid var(--hairline);
+    padding-top: var(--s-9);
+    margin-top: var(--s-11);
+  }
+  .scratch-header { padding: 0 var(--s-6); grid-template-columns: auto 1fr; }
+  .scratch-title { display: none; }
+}
+
+.how {
+  max-width: var(--measure-prose);
+  margin: 0 0 var(--s-9);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.step-detail .math { color: var(--path-a); }

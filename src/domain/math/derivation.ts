@@ -25,8 +25,21 @@ import { computeEngine, parseExpression } from './expression'
 export type StepRelation = 'first' | 'equals' | 'differentiates'
 
 export type StepVerdict =
-  | { status: 'sound'; relation: StepRelation }
-  | { status: 'broken'; reason: 'not_equivalent'; counterexample?: Record<string, number> }
+  | {
+      status: 'sound'
+      relation: StepRelation
+    }
+  | {
+      status: 'broken'
+      reason: 'not_equivalent'
+      /**
+       * What is actually missing, as mathematics. `12x^2` teaches; "they differ at
+       * x = 2.580159" only proves. We show the difference when it is simple enough to
+       * read, and fall back to the counterexample point when it is not.
+       */
+      difference?: { latex: string; against: 'previous' | 'derivative' }
+      counterexample?: Record<string, number>
+    }
   | { status: 'uncertain' }
   | { status: 'unreadable'; code: string; message: string }
   | { status: 'downstream' }
@@ -40,6 +53,43 @@ export type DerivationReport = {
   firstBrokenId: string | null
   /** True when every line is sound. */
   allSound: boolean
+}
+
+const READABLE_DIFFERENCE_CHARS = 40
+
+/**
+ * Reports what is missing rather than merely that something is.
+ *
+ * The step could have been intended as a rewrite or as a differentiation, and we do
+ * not ask the learner which. So both differences are computed and the shorter one is
+ * reported: whichever reading the learner meant, the smaller residue is the one that
+ * names the actual mistake. A residue too long to read is suppressed, because an
+ * unreadable wall of algebra teaches nothing.
+ */
+function describeDifference(
+  previous: BoxedExpression,
+  current: BoxedExpression,
+  derived: BoxedExpression | null,
+): { difference: { latex: string; against: 'previous' | 'derivative' } } | null {
+  const candidates: Array<{ latex: string; against: 'previous' | 'derivative' }> = []
+  const consider = (from: BoxedExpression | null, against: 'previous' | 'derivative') => {
+    if (!from) return
+    try {
+      const residue = from.sub(current).simplify()
+      if (!residue.isValid) return
+      const latex = residue.latex
+      if (!latex || latex.length > READABLE_DIFFERENCE_CHARS) return
+      if (residue.isEqual(0) === true) return
+      candidates.push({ latex, against })
+    } catch {
+      /* an unrepresentable difference is simply not reported */
+    }
+  }
+  consider(previous, 'previous')
+  consider(derived, 'derivative')
+  if (candidates.length === 0) return null
+  candidates.sort((a, b) => a.latex.length - b.latex.length)
+  return { difference: candidates[0] }
 }
 
 function differentiate(expr: BoxedExpression, variable: string): BoxedExpression | null {
@@ -120,6 +170,7 @@ export function checkDerivation(lines: readonly DerivationLine[], variable: stri
     verdicts[line.id] = {
       status: 'broken',
       reason: 'not_equivalent',
+      ...(describeDifference(previousParsed.expr, parsed.expr, derived) ?? {}),
       ...(asRewrite.status === 'mismatch' && asRewrite.routes.counterexample
         ? { counterexample: asRewrite.routes.counterexample }
         : {}),

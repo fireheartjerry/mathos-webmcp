@@ -1,0 +1,174 @@
+import { useState } from 'react'
+import type { ToolDefinition } from '../domain/tools/definitions'
+import type { RegistrationStatus } from '../domain/tools/registry'
+
+/**
+ * The Agent Console.
+ *
+ * The default judge browser has no WebMCP. The previous build's entire answer to that
+ * was a 10px grey line in a corner saying agent tools were unavailable, which meant
+ * the one thing this submission is about was invisible by default and announced only
+ * as an absence.
+ *
+ * So this panel is a permanent product surface, rendered in every browser. It lists
+ * the real tool objects, states the detection result verbatim, and lets anyone run a
+ * tool through the *identical* execute path the agent uses - logged as
+ * `local-inspector`, and labelled as not being an agent. Nothing is simulated.
+ */
+
+type Props = {
+  status: RegistrationStatus
+  tools: ToolDefinition[]
+  onRun: (toolName: string, argsJson: string) => Promise<string>
+  revision: number
+}
+
+const SUGGESTED: Record<string, (revision: number) => string> = {
+  get_scratchpad: () => '{}',
+  get_receipt: () => '{}',
+  check_work: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+  annotate_step: (r) =>
+    `{ "stepId": "step-1", "note": "Look again at the second term.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+  propose_step: (r) =>
+    `{ "stepId": "step-1", "latex": "9x^2 + 2x", "rationale": "Both routes contribute.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+  new_problem: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+}
+
+function StatusLine({ status }: { status: RegistrationStatus }) {
+  if (status.state === 'live') {
+    return (
+      <p className="console-status console-live">
+        <span className="dot" aria-hidden="true" />
+        {status.registered} tools registered with this tab
+      </p>
+    )
+  }
+  if (status.state === 'partial') {
+    return (
+      <p className="console-status console-warn">
+        <span className="dot" aria-hidden="true" />
+        {status.registered} of {status.total} tools registered. Failed: {status.failures.join(', ')}
+      </p>
+    )
+  }
+  if (status.state === 'failed') {
+    return (
+      <p className="console-status console-warn">
+        <span className="dot" aria-hidden="true" />
+        {status.detail}
+      </p>
+    )
+  }
+  return (
+    <p className="console-status console-idle">
+      <span className="dot" aria-hidden="true" />
+      No agent connected. {status.detail}
+    </p>
+  )
+}
+
+export default function AgentConsole({ status, tools, onRun, revision }: Props) {
+  const [openTool, setOpenTool] = useState<string | null>(null)
+  const [args, setArgs] = useState<string>('')
+  const [output, setOutput] = useState<{ tool: string; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const connected = status.state === 'live' || status.state === 'partial'
+
+  async function run(name: string) {
+    setBusy(true)
+    try {
+      const text = await onRun(name, args || (SUGGESTED[name]?.(revision) ?? '{}'))
+      setOutput({ tool: name, text })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function toggle(name: string) {
+    if (openTool === name) {
+      setOpenTool(null)
+      return
+    }
+    setOpenTool(name)
+    setArgs(SUGGESTED[name]?.(revision) ?? '{}')
+  }
+
+  return (
+    <section className="agent-console" aria-labelledby="console-heading">
+      <p className="kicker" id="console-heading">
+        Agent tools
+      </p>
+      <hr className="rule" />
+      <StatusLine status={status} />
+
+      <ul className="console-tools">
+        {tools.map((tool) => {
+          const open = openTool === tool.name
+          return (
+            <li key={tool.name} className={open ? 'is-open' : undefined}>
+              <button
+                type="button"
+                className="console-tool-head"
+                aria-expanded={open}
+                onClick={() => toggle(tool.name)}
+              >
+                <span className="console-tool-name">{tool.name}</span>
+                <span className={tool.annotations.readOnlyHint ? 'tag tag-read' : 'tag tag-write'}>
+                  {tool.annotations.readOnlyHint ? 'read' : 'write'}
+                </span>
+              </button>
+              {open && (
+                <div className="console-tool-body">
+                  <p className="console-tool-desc">{tool.description}</p>
+                  <label className="console-args-label" htmlFor={`args-${tool.name}`}>
+                    Arguments
+                  </label>
+                  <textarea
+                    id={`args-${tool.name}`}
+                    className="console-args"
+                    rows={3}
+                    spellCheck={false}
+                    value={args}
+                    onChange={(event) => setArgs(event.target.value)}
+                  />
+                  <button type="button" className="button button-sm" disabled={busy} onClick={() => run(tool.name)}>
+                    {busy ? 'Running' : 'Run this tool'}
+                  </button>
+                  <p className="console-hint">
+                    Runs the same handler an agent calls. Recorded as{' '}
+                    <code>local-inspector</code>, not as an agent.
+                  </p>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+
+      {output && (
+        <div className="console-output">
+          <p className="console-output-head">
+            <code>{output.tool}</code> returned
+          </p>
+          <pre>{output.text}</pre>
+        </div>
+      )}
+
+      {!connected && (
+        <div className="console-connect">
+          <p className="console-connect-head">To drive these with a real agent</p>
+          <ul>
+            <li>
+              ChatGPT&rsquo;s built-in browser, on <strong>GPT&#8209;5.6 Sol or Terra</strong>. Luna has
+              WebMCP disabled.
+            </li>
+            <li>
+              Chrome 149 or later with <code>chrome://flags/#enable-webmcp-testing</code> enabled.
+            </li>
+          </ul>
+        </div>
+      )}
+    </section>
+  )
+}
