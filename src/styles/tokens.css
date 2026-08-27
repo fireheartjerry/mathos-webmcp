@@ -11,7 +11,7 @@
 :root {
   /* ---- SURFACES (Sarsa ground, Mathos-compatible) --------------------- */
   --paper:            #FAFAF7;   /* page ground - Sarsa exact; Mathos #FCFCFB is equivalent */
-  --paper-sunk:       #F4F4F0;   /* recessed rails, table zebra, inert wells */
+  --paper-sunk:       #F0F0EB;   /* recessed rails, table zebra, inert wells */
   --panel:            #FFFFFF;   /* the ONE raised surface. Both refs agree. */
   --panel-tint:       #ECF6FE;   /* Mathos --color-brand-50: formula banners, step badges */
   --panel-verify:     #EEF4F0;   /* verification strip ground (green-tinted paper) */
@@ -22,7 +22,8 @@
   --ink-cool:         #0A0E1B;   /* Mathos --color-ink-900. Dark inline chips only */
   --ink-70:  rgba(22, 21, 15, 0.68);  /* body prose, nav at rest */
   --ink-60:  rgba(22, 21, 15, 0.62);  /* kickers, numerals, meta */
-  --ink-35:  rgba(22, 21, 15, 0.35);  /* faint strokes, disabled */
+  --ink-35:  rgba(22, 21, 15, 0.35);
+  --ink-meta: rgba(22, 21, 15, 0.58);   /* smallest readable text; 4.5:1 on --paper */  /* faint strokes, disabled */
   --hairline:         rgba(22, 21, 15, 0.12);  /* EVERY divider and card border */
   --hairline-strong:  rgba(22, 21, 15, 0.22);
   --wash:             rgba(22, 21, 15, 0.06);  /* hover ground, unfilled progress track */
@@ -44,7 +45,7 @@
   --path-a:           #C2541E;   /* rust  - the route under discussion / attempted route */
   --path-b:           #2E5E8C;   /* steel - alternative route */
   --path-c:           #33724F;   /* green - verified route */
-  --path-d:           #7A5C9E;   /* violet - fourth route */
+     /* violet - fourth route */
   --path-faint:       rgba(22, 21, 15, 0.42);  /* de-emphasise by ALPHA, never by hue */
 
   /* ---- TYPE FAMILIES -------------------------------------------------- */
@@ -56,15 +57,15 @@
   /* ---- TYPE SIZES ----------------------------------------------------- */
   --fs-micro:   11px;  /* pills, legends */
   --fs-kicker:  12px;  /* uppercase eyebrow */
-  --fs-num:     13px;  /* step indices, tnum meta */
+  /* step indices, tnum meta */
   --fs-meta:    14px;  /* footer meta, nav CTA */
-  --fs-ui:      15px;  /* nav links, button label, dense body */
+  /* nav links, button label, dense body */
   --fs-sm:      16px;  /* column body */
   --fs-body:    17px;  /* BASE */
   --fs-lg:      18px;  /* section prose */
-  --fs-xl:      19px;  /* wordmark, hero sub */
+  /* wordmark, hero sub */
   --fs-2xl:     21px;  /* premise paragraph */
-  --fs-3xl:     22px;  /* card / pillar h3 */
+  /* card / pillar h3 */
   --fs-pull:    clamp(24px, 3.0vw, 36px);   /* pull quote */
   --fs-section: clamp(28px, 3.4vw, 44px);   /* Sarsa --display-section */
   --fs-hero:    clamp(40px, 5.6vw, 76px);   /* Sarsa --display-hero */
@@ -179,6 +180,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 h1, h2, h3, p { margin: 0; }
+strong, b { font-weight: var(--fw-ui); }   /* the browser default is 700 */
 a { color: inherit; text-decoration: none; }
 button { font: inherit; cursor: pointer; }
 ::selection { background: var(--ink); color: var(--paper); }
@@ -210,18 +212,18 @@ button { font: inherit; cursor: pointer; }
   background: var(--ink); color: var(--paper);
   border: var(--bw-hairline) solid var(--ink); border-radius: var(--r-control);
   box-shadow: var(--shadow-none);
-  position: relative; overflow: hidden;
-  transition: color var(--d-fill) ease, transform var(--d-instant) ease;
+  position: relative; overflow: hidden; isolation: isolate;
+  transition: color var(--d-fill) var(--ease-out), transform var(--d-instant) var(--ease-out);
 }
 .button::before {
   content: ""; position: absolute; inset: 0; background: var(--paper);
-  transform: scaleX(0); transform-origin: left center; z-index: 0;
+  transform: scaleX(0); transform-origin: left center; z-index: -1;
   transition: transform var(--d-fill) var(--ease-emph);
 }
 .button:hover::before { transform: scaleX(1); }
 .button:hover { color: var(--ink); }
-.button > span, .button .arrow { position: relative; z-index: 1; }
-.button .arrow { transition: transform var(--d-fill) ease; }
+.button > span, .button .arrow { position: relative; }
+.button .arrow { transition: transform var(--d-fill) var(--ease-out); }
 .button:hover .arrow { transform: translateX(4px); }
 .button:active { transform: scale(0.97); }
 
@@ -302,3 +304,23 @@ button { font: inherit; cursor: pointer; }
   transition: top var(--d-instant) var(--ease-out);
 }
 .skip-link:focus { top: var(--s-4); }
+
+/* ---- STATE CLASSES (rule 36: these must exist, not be improvised) ---- */
+
+.is-loading {
+  color: transparent;
+  background: linear-gradient(90deg, var(--wash), var(--paper-sunk), var(--wash));
+  border-radius: var(--r-chip);
+  min-height: 1em;
+}
+.is-empty { color: var(--ink-meta); font-size: var(--fs-sm); }
+.is-error {
+  color: var(--warn);
+  font-size: var(--fs-sm);
+  border-left: var(--bw-track) solid var(--warn);
+  padding-left: var(--s-3);
+}
+
+/* rule 32: every interactive element defines all four states. */
+.skip-link:hover { background: var(--brand-deep); }
+.skip-link:active { background: var(--brand); }

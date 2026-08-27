@@ -183,11 +183,19 @@ export function applyAction(
       if (state.steps.length === 0) {
         return fail('invalid_phase', 'There is nothing to check yet.', 'Write at least one step first.')
       }
-      const report = checkDerivation(state.steps, state.problem.variable, state.problem.evaluationPoint)
+      const report = checkDerivation(
+        state.steps,
+        state.problem.variable,
+        state.problem.evaluationPoint,
+        state.problem.premiseLatex,
+        state.problem.answer,
+      )
       // A check is the moment attempts reset: the learner has committed to this work.
       const steps = state.steps.map((s) => ({ ...s, attempts: 0 }))
       const description = report.allSound
-        ? 'Checked the derivation · every step sound'
+        ? report.reachesAnswer
+          ? 'Checked the derivation · sound, and it reaches the answer'
+          : 'Checked the derivation · sound, but it does not reach the answer yet'
         : report.firstBrokenId
           ? `Checked the derivation · first break at step ${(report.firstBrokenIndex ?? 0) + 1}`
           : 'Checked the derivation'
@@ -198,6 +206,7 @@ export function applyAction(
         { report, steps, tally: { ...state.tally, checks: state.tally.checks + 1 } },
         {
           allSound: report.allSound,
+          reachesAnswer: report.reachesAnswer,
           firstBrokenStep: report.firstBrokenIndex === null ? null : report.firstBrokenIndex + 1,
           firstBrokenId: report.firstBrokenId,
         },
@@ -334,7 +343,7 @@ export function applyAction(
       const summary = {
         round: state.round,
         problemId: state.problem.id,
-        sound: state.report.allSound,
+        sound: state.report.allSound && state.report.reachesAnswer,
         checks: state.tally.checks,
         agentAnnotations: state.tally.annotations,
         agentProposalsAccepted: state.tally.proposalsAccepted,

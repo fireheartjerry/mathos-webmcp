@@ -53,8 +53,14 @@ export type DerivationReport = {
   /** Index into the supplied lines, or null when nothing is broken. */
   firstBrokenIndex: number | null
   firstBrokenId: string | null
-  /** True when every line is sound. */
+  /** True when every line follows from the one above it. */
   allSound: boolean
+  /**
+   * True when the last line is the answer the problem asked for. Internal consistency
+   * is not the same as answering the question: a derivation about an unrelated
+   * expression can be perfectly sound and still not be a solution.
+   */
+  reachesAnswer: boolean
 }
 
 const READABLE_DIFFERENCE_CHARS = 40
@@ -126,13 +132,21 @@ export function checkDerivation(
   lines: readonly DerivationLine[],
   variable: string,
   evaluationPoint?: number,
+  premiseLatex?: string,
+  answer?: { latex: string; value: number },
 ): DerivationReport {
   const verdicts: Record<string, StepVerdict> = {}
   const allowed = [variable]
   let firstBrokenIndex: number | null = null
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+  // The problem statement is line zero. Anchoring the learner's first line to it is
+  // what stops an internally consistent derivation about something else from passing.
+  const premise: DerivationLine | null = premiseLatex ? { id: '__premise__', latex: premiseLatex } : null
+  const chain = premise ? [premise, ...lines] : lines
+  const offset = premise ? 1 : 0
+
+  for (let i = offset; i < chain.length; i++) {
+    const line = chain[i]
 
     // Once something is broken, later lines are downstream of it. They are still
     // shown, but they are not judged - their premise is already wrong.
@@ -144,7 +158,7 @@ export function checkDerivation(
     const parsed = parseExpression(line.latex, allowed)
     if (!parsed.ok) {
       verdicts[line.id] = { status: 'unreadable', code: parsed.code, message: parsed.message }
-      firstBrokenIndex = i
+      firstBrokenIndex = i - offset
       continue
     }
 
@@ -153,13 +167,13 @@ export function checkDerivation(
       continue
     }
 
-    const previous = lines[i - 1]
+    const previous = chain[i - 1]
     const previousParsed = parseExpression(previous.latex, allowed)
     if (!previousParsed.ok) {
       // Unreachable in practice: an unreadable predecessor would already have set
       // firstBrokenIndex. Handled so the function is total.
       verdicts[line.id] = { status: 'uncertain' }
-      firstBrokenIndex = i
+      firstBrokenIndex = i - offset
       continue
     }
 
@@ -195,7 +209,7 @@ export function checkDerivation(
     // If any reading is merely undecided, we must not call the step wrong.
     if (asRewrite.status === 'uncertain' || derivativeUncertain) {
       verdicts[line.id] = { status: 'uncertain' }
-      firstBrokenIndex = i
+      firstBrokenIndex = i - offset
       continue
     }
 
@@ -207,13 +221,23 @@ export function checkDerivation(
         ? { counterexample: asRewrite.routes.counterexample }
         : {}),
     }
-    firstBrokenIndex = i
+    firstBrokenIndex = i - offset
+  }
+
+  const allSound = firstBrokenIndex === null && lines.length > 0
+  const last = lines[lines.length - 1]
+  let reachesAnswer = false
+  if (allSound && answer && last) {
+    reachesAnswer =
+      compareExpressions(last.latex, answer.latex, allowed).status === 'match' ||
+      compareExpressions(last.latex, String(answer.value), []).status === 'match'
   }
 
   return {
     verdicts,
     firstBrokenIndex,
     firstBrokenId: firstBrokenIndex === null ? null : lines[firstBrokenIndex].id,
-    allSound: firstBrokenIndex === null && lines.length > 0,
+    allSound,
+    reachesAnswer,
   }
 }

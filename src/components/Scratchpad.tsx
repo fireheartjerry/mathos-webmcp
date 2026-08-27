@@ -195,7 +195,8 @@ export default function Scratchpad() {
           // agent is talking about in front of the person reading the annotation.
           if (action.type === 'ANNOTATE_STEP' && action.focus) {
             const el = document.getElementById(`line-${action.stepId}`)
-            el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            el?.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' })
             el?.classList.add('step-focused')
             window.setTimeout(() => el?.classList.remove('step-focused'), 1600)
           }
@@ -339,7 +340,7 @@ export default function Scratchpad() {
           )}
 
           {state.steps.length === 0 && (
-            <p className="how">
+            <p className="how how-lead">
               Write your working one line at a time. Each line should be equal to the line above
               it, or its derivative, or its value at the point in the question. Second Try checks
               every line against the one above and marks the first that stops being true.
@@ -553,13 +554,22 @@ export default function Scratchpad() {
             </div>
           )}
 
-          {state.round === 'transfer' && report?.allSound && <Receipt state={state} />}
+          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <Receipt state={state} />}
+
+          {state.steps.length > 0 && (
+            <p className="how how-foot">
+              Each line should be equal to the line above it, or its derivative, or its value at
+              the point in the question. Click any line to rewrite it.
+            </p>
+          )}
 
           <p className="live-status" role="status" aria-live="polite">
             {flash ||
               (report
                 ? report.allSound
-                  ? 'Every line follows from the one above it.'
+                  ? report.reachesAnswer
+                    ? 'Every line follows, and the last one is the answer this problem asked for.'
+                    : 'Every line follows from the one above it — but this is not yet the answer the problem asked for.'
                   : report.firstBrokenIndex !== null
                     ? `Line ${report.firstBrokenIndex + 1} is the first that does not follow.`
                     : ''

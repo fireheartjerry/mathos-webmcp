@@ -18,7 +18,9 @@ export function Tex({ latex, display = false, ariaLabel }: { latex: string; disp
         throwOnError: false,
         errorColor: 'var(--path-a)',
         strict: false,
-        output: 'html',
+        // 'htmlAndMathml' keeps KaTeX's MathML branch, which is what a screen reader
+        // announces. With 'html' every expression on the page is an unnamed role="math".
+        output: 'htmlAndMathml',
       })
     } catch {
       return ''

@@ -125,6 +125,47 @@ describe('refusing to over-claim', () => {
   })
 })
 
+describe('answering the question, not merely being self-consistent', () => {
+  const PREMISE = '4x^3 + x^2'          // y
+  const ANSWER = { latex: '12x^2 + 2x', value: 52 }   // dy/dx, and its value at x = 2
+
+  it('rejects a derivation that never starts from the problem', () => {
+    // Internally consistent, and about something else entirely.
+    const report = checkDerivation(lines('x^2', '2x', '4'), 'x', 2, PREMISE, ANSWER)
+    expect(report.firstBrokenIndex).toBe(0)
+    expect(report.allSound).toBe(false)
+  })
+
+  it('accepts a derivation that does start from the problem', () => {
+    const report = checkDerivation(lines(PREMISE, '12x^2 + 2x', '52'), 'x', 2, PREMISE, ANSWER)
+    expect(report.allSound).toBe(true)
+    expect(report.reachesAnswer).toBe(true)
+  })
+
+  it('accepts a first line written in another equivalent form', () => {
+    const report = checkDerivation(lines('x^2 + 4x^3', '12x^2 + 2x'), 'x', 2, PREMISE, ANSWER)
+    expect(report.allSound).toBe(true)
+  })
+
+  it('separates "every line follows" from "this answers the question"', () => {
+    // Sound, but it stops before the derivative was taken.
+    const report = checkDerivation(lines(PREMISE, 'x^2 + 4x^3'), 'x', 2, PREMISE, ANSWER)
+    expect(report.allSound).toBe(true)
+    expect(report.reachesAnswer).toBe(false)
+  })
+
+  it('counts the numeric answer as reaching it', () => {
+    const report = checkDerivation(lines(PREMISE, '12x^2 + 2x', '52'), 'x', 2, PREMISE, ANSWER)
+    expect(report.reachesAnswer).toBe(true)
+  })
+
+  it('never claims to reach the answer when a line is broken', () => {
+    const report = checkDerivation(lines(PREMISE, '12x^2 + 2x', '0', '52'), 'x', 2, PREMISE, ANSWER)
+    expect(report.allSound).toBe(false)
+    expect(report.reachesAnswer).toBe(false)
+  })
+})
+
 describe('the learner is not punished for a correct but unusual route', () => {
   it('accepts an expanded intermediate line', () => {
     const report = checkDerivation(

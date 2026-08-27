@@ -31,6 +31,8 @@
   text-decoration: none;
 }
 .wordmark:hover { color: var(--brand); }
+.wordmark:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 3px; }
+.wordmark:active { color: var(--brand-deep); }
 
 .scratch-title {
   font-size: var(--fs-meta);
@@ -38,7 +40,7 @@
 }
 .scratch-session {
   font-family: var(--font-mono);
-  font-size: var(--fs-num);
+  font-size: var(--fs-meta);
 }
 
 .header-status {
@@ -127,12 +129,12 @@
 
 .step-n {
   font-family: var(--font-mono);
-  font-size: var(--fs-num);
-  color: var(--ink-35);
+  font-size: var(--fs-meta);
+  color: var(--ink-meta);
   padding-top: 2px;
 }
 
-.step-body { min-width: 0; font-size: var(--fs-xl); }
+.step-body { min-width: 0; font-size: var(--fs-lg); }
 
 /* The first broken step is the only thing the interface points at. */
 .step-broken {
@@ -171,7 +173,7 @@
 .step-remove {
   border: 0;
   background: none;
-  color: var(--ink-35);
+  color: var(--ink-meta);
   font-size: var(--fs-lg);
   line-height: 1;
   cursor: pointer;
@@ -194,12 +196,12 @@
   border: var(--bw-hairline) solid transparent;
   white-space: nowrap;
 }
-.badge-idle { color: var(--ink-35); border-color: var(--hairline); }
+.badge-idle { color: var(--ink-meta); border-color: var(--hairline); }
 .badge-sound { color: var(--verify-deep); background: var(--panel-verify); border-color: var(--verify); }
 .badge-broken { color: var(--path-a); background: var(--panel-path); border-color: var(--path-a); }
 .badge-uncertain { color: var(--warn); border-color: var(--warn); }
 .badge-unreadable { color: var(--warn); border-color: var(--warn); }
-.badge-downstream { color: var(--ink-35); border-color: var(--hairline); }
+.badge-downstream { color: var(--ink-meta); border-color: var(--hairline); }
 
 /* ---------- proposal: the agent asks, the learner decides ---------- */
 
@@ -242,14 +244,14 @@
   height: 44px;
   padding: 0 var(--s-4);
   font-family: var(--font-mono);
-  font-size: var(--fs-ui);
+  font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--panel);
   border: var(--bw-hairline) solid var(--hairline-strong);
   border-radius: var(--r-control);
   transition: border-color var(--d-instant) var(--ease-out);
 }
-.composer-row input::placeholder { color: var(--ink-35); }
+.composer-row input::placeholder { color: var(--ink-meta); }
 .composer-row input:hover { border-color: var(--ink-35); }
 .composer-row input:focus-visible {
   outline: var(--bw-focus) solid var(--ink);
@@ -308,7 +310,7 @@
 .console-tool-head:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
 .console-tool-head:active { color: var(--brand-deep); }
 
-.console-tool-name { font-family: var(--font-mono); font-size: var(--fs-num); }
+.console-tool-name { font-family: var(--font-mono); font-size: var(--fs-meta); }
 
 .tag {
   font-size: var(--fs-micro);
@@ -340,7 +342,7 @@
 .console-args {
   width: 100%;
   font-family: var(--font-mono);
-  font-size: var(--fs-num);
+  font-size: var(--fs-meta);
   line-height: 1.5;
   padding: var(--s-3);
   color: var(--ink);
@@ -360,7 +362,7 @@
 }
 .console-hint code, .console-connect code {
   font-family: var(--font-mono);
-  font-size: 0.95em;
+  font-size: 1em;
   background: var(--wash);
   padding: 1px 4px;
   border-radius: var(--r-chip);
@@ -422,8 +424,8 @@
 .source-agent { color: var(--brand); }
 .source-local-inspector { color: var(--warn); }
 .activity-action { color: var(--ink-70); min-width: 0; }
-.activity-rev { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-35); }
-.activity-empty { font-size: var(--fs-sm); color: var(--ink-35); margin: 0; }
+.activity-rev { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-meta); }
+.activity-empty { font-size: var(--fs-sm); color: var(--ink-meta); margin: 0; }
 
 /* ---------- math ---------- */
 
@@ -551,7 +553,7 @@
   height: 40px;
   padding: 0 var(--s-3);
   font-family: var(--font-mono);
-  font-size: var(--fs-ui);
+  font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--panel);
   border: var(--bw-hairline) solid var(--ink);
@@ -560,3 +562,10 @@
 .step-edit input:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
 
 .step-focused { background: var(--panel-tint); }
+
+.how-foot {
+  margin: var(--s-9) 0 0;
+  padding-top: var(--s-5);
+  border-top: var(--bw-hairline) solid var(--hairline);
+  color: var(--ink-meta);
+}

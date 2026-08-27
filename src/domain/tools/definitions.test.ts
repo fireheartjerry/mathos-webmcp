@@ -201,7 +201,7 @@ describe('idempotency', () => {
   it('re-checks rather than replaying a stale verdict when the work has changed', async () => {
     // An agent asked to "check it again" often reuses its requestId. Keyed on the id
     // alone it would receive the previous verdict presented as a fresh one.
-    h.learner({ type: 'ADD_STEP', latex: '3x^3 + x^2' })
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
     const first = await call(h.byName('check_work'), {
       expectedRevision: h.state.revision,
       requestId: 'req-again-1',
@@ -313,8 +313,8 @@ describe('the verdict belongs to the engine, not the agent', () => {
   it('an agent calling check_work on wrong work still gets a mismatch', async () => {
     // The demonstration the submission rests on: the agent cannot make a wrong step
     // correct, because it does not author the verdict.
-    h.learner({ type: 'ADD_STEP', latex: '3x^3 + x^2' })
-    h.learner({ type: 'ADD_STEP', latex: '9x^2' }) // drops the 2x term
+    h.learner({ type: 'ADD_STEP', latex: h.state.problem.premiseLatex })
+    h.learner({ type: 'ADD_STEP', latex: '9999x' }) // not the derivative of anything here
     const result = await call(h.byName('check_work'), {
       expectedRevision: h.state.revision,
       requestId: 'req-truth-1',

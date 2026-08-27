@@ -146,14 +146,34 @@ const TOOLS = [
       <section class="honest">
         <p class="kicker">What it does not claim</p>
         <hr class="rule" />
-        <p class="honest-body">
-          Passing here is evidence about one session in one browser. It is not proof of
-          understanding, and the page says so on the evidence surface itself. The supported
-          mathematics is bounded: derivatives of polynomial expressions and algebraic rewriting.
-          When the two verification routes disagree, the page reports that it could not determine
-          the answer rather than guessing.
-        </p>
-        <a class="button" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
+        <div class="honest-split">
+          <div>
+            <p class="honest-body">
+              Passing here is evidence about one session in one browser. It is not proof of
+              understanding, and the page says so on the evidence surface itself. The supported
+              mathematics is bounded: derivatives of polynomial expressions and algebraic
+              rewriting. When the two verification routes disagree, the page reports that it could
+              not determine the answer rather than guessing.
+            </p>
+            <a class="button" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+          <div class="connect">
+            <p class="connect-head">To drive the tools with a real agent</p>
+            <ul>
+              <li>
+                ChatGPT&rsquo;s built-in browser, on <strong>GPT&#8209;5.6 Sol or Terra</strong>.
+                Luna has WebMCP disabled.
+              </li>
+              <li>
+                Chrome 149 or later with <code>chrome://flags/#enable-webmcp-testing</code>.
+              </li>
+            </ul>
+            <p class="connect-note">
+              Without either, the scratchpad still works and the Agent Console still lists and runs
+              all six tools through the same handler an agent calls.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
 

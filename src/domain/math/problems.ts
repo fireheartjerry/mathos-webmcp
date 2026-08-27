@@ -43,6 +43,12 @@ export type Problem = {
   definitions: ProblemDefinition[]
   /** The quantity being differentiated, e.g. "y". */
   resultName: string
+  /**
+   * The quantity being differentiated, written out in the problem's variable. The
+   * learner's first line is checked against this; without it a derivation about some
+   * unrelated expression would be judged internally consistent and passed.
+   */
+  premiseLatex: string
   answer: { latex: string; value: number }
   errorModes: ErrorMode[]
 }
@@ -166,6 +172,7 @@ function buildSharedPath(seed: number): Problem | null {
       { name: 'y', latex: 'a \\cdot b + a' },
     ],
     resultName: 'y',
+    premiseLatex: y.simplify().latex,
     answer: { latex: correct.latex, value: correct.value },
     errorModes: errors,
   }
