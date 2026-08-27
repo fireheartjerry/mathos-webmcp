@@ -10,7 +10,7 @@ import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import SessionDetails from './SessionDetails'
-import { actorLabel, relationLabel } from './proofPresentation'
+import { actorLabel, registrationStatusLabel, relationLabel } from './proofPresentation'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
@@ -317,13 +317,7 @@ export default function Scratchpad() {
         </p>
         <p className={`header-status header-${status.state}`}>
           <span className="dot" aria-hidden="true" />
-          {status.state === 'live'
-            ? `${status.registered} page tools registered`
-            : status.state === 'partial'
-              ? `${status.registered}/${status.total} page tools registered`
-              : status.state === 'failed'
-                ? 'Page tools failed to register'
-                : 'WebMCP unavailable here'}
+          {registrationStatusLabel(status)}
         </p>
       </header>
 
