@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { applyAction, createSession } from '../domain/session/reducer'
-import { clearSession, loadSession, saveSession } from '../domain/session/persistence'
+import { clearSession, loadSession, saveSession, STORAGE_KEY } from '../domain/session/persistence'
 import type { ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
 import type { StepVerdict } from '../domain/math/derivation'
 import { registerTools } from '../domain/tools/registry'
@@ -126,6 +126,7 @@ export default function Scratchpad() {
   // controls only become live once the island has hydrated; say so rather than
   // accepting keystrokes that would be discarded.
   const [ready, setReady] = useState(false)
+  const [tabConflict, setTabConflict] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
@@ -218,6 +219,27 @@ export default function Scratchpad() {
 
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
   const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
+
+  // Two tabs share one storage key, so the second one to write wins and the first
+  // would silently fail to restore on reload. We cannot merge two live derivations
+  // sensibly, so we say what happened instead of losing work quietly.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return
+      try {
+        const incoming: unknown = JSON.parse(event.newValue)
+        const id =
+          incoming && typeof incoming === 'object' && 'sessionId' in incoming
+            ? String((incoming as { sessionId: unknown }).sessionId)
+            : null
+        if (id && id !== stateRef.current.sessionId) setTabConflict(true)
+      } catch {
+        /* an unreadable payload is handled on the next load */
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // A requestId from a finished session must not replay into a new one. Idempotency
   // is scoped to the session it was established in.
@@ -597,6 +619,13 @@ export default function Scratchpad() {
           )}
 
           {!ready && <p className="is-empty">Loading the mathematics engine…</p>}
+
+          {tabConflict && (
+            <p className="is-error" role="status">
+              Another tab has started a different session. This one still works, but it is no
+              longer the session that will be restored if you reload.
+            </p>
+          )}
 
           <p className="live-status" role="status" aria-live="polite">
             {flash ||
