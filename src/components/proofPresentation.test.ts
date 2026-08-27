@@ -4,9 +4,11 @@ import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import {
   actorLabel,
+  isBrokenVerdict,
   registrationStatusLabel,
   relationDetail,
   relationLabel,
+  reportStatusMessage,
 } from './proofPresentation'
 
 describe('registrationStatusLabel', () => {
@@ -99,6 +101,38 @@ describe('relationDetail', () => {
   it('does not invent detail for a checked step', () => {
     const verdict: StepVerdict = { status: 'sound', relation: 'equals' }
     expect(relationDetail(verdict)).toBeNull()
+  })
+})
+
+describe('unresolved report presentation', () => {
+  it('does not style unreadable or uncertain relations as broken', () => {
+    expect(
+      isBrokenVerdict({
+        status: 'unreadable',
+        code: 'parse_error',
+        message: 'That expression could not be read.',
+      }),
+    ).toBe(false)
+    expect(isBrokenVerdict({ status: 'uncertain' })).toBe(false)
+    expect(isBrokenVerdict({ status: 'broken', reason: 'not_equivalent' })).toBe(true)
+  })
+
+  it('calls an unreadable first issue unresolved, not a broken relation', () => {
+    expect(
+      reportStatusMessage({
+        verdicts: {
+          'step-2': {
+            status: 'unreadable',
+            code: 'parse_error',
+            message: 'That expression could not be read.',
+          },
+        },
+        firstBrokenIndex: 1,
+        firstBrokenId: 'step-2',
+        allSound: false,
+        reachesAnswer: false,
+      }),
+    ).toBe('Line 2 is the first unresolved line.')
   })
 })
 

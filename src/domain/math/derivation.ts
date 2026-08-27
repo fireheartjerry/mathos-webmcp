@@ -50,7 +50,7 @@ export type DerivationLine = { id: string; latex: string }
 
 export type DerivationReport = {
   verdicts: Record<string, StepVerdict>
-  /** Index into the supplied lines, or null when nothing is broken. */
+  /** Index of the first non-sound line. Legacy name retained for saved sessions. */
   firstBrokenIndex: number | null
   firstBrokenId: string | null
   /** True when every line follows from the one above it. */
@@ -61,6 +61,26 @@ export type DerivationReport = {
    * expression can be perfectly sound and still not be a solution.
    */
   reachesAnswer: boolean
+}
+
+export type DerivationIssue = {
+  index: number
+  id: string
+  verdict: StepVerdict
+  kind: 'broken' | 'unresolved'
+}
+
+/** Interprets the legacy firstBroken fields without calling uncertainty incorrect. */
+export function getFirstIssue(report: DerivationReport): DerivationIssue | null {
+  if (report.firstBrokenIndex === null || !report.firstBrokenId) return null
+  const verdict = report.verdicts[report.firstBrokenId]
+  if (!verdict) return null
+  return {
+    index: report.firstBrokenIndex,
+    id: report.firstBrokenId,
+    verdict,
+    kind: verdict.status === 'broken' ? 'broken' : 'unresolved',
+  }
 }
 
 const READABLE_DIFFERENCE_CHARS = 40

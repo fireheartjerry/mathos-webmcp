@@ -18,7 +18,7 @@
  *     unaided.
  */
 
-import { checkDerivation } from '../math/derivation'
+import { checkDerivation, getFirstIssue } from '../math/derivation'
 import { generateProblem, problemSignature } from '../math/problems'
 import type { Problem } from '../math/problems'
 import {
@@ -199,16 +199,16 @@ export function applyAction(
       )
       // A check is the moment attempts reset: the learner has committed to this work.
       const steps = state.steps.map((s) => ({ ...s, attempts: 0 }))
+      const firstIssue = getFirstIssue(report)
       const description = report.allSound
         ? report.reachesAnswer
           ? 'Checked the derivation · sound, and it reaches the answer'
           : 'Checked the derivation · sound, but it does not reach the answer yet'
-        : report.firstBrokenId
-          ? `Checked the derivation · first break at step ${(report.firstBrokenIndex ?? 0) + 1}`
+        : firstIssue
+          ? firstIssue.kind === 'broken'
+            ? `Checked the derivation · first break at step ${firstIssue.index + 1}`
+            : `Checked the derivation · first unresolved line at step ${firstIssue.index + 1}`
           : 'Checked the derivation'
-      const firstBrokenDetail = report.firstBrokenId
-        ? report.verdicts[report.firstBrokenId] ?? null
-        : null
       return commit(
         state,
         source,
@@ -217,9 +217,12 @@ export function applyAction(
         {
           allSound: report.allSound,
           reachesAnswer: report.reachesAnswer,
-          firstBrokenStep: report.firstBrokenIndex === null ? null : report.firstBrokenIndex + 1,
-          firstBrokenId: report.firstBrokenId,
-          firstBrokenDetail,
+          firstBrokenStep: firstIssue?.kind === 'broken' ? firstIssue.index + 1 : null,
+          firstBrokenId: firstIssue?.kind === 'broken' ? firstIssue.id : null,
+          firstBrokenDetail: firstIssue?.kind === 'broken' ? firstIssue.verdict : null,
+          firstUnresolvedStep: firstIssue?.kind === 'unresolved' ? firstIssue.index + 1 : null,
+          firstUnresolvedId: firstIssue?.kind === 'unresolved' ? firstIssue.id : null,
+          firstUnresolvedDetail: firstIssue?.kind === 'unresolved' ? firstIssue.verdict : null,
         },
         env,
       )
@@ -364,11 +367,14 @@ export function applyAction(
         )
       }
       if (!state.report.allSound || !state.report.reachesAnswer) {
+        const firstIssue = getFirstIssue(state.report)
         return fail(
           'invalid_phase',
           'The practice derivation is not complete yet.',
-          state.report.firstBrokenId
+          firstIssue?.kind === 'broken'
             ? 'Help the learner repair the first broken step, then call check_work again.'
+            : firstIssue?.kind === 'unresolved'
+              ? 'Help the learner rewrite the first unresolved line, then call check_work again.'
             : 'Help the learner reach the requested answer, then call check_work again.',
         )
       }

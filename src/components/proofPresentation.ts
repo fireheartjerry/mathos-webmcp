@@ -1,4 +1,5 @@
-import type { StepVerdict } from '../domain/math/derivation'
+import { getFirstIssue } from '../domain/math/derivation'
+import type { DerivationReport, StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
 
@@ -43,6 +44,25 @@ export function relationLabel(verdict: StepVerdict | undefined): string {
     case 'sound':
       return verdict.relation === 'first' ? 'Starting line' : verdict.relation
   }
+}
+
+export function isBrokenVerdict(verdict: StepVerdict | undefined): boolean {
+  return verdict?.status === 'broken'
+}
+
+export function reportStatusMessage(report: DerivationReport | null): string {
+  if (!report) return ''
+  if (report.allSound) {
+    return report.reachesAnswer
+      ? 'Every line follows, and the last one is the answer this problem asked for.'
+      : 'Every line follows from the one above it — but this is not yet the answer the problem asked for.'
+  }
+
+  const issue = getFirstIssue(report)
+  if (!issue) return ''
+  return issue.kind === 'broken'
+    ? `Line ${issue.index + 1} is the first that does not follow.`
+    : `Line ${issue.index + 1} is the first unresolved line.`
 }
 
 export function relationDetail(verdict: StepVerdict | undefined): string | null {

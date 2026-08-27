@@ -3,13 +3,14 @@ import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import AgentConsole from './AgentConsole'
 import { actorLabel, registrationStatusLabel } from './proofPresentation'
+import type { ProposalSeed } from './inspectorPresentation'
 
 type Props = {
   status: RegistrationStatus
   tools: ToolDefinition[]
   onRun: (toolName: string, argsJson: string) => Promise<string>
   revision: number
-  suggestedLatex: string
+  proposalSeed: ProposalSeed | null
   activities: Activity[]
 }
 
@@ -18,7 +19,7 @@ export default function SessionDetails({
   tools,
   onRun,
   revision,
-  suggestedLatex,
+  proposalSeed,
   activities,
 }: Props) {
   return (
@@ -41,7 +42,7 @@ export default function SessionDetails({
           tools={tools}
           onRun={onRun}
           revision={revision}
-          suggestedLatex={suggestedLatex}
+          proposalSeed={proposalSeed}
         />
 
         <section className="activity" aria-labelledby="activity-heading">

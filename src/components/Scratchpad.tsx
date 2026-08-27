@@ -17,10 +17,13 @@ import {
 } from './actionFeedback'
 import {
   actorLabel,
+  isBrokenVerdict,
   registrationStatusLabel,
   relationDetail,
   relationLabel,
+  reportStatusMessage,
 } from './proofPresentation'
+import { proposalSeedForSession } from './inspectorPresentation'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
@@ -310,6 +313,7 @@ export default function Scratchpad() {
 
   const report = state.report
   const firstBrokenId = report?.firstBrokenId ?? null
+  const proposalSeed = proposalSeedForSession(state)
   const annotationsFor = (stepId: string) => state.annotations.filter((a) => a.stepId === stepId)
 
   return (
@@ -368,7 +372,7 @@ export default function Scratchpad() {
             <div className="start-cue" aria-label="How to structure your derivation">
               <p>
                 Write one true line at a time. The page checks the chain and stops at the first
-                break—not at every consequence of it.
+                unresolved relation—not at every consequence of it.
               </p>
               <ol>
                 <li><span>01</span> Rewrite in terms of {state.problem.variable}</li>
@@ -381,7 +385,7 @@ export default function Scratchpad() {
           <ol className="steps" aria-label="Your working">
             {state.steps.map((step: Step, index) => {
               const verdict = report?.verdicts[step.id]
-              const broken = step.id === firstBrokenId
+              const broken = step.id === firstBrokenId && isBrokenVerdict(verdict)
               const notes = annotationsFor(step.id)
               const verdictDetail = relationDetail(verdict)
               return (
@@ -634,16 +638,7 @@ export default function Scratchpad() {
           )}
 
           <p className="live-status" role="status" aria-live="polite">
-            {flash ||
-              (report
-                ? report.allSound
-                  ? report.reachesAnswer
-                    ? 'Every line follows, and the last one is the answer this problem asked for.'
-                    : 'Every line follows from the one above it — but this is not yet the answer the problem asked for.'
-                  : report.firstBrokenIndex !== null
-                    ? `Line ${report.firstBrokenIndex + 1} is the first that does not follow.`
-                    : ''
-                : '')}
+            {flash || reportStatusMessage(report)}
           </p>
 
           <SessionDetails
@@ -651,7 +646,7 @@ export default function Scratchpad() {
             tools={inspectorTools}
             onRun={runFromInspector}
             revision={state.revision}
-            suggestedLatex={state.problem.answer.latex}
+            proposalSeed={proposalSeed}
             activities={state.activities}
           />
         </main>

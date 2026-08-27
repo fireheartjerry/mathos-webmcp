@@ -19,6 +19,7 @@
  */
 
 import type { ActionResult, SessionAction, SessionState } from '../session/types'
+import { getFirstIssue } from '../math/derivation'
 
 export type ToolErrorCode =
   | 'stale_revision'
@@ -115,10 +116,10 @@ const requestIdField = {
 /** Keeps tool output small. Context is the scarce resource, not the transport. */
 function summariseSteps(state: SessionState) {
   const limit = 8
-  const brokenIndex = state.report?.firstBrokenIndex ?? -1
+  const firstIssueIndex = state.report?.firstBrokenIndex ?? -1
   const shown = state.steps.slice(0, limit).map((step, index) => ({ step, index }))
-  if (brokenIndex >= limit && state.steps[brokenIndex]) {
-    shown[limit - 1] = { step: state.steps[brokenIndex], index: brokenIndex }
+  if (firstIssueIndex >= limit && state.steps[firstIssueIndex]) {
+    shown[limit - 1] = { step: state.steps[firstIssueIndex], index: firstIssueIndex }
   }
   const steps = shown.map(({ step, index }) => {
     const verdict = state.report?.verdicts[step.id]
@@ -135,10 +136,17 @@ function summariseSteps(state: SessionState) {
 
 function scratchpadData(state: SessionState): Record<string, unknown> {
   const { steps, truncated } = summariseSteps(state)
-  const firstBroken =
-    state.report && state.report.firstBrokenIndex !== null
-      ? { position: state.report.firstBrokenIndex + 1, stepId: state.report.firstBrokenId }
-      : null
+  const firstIssue = state.report ? getFirstIssue(state.report) : null
+  const firstBroken = firstIssue?.kind === 'broken'
+    ? { position: firstIssue.index + 1, stepId: firstIssue.id }
+    : null
+  const firstUnresolved = firstIssue?.kind === 'unresolved'
+    ? {
+        position: firstIssue.index + 1,
+        stepId: firstIssue.id,
+        status: firstIssue.verdict.status,
+      }
+    : null
 
   const available: string[] = []
   if (state.steps.length > 0) available.push('check_work')
@@ -162,6 +170,7 @@ function scratchpadData(state: SessionState): Record<string, unknown> {
     ...(truncated ? { truncated: true } : {}),
     checked: state.report !== null,
     firstBrokenStep: firstBroken,
+    firstUnresolvedStep: firstUnresolved,
     pendingProposal: state.proposal ? { stepId: state.proposal.stepId } : null,
     availableActions: available,
     note:
@@ -314,7 +323,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'get_scratchpad',
       title: 'Read the scratchpad',
       description:
-        "Read the learner's current problem, every step they have written, each step's verdict, the first step that broke, and what you may do next.",
+        "Read the learner's current problem, every step they have written, each step's verdict, the first broken or unresolved line, and what you may do next.",
       inputSchema: EMPTY_SCHEMA,
       // Every step is learner-authored text. Chrome's guidance is to mark that.
       annotations: { readOnlyHint: true, untrustedContentHint: true },
@@ -336,7 +345,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'check_work',
       title: 'Check the derivation',
       description:
-        'Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you.',
+        'Ask the page computer algebra system to check the whole derivation and mark the first broken or unresolved relation. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you.',
       inputSchema: {
         type: 'object',
         properties: { expectedRevision: revisionField, requestId: requestIdField },

@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { registrationStatusLabel } from './proofPresentation'
+import { suggestedInspectorArgs } from './inspectorPresentation'
+import type { ProposalSeed } from './inspectorPresentation'
 
 /** The exact page-tool inspector, including its truthful no-WebMCP recovery path. */
 
@@ -10,25 +12,8 @@ type Props = {
   tools: ToolDefinition[]
   onRun: (toolName: string, argsJson: string) => Promise<string>
   revision: number
-  suggestedLatex: string
+  proposalSeed: ProposalSeed | null
 }
-
-const suggestedArgs = (suggestedLatex: string): Record<string, (revision: number) => string> => ({
-  get_scratchpad: () => '{}',
-  get_receipt: () => '{}',
-  check_work: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
-  annotate_step: (r) =>
-    `{ "stepId": "step-1", "note": "Re-check this line against the premise.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
-  propose_step: (r) =>
-    JSON.stringify({
-      stepId: 'step-1',
-      latex: suggestedLatex,
-      rationale: 'This is the derivative implied by the current premise.',
-      expectedRevision: r,
-      requestId: `inspector-${r}`,
-    }),
-  new_problem: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
-})
 
 function StatusLine({ status }: { status: RegistrationStatus }) {
   if (status.state === 'live') {
@@ -63,8 +48,8 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
   )
 }
 
-export default function AgentConsole({ status, tools, onRun, revision, suggestedLatex }: Props) {
-  const suggested = suggestedArgs(suggestedLatex)
+export default function AgentConsole({ status, tools, onRun, revision, proposalSeed }: Props) {
+  const suggested = useMemo(() => suggestedInspectorArgs(proposalSeed), [proposalSeed])
   const [openTool, setOpenTool] = useState<string | null>(null)
   const [args, setArgs] = useState<string>('')
   const [output, setOutput] = useState<{ tool: string; text: string } | null>(null)
@@ -73,6 +58,16 @@ export default function AgentConsole({ status, tools, onRun, revision, suggested
   const connected = status.state === 'live' || status.state === 'partial'
   const checking =
     status.state === 'unsupported' && status.detail.startsWith('Checking')
+
+  const proposalSeedKey = proposalSeed
+    ? `${proposalSeed.stepId}:${proposalSeed.latex}`
+    : 'redacted'
+
+  useEffect(() => {
+    if (openTool === 'propose_step') {
+      setArgs(suggested.propose_step(revision))
+    }
+  }, [proposalSeedKey])
 
   async function run(name: string) {
     setBusy(true)

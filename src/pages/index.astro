@@ -6,12 +6,12 @@ const TOOLS = [
   {
     name: 'get_scratchpad',
     kind: 'Read',
-    description: 'Current problem, learner lines, verdicts, first break, and valid next actions.',
+    description: 'Current problem, learner lines, verdicts, first broken or unresolved line, and valid next actions.',
   },
   {
     name: 'check_work',
     kind: 'Write',
-    description: 'Asks the page engine to check the derivation and record the first break.',
+    description: 'Asks the page engine to check the derivation and record the first broken or unresolved relation.',
   },
   {
     name: 'annotate_step',
@@ -66,7 +66,7 @@ const TOOLS = [
       <section class="opening" aria-labelledby="page-title">
         <div class="opening-copy">
           <p class="product-context">Product-rule practice in a shared browser page</p>
-          <h1 id="page-title">A learner-owned derivation, checked at the first break.</h1>
+          <h1 id="page-title">A learner-owned derivation, checked at the first unresolved relation.</h1>
         </div>
 
         <figure class="transaction" aria-labelledby="transaction-title">
@@ -147,7 +147,7 @@ const TOOLS = [
           <dl class="fact-list">
             <div>
               <dt>Page engine</dt>
-              <dd>Checks symbolic equivalence and identifies the first relation that fails.</dd>
+              <dd>Checks symbolic equivalence and identifies the first broken or unresolved relation.</dd>
             </div>
             <div>
               <dt>Agent</dt>

@@ -236,6 +236,48 @@ describe('checking', () => {
     }
   })
 
+  it('records an unreadable line as unresolved without claiming a break', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: '((((' })
+    const result = applyAction(state, { type: 'CHECK_WORK' }, 'learner', ENV)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.activity.action).toBe(
+        'Checked the derivation · first unresolved line at step 1',
+      )
+      expect(result.data.firstBrokenStep).toBeNull()
+      expect(result.data.firstUnresolvedStep).toBe(1)
+      expect(result.data.firstUnresolvedDetail).toEqual(
+        expect.objectContaining({ status: 'unreadable' }),
+      )
+    }
+  })
+
+  it('records an uncertain relation as unresolved without claiming a break', () => {
+    let state = start()
+    state = {
+      ...state,
+      problem: {
+        ...state.problem,
+        variable: 'x',
+        premiseLatex: 'x',
+        answer: { latex: '1', value: 1 },
+      },
+    }
+    state = run(state, { type: 'ADD_STEP', latex: 'e^{\\ln x}' })
+    const result = applyAction(state, { type: 'CHECK_WORK' }, 'learner', ENV)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.activity.action).toBe(
+        'Checked the derivation · first unresolved line at step 1',
+      )
+      expect(result.data.firstBrokenStep).toBeNull()
+      expect(result.data.firstUnresolvedDetail).toEqual({ status: 'uncertain' })
+    }
+  })
+
   it('passes a fully sound derivation', () => {
     let state = start()
     for (const latex of soundWork(state)) state = run(state, { type: 'ADD_STEP', latex })

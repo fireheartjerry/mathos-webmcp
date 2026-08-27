@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkDerivation } from './derivation'
+import { checkDerivation, getFirstIssue } from './derivation'
 
 const lines = (...latex: string[]) => latex.map((l, i) => ({ id: `s${i + 1}`, latex: l }))
 
@@ -103,6 +103,9 @@ describe('refusing to over-claim', () => {
     expect(verdict.status).toBe('unreadable')
     if (verdict.status === 'unreadable') expect(verdict.code).toBe('parse_error')
     expect(report.firstBrokenIndex).toBe(1)
+    expect(getFirstIssue(report)).toEqual(
+      expect.objectContaining({ kind: 'unresolved', index: 1, id: 's2' }),
+    )
   })
 
   it('reports a foreign variable as unreadable with a helpful code', () => {
@@ -117,6 +120,7 @@ describe('refusing to over-claim', () => {
     // direction; the honest outcome is that we stop, not that we accuse the learner.
     const report = checkDerivation(lines('x', 'e^{\\ln x}'), 'x')
     expect(report.verdicts.s2.status).toBe('uncertain')
+    expect(getFirstIssue(report)?.kind).toBe('unresolved')
   })
 
   it('never reports allSound when any line is uncertain', () => {

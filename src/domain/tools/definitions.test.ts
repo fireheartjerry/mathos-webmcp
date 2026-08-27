@@ -440,6 +440,58 @@ describe('the verdict belongs to the engine, not the agent', () => {
       )
     }
   })
+
+  it('reports unreadable work as unresolved in both check and scratchpad output', async () => {
+    h.learner({ type: 'ADD_STEP', latex: '((((' })
+    const checked = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-unresolved-1',
+    })
+    expect(checked.ok).toBe(true)
+    if (checked.ok) {
+      expect(checked.data.firstBrokenStep).toBeNull()
+      expect(checked.data.firstUnresolvedStep).toBe(1)
+      expect(checked.data.firstUnresolvedDetail).toEqual(
+        expect.objectContaining({ status: 'unreadable' }),
+      )
+    }
+
+    const scratchpad = await call(h.byName('get_scratchpad'), {})
+    expect(scratchpad.ok).toBe(true)
+    if (scratchpad.ok) {
+      expect(scratchpad.data.firstBrokenStep).toBeNull()
+      expect(scratchpad.data.firstUnresolvedStep).toEqual({
+        position: 1,
+        stepId: 'step-1',
+        status: 'unreadable',
+      })
+    }
+  })
+
+  it('reports an uncertain comparison as unresolved, never broken', async () => {
+    const initial = createSession(2026, 'uncertain-tool-report')
+    h = harness({
+      ...initial,
+      problem: {
+        ...initial.problem,
+        variable: 'x',
+        premiseLatex: 'x',
+        answer: { latex: '1', value: 1 },
+      },
+    })
+    h.learner({ type: 'ADD_STEP', latex: 'e^{\\ln x}' })
+    const checked = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-uncertain-1',
+    })
+
+    expect(checked.ok).toBe(true)
+    if (checked.ok) {
+      expect(checked.data.firstBrokenStep).toBeNull()
+      expect(checked.data.firstUnresolvedStep).toBe(1)
+      expect(checked.data.firstUnresolvedDetail).toEqual({ status: 'uncertain' })
+    }
+  })
 })
 
 describe('the receipt', () => {
