@@ -97,11 +97,22 @@ function Receipt({ state }: { state: SessionState }) {
   )
 }
 
+/**
+ * The first problem is deterministic.
+ *
+ * Two reasons. It removes the server/client hydration mismatch that a random seed
+ * caused, and it means every judge who opens the link sees the same first problem, so
+ * the README's instructions stay true. Randomness starts at the first `new_problem`.
+ */
+const FIRST_PROBLEM_SEED = 20260903
+const SSR_SESSION_ID = 'st_pending'
+
 export default function Scratchpad() {
-  const [state, setState] = useState<SessionState>(() => {
-    const restored = typeof window === 'undefined' ? null : loadSession()
-    return restored ?? createSession(Date.now() % 100000, newSessionId())
-  })
+  // Rendered identically on the server and on the first client pass; the real session
+  // is restored or created in an effect, after hydration has already matched.
+  const [state, setState] = useState<SessionState>(() =>
+    createSession(FIRST_PROBLEM_SEED, SSR_SESSION_ID),
+  )
   const [draft, setDraft] = useState('')
   const [status, setStatus] = useState<RegistrationStatus>({
     state: 'unsupported',
@@ -164,6 +175,15 @@ export default function Scratchpad() {
     }),
     [awaitPaint],
   )
+
+  // Adopt the real session once, after hydration.
+  useEffect(() => {
+    const restored = loadSession()
+    const next = restored ?? createSession(FIRST_PROBLEM_SEED, newSessionId())
+    stateRef.current = next
+    paintedRevision.current = next.revision
+    setState(next)
+  }, [])
 
   useEffect(() => {
     let live = true
@@ -228,7 +248,7 @@ export default function Scratchpad() {
           Mathos
         </a>
         <p className="scratch-title">
-          Second&nbsp;Try <span aria-hidden="true">/</span> <span className="scratch-session">{state.sessionId}</span>
+          Second&nbsp;Try <span aria-hidden="true">/</span> <span className="scratch-session" suppressHydrationWarning>{state.sessionId}</span>
         </p>
         <p className={`header-status header-${status.state}`}>
           <span className="dot" aria-hidden="true" />
