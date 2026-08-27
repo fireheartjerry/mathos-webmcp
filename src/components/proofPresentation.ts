@@ -1,5 +1,5 @@
 import { getFirstIssue } from '../domain/math/derivation'
-import type { DerivationReport, StepVerdict } from '../domain/math/derivation'
+import type { DerivationIssue, DerivationReport, StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
 
@@ -29,14 +29,19 @@ export function actorLabel(source: ActionSource): string {
   }
 }
 
-export function relationLabel(verdict: StepVerdict | undefined): string {
+export function relationLabel(
+  verdict: StepVerdict | undefined,
+  firstIssueKind?: DerivationIssue['kind'],
+): string {
   if (!verdict) return 'Not checked'
 
   switch (verdict.status) {
     case 'broken':
       return 'Does not follow'
     case 'downstream':
-      return 'After the first break'
+      return firstIssueKind === 'unresolved'
+        ? 'Not checked after the unresolved line'
+        : 'After the first break'
     case 'unreadable':
       return 'Could not read'
     case 'uncertain':

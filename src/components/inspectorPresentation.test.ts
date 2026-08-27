@@ -52,4 +52,14 @@ describe('local inspector proposal defaults', () => {
       state.problem.answer.latex,
     )
   })
+
+  it('rebuilds safe inspector arguments with the current revision', () => {
+    const suggested = suggestedInspectorArgs(null)
+    expect(JSON.parse(suggested.propose_step(7))).toEqual(
+      expect.objectContaining({ expectedRevision: 7, latex: '' }),
+    )
+    expect(JSON.parse(suggested.propose_step(8))).toEqual(
+      expect.objectContaining({ expectedRevision: 8, latex: '' }),
+    )
+  })
 })

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { checkDerivation, getFirstIssue } from '../domain/math/derivation'
 import type { StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
@@ -44,7 +45,38 @@ describe('relationLabel', () => {
 
   it('labels a downstream step as after the first break', () => {
     const verdict: StepVerdict = { status: 'downstream' }
-    expect(relationLabel(verdict)).toBe('After the first break')
+    expect(relationLabel(verdict, 'broken')).toBe('After the first break')
+  })
+
+  it('labels a line after unreadable work as not checked after the unresolved line', () => {
+    const report = checkDerivation(
+      [
+        { id: 's1', latex: 'x' },
+        { id: 's2', latex: '((((' },
+        { id: 's3', latex: 'x' },
+      ],
+      'x',
+    )
+    expect(report.verdicts.s3).toEqual({ status: 'downstream' })
+    expect(relationLabel(report.verdicts.s3, getFirstIssue(report)?.kind)).toBe(
+      'Not checked after the unresolved line',
+    )
+  })
+
+  it('labels a line after an uncertain comparison as not checked after the unresolved line', () => {
+    const report = checkDerivation(
+      [
+        { id: 's1', latex: 'x' },
+        { id: 's2', latex: 'e^{\\ln x}' },
+        { id: 's3', latex: 'x' },
+      ],
+      'x',
+    )
+    expect(report.verdicts.s2).toEqual({ status: 'uncertain' })
+    expect(report.verdicts.s3).toEqual({ status: 'downstream' })
+    expect(relationLabel(report.verdicts.s3, getFirstIssue(report)?.kind)).toBe(
+      'Not checked after the unresolved line',
+    )
   })
 
   it('labels a differentiating relation', () => {

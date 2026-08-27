@@ -67,7 +67,7 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
     if (openTool === 'propose_step') {
       setArgs(suggested.propose_step(revision))
     }
-  }, [proposalSeedKey])
+  }, [openTool, proposalSeedKey, revision, suggested])
 
   async function run(name: string) {
     setBusy(true)

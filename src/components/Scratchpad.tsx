@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import { applyAction, createSession } from '../domain/session/reducer'
+import { getFirstIssue } from '../domain/math/derivation'
 import { clearSession, loadSession, saveSession, STORAGE_KEY } from '../domain/session/persistence'
 import { createPaintBarrier } from '../domain/session/paintBarrier'
 import type { ActionResult, ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
@@ -313,6 +314,7 @@ export default function Scratchpad() {
 
   const report = state.report
   const firstBrokenId = report?.firstBrokenId ?? null
+  const firstIssueKind = report ? getFirstIssue(report)?.kind : undefined
   const proposalSeed = proposalSeedForSession(state)
   const annotationsFor = (stepId: string) => state.annotations.filter((a) => a.stepId === stepId)
 
@@ -464,7 +466,7 @@ export default function Scratchpad() {
                   </div>
                   <p className={`relation relation-${verdict?.status ?? 'idle'}`}>
                     <span className="relation-mark" aria-hidden="true" />
-                    <span>{relationLabel(verdict)}</span>
+                    <span>{relationLabel(verdict, firstIssueKind)}</span>
                   </p>
                   <div className="line-evidence">
                     {verdictDetail && <p className="step-detail">{verdictDetail}</p>}

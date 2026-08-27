@@ -168,8 +168,8 @@ export function checkDerivation(
   for (let i = offset; i < chain.length; i++) {
     const line = chain[i]
 
-    // Once something is broken, later lines are downstream of it. They are still
-    // shown, but they are not judged - their premise is already wrong.
+    // Once a relation is broken or unresolved, later lines are downstream of it.
+    // They are still shown, but not judged without a trustworthy predecessor.
     if (firstBrokenIndex !== null) {
       verdicts[line.id] = { status: 'downstream' }
       continue
