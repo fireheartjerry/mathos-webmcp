@@ -166,6 +166,10 @@ try {
   })).sort((a, b) => a.name.localeCompare(b.name)))`)
   assert(registration.length === 6, 'Expected six registered tools.')
   assert(registration.filter((tool) => tool.readOnlyHint).length === 2, 'Expected exactly two read-only tools.')
+  await waitFor(
+    `document.querySelector('.header-status')?.textContent.trim() === '6 page tools available'`,
+    'the visible six-tool registration status',
+  )
   const headerStatus = await evaluate(`document.querySelector('.header-status')?.textContent.trim()`)
   assert(headerStatus === '6 page tools available', 'The product did not visibly confirm all six registrations.')
   await capture('01-webmcp-connected-cold')
@@ -186,10 +190,7 @@ try {
   state = await addLine(practice.premise, 1)
   state = await addLine(practice.wrong, 2)
   const broken = await runTool('check_work', { expectedRevision: 2, requestId: 'final-check-001' })
-  assert(
-    broken.ok && broken.data.firstBrokenStep?.position === 2,
-    'check_work did not identify line 2.',
-  )
+  assert(broken.ok && broken.data.firstBrokenStep === 2, 'check_work did not identify line 2.')
   await capture('02-first-break-diagnosis')
 
   const gatedProposal = await runTool('propose_step', {
