@@ -134,6 +134,16 @@ describe('get_scratchpad', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('rejects arguments it publishes no schema for, rather than ignoring them', async () => {
+    // additionalProperties:false is published; silently dropping an argument would
+    // teach an agent that its mistake worked.
+    for (const name of ['get_scratchpad', 'get_receipt']) {
+      const result = await call(h.byName(name), { foo: 'bar' })
+      expect(result.ok, name).toBe(false)
+      if (!result.ok) expect(result.error.code).toBe('invalid_input')
+    }
+  })
+
   it('truncates a long derivation explicitly rather than silently', async () => {
     for (let i = 0; i < 10; i++) h.learner({ type: 'ADD_STEP', latex: `x^${i + 1}` })
     const result = await call(h.byName('get_scratchpad'), {})

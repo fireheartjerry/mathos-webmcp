@@ -173,6 +173,15 @@ export default function Scratchpad() {
    * as an agent, and the console's own "recorded as local-inspector" line would be a
    * lie a judge could catch by comparing it to the activity list.
    */
+  const caches = useRef(new Map<ActionSource, Map<string, ToolEnvelope | Promise<ToolEnvelope>>>())
+  const cacheFor = useCallback((source: ActionSource) => {
+    const existing = caches.current.get(source)
+    if (existing) return existing
+    const created = new Map<string, ToolEnvelope | Promise<ToolEnvelope>>()
+    caches.current.set(source, created)
+    return created
+  }, [])
+
   const makeBridge = useCallback(
     (source: ActionSource): ToolBridge => ({
       getState: () => stateRef.current,
@@ -196,13 +205,19 @@ export default function Scratchpad() {
         }
         return result
       },
-      requestCache: new Map<string, ToolEnvelope | Promise<ToolEnvelope>>(),
+      requestCache: cacheFor(source),
     }),
-    [awaitPaint],
+    [awaitPaint, cacheFor],
   )
 
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
   const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
+
+  // A requestId from a finished session must not replay into a new one. Idempotency
+  // is scoped to the session it was established in.
+  useEffect(() => {
+    for (const cache of caches.current.values()) cache.clear()
+  }, [state.sessionId])
 
   // Adopt the real session once, after hydration.
   useEffect(() => {
@@ -510,10 +525,15 @@ export default function Scratchpad() {
               className="button-text"
               onClick={() => {
                 clearSession()
+                // Starting over gives a different problem on purpose; only the very
+                // first problem of a session is fixed.
                 const fresh = createSession(Date.now() % 100000, newSessionId())
                 stateRef.current = fresh
                 setState(fresh)
                 setDraft('')
+                setRefusal(null)
+                setEditingId(null)
+                setFlash('')
               }}
             >
               Start over

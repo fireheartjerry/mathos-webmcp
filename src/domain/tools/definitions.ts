@@ -277,7 +277,11 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        if (!readInput(input)) {
+        const values = readInput(input)
+        // The published schema says additionalProperties:false, so honour it here too.
+        // Accepting and silently dropping an argument teaches an agent that its
+        // mistake worked.
+        if (!values || Object.keys(values).length > 0) {
           return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
         }
         return { ok: true, revision: state.revision, data: scratchpadData(state) }
@@ -405,7 +409,8 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        if (!readInput(input)) {
+        const values = readInput(input)
+        if (!values || Object.keys(values).length > 0) {
           return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
         }
         if (state.history.length === 0) {
