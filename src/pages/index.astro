@@ -31,7 +31,7 @@ const TOOLS = [
   {
     name: 'get_receipt',
     kind: 'Read',
-    description: 'Reports observed session evidence, agent involvement, and explicit limits.',
+    description: 'Reports up to eight recent rounds, actor-specific intervention counts, truncation metadata, and explicit limits.',
   },
 ] as const
 ---
@@ -238,8 +238,8 @@ const TOOLS = [
             or general mathematics mastery.
           </p>
           <p class="closing-copy">
-            The receipt keeps those limitations beside the observed checks and records whether an
-            agent annotated or proposed during each round.
+            The receipt keeps those limitations beside the observed checks, separates agent from
+            local-inspector activity, and marks when its eight-round history window is truncated.
           </p>
         </div>
       </section>
