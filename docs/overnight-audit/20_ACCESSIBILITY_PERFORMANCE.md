@@ -12,14 +12,15 @@ Lighthouse navigation/snapshot results:
 | Accessibility | **100** |
 | Best Practices | **100** |
 | Agentic Browsing | **100** |
-| SEO | 90 |
+| SEO | **100** |
 
-The only failed SEO item came from an Astro development-toolbar “Learn more” link and is not in
-the production build.
+The final navigation audit ran against the rebuilt production preview and passed 52 of 52 audited
+items with zero failures. The browser console contained zero messages.
 
 Verified directly:
 
-- one descriptive `h1`;
+- one descriptive `h1`, with the full accessibility-tree name
+  `Find d y by d x at x equals 2`;
 - skip link reaches the scratchpad;
 - first Tab focuses the skip link; Enter + Tab reaches the composer;
 - composer submits with Enter and focus remains ready for the next line;
@@ -36,8 +37,8 @@ Verified directly:
 Responsive checks:
 
 - 390×844 mobile: single-column layout, no clipping;
-- 720×450 CSS viewport (200% stress equivalent): no horizontal overflow
-  (`scrollWidth 705 <= innerWidth 720`);
+- 1152×720, 960×600, and 720×450 CSS viewports (125/150/200% equivalents): no horizontal
+  overflow (`1137 = 1137`, `945 = 945`, and `705 = 705` respectively);
 - 1440×900: checked derivation, composer and actions remain coherent in the first viewport.
 
 ## Performance

@@ -174,9 +174,9 @@ function receiptData(state: SessionState): Record<string, unknown> {
     round: round.round,
     allStepsSound: round.sound,
     checksRun: round.checks,
-    agentAnnotations: round.agentAnnotations,
-    agentProposalsOffered: round.agentProposalsOffered,
-    agentProposalsAccepted: round.agentProposalsAccepted,
+    annotations: round.agentAnnotations,
+    proposalsOffered: round.agentProposalsOffered,
+    proposalsAccepted: round.agentProposalsAccepted,
   }))
   const previousTransfer = [...state.history].reverse().find((round) => round.round === 'transfer')
   const currentRoundStart = state.activities.findLastIndex(
@@ -204,7 +204,7 @@ function receiptData(state: SessionState): Record<string, unknown> {
         : transfer === null
         ? 'not attempted yet'
         : transfer
-          ? 'every step sound, with no agent annotations or proposals'
+          ? 'every step sound, with no external annotations or proposals'
           : 'attempted, not yet sound',
     limits: [
       'This records what happened in this browser session.',

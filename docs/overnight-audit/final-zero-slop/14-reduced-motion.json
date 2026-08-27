@@ -1,0 +1,14 @@
+{
+  "output": "C:\\Jerry\\Important\\Coding\\Mathos\\mathos-webmcp\\.worktrees\\hackathon-build\\docs\\overnight-audit\\final-zero-slop\\14-reduced-motion.png",
+  "width": 1440,
+  "height": 900,
+  "reducedMotion": true,
+  "hoverSelector": null,
+  "url": "http://127.0.0.1:4322/learn",
+  "clientWidth": 1440,
+  "scrollWidth": 1440,
+  "horizontalOverflow": false,
+  "reducedMotionMatched": true,
+  "buttonTransitionDuration": "0.001s",
+  "headingName": "Find d y by d x at x equals 2"
+}

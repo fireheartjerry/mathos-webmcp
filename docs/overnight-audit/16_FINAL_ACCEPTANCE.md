@@ -18,6 +18,11 @@ work:
 
 No deployment, push, or client-compatibility result was fabricated during this rescue.
 
+Prompt-pack closure, archive integrity, exact artifact mapping, fresh runtime results, and the
+remaining authorization boundary are recorded in
+[`22_PROMPT_PACK_EXECUTION_MATRIX.md`](./22_PROMPT_PACK_EXECUTION_MATRIX.md). The authoritative
+visual proof is [`AI_SLOP_FINAL_SCREENSHOT_AUDIT.md`](./AI_SLOP_FINAL_SCREENSHOT_AUDIT.md).
+
 > The remainder of this file is the retained 2026-08-26 acceptance record. Where its build counts,
 > blocker count or runtime details differ, the 2026-08-27 verdict above is authoritative.
 

@@ -30,10 +30,12 @@ const TOOLS = [
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <header class="nav">
-      <a class="wordmark" href="/">Mathos</a>
-      <p class="nav-mid">Second Try</p>
-      <a class="nav-cta" href="/learn">Open the scratchpad <span class="arrow" aria-hidden="true">→</span></a>
+    <header class="nav-shell">
+      <div class="nav">
+        <a class="wordmark" href="/">Mathos</a>
+        <p class="nav-mid">Second Try</p>
+        <a class="nav-cta" href="/learn">Open the scratchpad <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
     </header>
 
     <main id="main" class="container">
@@ -172,9 +174,11 @@ const TOOLS = [
             <p class="honest-body">
               Passing here is evidence about one session in one browser. It is not proof of
               understanding, and the page says so on the evidence surface itself. The supported
-              mathematics is bounded: derivatives of polynomial expressions and algebraic
-              rewriting. When the two verification routes disagree, the page reports that it could
-              not determine the answer rather than guessing.
+              mathematics is deliberately bounded to one generated product-rule family,
+              polynomial derivatives, and algebraic rewriting. This is a complete learning loop,
+              not a claim to be a general-purpose mathematics tutor. When the two verification
+              routes disagree, the page reports that it could not determine the answer rather than
+              guessing.
             </p>
             <a class="button" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
           </div>
@@ -198,9 +202,11 @@ const TOOLS = [
       </section>
     </main>
 
-    <footer class="foot">
-      <p>Mathos · Y Combinator W24</p>
-      <p>Built for the WebMCP Challenge, 2026.</p>
+    <footer class="foot-shell">
+      <div class="foot">
+        <p>Mathos · Y Combinator W24</p>
+        <p>Built for the WebMCP Challenge, 2026.</p>
+      </div>
     </footer>
   </body>
 </html>

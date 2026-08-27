@@ -234,16 +234,10 @@ button { font: inherit; cursor: pointer; }
   background: var(--ink); color: var(--paper);
   border: var(--bw-hairline) solid var(--ink); border-radius: var(--r-control);
   box-shadow: var(--shadow-none);
-  position: relative; overflow: hidden; isolation: isolate;
-  transition: color var(--d-fill) var(--ease-out), transform var(--d-instant) var(--ease-out);
+  position: relative; overflow: hidden;
+  transition: color var(--d-fill) var(--ease-out), background-color var(--d-fill) var(--ease-out), transform var(--d-instant) var(--ease-out);
 }
-.button::before {
-  content: ""; position: absolute; inset: 0; background: var(--paper);
-  transform: scaleX(0); transform-origin: left center; z-index: -1;
-  transition: transform var(--d-fill) var(--ease-emph);
-}
-.button:hover::before { transform: scaleX(1); }
-.button:hover { color: var(--ink); }
+.button:hover { color: var(--ink); background: var(--paper); }
 .button > span, .button .arrow { position: relative; }
 .button .arrow { transition: transform var(--d-fill) var(--ease-out); }
 .button:hover .arrow { transform: translateX(4px); }
@@ -296,8 +290,7 @@ button { font: inherit; cursor: pointer; }
   cursor: not-allowed;
   transform: none;
 }
-.button:disabled::before { transform: scaleX(0); }
-.button:disabled:hover { color: var(--ink-disabled); }
+.button:disabled:hover { color: var(--ink-disabled); background: var(--paper-sunk); }
 
 /* The secondary affordance. Never a second filled button competing with the first. */
 .button-text {

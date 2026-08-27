@@ -1,5 +1,9 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+
 const CDP_PORT = process.env.WEBMCP_CDP_PORT ?? '9444'
 const PAGE_MATCH = process.env.WEBMCP_PAGE_MATCH ?? '/learn'
+const SCREENSHOT_DIR = process.env.WEBMCP_SCREENSHOT_DIR
 const STORAGE_KEY = 'second-try.session.v1'
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -121,8 +125,31 @@ function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
 
+const screenshots = []
+async function capture(name) {
+  if (!SCREENSHOT_DIR) return
+  await delay(120)
+  const shot = await command('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: false,
+  })
+  const filename = `${name}.png`
+  await writeFile(join(SCREENSHOT_DIR, filename), Buffer.from(shot.data, 'base64'))
+  screenshots.push(filename)
+}
+
 try {
   await command('Runtime.enable')
+  await command('Page.enable')
+  if (SCREENSHOT_DIR) {
+    await mkdir(SCREENSHOT_DIR, { recursive: true })
+    await command('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    })
+  }
   await evaluate(`localStorage.removeItem(${JSON.stringify(STORAGE_KEY)})`)
   await command('Page.reload', { ignoreCache: true })
   await waitFor(
@@ -141,6 +168,7 @@ try {
   assert(registration.filter((tool) => tool.readOnlyHint).length === 2, 'Expected exactly two read-only tools.')
   const headerStatus = await evaluate(`document.querySelector('.header-status')?.textContent.trim()`)
   assert(headerStatus === '6 page tools registered', 'The product did not visibly confirm all six registrations.')
+  await capture('01-webmcp-connected-cold')
 
   let state = await readState()
   const practice = {
@@ -159,6 +187,21 @@ try {
   state = await addLine(practice.wrong, 2)
   const broken = await runTool('check_work', { expectedRevision: 2, requestId: 'final-check-001' })
   assert(broken.ok && broken.data.firstBrokenStep === 2, 'check_work did not identify line 2.')
+  await capture('02-first-break-diagnosis')
+
+  const gatedProposal = await runTool('propose_step', {
+    stepId: state.steps[1].id,
+    latex: practice.derivative,
+    rationale: 'Restore both dependency paths before evaluating.',
+    expectedRevision: 3,
+    requestId: 'final-proposal-gated',
+  })
+  assert(
+    !gatedProposal.ok && gatedProposal.error.code === 'refused_policy',
+    'propose_step did not visibly enforce the second-attempt gate.',
+  )
+  await capture('03-policy-refusal-recovery')
+  await evaluate(`([...document.querySelectorAll('button')].find((button) => button.textContent.trim() === 'Dismiss'))?.click()`)
 
   const note = await runTool('annotate_step', {
     stepId: state.steps[1].id,
@@ -168,6 +211,7 @@ try {
     requestId: 'final-note-001',
   })
   assert(note.ok, 'annotate_step failed.')
+  await capture('04-targeted-agent-note')
 
   state = await editLine(2, practice.otherWrong, 5)
   state = await editLine(2, practice.thirdWrong, 6)
@@ -180,6 +224,7 @@ try {
   })
   if (!proposal.ok) console.error('propose_step response:', JSON.stringify(proposal))
   assert(proposal.ok, 'propose_step failed after a genuine second attempt.')
+  await capture('05-learner-owned-proposal')
   state = await clickButton('Use this', 8)
   const derivativeOnlyCheck = await runTool('check_work', {
     expectedRevision: 8,
@@ -202,10 +247,12 @@ try {
   state = await addLine(practice.value, 10)
   const repaired = await runTool('check_work', { expectedRevision: 10, requestId: 'final-check-002' })
   assert(repaired.ok && repaired.data.allSound && repaired.data.reachesAnswer, 'The repaired practice round was not complete.')
+  await capture('06-practice-complete')
 
   const next = await runTool('new_problem', { expectedRevision: 11, requestId: 'final-transfer-001' })
   assert(next.ok, 'new_problem did not start after complete, sound practice work.')
   state = await waitForRevision(12)
+  await capture('07-fresh-transfer-transition')
   const transfer = {
     premise: state.problem.premiseLatex,
     derivative: state.problem.answer.latex,
@@ -214,8 +261,14 @@ try {
   state = await addLine(transfer.premise, 13)
   state = await addLine(transfer.derivative, 14)
   state = await addLine(transfer.value, 15)
+  await capture('08-transfer-attempt')
   const transferCheck = await runTool('check_work', { expectedRevision: 15, requestId: 'final-check-003' })
   assert(transferCheck.ok && transferCheck.data.allSound && transferCheck.data.reachesAnswer, 'The transfer round did not finish sound.')
+  await command('Runtime.evaluate', {
+    expression: `document.querySelector('.receipt')?.scrollIntoView({ block: 'start', behavior: 'instant' })`,
+  })
+  await new Promise((resolve) => setTimeout(resolve, 120))
+  await capture('09-immediate-transfer-signal')
 
   const receipt = await runTool('get_receipt')
   assert(receipt.ok && receipt.data.unaidedTransfer.startsWith('every step sound'), 'get_receipt did not report the completed transfer round.')
@@ -230,6 +283,7 @@ try {
     prematureTransfer: prematureTransfer.error,
     transfer: transferCheck.data,
     receipt: receipt.data,
+    screenshots,
   }
   console.log(JSON.stringify(result, null, 2))
 } finally {

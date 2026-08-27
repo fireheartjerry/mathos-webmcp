@@ -21,18 +21,25 @@ type Props = {
   tools: ToolDefinition[]
   onRun: (toolName: string, argsJson: string) => Promise<string>
   revision: number
+  suggestedLatex: string
 }
 
-const SUGGESTED: Record<string, (revision: number) => string> = {
+const suggestedArgs = (suggestedLatex: string): Record<string, (revision: number) => string> => ({
   get_scratchpad: () => '{}',
   get_receipt: () => '{}',
   check_work: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
   annotate_step: (r) =>
-    `{ "stepId": "step-1", "note": "Look again at the second term.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+    `{ "stepId": "step-1", "note": "Re-check this line against the premise.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
   propose_step: (r) =>
-    `{ "stepId": "step-1", "latex": "9x^2 + 2x", "rationale": "Both routes contribute.", "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
+    JSON.stringify({
+      stepId: 'step-1',
+      latex: suggestedLatex,
+      rationale: 'This is the derivative implied by the current premise.',
+      expectedRevision: r,
+      requestId: `inspector-${r}`,
+    }),
   new_problem: (r) => `{ "expectedRevision": ${r}, "requestId": "inspector-${r}" }`,
-}
+})
 
 function StatusLine({ status }: { status: RegistrationStatus }) {
   if (status.state === 'live') {
@@ -67,7 +74,8 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
   )
 }
 
-export default function AgentConsole({ status, tools, onRun, revision }: Props) {
+export default function AgentConsole({ status, tools, onRun, revision, suggestedLatex }: Props) {
+  const suggested = suggestedArgs(suggestedLatex)
   const [openTool, setOpenTool] = useState<string | null>(null)
   const [args, setArgs] = useState<string>('')
   const [output, setOutput] = useState<{ tool: string; text: string } | null>(null)
@@ -78,7 +86,7 @@ export default function AgentConsole({ status, tools, onRun, revision }: Props) 
   async function run(name: string) {
     setBusy(true)
     try {
-      const text = await onRun(name, args || (SUGGESTED[name]?.(revision) ?? '{}'))
+      const text = await onRun(name, args || (suggested[name]?.(revision) ?? '{}'))
       setOutput({ tool: name, text })
     } finally {
       setBusy(false)
@@ -91,7 +99,7 @@ export default function AgentConsole({ status, tools, onRun, revision }: Props) 
       return
     }
     setOpenTool(name)
-    setArgs(SUGGESTED[name]?.(revision) ?? '{}')
+    setArgs(suggested[name]?.(revision) ?? '{}')
   }
 
   return (

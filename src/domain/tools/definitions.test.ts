@@ -428,8 +428,8 @@ describe('the receipt', () => {
     await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-n-2' })
     const result = await call(h.byName('get_receipt'), {})
     if (result.ok) {
-      const rounds = result.data.rounds as Array<{ agentAnnotations: number }>
-      expect(rounds[0].agentAnnotations).toBe(1)
+      const rounds = result.data.rounds as Array<{ annotations: number }>
+      expect(rounds[0].annotations).toBe(1)
     }
   })
 
@@ -481,7 +481,7 @@ describe('the receipt', () => {
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.data.unaidedTransfer).toBe(
-        'every step sound, with no agent annotations or proposals',
+        'every step sound, with no external annotations or proposals',
       )
     }
   })

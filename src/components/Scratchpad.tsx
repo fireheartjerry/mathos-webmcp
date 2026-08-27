@@ -155,6 +155,7 @@ export default function Scratchpad() {
     if (result.ok) {
       stateRef.current = result.state
       setState(result.state)
+      setRefusal(null)
     }
     return result
   }, [])
@@ -346,11 +347,14 @@ export default function Scratchpad() {
       <div className="scratch-grid">
         <main className="work" id="main">
           <p className="kicker">
-            {state.round === 'transfer' ? 'Unaided attempt' : 'Practice'} · {state.problem.familyId}
+            {state.round === 'transfer' ? 'Unaided attempt' : 'Practice'} · Product rule
           </p>
           <hr className="rule" />
 
-          <h1 className="problem-prompt">
+          <h1
+            className="problem-prompt"
+            aria-label={`Find d ${state.problem.resultName} by d ${state.problem.variable} at ${state.problem.variable} equals ${state.problem.evaluationPoint}`}
+          >
             Find{' '}
             <Tex
               latex={`\\frac{d${state.problem.resultName}}{d${state.problem.variable}}`}
@@ -562,6 +566,8 @@ export default function Scratchpad() {
             )}
           </form>
 
+          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <TransferSignal state={state} />}
+
           <div className="work-actions">
             <button
               type="button"
@@ -619,8 +625,6 @@ export default function Scratchpad() {
             </div>
           )}
 
-          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <TransferSignal state={state} />}
-
           {state.steps.length > 0 && (
             <p className="how how-foot">
               Each line should be equal to the line above it, or its derivative, or its value at
@@ -657,6 +661,7 @@ export default function Scratchpad() {
             tools={inspectorTools}
             onRun={runFromInspector}
             revision={state.revision}
+            suggestedLatex={state.problem.answer.latex}
           />
 
           <section className="activity" aria-labelledby="activity-heading">

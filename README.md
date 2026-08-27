@@ -4,6 +4,9 @@ A math scratchpad. The learner writes real multi-step working; the page's own co
 algebra system finds the first step that stopped being true; a WebMCP agent reads that work,
 asks the page to check it, and teaches to that exact step.
 
+This challenge candidate deliberately proves one generated product-rule family end to end.
+It is a narrow, falsifiable wedge—not a claim to be a general-purpose mathematics tutor.
+
 > **WebMCP lets a page hand an agent the one thing language models are worst at — reliable
 > symbolic verification — applied to the one thing a server can never see: a learner's live,
 > unsubmitted, half-finished work.**

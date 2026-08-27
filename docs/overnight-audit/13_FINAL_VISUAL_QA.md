@@ -1,5 +1,20 @@
 # 13 — Final Visual QA (hostile, measured)
 
+## 2026-08-27 final zero-slop recertification
+
+**Authoritative result: 40 / 40 PASS, zero unresolved judge-visible failures.**
+
+The three former failures are closed in the current source: readable metadata/rust text tokens,
+complete text-field interaction states, and bounded empty-state layouts. The primary-button wipe
+effect was removed after an independent reviewer proved it could cover plain text labels. Fresh
+connected, unavailable, diagnosis, refusal, proposal, transfer, 125/150/200%, reduced-motion,
+landing, and hover captures are audited in
+[`AI_SLOP_FINAL_SCREENSHOT_AUDIT.md`](./AI_SLOP_FINAL_SCREENSHOT_AUDIT.md), against the exact
+[`AI_SLOP_ZERO_TOLERANCE_CHECKLIST.md`](./AI_SLOP_ZERO_TOLERANCE_CHECKLIST.md).
+
+> The 37/40 report below is retained as historical audit evidence. Its measurements describe an
+> intermediate candidate and are superseded by the recertification above.
+
 ## 2026-08-27 post-rescue visual acceptance
 
 The current proof-ledger build was reloaded and inspected at 1440×900, 390×844 mobile and a
