@@ -200,8 +200,8 @@
 
 .start-cue li span {
   color: var(--blue);
-  font-family: var(--font-mono);
   font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
 }
 
 .how {
@@ -248,8 +248,8 @@
   grid-area: number;
   padding-top: 10px;
   color: var(--graphite);
-  font-family: var(--font-mono);
   font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
 }
 
 .line-main {
@@ -432,7 +432,6 @@
   background: var(--canvas);
   color: currentColor;
   content: '';
-  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -495,7 +494,6 @@
 .step-detail {
   margin: var(--s-1) 0 0;
   color: var(--rust-deep);
-  font-family: var(--font-mono);
   font-size: var(--fs-meta);
   line-height: 1.55;
   overflow-wrap: anywhere;
@@ -717,7 +715,6 @@
 
 .receipt-mark {
   color: var(--green);
-  font-family: var(--font-mono);
   font-weight: 700;
 }
 
@@ -769,7 +766,6 @@
 .session-details-marker {
   margin-left: auto;
   color: var(--blue);
-  font-family: var(--font-mono);
   font-size: var(--fs-lg);
 }
 
@@ -859,7 +855,6 @@
 .console-tool-head::after {
   color: var(--blue);
   content: '+';
-  font-family: var(--font-mono);
   font-size: var(--fs-lg);
   text-align: center;
 }
