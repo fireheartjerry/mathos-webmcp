@@ -4,13 +4,13 @@ import { applyAction, createSession } from '../domain/session/reducer'
 import { clearSession, loadSession, saveSession, STORAGE_KEY } from '../domain/session/persistence'
 import { createPaintBarrier } from '../domain/session/paintBarrier'
 import type { ActionResult, ActionSource, SessionAction, SessionState, Step } from '../domain/session/types'
-import type { StepVerdict } from '../domain/math/derivation'
 import { registerTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import AgentConsole from './AgentConsole'
+import { actorLabel, relationLabel } from './proofPresentation'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
@@ -29,23 +29,6 @@ function conflictFailure(): ActionResult {
     message: 'Another tab changed this session, so this copy is paused.',
     recovery: 'Close one tab, then choose Start over here to continue safely.',
   }
-}
-
-const VERDICT_LABEL: Record<StepVerdict['status'], string> = {
-  sound: 'follows',
-  broken: 'not equivalent',
-  uncertain: 'could not determine',
-  unreadable: 'could not read',
-  downstream: 'after the first break',
-}
-
-function StepBadge({ verdict }: { verdict: StepVerdict | undefined }) {
-  if (!verdict) return <span className="badge badge-idle">unchecked</span>
-  const label =
-    verdict.status === 'sound' && verdict.relation !== 'first'
-      ? verdict.relation
-      : VERDICT_LABEL[verdict.status]
-  return <span className={`badge badge-${verdict.status}`}>{label}</span>
 }
 
 /**
@@ -412,7 +395,7 @@ export default function Scratchpad() {
                     .join(' ')}
                 >
                   <span className="step-n">{index + 1}</span>
-                  <div className="step-body">
+                  <div className="line-main">
                     {editingId === step.id ? (
                       <form
                         className="step-edit"
@@ -472,6 +455,12 @@ export default function Scratchpad() {
                         <Tex latex={step.latex} />
                       </button>
                     )}
+                  </div>
+                  <p className={`relation relation-${verdict?.status ?? 'idle'}`}>
+                    <span className="relation-mark" aria-hidden="true" />
+                    <span>{relationLabel(verdict)}</span>
+                  </p>
+                  <div className="line-evidence">
                     {verdict?.status === 'unreadable' && (
                       <p className="step-detail">{verdict.message}</p>
                     )}
@@ -496,14 +485,14 @@ export default function Scratchpad() {
                     )}
                     {notes.map((note) => (
                       <p key={note.id} className="step-note">
-                        <span className="note-source">{note.source === 'agent' ? 'Agent' : 'Local inspector'}</span>
+                        <span className="note-source">{actorLabel(note.source)}</span>
                         {note.note}
                       </p>
                     ))}
                     {state.proposal?.stepId === step.id && (
                       <div className="proposal">
                         <p className="proposal-head">
-                          {state.proposal.source === 'agent' ? 'The agent suggests' : 'The inspector suggests'}
+                          Proposed replacement — not applied · {actorLabel(state.proposal.source)}
                         </p>
                         <Tex latex={state.proposal.latex} />
                         <p className="proposal-why">{state.proposal.rationale}</p>
@@ -526,7 +515,6 @@ export default function Scratchpad() {
                       </div>
                     )}
                   </div>
-                  <StepBadge verdict={verdict} />
                   <button
                     type="button"
                     className="step-remove"
