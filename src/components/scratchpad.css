@@ -132,8 +132,8 @@
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) minmax(220px, 280px) 44px;
   grid-template-areas:
-    'number main relation remove'
-    '. main evidence .';
+    'number main relation .'
+    '. main evidence remove';
   align-items: start;
   gap: var(--s-2) var(--s-4);
   padding: var(--s-5) 0;
@@ -800,11 +800,13 @@
   .step {
     grid-template-columns: 28px minmax(0, 1fr) 44px;
     grid-template-areas:
-      'number main remove'
+      'number main .'
       '. relation .'
-      '. evidence .';
+      '. evidence .'
+      '. remove remove';
     gap: var(--s-2);
   }
+  .step-remove { justify-self: end; }
 }
 
 @media (max-width: 640px) {
