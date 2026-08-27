@@ -32,9 +32,10 @@ learner writes multi-line working, not a single number.
 2. Write your working one line at a time, pressing **Add line** after each. Write it
    *wrong on purpose* — get the first line or two right, then drop a term.
 3. Press **Check my work.**
-4. The **first** line that stopped being equivalent is marked `not equivalent`. Every line
-   after it is dimmed and badged `after the first break`, because everything downstream of a
-   mistake is downstream of a mistake. Sound lines read `follows` or `differentiates`.
+4. The first unresolved relation is marked locally. A proven failure reads `not equivalent`;
+   unreadable or uncertain math stays unresolved rather than being called wrong. Later lines say
+   either `after the first break` or `not checked after the unresolved line`. Sound lines read
+   `equals`, `differentiates`, or `evaluates`.
 5. **Click that line to rewrite it**, then check again. Only the learner can edit a line —
    an agent that tries is refused, and it may not offer a replacement until you have genuinely
    attempted the step yourself.
@@ -49,8 +50,9 @@ learner writes multi-line working, not a single number.
 You do not need an agent for any of that. If your browser has no WebMCP, the **Agent
 Console** in the margin still lists all six real tools with their descriptions and read/write roles,
 states the capability result honestly, and gives each tool a **Run locally** control that
-invokes the *identical* `execute` path with a pre-filled argument set. The page really
-mutates. Nothing is simulated and no agent is faked.
+invokes the *identical* `execute` path with safe argument templates and the current revision.
+The inspector never receives the canonical answer; the tester must supply proposal math. The
+page really mutates. Nothing is simulated and no agent is faked.
 
 Inspector-initiated calls are attributed to `local-inspector` in the session activity log,
 not to `agent`. Each caller identity gets its own bridge into the reducer, so the console's
@@ -86,7 +88,7 @@ twice, and the refusal it returns says exactly why:
   "revision": 7,
   "error": {
     "code": "refused_policy",
-    "message": "The learner has attempted step 3 0 time(s). Second Try does not offer a replacement before 2.",
+    "message": "The learner has made no attempts on step 3 since the most recent check. Second Try requires two learner attempts since the most recent check before offering a replacement.",
     "recovery": "Use annotate_step to explain what is wrong, and let the learner try again."
   }
 }
@@ -114,12 +116,12 @@ the ones in `src/domain/tools/definitions.ts`.
 
 | # | Tool | Mode | What it does |
 |---|---|---|---|
-| 1 | `get_scratchpad` — *Read the scratchpad* | **read** | Read the learner's current problem, every step they have written, each step's verdict, the first step that broke, and what you may do next. |
-| 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
+| 1 | `get_scratchpad` — *Read the scratchpad* | **read** | Read the current problem, learner lines, verdicts, first broken or unresolved relation, and valid next actions. |
+| 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the derivation and mark the first broken or unresolved relation. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
 | 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message. |
-| 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step. |
+| 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement after two learner attempts since the most recent check. The learner must accept or reject it; the caller cannot apply it. |
 | 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires checked work in which every line is sound and the requested answer is reached. |
-| 6 | `get_receipt` — *Read the session evidence* | **read** | Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven. |
+| 6 | `get_receipt` — *Read the session evidence* | **read** | Read up to eight recent completed rounds, actor-specific intervention counts, truncation metadata, the unaided result, and explicit limits. |
 
 Required arguments:
 
@@ -140,7 +142,7 @@ Notes an agent author will want:
 - **`expectedRevision`** is not ceremony. A human is editing the same document at the same
   time. If the learner has typed since you read the scratchpad, your write is rejected with
   `stale_revision` and a `recovery` string naming the current revision.
-- **`requestId`** caches the in-flight promise, so a retried call awaits the original rather
+- **`requestId` is namespaced by tool.** It caches the in-flight promise, so a retried call awaits the original rather
   than racing it. A completed success is replayed only while the document is still at that
   revision; once the learner moves on, the caller gets `stale_revision`, never an old success
   presented as current. Failures are evicted so a corrected retry can succeed.
@@ -174,7 +176,7 @@ const scratchpad = tools.find(t => t.name === 'get_scratchpad');
 
 // Chrome 151 wants the tool OBJECT and a JSON STRING. Both. It always returns a string.
 const state = JSON.parse(await mc.executeTool(scratchpad, '{}'));
-console.log(state);          // { ok: true, revision, data: { ...steps, firstBrokenStep } }
+console.log(state);          // firstBrokenStep is { position, stepId } or null
 ```
 
 A write, echoing the revision you just read:
@@ -295,9 +297,10 @@ validation branch.
   wrong.
 - **`check_work` is a write.** See above. If that surprises an agent author, the annotation
   is doing its job.
-- **The receipt evidences one session, in one browser.** It records what happened here: which
-  rounds ran, how many checks, how many agent annotations and proposals, whether the unaided
-  attempt was sound. It prints its own limits beside its claims, in the same type size:
+- **The receipt evidences one session, in one browser.** It returns at most eight recent
+  completed rounds, reports total/returned/truncated counts, separates agent, local-inspector,
+  and migrated unattributed interventions, and says whether the unaided attempt was sound. It
+  prints its own limits beside its claims, in the same type size:
   *it does not establish that the learner could do this again tomorrow, or unassisted
   elsewhere.* The product says *checked*, *equivalent*, *not equivalent*, *could not
   determine*, *unaided in this session*. It does not say *proved*, *mastered*, *understands*,
