@@ -61,6 +61,11 @@ describe('the tool surface itself', () => {
     )
   })
 
+  it('states the receipt history cap and truncation metadata', () => {
+    expect(h.byName('get_receipt').description).toContain('at most 8')
+    expect(h.byName('get_receipt').description).toContain('total and truncation metadata')
+  })
+
   it('reports read-only and cached mutation successes, but not failed calls', async () => {
     let successes = 0
     const local = harness(undefined, () => {
@@ -288,6 +293,25 @@ describe('idempotency', () => {
     expect(replay.ok).toBe(false)
     if (!replay.ok) expect(replay.error.code).toBe('stale_revision')
   })
+
+  it('does not collide when two different tools reuse a request id and revision', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const observedRevision = h.state.revision
+    const checked = await call(h.byName('check_work'), {
+      expectedRevision: observedRevision,
+      requestId: 'shared-cross-tool',
+    })
+    expect(checked.ok).toBe(true)
+
+    const annotation = await call(h.byName('annotate_step'), {
+      stepId: 'step-1',
+      note: 'This must not replay check_work.',
+      expectedRevision: observedRevision,
+      requestId: 'shared-cross-tool',
+    })
+    expect(annotation.ok).toBe(false)
+    if (!annotation.ok) expect(annotation.error.code).toBe('stale_revision')
+  })
 })
 
 describe('unexpected bridge failures', () => {
@@ -510,20 +534,35 @@ describe('the receipt', () => {
     }
   })
 
-  it('reports agent involvement per round', async () => {
-    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
-    await call(h.byName('annotate_step'), {
-      stepId: 'step-1',
-      note: 'look again at the second term',
-      expectedRevision: h.state.revision,
-      requestId: 'req-a-1',
+  it('caps completed rounds and returns explicit provenance and truncation metadata', async () => {
+    const initial = createSession(2026, 'receipt-cap')
+    const counts = (agent: number, localInspector: number, unattributed = 0) => ({
+      agent,
+      localInspector,
+      unattributed,
     })
-    h.learner({ type: 'CHECK_WORK' })
-    await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-n-2' })
+    h = harness({
+      ...initial,
+      history: Array.from({ length: 10 }, (_, index) => ({
+        round: index === 0 ? 'practice' as const : 'transfer' as const,
+        problemId: `problem-${index}`,
+        sound: true,
+        checks: 1,
+        annotations: counts(index, 1),
+        proposalsOffered: counts(2, 3),
+        proposalsAccepted: counts(1, 2),
+      })),
+    })
     const result = await call(h.byName('get_receipt'), {})
     if (result.ok) {
-      const rounds = result.data.rounds as Array<{ annotations: number }>
-      expect(rounds[0].annotations).toBe(1)
+      const rounds = result.data.rounds as Array<{
+        annotations: { agent: number; localInspector: number; unattributed: number }
+      }>
+      expect(rounds).toHaveLength(8)
+      expect(rounds[0].annotations).toEqual(counts(2, 1))
+      expect(result.data.roundsTotal).toBe(10)
+      expect(result.data.roundsReturned).toBe(8)
+      expect(result.data.roundsTruncated).toBe(true)
     }
   })
 

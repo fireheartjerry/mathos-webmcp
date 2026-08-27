@@ -46,15 +46,29 @@ export type Activity = {
   at: number
 }
 
+export type ProvenanceCounts = {
+  agent: number
+  localInspector: number
+  /** Counts migrated from sessions saved before actor-specific tallies existed. */
+  unattributed: number
+}
+
+export type InterventionTally = {
+  checks: number
+  annotations: ProvenanceCounts
+  proposalsOffered: ProvenanceCounts
+  proposalsAccepted: ProvenanceCounts
+}
+
 export type RoundSummary = {
   round: Round
   problemId: string
   /** Whether the derivation was fully sound when the round ended. */
   sound: boolean
   checks: number
-  agentAnnotations: number
-  agentProposalsAccepted: number
-  agentProposalsOffered: number
+  annotations: ProvenanceCounts
+  proposalsAccepted: ProvenanceCounts
+  proposalsOffered: ProvenanceCounts
 }
 
 export type SessionState = {
@@ -77,7 +91,7 @@ export type SessionState = {
   nextStepNumber: number
   nextEventNumber: number
   /** Per-round tallies, folded into `history` when the round ends. */
-  tally: { checks: number; annotations: number; proposalsOffered: number; proposalsAccepted: number }
+  tally: InterventionTally
 }
 
 export type SessionAction =

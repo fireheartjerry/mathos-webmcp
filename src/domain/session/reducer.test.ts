@@ -364,14 +364,49 @@ describe('the transfer round', () => {
     if (!result.ok) expect(result.code).toBe('refused_policy')
   })
 
-  it('records what the agent did in the practice round', () => {
+  it('records agent and local-inspector intervention provenance separately', () => {
     let state = start()
-    for (const latex of soundWork(state)) state = run(state, { type: 'ADD_STEP', latex })
-    state = run(state, { type: 'ANNOTATE_STEP', stepId: 'step-1', note: 'look again' }, 'agent')
-    state = run(state, { type: 'CHECK_WORK' })
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^3' })
+    state = run(state, { type: 'ANNOTATE_STEP', stepId: 'step-1', note: 'agent note' }, 'agent')
+    state = run(
+      state,
+      { type: 'ANNOTATE_STEP', stepId: 'step-1', note: 'inspector note' },
+      'local-inspector',
+    )
+    state = run(
+      state,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '3x^2', rationale: 'agent offer' },
+      'agent',
+    )
+    state = run(state, { type: 'RESOLVE_PROPOSAL', accept: false })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^4' })
+    state = run(state, { type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^5' })
+    state = run(
+      state,
+      { type: 'PROPOSE_STEP', stepId: 'step-1', latex: '5x^4', rationale: 'inspector offer' },
+      'local-inspector',
+    )
+    state = run(state, { type: 'RESOLVE_PROPOSAL', accept: true })
+
+    expect(state.tally.annotations).toEqual({ agent: 1, localInspector: 1, unattributed: 0 })
+    expect(state.tally.proposalsOffered).toEqual({ agent: 1, localInspector: 1, unattributed: 0 })
+    expect(state.tally.proposalsAccepted).toEqual({ agent: 0, localInspector: 1, unattributed: 0 })
+
+    state = {
+      ...state,
+      report: {
+        verdicts: {},
+        firstBrokenIndex: null,
+        firstBrokenId: null,
+        allSound: true,
+        reachesAnswer: true,
+      },
+    }
     state = run(state, { type: 'NEW_PROBLEM' }, 'agent')
     expect(state.history).toHaveLength(1)
-    expect(state.history[0].agentAnnotations).toBe(1)
+    expect(state.history[0].annotations).toEqual({ agent: 1, localInspector: 1, unattributed: 0 })
+    expect(state.history[0].proposalsAccepted).toEqual({ agent: 0, localInspector: 1, unattributed: 0 })
   })
 })
 

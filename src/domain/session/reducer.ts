@@ -33,6 +33,8 @@ import type {
   ActionSource,
   Activity,
   FailureCode,
+  InterventionTally,
+  ProvenanceCounts,
   SessionAction,
   SessionEnv,
   SessionState,
@@ -48,6 +50,28 @@ const LEARNER_ONLY: SessionAction['type'][] = [
 
 function fail(code: FailureCode, message: string, recovery: string): ActionResult {
   return { ok: false, code, message, recovery }
+}
+
+const emptyCounts = (): ProvenanceCounts => ({
+  agent: 0,
+  localInspector: 0,
+  unattributed: 0,
+})
+
+const emptyTally = (): InterventionTally => ({
+  checks: 0,
+  annotations: emptyCounts(),
+  proposalsOffered: emptyCounts(),
+  proposalsAccepted: emptyCounts(),
+})
+
+function incrementForSource(counts: ProvenanceCounts, source: ActionSource): ProvenanceCounts {
+  const key = source === 'agent'
+    ? 'agent'
+    : source === 'local-inspector'
+      ? 'localInspector'
+      : 'unattributed'
+  return { ...counts, [key]: counts[key] + 1 }
 }
 
 export function createSession(seed: number, sessionId: string, familyId = 'shared-path'): SessionState {
@@ -67,7 +91,7 @@ export function createSession(seed: number, sessionId: string, familyId = 'share
     history: [],
     nextStepNumber: 1,
     nextEventNumber: 1,
-    tally: { checks: 0, annotations: 0, proposalsOffered: 0, proposalsAccepted: 0 },
+    tally: emptyTally(),
   }
 }
 
@@ -257,7 +281,10 @@ export function applyAction(
         `Annotated step ${index + 1}`,
         {
           annotations: [...state.annotations, annotation],
-          tally: { ...state.tally, annotations: state.tally.annotations + 1 },
+          tally: {
+            ...state.tally,
+            annotations: incrementForSource(state.tally.annotations, source),
+          },
         },
         { annotationId: annotation.id, stepId: action.stepId, focus: action.focus === true },
         env,
@@ -313,7 +340,13 @@ export function applyAction(
         state,
         source,
         `Proposed a replacement for step ${index + 1}`,
-        { proposal, tally: { ...state.tally, proposalsOffered: state.tally.proposalsOffered + 1 } },
+        {
+          proposal,
+          tally: {
+            ...state.tally,
+            proposalsOffered: incrementForSource(state.tally.proposalsOffered, source),
+          },
+        },
         { proposalId: proposal.id, status: 'pending_learner_acceptance', stepId: action.stepId },
         env,
       )
@@ -350,7 +383,13 @@ export function applyAction(
         {
           steps,
           proposal: null,
-          tally: { ...state.tally, proposalsAccepted: state.tally.proposalsAccepted + 1 },
+          tally: {
+            ...state.tally,
+            proposalsAccepted: incrementForSource(
+              state.tally.proposalsAccepted,
+              proposal.source,
+            ),
+          },
           ...clearReport,
         },
         { accepted: true, stepId: proposal.stepId },
@@ -389,9 +428,9 @@ export function applyAction(
         problemId: state.problem.id,
         sound: state.report.allSound && state.report.reachesAnswer,
         checks: state.tally.checks,
-        agentAnnotations: state.tally.annotations,
-        agentProposalsAccepted: state.tally.proposalsAccepted,
-        agentProposalsOffered: state.tally.proposalsOffered,
+        annotations: state.tally.annotations,
+        proposalsAccepted: state.tally.proposalsAccepted,
+        proposalsOffered: state.tally.proposalsOffered,
       }
       return commit(
         state,
@@ -406,7 +445,7 @@ export function applyAction(
           proposal: null,
           history: [...state.history, summary],
           seenSignatures: [...state.seenSignatures, problemSignature(problem)],
-          tally: { checks: 0, annotations: 0, proposalsOffered: 0, proposalsAccepted: 0 },
+          tally: emptyTally(),
         },
         { problemId: problem.id, prompt: problem.prompt, round: 'transfer' },
         env,

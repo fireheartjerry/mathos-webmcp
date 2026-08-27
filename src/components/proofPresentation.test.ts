@@ -6,6 +6,8 @@ import type { RegistrationStatus } from '../domain/tools/registry'
 import {
   actorLabel,
   isBrokenVerdict,
+  registrationAllowsDirectCalls,
+  registrationRecovery,
   registrationStatusLabel,
   relationDetail,
   relationLabel,
@@ -30,6 +32,34 @@ describe('registrationStatusLabel', () => {
     [{ state: 'failed', detail: 'Registration threw unexpectedly.' }, 'Page tool registration failed'],
   ])('labels $status.state as %s', (status, label) => {
     expect(registrationStatusLabel(status)).toBe(label)
+  })
+})
+
+describe('partial registration recovery', () => {
+  it('does not treat zero confirmed tools as connected', () => {
+    const status: RegistrationStatus = {
+      state: 'partial',
+      registered: 0,
+      total: 6,
+      failures: ['get_scratchpad'],
+    }
+    expect(registrationAllowsDirectCalls(status)).toBe(false)
+    expect(registrationRecovery(status)).toBe(
+      'Only 0 of 6 page tools were confirmed. Missing: get_scratchpad. Reload this page once; if they remain missing, use a supported Chrome/WebMCP setup.',
+    )
+  })
+
+  it('keeps a usable partial connection and gives actionable recovery', () => {
+    const status: RegistrationStatus = {
+      state: 'partial',
+      registered: 2,
+      total: 6,
+      failures: ['annotate_step', 'propose_step'],
+    }
+    expect(registrationAllowsDirectCalls(status)).toBe(true)
+    expect(registrationRecovery(status)).toBe(
+      'Only 2 of 6 page tools were confirmed. Missing: annotate_step, propose_step. Reload this page once; if they remain missing, use a supported Chrome/WebMCP setup.',
+    )
   })
 })
 

@@ -55,9 +55,16 @@ function conflictFailure(): ActionResult {
  */
 function TransferSignal({ state }: { state: SessionState }) {
   const practice = state.history[0]
+  const interventionTotal = (counts: { agent: number; localInspector: number; unattributed: number }) =>
+    counts.agent + counts.localInspector + counts.unattributed
   const assisted = practice
-    ? practice.agentAnnotations + practice.agentProposalsOffered > 0
+    ? interventionTotal(practice.annotations) + interventionTotal(practice.proposalsOffered) > 0
     : false
+  const unattributed = practice
+    ? practice.annotations.unattributed +
+      practice.proposalsOffered.unattributed +
+      practice.proposalsAccepted.unattributed
+    : 0
   return (
     <section className="receipt" aria-labelledby="receipt-heading">
       <p className="kicker" id="receipt-heading">
@@ -92,9 +99,15 @@ function TransferSignal({ state }: { state: SessionState }) {
               ·
             </span>
             In the first round an agent or the local inspector {assisted ? 'did' : 'did not'}{' '}
-            intervene: {practice.agentAnnotations} annotation(s),{' '}
-            {practice.agentProposalsOffered} proposal(s) offered,{' '}
-            {practice.agentProposalsAccepted} accepted.
+            intervene. Agent: {practice.annotations.agent} annotation(s),{' '}
+            {practice.proposalsOffered.agent} proposal(s) offered,{' '}
+            {practice.proposalsAccepted.agent} accepted. Local inspector:{' '}
+            {practice.annotations.localInspector} annotation(s),{' '}
+            {practice.proposalsOffered.localInspector} proposal(s) offered,{' '}
+            {practice.proposalsAccepted.localInspector} accepted.
+            {unattributed > 0 && (
+              <> Earlier saved activity includes unattributed intervention counts.</>
+            )}
           </li>
         )}
       </ul>

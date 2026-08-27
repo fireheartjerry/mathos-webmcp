@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
-import { registrationStatusLabel } from './proofPresentation'
+import {
+  registrationAllowsDirectCalls,
+  registrationRecovery,
+  registrationStatusLabel,
+} from './proofPresentation'
 import { suggestedInspectorArgs } from './inspectorPresentation'
 import type { ProposalSeed } from './inspectorPresentation'
 
@@ -55,12 +59,13 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
   const [output, setOutput] = useState<{ tool: string; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const connected = status.state === 'live' || status.state === 'partial'
+  const connected = registrationAllowsDirectCalls(status)
+  const partialRecovery = registrationRecovery(status)
   const checking =
     status.state === 'unsupported' && status.detail.startsWith('Checking')
 
   const proposalSeedKey = proposalSeed
-    ? `${proposalSeed.stepId}:${proposalSeed.latex}`
+    ? proposalSeed.stepId
     : 'redacted'
 
   useEffect(() => {
@@ -91,6 +96,7 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
   return (
     <div className="agent-console">
       <StatusLine status={status} />
+      {partialRecovery && <p className="console-hint">{partialRecovery}</p>}
       <ul className="console-tools">
         {tools.map((tool) => {
           const open = openTool === tool.name

@@ -61,14 +61,53 @@ function isProblem(value: unknown): boolean {
   return true
 }
 
+function isProvenanceCounts(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isCount(value.agent) &&
+    isCount(value.localInspector) &&
+    isCount(value.unattributed)
+  )
+}
+
 function isTally(value: unknown): boolean {
   return (
     isRecord(value) &&
     isCount(value.checks) &&
-    isCount(value.annotations) &&
-    isCount(value.proposalsOffered) &&
-    isCount(value.proposalsAccepted)
+    isProvenanceCounts(value.annotations) &&
+    isProvenanceCounts(value.proposalsOffered) &&
+    isProvenanceCounts(value.proposalsAccepted)
   )
+}
+
+const migratedCounts = (value: unknown) =>
+  isCount(value)
+    ? { agent: 0, localInspector: 0, unattributed: value }
+    : value
+
+/** Preserves old totals as unattributed instead of falsely assigning an actor. */
+function migrateLegacyInterventionCounts(value: unknown): unknown {
+  if (!isRecord(value) || value.version !== STORAGE_VERSION) return value
+  if (isRecord(value.tally)) {
+    value.tally.annotations = migratedCounts(value.tally.annotations)
+    value.tally.proposalsOffered = migratedCounts(value.tally.proposalsOffered)
+    value.tally.proposalsAccepted = migratedCounts(value.tally.proposalsAccepted)
+  }
+  if (Array.isArray(value.history)) {
+    for (const summary of value.history) {
+      if (!isRecord(summary)) continue
+      summary.annotations = migratedCounts(
+        summary.annotations ?? summary.agentAnnotations,
+      )
+      summary.proposalsOffered = migratedCounts(
+        summary.proposalsOffered ?? summary.agentProposalsOffered,
+      )
+      summary.proposalsAccepted = migratedCounts(
+        summary.proposalsAccepted ?? summary.agentProposalsAccepted,
+      )
+    }
+  }
+  return value
 }
 
 /**
@@ -152,9 +191,9 @@ export function isRestorable(value: unknown): value is SessionState {
       !isString(summary.problemId) ||
       typeof summary.sound !== 'boolean' ||
       !isCount(summary.checks) ||
-      !isCount(summary.agentAnnotations) ||
-      !isCount(summary.agentProposalsAccepted) ||
-      !isCount(summary.agentProposalsOffered)
+      !isProvenanceCounts(summary.annotations) ||
+      !isProvenanceCounts(summary.proposalsAccepted) ||
+      !isProvenanceCounts(summary.proposalsOffered)
     ) return false
   }
   return true
@@ -180,7 +219,7 @@ export function loadSession(storage: Storage | undefined = safeStorage()): Sessi
   }
   if (!raw) return null
   try {
-    const parsed: unknown = JSON.parse(raw)
+    const parsed: unknown = migrateLegacyInterventionCounts(JSON.parse(raw))
     if (!isRestorable(parsed)) {
       clearSession(storage)
       return null

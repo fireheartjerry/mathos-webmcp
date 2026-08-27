@@ -1,13 +1,13 @@
 import type { SessionState } from '../domain/session/types'
 import { PROPOSAL_ATTEMPT_GATE } from '../domain/session/types'
 
-export type ProposalSeed = { stepId: string; latex: string }
+export type ProposalSeed = { stepId: string }
 
-/** The canonical answer is available only when a practice step has earned a proposal. */
+/** The inspector may identify an eligible step, but it never supplies proposal content. */
 export function proposalSeedForSession(state: SessionState): ProposalSeed | null {
   if (state.round !== 'practice') return null
   const eligible = state.steps.find((step) => step.attempts >= PROPOSAL_ATTEMPT_GATE)
-  return eligible ? { stepId: eligible.id, latex: state.problem.answer.latex } : null
+  return eligible ? { stepId: eligible.id } : null
 }
 
 export function suggestedInspectorArgs(
@@ -23,10 +23,8 @@ export function suggestedInspectorArgs(
     propose_step: (revision) =>
       JSON.stringify({
         stepId: proposalSeed?.stepId ?? '',
-        latex: proposalSeed?.latex ?? '',
-        rationale: proposalSeed
-          ? 'This is the derivative implied by the current premise.'
-          : '',
+        latex: '',
+        rationale: '',
         expectedRevision: revision,
         requestId: `inspector-${revision}`,
       }),

@@ -29,4 +29,28 @@ describe('browser registration read-back', () => {
       expect(registration.status.failures).toHaveLength(6)
     }
   })
+
+  it('uses read-back counts even when some registration calls reject', async () => {
+    const getTools = vi.fn(async () => [
+      { name: 'get_scratchpad' },
+      { name: 'check_work' },
+    ])
+    vi.stubGlobal('document', {
+      modelContext: {
+        registerTool: async (tool: { name: string }) => {
+          if (tool.name === 'annotate_step') throw new Error('blocked')
+        },
+        getTools,
+      },
+    })
+
+    const registration = await registerTools(bridge)
+    expect(getTools).toHaveBeenCalledOnce()
+    expect(registration.status).toEqual({
+      state: 'partial',
+      registered: 2,
+      total: 6,
+      failures: ['annotate_step', 'propose_step', 'new_problem', 'get_receipt'],
+    })
+  })
 })

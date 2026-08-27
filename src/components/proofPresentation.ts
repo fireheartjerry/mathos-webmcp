@@ -18,6 +18,15 @@ export function registrationStatusLabel(status: RegistrationStatus): string {
   }
 }
 
+export function registrationAllowsDirectCalls(status: RegistrationStatus): boolean {
+  return status.state === 'live' || (status.state === 'partial' && status.registered > 0)
+}
+
+export function registrationRecovery(status: RegistrationStatus): string | null {
+  if (status.state !== 'partial') return null
+  return `Only ${status.registered} of ${status.total} page tools were confirmed. Missing: ${status.failures.join(', ')}. Reload this page once; if they remain missing, use a supported Chrome/WebMCP setup.`
+}
+
 export function actorLabel(source: ActionSource): string {
   switch (source) {
     case 'learner':

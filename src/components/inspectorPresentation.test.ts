@@ -21,7 +21,7 @@ describe('local inspector proposal defaults', () => {
     )
   })
 
-  it('uses the eligible learner step only after two attempts in practice', () => {
+  it('prefills only the eligible learner step after two attempts in practice', () => {
     let state = createSession(2026, 'inspector-seed-after-gate')
     state = run(state, { type: 'ADD_STEP', latex: state.problem.premiseLatex })
     state = run(state, {
@@ -30,10 +30,15 @@ describe('local inspector proposal defaults', () => {
       latex: `${state.problem.premiseLatex}+0`,
     })
 
-    expect(proposalSeedForSession(state)).toEqual({
-      stepId: 'step-1',
-      latex: state.problem.answer.latex,
-    })
+    const seed = proposalSeedForSession(state)
+    expect(seed).toEqual({ stepId: 'step-1' })
+    expect(JSON.parse(suggestedInspectorArgs(seed).propose_step(state.revision))).toEqual(
+      expect.objectContaining({
+        stepId: 'step-1',
+        latex: '',
+        rationale: '',
+      }),
+    )
   })
 
   it('never exposes the canonical answer during unaided transfer', () => {

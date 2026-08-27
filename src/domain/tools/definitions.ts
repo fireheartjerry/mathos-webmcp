@@ -180,14 +180,17 @@ function scratchpadData(state: SessionState): Record<string, unknown> {
   }
 }
 
+const RECEIPT_ROUND_LIMIT = 8
+
 function receiptData(state: SessionState): Record<string, unknown> {
-  const rounds = state.history.map((round) => ({
+  const completedRounds = state.history.slice(-RECEIPT_ROUND_LIMIT)
+  const rounds = completedRounds.map((round) => ({
     round: round.round,
     allStepsSound: round.sound,
     checksRun: round.checks,
-    annotations: round.agentAnnotations,
-    proposalsOffered: round.agentProposalsOffered,
-    proposalsAccepted: round.agentProposalsAccepted,
+    annotations: round.annotations,
+    proposalsOffered: round.proposalsOffered,
+    proposalsAccepted: round.proposalsAccepted,
   }))
   const previousTransfer = [...state.history].reverse().find((round) => round.round === 'transfer')
   const currentRoundStart = state.activities.findLastIndex(
@@ -209,6 +212,9 @@ function receiptData(state: SessionState): Record<string, unknown> {
   return {
     sessionId: state.sessionId,
     rounds,
+    roundsTotal: state.history.length,
+    roundsReturned: rounds.length,
+    roundsTruncated: state.history.length > RECEIPT_ROUND_LIMIT,
     unaidedTransfer:
       observedSoundBeforeEdit && transfer === null
         ? 'previously checked sound; current work changed afterward'
@@ -233,6 +239,7 @@ function receiptData(state: SessionState): Record<string, unknown> {
  */
 async function mutate(
   bridge: ToolBridge,
+  toolName: string,
   input: unknown,
   allowedKeys: readonly string[],
   build: (values: Record<string, unknown>) => SessionAction | { invalid: string; recovery: string },
@@ -261,7 +268,7 @@ async function mutate(
   // often reuses its id; keyed on the id alone it would receive the previous verdict,
   // presented as a fresh one. Including the revision makes that a different operation,
   // which is what it actually is.
-  const cacheKey = `${requestId}@${String(expectedRevision)}`
+  const cacheKey = `${toolName}:${requestId}@${String(expectedRevision)}`
   const cached = bridge.requestCache.get(cacheKey)
   if (cached) {
     // An in-flight duplicate must await the original. A completed duplicate is safe
@@ -353,7 +360,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
         additionalProperties: false,
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) => mutate(bridge, input, ['expectedRevision', 'requestId'], () => ({ type: 'CHECK_WORK' })),
+      execute: (input) => mutate(bridge, 'check_work', input, ['expectedRevision', 'requestId'], () => ({ type: 'CHECK_WORK' })),
     },
 
     {
@@ -375,7 +382,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       execute: (input) =>
-        mutate(bridge, input, ['stepId', 'note', 'focus', 'expectedRevision', 'requestId'], (values) => {
+        mutate(bridge, 'annotate_step', input, ['stepId', 'note', 'focus', 'expectedRevision', 'requestId'], (values) => {
           if (typeof values.stepId !== 'string' || !values.stepId) {
             return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
           }
@@ -416,7 +423,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       execute: (input) =>
-        mutate(bridge, input, ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'], (values) => {
+        mutate(bridge, 'propose_step', input, ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'], (values) => {
           if (typeof values.stepId !== 'string' || !values.stepId) {
             return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
           }
@@ -458,7 +465,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       execute: (input) =>
-        mutate(bridge, input, ['familyId', 'expectedRevision', 'requestId'], (values) => {
+        mutate(bridge, 'new_problem', input, ['familyId', 'expectedRevision', 'requestId'], (values) => {
           if (values.familyId !== undefined && typeof values.familyId !== 'string') {
             return { invalid: 'familyId must be a string.', recovery: 'Omit familyId to stay in the current skill family.' }
           }
@@ -476,7 +483,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'get_receipt',
       title: 'Read the session evidence',
       description:
-        'Read completed-round history and bounded transfer evidence. Use get_scratchpad for the current on-screen derivation and its verdicts.',
+        'Read at most 8 recent completed rounds with total and truncation metadata, plus bounded transfer evidence. Use get_scratchpad for the current on-screen derivation and its verdicts.',
       inputSchema: EMPTY_SCHEMA,
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input) {

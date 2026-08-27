@@ -35,4 +35,32 @@ describe('session persistence validation', () => {
     expect(loadSession(storage)).toBeNull()
     expect(storage.read()).toBe('')
   })
+
+  it('migrates legacy aggregate intervention counts without inventing provenance', () => {
+    const legacy: any = structuredClone(createSession(2026, 'persist-legacy-counts'))
+    legacy.tally = { checks: 1, annotations: 2, proposalsOffered: 3, proposalsAccepted: 1 }
+    legacy.history = [
+      {
+        round: 'practice',
+        problemId: 'legacy-problem',
+        sound: true,
+        checks: 1,
+        agentAnnotations: 2,
+        agentProposalsOffered: 3,
+        agentProposalsAccepted: 1,
+      },
+    ]
+
+    const restored = loadSession(memoryStorage(legacy))
+    expect(restored?.tally.annotations).toEqual({
+      agent: 0,
+      localInspector: 0,
+      unattributed: 2,
+    })
+    expect(restored?.history[0].proposalsOffered).toEqual({
+      agent: 0,
+      localInspector: 0,
+      unattributed: 3,
+    })
+  })
 })

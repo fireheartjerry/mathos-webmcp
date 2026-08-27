@@ -101,24 +101,26 @@ export async function registerTools(bridge: ToolBridge): Promise<Registration> {
     .map((outcome, index) => (outcome.status === 'rejected' ? tools[index].name : null))
     .filter((name): name is string => name !== null)
 
-  if (failures.length === 0) {
-    // Report what the browser says it holds, not what we believe we sent it. The
-    // badge should be a reading, not an assumption.
+  if (typeof document.modelContext?.getTools === 'function') {
+    // Read back after every registration attempt, including partial failures. A
+    // rejected registration is not proof that another copy is absent or present.
     const confirmed = await readBack()
     const registered = confirmed.length
-    if (registered < tools.length) {
-      return {
-        status: {
-          state: 'partial',
-          registered,
-          total: tools.length,
-          failures: tools.filter((t) => !confirmed.some((c) => c.name === t.name)).map((t) => t.name),
-        },
-        tools,
-        readBack,
-      }
+    const missing = tools
+      .filter((tool) => !confirmed.some((item) => item.name === tool.name))
+      .map((tool) => tool.name)
+    if (registered === tools.length) {
+      return { status: { state: 'live', registered, total: tools.length }, tools, readBack }
     }
-    return { status: { state: 'live', registered, total: tools.length }, tools, readBack }
+    return {
+      status: { state: 'partial', registered, total: tools.length, failures: missing },
+      tools,
+      readBack,
+    }
+  }
+
+  if (failures.length === 0) {
+    return { status: { state: 'live', registered: tools.length, total: tools.length }, tools, readBack }
   }
   if (failures.length === tools.length) {
     return { status: { state: 'failed', detail: 'No tool could be registered.' }, tools, readBack }
