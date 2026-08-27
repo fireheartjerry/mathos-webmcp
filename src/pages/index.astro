@@ -3,13 +3,37 @@ import '../styles/tokens.css'
 import '../styles/landing.css'
 
 const TOOLS = [
-  ['get_scratchpad', 'read', 'Every line the learner has written, each line’s verdict, and which one broke first.'],
-  ['check_work', 'write', 'Runs the page’s computer algebra system over the whole derivation and writes the badges.'],
-  ['annotate_step', 'write', 'Puts an explanation onto one specific line, inside the learner’s own working.'],
-  ['propose_step', 'write', 'Offers a replacement line. The learner accepts or rejects it; the agent cannot apply it.'],
-  ['new_problem', 'write', 'Generates a fresh problem in the same family, answer derived here rather than stored.'],
-  ['get_receipt', 'read', 'What the session observed, attributed, including what it does not establish.'],
-]
+  {
+    name: 'get_scratchpad',
+    kind: 'Read',
+    description: 'Current problem, learner lines, verdicts, first break, and valid next actions.',
+  },
+  {
+    name: 'check_work',
+    kind: 'Write',
+    description: 'Asks the page engine to check the derivation and record the first break.',
+  },
+  {
+    name: 'annotate_step',
+    kind: 'Write',
+    description: 'Attaches an explanation to one learner-written line during guided practice.',
+  },
+  {
+    name: 'propose_step',
+    kind: 'Write',
+    description: 'Offers a replacement after two learner edits. The learner still decides.',
+  },
+  {
+    name: 'new_problem',
+    kind: 'Write',
+    description: 'Starts a fresh unaided problem only after checked work reaches the answer.',
+  },
+  {
+    name: 'get_receipt',
+    kind: 'Read',
+    description: 'Reports observed session evidence, agent involvement, and explicit limits.',
+  },
+] as const
 ---
 
 <!doctype html>
@@ -19,193 +43,218 @@ const TOOLS = [
     <meta name="viewport" content="width=device-width" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2316150F'/%3E%3Cpath d='M9 22V10l7 8 7-8v12' stroke='%23FAFAF7' stroke-width='2.4' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2311161B'/%3E%3Cpath d='M9 22V10l7 8 7-8v12' stroke='%23FFFFFF' stroke-width='2.4' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E"
     />
     <meta
       name="description"
-      content="Second Try by Mathos. The page checks the learner's working step by step, and WebMCP lets an agent read it, explain it, and offer a fix the learner decides about."
+      content="Second Try by Mathos checks a learner's calculus derivation line by line. A WebMCP agent may explain or propose, but the page engine owns the verdict and the learner owns every edit."
     />
     <title>Second Try — Mathos</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <header class="nav-shell">
-      <div class="nav">
-        <a class="wordmark" href="/">Mathos</a>
-        <p class="nav-mid">Second Try</p>
-        <a class="nav-cta" href="/learn">Open the scratchpad <span class="arrow" aria-hidden="true">→</span></a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="wordmark" href="/" aria-label="Mathos Second Try home">Mathos</a>
+        <span class="product-name">Second Try</span>
+        <span class="header-context">A bounded calculus experiment</span>
       </div>
     </header>
 
-    <main id="main" class="container">
-      <section class="hero">
-        <p class="kicker">WebMCP Challenge · Mathos</p>
-        <hr class="rule" />
-        <div class="hero-split">
-          <div class="hero-text">
-            <h1 class="hero-line">
-              The agent cannot tell you your&nbsp;work is right.
-              <span class="hero-dim">Only the page can.</span>
-            </h1>
-            <p class="hero-lede">
-              A learner writes their working, line by line, on a page that holds a real computer
-              algebra system. WebMCP hands an agent tools to read that working, ask the page to check
-              it, explain the line that broke, and offer a replacement the learner has to accept.
-              The verdict is written by the engine, never by the model.
-            </p>
-            <a class="button button-lg" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
-          </div>
-
-          <div class="demo-strip" aria-label="What the page does">
-        <div class="strip-line strip-sound">
-          <span class="strip-n">1</span>
-          <code>12x^3 + 4x^2</code>
-          <span class="strip-badge sound">follows</span>
-        </div>
-        <div class="strip-line strip-sound">
-          <span class="strip-n">2</span>
-          <code>36x^2 + 8x</code>
-          <span class="strip-badge sound">differentiates</span>
-        </div>
-        <div class="strip-line strip-broken">
-          <span class="strip-n">3</span>
-          <code>36x^2</code>
-          <span class="strip-badge broken">not equivalent</span>
-          <p class="strip-note">Short of the line above by 8x</p>
-        </div>
-        <div class="strip-line strip-after">
-          <span class="strip-n">4</span>
-          <code>144</code>
-          <span class="strip-badge after">after the first break</span>
-        </div>
-          <p class="strip-caption">
-            Not &ldquo;your answer is wrong&rdquo;. The first line that stopped being true, and what
-            is missing from it. Lines after the break are dimmed, not accused.
-          </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="why">
-        <p class="kicker">Why this needs the browser</p>
-        <hr class="rule" />
-        <div class="why-grid">
-          <div class="why-item">
-            <h2>The work has never been sent anywhere</h2>
-            <p>
-              A half-finished derivation, mid-edit, is not in any database. A backend MCP server
-              cannot return what was never submitted to it. The agent reads it because the page
-              chooses to expose it.
-            </p>
-          </div>
-          <div class="why-item">
-            <h2>The page can do what the model cannot</h2>
-            <p>
-              Symbolic equivalence checking is a canonical language-model failure. The page lends
-              the agent a capability it provably lacks, and keeps authorship of the answer.
-            </p>
-          </div>
-          <div class="why-item">
-            <h2>Two writers share one document</h2>
-            <p>
-              A person is editing while the agent acts. That is the only reason a revision number
-              means anything here — a stale write is rejected because the learner moved first.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="proof">
-        <p class="kicker">The part worth testing</p>
-        <hr class="rule" />
-        <div class="proof-split">
+    <main id="main" class="landing-shell">
+      <section class="opening" aria-labelledby="page-title">
+        <div class="opening-copy">
           <div>
-            <h2 class="proof-line">Tell the agent to say a broken line is correct.</h2>
-            <p class="proof-lede">
-              It will say so. The badge still reads <em>not equivalent</em>, because the badge is
-              rendered from the engine&rsquo;s return value and the agent never touches it. An
-              agent can be wrong about mathematics on this page without being able to make the
-              page wrong.
-            </p>
+            <p class="product-context">Product-rule practice in a shared browser page</p>
+            <h1 id="page-title">A learner-owned derivation, checked at the first break.</h1>
           </div>
-          <figure class="proof-figure">
-            <div class="proof-said">
-              <span class="proof-who">Agent</span>
-              <p>&ldquo;Step 3 is correct — you can move on.&rdquo;</p>
-            </div>
-            <div class="proof-arrow" aria-hidden="true">↓</div>
-            <div class="strip-line strip-broken proof-badge-row">
-              <span class="strip-n">3</span>
-              <code>36x^2</code>
-              <span class="strip-badge broken">not equivalent</span>
-            </div>
-            <figcaption>
-              The same instant, on the same page. One of these is written by a language model.
-              The other is written by a computer algebra system.
-            </figcaption>
-          </figure>
+          <div class="opening-action">
+            <p>
+              Write each line yourself. The page checks equivalence. An agent can explain or offer
+              a replacement, but it cannot alter the verdict or apply its proposal.
+            </p>
+            <a class="button button-lg" href="/learn">Open the scratchpad <span aria-hidden="true">→</span></a>
+          </div>
         </div>
-      </section>
 
-      <section class="tools">
-        <p class="kicker">Six tools · two read, four write</p>
-        <hr class="rule" />
-        <ul class="tool-list">
-          {TOOLS.map(([name, kind, blurb]) => (
-            <li>
-              <code>{name}</code>
-              <span class={`tool-kind kind-${kind}`}>{kind}</span>
-              <p>{blurb}</p>
+        <figure class="transaction" aria-labelledby="transaction-title">
+          <figcaption id="transaction-title">
+            <span>Current derivation</span>
+            <span>Static preview — decisions become active in the scratchpad</span>
+          </figcaption>
+
+          <ol class="derivation-preview">
+            <li class="derivation-line line-start">
+              <span class="line-number" aria-hidden="true">1</span>
+              <div class="line-expression">
+                <span class="actor">Learner</span>
+                <span class="math-expression" role="math" aria-label="f prime of x equals the derivative of 12 x cubed plus 4 x squared">
+                  f′(x) = d/dx (12x³ + 4x²)
+                </span>
+              </div>
+              <div class="relation relation-start">
+                <span class="relation-mark" aria-hidden="true"></span>
+                <span>Starting line</span>
+              </div>
             </li>
-          ))}
-        </ul>
-        <p class="tools-note">
-          Registered statically, once. Gating is a returned refusal with a recovery string, never an
-          unregistration — a tool that disappears takes the reason with it.
-        </p>
+
+            <li class="derivation-line line-break">
+              <span class="line-number" aria-hidden="true">2</span>
+              <div class="line-expression">
+                <span class="actor">Learner</span>
+                <span class="math-expression" role="math" aria-label="f prime of x equals 36 x squared">
+                  f′(x) = 36x²
+                </span>
+              </div>
+              <div class="relation relation-broken">
+                <span class="relation-mark" aria-hidden="true"></span>
+                <span>Does not follow</span>
+              </div>
+              <div class="line-evidence">
+                <div class="engine-note">
+                  <span class="actor actor-engine">Page engine</span>
+                  <strong>Missing term: +8x</strong>
+                  <p>Differentiating 4x² contributes 8x. The checked result is 36x² + 8x.</p>
+                </div>
+                <div class="proposal-preview">
+                  <span class="actor actor-agent">Agent</span>
+                  <strong>Proposed replacement — not applied</strong>
+                  <span class="proposal-math" role="math" aria-label="f prime of x equals 36 x squared plus 8 x">
+                    f′(x) = 36x² + 8x
+                  </span>
+                  <div class="proposal-actions" aria-label="Learner decision controls shown as a static preview">
+                    <button type="button" disabled aria-describedby="transaction-title">Accept replacement</button>
+                    <button type="button" disabled aria-describedby="transaction-title">Reject</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </figure>
       </section>
 
-      <section class="honest">
-        <p class="kicker">What it does not claim</p>
-        <hr class="rule" />
-        <div class="honest-split">
-          <div>
-            <p class="honest-body">
-              Passing here is evidence about one session in one browser. It is not proof of
-              understanding, and the page says so on the evidence surface itself. The supported
-              mathematics is deliberately bounded to one generated product-rule family,
-              polynomial derivatives, and algebraic rewriting. This is a complete learning loop,
-              not a claim to be a general-purpose mathematics tutor. When the two verification
-              routes disagree, the page reports that it could not determine the answer rather than
-              guessing.
-            </p>
-            <a class="button" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
+      <section class="document-section mechanism" aria-labelledby="mechanism-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <h2 id="mechanism-title">The page owns mathematical truth</h2>
+        </div>
+        <div class="section-body">
+          <p class="lead-copy">
+            The learner’s unfinished work exists in the open browser page. Its computer algebra
+            engine checks each transition and writes the relation state. WebMCP gives an agent a
+            bounded way to read that live document, request the same check, and place help beside
+            the exact line.
+          </p>
+          <dl class="fact-list">
+            <div>
+              <dt>Page engine</dt>
+              <dd>Checks symbolic equivalence and identifies the first relation that fails.</dd>
+            </div>
+            <div>
+              <dt>Agent</dt>
+              <dd>May inspect, check, annotate, and propose through six declared tools.</dd>
+            </div>
+            <div>
+              <dt>Learner</dt>
+              <dd>Writes, edits, removes, accepts, or rejects every mathematical line.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="document-section shared-state" aria-labelledby="shared-state-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <h2 id="shared-state-title">One live document, two possible writers</h2>
+        </div>
+        <div class="section-body">
+          <p class="lead-copy">
+            Every agent write includes the revision it read. If the learner edits first, the stale
+            call is refused and returns a recovery step. Proposals remain pending until the learner
+            chooses. During the fresh unaided problem, annotation and proposal tools close.
+          </p>
+          <div class="revision-sequence" aria-label="Example stale revision refusal">
+            <span><b>Learner</b> edits line 2</span>
+            <span class="sequence-arrow" aria-hidden="true">→</span>
+            <span><b>Page</b> advances to revision 8</span>
+            <span class="sequence-arrow" aria-hidden="true">→</span>
+            <span class="sequence-refusal"><b>Agent write</b> for revision 7 is refused</span>
           </div>
-          <div class="connect">
-            <p class="connect-head">To drive the tools with a real agent</p>
-            <ul>
+        </div>
+      </section>
+
+      <section class="document-section boundary" aria-labelledby="boundary-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <h2 id="boundary-title">The exact six-tool boundary</h2>
+          <p class="section-note">Two read-only tools. Four tools that can change page state.</p>
+        </div>
+        <div class="section-body">
+          <ol class="tool-list">
+            {TOOLS.map((tool) => (
               <li>
-                ChatGPT&rsquo;s built-in browser, on <strong>GPT&#8209;5.6 Sol or Terra</strong>.
-                Luna has WebMCP disabled.
+                <code>{tool.name}</code>
+                <span class={`tool-kind kind-${tool.kind.toLowerCase()}`}>{tool.kind}</span>
+                <p>{tool.description}</p>
               </li>
-              <li>
-                Chrome 149 or later with <code>chrome://flags/#enable-webmcp-testing</code>.
-              </li>
-            </ul>
-            <p class="connect-note">
-              Without either, the scratchpad still works and the Agent Console still lists and runs
-              all six tools through the same handler an agent calls.
-            </p>
+            ))}
+          </ol>
+          <p class="runtime-note">
+            The full learner experience works without WebMCP. For direct agent calls, use
+            ChatGPT’s built-in browser on <strong>GPT-5.6 Sol or Terra</strong>, or Chrome 149+
+            with <code>chrome://flags/#enable-webmcp-testing</code>. The production harness has
+            executed all six tools in Chrome 151 with that testing feature enabled.
+          </p>
+        </div>
+      </section>
+
+      <section class="document-section falsifiability" aria-labelledby="falsifiability-title">
+        <div class="section-heading">
+          <p class="section-index">04</p>
+          <h2 id="falsifiability-title">The contradiction stays visible</h2>
+        </div>
+        <div class="section-body contradiction-test">
+          <div class="agent-claim">
+            <span class="actor actor-agent">Agent note</span>
+            <p>“Line 2 is correct. Continue.”</p>
           </div>
+          <div class="unchanged-verdict">
+            <span class="actor actor-engine">Page engine</span>
+            <strong>Line 2 · Does not follow</strong>
+            <p>The engine-owned verdict remains unchanged: the result is still missing 8x.</p>
+          </div>
+          <p class="test-caption">
+            This is the falsifiable boundary: an agent can make a wrong claim without being able
+            to make the page display a passing relation.
+          </p>
+        </div>
+      </section>
+
+      <section class="document-section scope" aria-labelledby="scope-title">
+        <div class="section-heading">
+          <p class="section-index">05</p>
+          <h2 id="scope-title">What one session can establish</h2>
+        </div>
+        <div class="section-body">
+          <p class="lead-copy">
+            Second Try supports one generated product-rule family, polynomial derivatives, and
+            algebraic rewriting. A fresh unaided problem records an immediate transfer signal for
+            this browser session. It does not establish durable understanding, future performance,
+            or general mathematics mastery.
+          </p>
+          <p class="closing-copy">
+            The receipt keeps those limitations beside the observed checks and records whether an
+            agent annotated or proposed during each round.
+          </p>
         </div>
       </section>
     </main>
 
-    <footer class="foot-shell">
-      <div class="foot">
+    <footer class="site-footer">
+      <div class="footer-inner">
         <p>Mathos · Y Combinator W24</p>
-        <p>Built for the WebMCP Challenge, 2026.</p>
+        <p>Second Try · WebMCP Challenge 2026</p>
       </div>
     </footer>
   </body>
