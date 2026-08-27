@@ -1210,7 +1210,9 @@
   }
 }
 
-/* Line order remains number → expression → relation → evidence → remove below 720px. */
+/* Below 720px each item reads as a compact proof line. Source order remains
+   number → expression → relation → evidence → remove; the remove target sits beside
+   the expression without creating a fourth layout band. */
 
 @media (max-width: 719px) {
   .scratch-header {
@@ -1252,29 +1254,18 @@
   }
 
   .step {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 24px minmax(0, 1fr);
     grid-template-areas:
       'number main'
       '. relation'
-      '. evidence'
-      '. remove';
-    gap: var(--s-1) var(--s-2);
+      '. evidence';
+    gap: 0 var(--s-2);
     padding-block: var(--s-3);
   }
 
   .step::before,
   .step::after {
-    grid-column: 2;
-  }
-
-  .step::before {
-    grid-row: 1 / 3;
-    margin-block: calc(var(--s-3) * -1) 22px;
-  }
-
-  .step::after {
-    grid-row: 2 / -1;
-    margin-block: calc(22px + var(--s-1)) calc(var(--s-3) * -1);
+    display: none;
   }
 
   .step-broken {
@@ -1283,19 +1274,61 @@
   }
 
   .step-n {
-    padding-top: 11px;
+    padding-top: 12px;
+  }
+
+  .line-main {
+    padding-inline-end: 48px;
   }
 
   .line-evidence {
-    margin-top: var(--s-1);
+    margin-top: 0;
+    padding: 0 var(--s-2) var(--s-1) 22px;
   }
 
   .relation {
-    margin-top: var(--s-1);
+    display: flex;
+    width: fit-content;
+    min-height: 32px;
+    align-items: center;
+    gap: var(--s-1);
+    margin: 0;
+    padding-inline: var(--s-2);
+    font-size: var(--fs-micro);
+  }
+
+  .relation-mark {
+    display: grid;
+    width: 10px;
+    min-height: 20px;
+    place-items: center;
+  }
+
+  .relation-mark::before,
+  .relation-sound .relation-mark::before,
+  .relation-broken .relation-mark::before,
+  .relation-uncertain .relation-mark::before,
+  .relation-unreadable .relation-mark::before,
+  .relation-downstream .relation-mark::before {
+    position: static;
+    width: auto;
+    height: auto;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+    font-size: 13px;
+    transform: none;
+  }
+
+  .relation-idle .relation-mark::before {
+    content: '·';
   }
 
   .step-remove {
-    margin-top: var(--s-1);
+    position: absolute;
+    top: var(--s-3);
+    right: 0;
+    margin: 0;
   }
 
   .session-details-status {
