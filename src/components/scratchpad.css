@@ -85,6 +85,17 @@
   gap: var(--s-11);
 }
 
+@media (min-width: 981px) {
+  .margin {
+    position: sticky;
+    top: calc(var(--nav-h) + var(--s-6));
+    max-height: calc(100vh - var(--nav-h) - var(--s-10));
+    overflow-y: auto;
+    align-self: start;
+    scrollbar-width: thin;
+  }
+}
+
 /* ---------- problem ---------- */
 
 .problem-prompt {
@@ -181,7 +192,7 @@
   border-radius: var(--r-chip);
   transition: color var(--d-instant) var(--ease-out);
 }
-.step-remove:hover { color: var(--path-a); }
+.step-remove:hover { color: var(--path-a-text); }
 .step-remove:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
 .step-remove:active { color: var(--ink); }
 
@@ -198,7 +209,7 @@
 }
 .badge-idle { color: var(--ink-meta); border-color: var(--hairline); }
 .badge-sound { color: var(--verify-deep); background: var(--panel-verify); border-color: var(--verify); }
-.badge-broken { color: var(--path-a); background: var(--panel-path); border-color: var(--path-a); }
+.badge-broken { color: var(--path-a-text); background: var(--panel-path); border-color: var(--path-a); }
 .badge-uncertain { color: var(--warn); border-color: var(--warn); }
 .badge-unreadable { color: var(--warn); border-color: var(--warn); }
 .badge-downstream { color: var(--ink-meta); border-color: var(--hairline); }
@@ -258,6 +269,8 @@
   outline-offset: 2px;
   border-color: var(--ink);
 }
+.composer-row input:active { border-color: var(--ink); }
+.composer-row input:disabled { color: var(--ink-35); background: var(--wash); cursor: not-allowed; }
 .composer-preview {
   margin: var(--s-3) 0 0;
   font-size: var(--fs-lg);
@@ -352,7 +365,10 @@
   resize: vertical;
   margin-bottom: var(--s-3);
 }
-.console-args:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.console-args:hover { border-color: var(--ink-35); }
+.console-args:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; border-color: var(--ink); }
+.console-args:active { border-color: var(--ink); }
+.console-args:disabled { color: var(--ink-35); background: var(--wash); cursor: not-allowed; }
 
 .console-hint {
   margin: var(--s-3) 0 0;
@@ -430,7 +446,7 @@
 /* ---------- math ---------- */
 
 .math .katex { font-size: 1em; }
-.math-raw { font-family: var(--font-mono); color: var(--path-a); }
+.math-raw { font-family: var(--font-mono); color: var(--path-a-text); }
 
 /* ---------- narrow ---------- */
 
@@ -455,7 +471,7 @@
   line-height: var(--lh-prose);
   color: var(--ink-70);
 }
-.step-detail .math { color: var(--path-a); }
+.step-detail .math { color: var(--path-a-text); }
 
 /* ---------- unaided round + evidence ---------- */
 
@@ -559,7 +575,10 @@
   border: var(--bw-hairline) solid var(--ink);
   border-radius: var(--r-control);
 }
+.step-edit input:hover { border-color: var(--ink); }
 .step-edit input:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.step-edit input:active { border-color: var(--ink); }
+.step-edit input:disabled { color: var(--ink-35); background: var(--wash); cursor: not-allowed; }
 
 .step-focused { background: var(--panel-tint); }
 
@@ -578,3 +597,31 @@
   align-items: center;
   justify-content: center;
 }
+
+/* The empty scratchpad used to be a large hole. This is the one thing a first-time
+   reader needs, and it is deliberately a DIFFERENT problem so it cannot be copied. */
+.example {
+  margin: 0 0 var(--s-9);
+  padding: var(--s-5) var(--s-6);
+  background: var(--paper-sunk);
+  border-radius: var(--r-panel);
+  max-width: var(--measure-prose);
+}
+.example figcaption {
+  font-size: var(--fs-meta);
+  color: var(--ink-meta);
+  margin-bottom: var(--s-4);
+}
+.example ol { list-style: none; margin: 0 0 var(--s-4); padding: 0; }
+.example li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+  font-size: var(--fs-lg);
+}
+.example li:last-child { border-bottom: 0; }
+.example-n { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--ink-meta); }
+.example > p { font-size: var(--fs-sm); line-height: var(--lh-prose); color: var(--ink-meta); margin: 0; }

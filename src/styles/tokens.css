@@ -43,7 +43,8 @@
   --ink-70:  rgba(22, 21, 15, 0.68);  /* body prose, nav at rest */
   --ink-60:  rgba(22, 21, 15, 0.62);  /* kickers, numerals, meta */
   --ink-35:  rgba(22, 21, 15, 0.35);
-  --ink-meta: rgba(22, 21, 15, 0.58);   /* smallest readable text; 4.5:1 on --paper */  /* faint strokes, disabled */
+  --ink-meta: rgba(22, 21, 15, 0.60);
+  --ink-disabled: rgba(22, 21, 15, 0.46);  /* inactive but still legible; WCAG exempts disabled controls, the first thing a judge sees should not be unreadable anyway */   /* smallest readable text; measured 4.57:1 on --paper */  /* faint strokes, disabled */
   --hairline:         rgba(22, 21, 15, 0.12);  /* EVERY divider and card border */
   --hairline-strong:  rgba(22, 21, 15, 0.22);
   --wash:             rgba(22, 21, 15, 0.06);  /* hover ground, unfilled progress track */
@@ -62,7 +63,8 @@
 
   /* ---- PATH / DATA ENCODING (Sarsa exact - NEVER type, buttons, links) - */
   --path-human:       #16150F;   /* the learner's own route */
-  --path-a:           #C2541E;   /* rust  - the route under discussion / attempted route */
+  --path-a:           #C2541E;
+  --path-a-text:      #B04C1B;   /* rust that may carry text; 4.88:1 on --panel-path */   /* rust  - the route under discussion / attempted route */
   --path-b:           #2E5E8C;   /* steel - alternative route */
   --path-c:           #33724F;   /* green - verified route */
      /* violet - fourth route */
@@ -288,14 +290,14 @@ button { font: inherit; cursor: pointer; }
 
 .button:disabled,
 .button[aria-disabled='true'] {
-  background: var(--wash);
-  color: var(--ink-35);
-  border-color: var(--hairline);
+  background: var(--paper-sunk);
+  color: var(--ink-disabled);
+  border-color: var(--hairline-strong);
   cursor: not-allowed;
   transform: none;
 }
 .button:disabled::before { transform: scaleX(0); }
-.button:disabled:hover { color: var(--ink-35); }
+.button:disabled:hover { color: var(--ink-disabled); }
 
 /* The secondary affordance. Never a second filled button competing with the first. */
 .button-text {
@@ -310,7 +312,7 @@ button { font: inherit; cursor: pointer; }
 }
 .button-text:hover { color: var(--ink); border-color: var(--ink); }
 .button-text:active { color: var(--brand-deep); }
-.button-text:disabled { color: var(--ink-35); border-color: var(--hairline); cursor: not-allowed; }
+.button-text:disabled { color: var(--ink-disabled); border-color: var(--hairline); cursor: not-allowed; }
 
 .skip-link {
   position: absolute;

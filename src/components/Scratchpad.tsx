@@ -375,11 +375,40 @@ export default function Scratchpad() {
           )}
 
           {state.steps.length === 0 && (
-            <p className="how how-lead">
-              Write your working one line at a time. Each line should be equal to the line above
-              it, or its derivative, or its value at the point in the question. Second Try checks
-              every line against the one above and marks the first that stops being true.
-            </p>
+            <>
+              <p className="how how-lead">
+                Write your working one line at a time. Each line should be equal to the line above
+                it, or its derivative, or its value at the point in the question. Second Try checks
+                every line against the one above and marks the first that stops being true.
+              </p>
+              <figure className="example">
+                <figcaption>
+                  The three moves, on a different problem —{' '}
+                  <Tex latex="y = x^2 \cdot 5x + x^2" /> at <Tex latex="x = 1" />
+                </figcaption>
+                <ol>
+                  <li>
+                    <span className="example-n">1</span>
+                    <Tex latex="5x^3 + x^2" />
+                    <span className="badge badge-sound">equals</span>
+                  </li>
+                  <li>
+                    <span className="example-n">2</span>
+                    <Tex latex="15x^2 + 2x" />
+                    <span className="badge badge-sound">differentiates</span>
+                  </li>
+                  <li>
+                    <span className="example-n">3</span>
+                    <Tex latex="17" />
+                    <span className="badge badge-sound">evaluates</span>
+                  </li>
+                </ol>
+                <p>
+                  Deliberately not your problem. Yours is above, and the point is the line where
+                  it goes wrong.
+                </p>
+              </figure>
+            </>
           )}
 
           <ol className="steps" aria-label="Your working">
