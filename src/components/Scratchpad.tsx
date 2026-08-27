@@ -37,6 +37,66 @@ function StepBadge({ verdict }: { verdict: StepVerdict | undefined }) {
   return <span className={`badge badge-${verdict.status}`}>{label}</span>
 }
 
+/**
+ * The evidence surface.
+ *
+ * Deliberately not a certificate. It reports what this session observed, attributes
+ * every action to whoever took it, and states its own limits in the same type size as
+ * its claims - because the honest reading and the flattering reading should not be
+ * typographically ranked.
+ */
+function Receipt({ state }: { state: SessionState }) {
+  const practice = state.history[0]
+  const assisted = practice
+    ? practice.agentAnnotations + practice.agentProposalsAccepted > 0
+    : false
+  return (
+    <section className="receipt" aria-labelledby="receipt-heading">
+      <p className="kicker" id="receipt-heading">
+        What this session observed
+      </p>
+      <hr className="rule" />
+      <ul className="receipt-claims">
+        <li>
+          <span className="receipt-mark" aria-hidden="true">
+            ✓
+          </span>
+          Every line of the fresh problem follows from the line above it, checked by the page
+          engine.
+        </li>
+        <li>
+          <span className="receipt-mark" aria-hidden="true">
+            ✓
+          </span>
+          The fresh problem was generated after the first round and its answer was derived here,
+          not stored.
+        </li>
+        <li>
+          <span className="receipt-mark" aria-hidden="true">
+            ✓
+          </span>
+          No agent annotated or proposed anything during this attempt — those tools are closed in
+          the unaided round.
+        </li>
+        {practice && (
+          <li>
+            <span className="receipt-mark" aria-hidden="true">
+              ·
+            </span>
+            In the first round the agent {assisted ? 'did' : 'did not'} intervene:{' '}
+            {practice.agentAnnotations} annotation(s), {practice.agentProposalsOffered} proposal(s)
+            offered, {practice.agentProposalsAccepted} accepted.
+          </li>
+        )}
+      </ul>
+      <p className="receipt-limits">
+        This is a record of one browser session. It does not establish that the learner could do
+        this again tomorrow, or without help elsewhere, and it is not a claim about understanding.
+      </p>
+    </section>
+  )
+}
+
 export default function Scratchpad() {
   const [state, setState] = useState<SessionState>(() => {
     const restored = typeof window === 'undefined' ? null : loadSession()
@@ -203,6 +263,17 @@ export default function Scratchpad() {
             ))}
           </div>
 
+          {state.round === 'transfer' && (
+            <p className="round-banner">
+              <strong>Unaided.</strong>
+              <span>
+                This problem was generated after your first round. <code>annotate_step</code> and{' '}
+                <code>propose_step</code> are closed until it ends, so whatever happens here is
+                yours.
+              </span>
+            </p>
+          )}
+
           {state.steps.length === 0 && (
             <p className="how">
               Write your working one line at a time. Each line should either be equal to the line
@@ -325,6 +396,19 @@ export default function Scratchpad() {
             <button type="button" className="button" onClick={check} disabled={state.steps.length === 0}>
               Check my work
             </button>
+            {report && state.round === 'practice' && (
+              <button
+                type="button"
+                className="button-text"
+                onClick={() => {
+                  const result = run({ type: 'NEW_PROBLEM' }, 'learner')
+                  setFlash(result.ok ? '' : result.message)
+                  setDraft('')
+                }}
+              >
+                Try a fresh problem, unaided
+              </button>
+            )}
             <button
               type="button"
               className="button-text"
@@ -339,6 +423,8 @@ export default function Scratchpad() {
               Start over
             </button>
           </div>
+
+          {state.round === 'transfer' && report?.allSound && <Receipt state={state} />}
 
           <p className="live-status" role="status" aria-live="polite">
             {flash ||

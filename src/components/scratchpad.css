@@ -454,3 +454,47 @@
   color: var(--ink-70);
 }
 .step-detail .math { color: var(--path-a); }
+
+/* ---------- unaided round + evidence ---------- */
+
+.round-banner {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-8);
+  background: var(--panel-tint);
+  border: var(--bw-hairline) solid var(--brand-line);
+  border-radius: var(--r-control);
+  font-size: var(--fs-sm);
+  color: var(--ink-70);
+  line-height: var(--lh-prose);
+}
+.round-banner strong { color: var(--brand); font-weight: var(--fw-ui); }
+
+.receipt {
+  margin-top: var(--s-12);
+  padding-top: var(--s-2);
+  border-top: var(--bw-track) solid var(--verify);
+}
+.receipt-claims { list-style: none; margin: 0 0 var(--s-6); padding: 0; }
+.receipt-claims li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-70);
+}
+.receipt-mark { color: var(--verify); font-weight: var(--fw-ui); }
+/* The limits are set at the same size as the claims. The honest reading and the
+   flattering reading are not typographically ranked. */
+.receipt-limits {
+  margin: 0;
+  max-width: var(--measure-prose);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-60);
+}

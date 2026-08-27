@@ -1,18 +1,14 @@
 ---
-import '../styles/global.css'
+import '../styles/tokens.css'
 import '../styles/landing.css'
 
-const PATHWAY = [
-  ['01', 'From slopes to learning', 'calculus'],
-  ['02', 'Numbers with direction', 'vectors'],
-  ['03', 'Following cause and effect', 'computation graphs'],
-  ['04', 'Learning from mistakes', 'backpropagation'],
-  ['05', 'Getting better step by step', 'optimization'],
-  ['06', 'Choosing among possibilities', 'probability'],
-  ['07', 'Turning words into meaning', 'tokens and embeddings'],
-  ['08', 'Deciding what matters', 'attention'],
-  ['09', 'Building a transformer', 'transformer blocks'],
-  ['10', 'Teach your own tiny model', 'training lab'],
+const TOOLS = [
+  ['get_scratchpad', 'read', 'Every line the learner has written, each line’s verdict, and which one broke first.'],
+  ['check_work', 'write', 'Runs the page’s computer algebra system over the whole derivation and writes the badges.'],
+  ['annotate_step', 'write', 'Puts an explanation in the margin beside one specific line.'],
+  ['propose_step', 'write', 'Offers a replacement line. The learner accepts or rejects it; the agent cannot apply it.'],
+  ['new_problem', 'write', 'Generates a fresh problem in the same family, answer derived here rather than stored.'],
+  ['get_receipt', 'read', 'What the session observed, attributed, including what it does not establish.'],
 ]
 ---
 
@@ -21,153 +17,149 @@ const PATHWAY = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2320221f'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23c85d31'/%3E%3C/svg%3E" />
-    <meta name="description" content="Begin with calculus. End with a transformer that you trained. Mathos turns every answer into a better path forward." />
-    <title>Mathos — From calculus to your own tiny transformer</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2316150F'/%3E%3Cpath d='M9 22V10l7 8 7-8v12' stroke='%23FAFAF7' stroke-width='2.4' fill='none' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <meta
+      name="description"
+      content="Second Try by Mathos. The page checks the learner's working step by step, and WebMCP lets an agent read it, explain it, and offer a fix the learner decides about."
+    />
+    <title>Second Try — Mathos</title>
   </head>
-  <body class="landing-page" data-story="1">
-    <a class="skip-link" href="#story">Skip to the story</a>
-    <header class="landing-header">
-      <a class="wordmark" href="/" aria-label="Mathos home">MATHOS<span>·</span></a>
-      <p>Calculus <span>→</span> transformer</p>
-      <a class="header-cta" href="/learn">Enter the studio <span aria-hidden="true">↗</span></a>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <a class="wordmark" href="/">Mathos</a>
+      <p class="nav-mid">Second Try</p>
+      <a class="nav-cta" href="/learn">Open the scratchpad <span class="arrow" aria-hidden="true">→</span></a>
     </header>
 
-    <aside class="path-motif" aria-hidden="true">
-      <p><span>01</span> Learning path <b>10</b></p>
-      <svg viewBox="0 0 180 610" role="presentation">
-        <path class="motif-base" d="M90 18 C90 66 36 72 36 126 C36 180 144 176 144 234 C144 292 63 298 63 354 C63 416 132 414 132 470 C132 524 90 530 90 590" />
-        <path class="motif-progress" pathLength="1" d="M90 18 C90 66 36 72 36 126 C36 180 144 176 144 234 C144 292 63 298 63 354 C63 416 132 414 132 470 C132 524 90 530 90 590" />
-        <g class="motif-nodes">
-          <circle cx="90" cy="18" r="5" />
-          <circle cx="36" cy="126" r="5" />
-          <circle cx="144" cy="234" r="5" />
-          <circle cx="63" cy="354" r="5" />
-          <circle cx="132" cy="470" r="5" />
-          <circle cx="90" cy="590" r="7" />
-        </g>
-      </svg>
-      <div class="motif-state"><span>Now</span><strong>Slopes</strong></div>
-      <div class="motif-state end"><span>Then</span><strong>Your model</strong></div>
-    </aside>
+    <main id="main" class="container">
+      <section class="hero">
+        <p class="kicker">WebMCP Challenge · Mathos</p>
+        <hr class="rule" />
+        <div class="hero-split">
+          <div class="hero-text">
+            <h1 class="hero-line">
+              The agent cannot tell you your&nbsp;work is right.
+              <span class="hero-dim">Only the page can.</span>
+            </h1>
+            <p class="hero-lede">
+              A learner writes their working, line by line, on a page that holds a real computer
+              algebra system. WebMCP hands an agent tools to read that working, ask the page to check
+              it, explain the line that broke, and offer a replacement the learner has to accept.
+              The verdict is written by the engine, never by the model.
+            </p>
+            <a class="button button-lg" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
+          </div>
 
-    <main id="story">
-      <section class="story-section hero-section is-visible" data-story-step="1">
-        <div class="section-inner hero-inner">
-          <p class="eyebrow"><span>Mathos learning system</span><span>Chapter 01 / 05</span></p>
-          <div class="company-proof" aria-label="Mathos company proof">
-            <span>Backed by <strong>Y Combinator</strong></span>
-            <span>Featured in <strong>Forbes</strong></span>
-            <span>Built for <strong>5M+ learners</strong></span>
-          </div>
-          <h1>Begin with<br /><em>calculus.</em><br />End with a transformer<br />that <i>you trained.</i></h1>
-          <div class="hero-bottom">
-            <p>One connected path from the mathematics you can see to the intelligence you can build.</p>
-            <a class="primary-link" href="/learn">Start with calculus <span aria-hidden="true">→</span></a>
-          </div>
+          <div class="demo-strip" aria-label="What the page does">
+        <div class="strip-line strip-sound">
+          <span class="strip-n">1</span>
+          <code>12x^3 + 4x^2</code>
+          <span class="strip-badge sound">follows</span>
         </div>
-        <p class="scroll-cue">Scroll to follow the calculation <span>↓</span></p>
-      </section>
-
-      <section class="story-section evidence-section" data-story-step="2">
-        <div class="section-inner evidence-layout">
-          <div class="section-index"><span>02</span><p>One answer changes the path</p></div>
-          <div class="answer-evidence" aria-label="An answer of 36 becomes evidence for a missed path">
-            <p class="answer-number">36</p>
-            <p class="answer-label">Not just wrong.<br /><strong>Specific.</strong></p>
-          </div>
-          <div class="evidence-copy">
-            <p class="lead">36 tells Mathos you followed the product path—and missed the direct one.</p>
-            <div class="decision-line">
-              <span>Answer</span><b>→</b><span>Evidence</span><b>→</b><span>New path</span>
-            </div>
-            <p>So the lesson changes. The representation changes. Then a fresh problem checks whether the idea can travel.</p>
+        <div class="strip-line strip-sound">
+          <span class="strip-n">2</span>
+          <code>36x^2 + 8x</code>
+          <span class="strip-badge sound">differentiates</span>
+        </div>
+        <div class="strip-line strip-broken">
+          <span class="strip-n">3</span>
+          <code>36x^2</code>
+          <span class="strip-badge broken">not equivalent</span>
+          <p class="strip-note">Short of the line above by 8x</p>
+        </div>
+        <div class="strip-line strip-after">
+          <span class="strip-n">4</span>
+          <code>144</code>
+          <span class="strip-badge after">after the first break</span>
+        </div>
+          <p class="strip-caption">
+            Not &ldquo;your answer is wrong&rdquo;. The first line that stopped being true, and what
+            is missing from it. Lines after the break are dimmed, not accused.
+          </p>
           </div>
         </div>
       </section>
 
-      <section class="story-section representation-section" data-story-step="3">
-        <div class="section-inner">
-          <div class="section-index light"><span>03</span><p>The same idea changes representation</p></div>
-          <h2>Follow the path.<br /><em>Change the lens.</em></h2>
-          <div class="representation-sequence">
-            <article>
-              <span class="rep-number">01</span>
-              <div><strong>dy/dx</strong><i> = 40</i></div>
-              <p>Equation</p>
-            </article>
-            <article>
-              <span class="rep-number">02</span>
-              <div class="branch-mark"><i></i><i></i><b></b><i></i></div>
-              <p>Computation graph</p>
-            </article>
-            <article>
-              <span class="rep-number">03</span>
-              <div class="vector-mark"><i></i><i></i><i></i><i></i><i></i></div>
-              <p>Vectors + attention</p>
-            </article>
-            <article>
-              <span class="rep-number">04</span>
-              <div class="transformer-mark"><i></i><i></i><i></i></div>
-              <p>Transformer</p>
-            </article>
+      <section class="why">
+        <p class="kicker">Why this needs the browser</p>
+        <hr class="rule" />
+        <div class="why-grid">
+          <div class="why-item">
+            <h2>The work has never been sent anywhere</h2>
+            <p>
+              A half-finished derivation, mid-edit, is not in any database. A backend MCP server
+              cannot return what was never submitted to it. The agent reads it because the page
+              chooses to expose it.
+            </p>
           </div>
-          <p class="representation-note">The notation gets more powerful. The underlying habit stays the same: trace influence, combine evidence, update what happens next.</p>
+          <div class="why-item">
+            <h2>The page can do what the model cannot</h2>
+            <p>
+              Symbolic equivalence checking is a canonical language-model failure. The page lends
+              the agent a capability it provably lacks, and keeps authorship of the answer.
+            </p>
+          </div>
+          <div class="why-item">
+            <h2>Two writers share one document</h2>
+            <p>
+              A person is editing while the agent acts. That is the only reason a revision number
+              means anything here — a stale write is rejected because the learner moved first.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section class="story-section pathway-section" data-story-step="4">
-        <div class="section-inner pathway-layout">
-          <div class="pathway-intro">
-            <div class="section-index"><span>04</span><p>Ten stages. One climb.</p></div>
-            <h2>From a slope<br />to a system<br /><em>that learns.</em></h2>
-            <p>Mathos already lives where mathematical reasoning happens. That makes it the right place to connect explanation, evidence, practice, and a real model you can inspect.</p>
-            <strong>Built by Mathos.</strong>
-          </div>
-          <ol class="landing-pathway">
-            {PATHWAY.map(([number, label, meta]) => (
-              <li>
-                <span>{number}</span>
-                <div><strong>{label}</strong><small>{meta}</small></div>
-              </li>
-            ))}
-          </ol>
-        </div>
+      <section class="proof">
+        <p class="kicker">The part worth testing</p>
+        <hr class="rule" />
+        <h2 class="proof-line">Tell the agent to say a broken line is correct.</h2>
+        <p class="proof-lede">
+          It will say so. The badge still reads <em>not equivalent</em>, because the badge is
+          rendered from the engine&rsquo;s return value and the agent never touches it. An agent can
+          be wrong about mathematics on this page without being able to make the page wrong.
+        </p>
       </section>
 
-      <section class="story-section finale-section" data-story-step="5">
-        <div class="section-inner finale-inner">
-          <div class="section-index light"><span>05</span><p>The final challenge</p></div>
-          <p class="finale-kicker">A real learning system, not a course playlist.</p>
-          <h2>Teach a tiny<br />transformer to<br /><em>finish the pattern.</em></h2>
-          <div class="finale-bottom">
-            <p>First, show us how you think about a derivative. Mathos will take it from there.</p>
-            <a class="primary-link light-link" href="/learn">Start with calculus <span aria-hidden="true">→</span></a>
-          </div>
-          <footer><span>MATHOS·</span><span>Built for the path between knowing and building.</span></footer>
-        </div>
+      <section class="tools">
+        <p class="kicker">Six tools · two read, four write</p>
+        <hr class="rule" />
+        <ul class="tool-list">
+          {TOOLS.map(([name, kind, blurb]) => (
+            <li>
+              <code>{name}</code>
+              <span class={`tool-kind kind-${kind}`}>{kind}</span>
+              <p>{blurb}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="tools-note">
+          Registered statically, once. Gating is a returned refusal with a recovery string, never an
+          unregistration — a tool that disappears takes the reason with it.
+        </p>
+      </section>
+
+      <section class="honest">
+        <p class="kicker">What it does not claim</p>
+        <hr class="rule" />
+        <p class="honest-body">
+          Passing here is evidence about one session in one browser. It is not proof of
+          understanding, and the page says so on the evidence surface itself. The supported
+          mathematics is bounded: derivatives of polynomial expressions and algebraic rewriting.
+          When the two verification routes disagree, the page reports that it could not determine
+          the answer rather than guessing.
+        </p>
+        <a class="button" href="/learn"><span>Open the scratchpad</span><span class="arrow" aria-hidden="true">→</span></a>
       </section>
     </main>
 
-    <script is:inline>
-      const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const STORY_SECTIONS = [...document.querySelectorAll('[data-story-step]')]
-
-      if (REDUCED_MOTION) {
-        STORY_SECTIONS.forEach((section) => section.classList.add('is-visible'))
-        document.body.dataset.story = '5'
-      } else {
-        document.body.classList.add('motion-ready')
-        const reveal_observer = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return
-            entry.target.classList.add('is-visible')
-            document.body.dataset.story = entry.target.dataset.storyStep
-          })
-        }, { rootMargin: '-20% 0px -45%', threshold: 0.08 })
-
-        STORY_SECTIONS.forEach((section) => reveal_observer.observe(section))
-      }
-    </script>
+    <footer class="foot">
+      <p>Mathos · Y Combinator W24</p>
+      <p>Built for the WebMCP Challenge, 2026.</p>
+    </footer>
   </body>
 </html>
