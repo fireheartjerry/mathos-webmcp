@@ -10,7 +10,12 @@
 
 **Screen**
 
-Open the learning studio beside the agent. The agent calls `get_learning_workspace`, then `check_current_attempt` with `36`. The page changes to the exact missing-path diagnosis.
+Open the learning studio beside the agent. Show only the first two calls:
+
+1. `get_learning_workspace`
+2. `check_current_attempt` with `36`
+
+The page changes to the exact missing-path diagnosis.
 
 **Audio**
 
@@ -30,13 +35,11 @@ Jump to the landing hero. Show the calculus-to-transformer path and the company 
 
 **Screen**
 
-Return to the diagnosis. Keep the agent and the session activity visible. Show these calls in order:
+Return to the diagnosis left by call two. Keep the agent and the session activity visible. Show only the next call:
 
-1. `get_learning_workspace`
-2. `check_current_attempt` with `36`
 3. `show_targeted_lesson`
 
-The third call opens the targeted lesson on the page.
+This call opens the targeted lesson on the page. Its activity entry appears beside the lesson.
 
 **Audio**
 
@@ -96,12 +99,14 @@ Return to the hero or hold on the trained evidence frame. End with the Mathos wo
 
 **Audio**
 
-> Most demos bolt an agent onto a page. Mathos already owns the math-learning surface and video engine. WebMCP turns that advantage into a frontier learning system shared by every learner and agent.
+> Mathos owns the math-learning surface and video engine. WebMCP turns that advantage into frontier learning for every learner and agent.
 
 ## Recording notes
 
 - Record the WebMCP segment in the ChatGPT in-app browser or Chrome 149+ with WebMCP enabled.
 - Show all six calls without hiding the repeated `check_current_attempt` call.
+- Show calls one and two only in the opening. Show call three only when the lesson opens.
+- Do not reset the session during the recording.
 - Preload the video lesson, receipt, pathway, and trained-model states in separate tabs.
 - Use jump cuts between those states. Do not show network or training waits.
 - Keep the final video between 2:40 and 2:55.

@@ -1,22 +1,26 @@
 # Screenshot shot list
 
-Use a wide desktop viewport. The saved live captures are 1692 × 890 or 1707 × 898. Hide empty browser chrome when the submission form accepts a clean image.
+The release set contains exactly four live captures. Hide empty browser chrome when the submission form accepts a clean image.
 
-## 1. Company thesis
+## 1. WebMCP changes the live lesson
 
-**File:** `docs/screenshots/01-landing-hero.png`
+**File:** `docs/screenshots/01-webmcp-agent-lesson.png`
 
-**State:** The deployed landing page at the top of `/`.
+**Size:** 1425 × 891.
 
-**Crop:** Keep the full hero, company proof, call to action, and right-side learning path. Remove only empty browser chrome.
+**State:** Open the deployed studio in the Codex in-app browser. Call `get_learning_workspace`, `check_current_attempt` with `36`, then `show_targeted_lesson`.
 
-**Caption:** “Begin with calculus. End with a transformer that you trained.”
+**Crop:** Keep the `5 agent tools live` status, targeted lesson, pathway, and agent activity entries.
 
-**Evidence in frame:** Backed by Y Combinator · Featured in Forbes · Built for 5M+ learners.
+**Caption:** “WebMCP turns one answer into the exact lesson, on the page the learner already sees.”
+
+**Evidence in frame:** Five live agent tools, the targeted shared-path repair, `AGENT · R1`, and `AGENT · R2`.
 
 ## 2. Targeted Mathos video
 
 **File:** `docs/screenshots/02-diagnosis-mathos-video.png`
+
+**Size:** 1692 × 890.
 
 **State:** Enter `36`, open the targeted lesson, and scroll to the ready Mathos video player.
 
@@ -30,6 +34,8 @@ Use a wide desktop viewport. The saved live captures are 1692 × 890 or 1707 × 
 
 **File:** `docs/screenshots/03-evidence-receipt.png`
 
+**Size:** 1707 × 898.
+
 **State:** Complete the `36 → lesson → 8` route and stop on the receipt.
 
 **Crop:** Keep the ten-stage rail, the full receipt, the observed sequence, and the session activity list.
@@ -42,18 +48,14 @@ Use a wide desktop viewport. The saved live captures are 1692 × 890 or 1707 × 
 
 **File:** `docs/screenshots/04-trained-transformer.png`
 
-**State:** Train the browser model for 100 real steps, then scroll to the measurement and generation sections.
+**Size:** 2538 × 2228.
 
-**Crop:** Keep the loss values, full loss curve, both raw samples, and the start of the attention heatmap.
+**State:** Train the browser model for 100 real steps. Capture the continuous page region from measured loss through the full attention head.
+
+**Crop:** Use the continuous live-page crop from the measurement section through the complete attention section.
 
 **Caption:** “A real 6,578-parameter transformer learns inside the browser.”
 
-**Evidence in frame:** Measured loss from `3.2807` to `1.3865`, direct-logit samples, and the real attention view.
+**Evidence in frame:** Measured loss from `3.2807` to `1.3865`, both direct-logit samples, and the complete real attention head.
 
-## Deferred WebMCP capture
-
-The current Chrome session did not expose WebMCP. Its live header correctly showed the supported-browser requirement.
-
-Capture one additional video frame later in the ChatGPT in-app browser or Chrome 149+ with WebMCP enabled. Show the agent panel, one tool call, the matching visible page change, and the session activity entry.
-
-Do not edit a screenshot to add an agent action bar. The four saved PNGs contain only states reproduced on the deployed site.
+Every PNG contains only a state reproduced on the deployed site. No screenshot uses a shim, mock, composite, or simulated tool action.

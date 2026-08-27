@@ -8,7 +8,7 @@ The learner and an agent share one visible learning session. The agent can read 
 
 Backed by Y Combinator · Featured in Forbes · Built for 5M+ learners
 
-## The 60-second judge path
+## Fast judge path
 
 1. Open the demo and select **Start with calculus**.
 2. Enter `36` for the first problem.
@@ -22,7 +22,7 @@ The model usually completes 100 steps in about 30 seconds on the WebGL backend. 
 
 ## Use the WebMCP path
 
-Open `/learn` in one of these supported environments:
+Open **[the learning studio](https://hackathon-build-eta.vercel.app/learn)** in one of these supported environments:
 
 - The ChatGPT in-app browser, which supports WebMCP by default.
 - Google Chrome 149 or later with `chrome://flags/#enable-webmcp-testing` enabled.
