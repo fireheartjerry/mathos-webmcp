@@ -136,7 +136,7 @@ Removed:
   the bundle. It is real and it works; it scores nothing on WebMCP Leverage, which is both
   the first criterion and the tiebreak, and it would have put off-thesis tools in the
   panel a judge screenshots first.
-- **The plain-HTTP bare-IP proxy** (`http://18.216.62.146:8001`) that both `vercel.json`
+- **The plain-HTTP bare-IP proxy** (`http://<internal-ip>:8001`) that both `vercel.json`
   and `astro.config.mjs` carried into what was intended to be a public repository.
 
 ---
