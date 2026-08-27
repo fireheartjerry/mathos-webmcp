@@ -61,40 +61,17 @@
 .header-live { color: var(--verify-deep); }
 .header-partial .dot { background: var(--warn); }
 
-/* ---------- shell grid ---------- */
+/* ---------- work document ---------- */
 
 .scratch-grid {
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  max-width: 1180px;
+  max-width: var(--measure-pull);
   width: 100%;
   margin: 0 auto;
   padding: var(--s-10) var(--s-9) var(--s-13);
-  gap: 0;
 }
 
-.work { min-width: 0; padding-right: var(--col-pad); }
-
-.margin {
-  min-width: 0;
-  padding-left: var(--col-pad);
-  border-left: var(--bw-hairline) solid var(--hairline);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-11);
-}
-
-@media (min-width: 981px) {
-  .margin {
-    position: sticky;
-    top: calc(var(--nav-h) + var(--s-6));
-    max-height: calc(100vh - var(--nav-h) - var(--s-10));
-    overflow-y: auto;
-    align-self: start;
-    scrollbar-width: thin;
-  }
-}
+.work { min-width: 0; }
 
 /* ---------- problem ---------- */
 
@@ -340,17 +317,11 @@
 
 .console-tool-name { font-family: var(--font-mono); font-size: var(--fs-meta); }
 
-.tag {
+.tool-access {
   font-size: var(--fs-micro);
-  font-weight: var(--fw-ui);
-  letter-spacing: var(--ls-pill);
-  padding: var(--pill-pad);
-  border-radius: var(--r-pill);
-  border: var(--bw-hairline) solid var(--hairline);
   color: var(--ink-60);
   flex: none;
 }
-.tag-write { color: var(--brand); border-color: var(--brand-line); }
 
 .console-tool-body { padding: 0 0 var(--s-4); }
 .console-tool-desc {
@@ -434,8 +405,57 @@
   margin-bottom: var(--s-2);
 }
 
+/* ---------- session details ---------- */
+
+.session-details {
+  margin-top: var(--s-11);
+  border-top: var(--bw-hairline) solid var(--hairline);
+  border-bottom: var(--bw-hairline) solid var(--hairline);
+}
+.session-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--ink-70);
+}
+.session-details > summary::-webkit-details-marker { display: none; }
+.session-details > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--ink-60);
+}
+.session-details[open] > summary::after { content: '−'; }
+.session-details > summary span { color: var(--ink-meta); font-weight: var(--fw-body); }
+.session-details > summary:hover { color: var(--ink); }
+.session-details > summary:focus-visible {
+  outline: var(--bw-focus) solid var(--ink);
+  outline-offset: 2px;
+}
+.session-details > summary:active { color: var(--brand-deep); }
+.session-details-body { padding: var(--s-4) 0 var(--s-8); }
+.session-details-intro {
+  max-width: var(--measure-prose);
+  margin: 0 0 var(--s-6);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+  color: var(--ink-60);
+}
+
 /* ---------- activity ---------- */
 
+.activity { margin-top: var(--s-9); }
+.activity h2 {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
 .activity ol { list-style: none; margin: 0; padding: 0; }
 .activity li {
   display: grid;
@@ -455,7 +475,6 @@
 .source-agent { color: var(--brand); }
 .source-local-inspector { color: var(--warn); }
 .activity-action { color: var(--ink-70); min-width: 0; }
-.activity-rev { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--ink-meta); }
 .activity-empty { font-size: var(--fs-sm); color: var(--ink-meta); margin: 0; }
 
 /* ---------- math ---------- */
@@ -466,15 +485,7 @@
 /* ---------- narrow ---------- */
 
 @media (max-width: 980px) {
-  .scratch-grid { grid-template-columns: minmax(0, 1fr); padding: var(--s-8) var(--s-6) var(--s-12); }
-  .work { padding-right: 0; }
-  .margin {
-    padding-left: 0;
-    border-left: 0;
-    border-top: var(--bw-hairline) solid var(--hairline);
-    padding-top: var(--s-9);
-    margin-top: var(--s-11);
-  }
+  .scratch-grid { padding: var(--s-8) var(--s-6) var(--s-12); }
   .scratch-header { padding: 0 var(--s-6); grid-template-columns: auto 1fr; }
   .scratch-title { display: none; }
 }
@@ -644,7 +655,6 @@
 /* ---------- rescue pass: the proof ledger ---------- */
 
 .scratch-grid {
-  max-width: 1200px;
   padding-top: var(--s-8);
 }
 
@@ -738,57 +748,10 @@
 .step-edit input { min-width: 44px; min-height: 44px; }
 .step-remove { padding: 0; }
 
-.capability-thesis {
-  margin: 0 0 var(--s-5);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-prose);
-  color: var(--ink-70);
-}
-.capability-inspector {
-  border-top: var(--bw-hairline) solid var(--hairline);
-  border-bottom: var(--bw-hairline) solid var(--hairline);
-}
-.capability-inspector > summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  cursor: pointer;
-  list-style: none;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--ink-70);
-}
-.capability-inspector > summary::-webkit-details-marker { display: none; }
-.capability-inspector > summary::after { content: '+'; font-family: var(--font-mono); }
-.capability-inspector[open] > summary::after { content: '−'; }
-.capability-inspector > summary:hover { color: var(--ink); }
-.capability-inspector > summary:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
-.capability-inspector > summary:active { color: var(--brand-deep); }
-.inspector-intro {
-  margin: 0 0 var(--s-4);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-prose);
-  color: var(--ink-60);
-}
-.console-tools { border-top: 0; }
 .console-tool-head { min-height: 44px; }
 .console-connect { margin-top: var(--s-5); }
 
 .activity li { grid-template-columns: auto minmax(0, 1fr); }
-
-@media (max-width: 1100px) {
-  .scratch-grid { grid-template-columns: minmax(0, 1fr); padding: var(--s-8) var(--s-6) var(--s-12); }
-  .work { padding-right: 0; }
-  .margin {
-    padding-left: 0;
-    border-left: 0;
-    border-top: var(--bw-hairline) solid var(--hairline);
-    padding-top: var(--s-9);
-    margin-top: var(--s-11);
-  }
-}
 
 @media (max-width: 980px) {
   .start-cue { grid-template-columns: 1fr; gap: 0; margin-bottom: var(--s-4); padding: var(--s-3) 0; }

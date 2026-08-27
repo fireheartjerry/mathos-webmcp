@@ -9,7 +9,7 @@ import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
-import AgentConsole from './AgentConsole'
+import SessionDetails from './SessionDetails'
 import { actorLabel, relationLabel } from './proofPresentation'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
@@ -641,36 +641,16 @@ export default function Scratchpad() {
                     : ''
                 : '')}
           </p>
-        </main>
 
-        <aside className="margin">
-          <AgentConsole
+          <SessionDetails
             status={status}
             tools={inspectorTools}
             onRun={runFromInspector}
             revision={state.revision}
             suggestedLatex={state.problem.answer.latex}
+            activities={state.activities}
           />
-
-          <section className="activity" aria-labelledby="activity-heading">
-            <p className="kicker" id="activity-heading">
-              Session activity
-            </p>
-            <hr className="rule" />
-            {state.activities.length === 0 ? (
-              <p className="activity-empty">Nothing has happened yet.</p>
-            ) : (
-              <ol>
-                {state.activities.slice(-8).map((activity) => (
-                  <li key={activity.id}>
-                    <span className={`activity-source source-${activity.source}`}>{activity.source}</span>
-                    <span className="activity-action">{activity.action}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-        </aside>
+        </main>
       </div>
     </div>
   )
