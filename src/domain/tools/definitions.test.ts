@@ -1,0 +1,328 @@
+import { describe, expect, it, beforeEach } from 'vitest'
+import { createTools } from './definitions'
+import type { ToolBridge, ToolDefinition, ToolEnvelope } from './definitions'
+import { applyAction, createSession } from '../session/reducer'
+import type { SessionAction, SessionState } from '../session/types'
+
+const ENV = { now: () => 1_000_000 }
+
+function harness(initial?: SessionState) {
+  let state: SessionState | null = initial ?? createSession(2026, 'session-tools')
+  const bridge: ToolBridge = {
+    getState: () => state,
+    run: async (action: SessionAction) => {
+      const result = applyAction(state as SessionState, action, 'agent', ENV)
+      if (result.ok) state = result.state
+      return result
+    },
+    requestCache: new Map(),
+  }
+  const tools = createTools(bridge)
+  const byName = (name: string) => tools.find((t) => t.name === name) as ToolDefinition
+  return {
+    tools,
+    byName,
+    get state() {
+      return state as SessionState
+    },
+    unmount: () => {
+      state = null
+    },
+    /** Applies a learner action directly, as the UI would. */
+    learner: (action: SessionAction) => {
+      const result = applyAction(state as SessionState, action, 'learner', ENV)
+      if (!result.ok) throw new Error(`${action.type}: ${result.message}`)
+      state = result.state
+    },
+  }
+}
+
+let h: ReturnType<typeof harness>
+beforeEach(() => {
+  h = harness()
+})
+
+const call = (tool: ToolDefinition, input: unknown) => tool.execute(input)
+
+describe('the tool surface itself', () => {
+  it('exposes exactly six tools, two of them read-only', () => {
+    expect(h.tools).toHaveLength(6)
+    expect(h.tools.filter((t) => t.annotations.readOnlyHint)).toHaveLength(2)
+  })
+
+  it('gives every tool a title, because the site-tools panel renders it', () => {
+    for (const tool of h.tools) expect(tool.title.length).toBeGreaterThan(0)
+  })
+
+  it('describes every input property, because agents read those descriptions', () => {
+    for (const tool of h.tools) {
+      const properties = (tool.inputSchema as { properties: Record<string, { description?: string }> }).properties
+      for (const [name, schema] of Object.entries(properties)) {
+        expect(schema.description, `${tool.name}.${name}`).toBeTruthy()
+        expect(schema.description!.length).toBeLessThanOrEqual(150)
+      }
+    }
+  })
+
+  it('marks tools that return learner-authored text as untrusted content', () => {
+    expect(h.byName('get_scratchpad').annotations.untrustedContentHint).toBe(true)
+    expect(h.byName('get_receipt').annotations.untrustedContentHint).toBe(true)
+  })
+
+  it('marks check_work as a write, because it changes what the learner sees', () => {
+    expect(h.byName('check_work').annotations.readOnlyHint).toBe(false)
+  })
+})
+
+describe('handlers never throw and never return undefined', () => {
+  const hostile: unknown[] = [
+    undefined, null, '', '{}', 'not json', 42, [], { requestId: null },
+    { expectedRevision: 'x', requestId: 'abcdef' },
+    { requestId: 'abcdef', expectedRevision: 0, surprise: 1 },
+  ]
+
+  it('returns an envelope for every hostile input on every tool', async () => {
+    for (const tool of h.tools) {
+      for (const input of hostile) {
+        const result = await call(tool, input)
+        expect(result, `${tool.name} <- ${JSON.stringify(input)}`).toBeDefined()
+        expect(typeof result).toBe('object')
+        expect(typeof result.ok).toBe('boolean')
+        if (!result.ok) {
+          expect(result.error.code).toBeTruthy()
+          expect(result.error.recovery).toBeTruthy()
+        }
+      }
+    }
+  })
+
+  it('reports an unmounted scratchpad instead of throwing', async () => {
+    h.unmount()
+    for (const tool of h.tools) {
+      const result = await call(tool, { expectedRevision: 0, requestId: 'abcdef' })
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error.code).toBe('not_ready')
+    }
+  })
+
+  it('takes exactly one argument, as Chrome 151 supplies', () => {
+    // The previous implementation read `context.signal` from a second parameter that
+    // Chrome never passes, and threw a TypeError on every call.
+    for (const tool of h.tools) expect(tool.execute.length).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('get_scratchpad', () => {
+  it('reads the problem and the steps', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const result = await call(h.byName('get_scratchpad'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.revision).toBe(h.state.revision)
+      expect((result.data.steps as unknown[]).length).toBe(1)
+      expect(result.data.checked).toBe(false)
+    }
+  })
+
+  it('tells the agent plainly that it may not write', async () => {
+    const result = await call(h.byName('get_scratchpad'), {})
+    if (result.ok) expect(String(result.data.note)).toContain('Only the learner')
+  })
+
+  it('accepts a JSON string as well as an object', async () => {
+    const result = await call(h.byName('get_scratchpad'), '{}')
+    expect(result.ok).toBe(true)
+  })
+
+  it('truncates a long derivation explicitly rather than silently', async () => {
+    for (let i = 0; i < 10; i++) h.learner({ type: 'ADD_STEP', latex: `x^${i + 1}` })
+    const result = await call(h.byName('get_scratchpad'), {})
+    if (result.ok) {
+      expect(result.data.truncated).toBe(true)
+      expect((result.data.steps as unknown[]).length).toBe(8)
+    }
+  })
+
+  it('stays compact', async () => {
+    for (let i = 0; i < 10; i++) h.learner({ type: 'ADD_STEP', latex: `x^${i + 1} + 3x` })
+    const result = await call(h.byName('get_scratchpad'), {})
+    expect(JSON.stringify(result).length).toBeLessThan(2000)
+  })
+})
+
+describe('optimistic concurrency', () => {
+  it('rejects a write against a revision the learner has moved past', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const stale = h.state.revision
+    h.learner({ type: 'ADD_STEP', latex: '2x' })
+    const result = await call(h.byName('check_work'), { expectedRevision: stale, requestId: 'req-stale-1' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('stale_revision')
+      expect(result.error.recovery).toContain(String(h.state.revision))
+    }
+  })
+
+  it('names the current revision so the agent can recover in one step', async () => {
+    const result = await call(h.byName('check_work'), { expectedRevision: 99, requestId: 'req-stale-2' })
+    if (!result.ok) expect(result.revision).toBe(h.state.revision)
+  })
+})
+
+describe('idempotency', () => {
+  it('does not apply the same requestId twice', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const input = { expectedRevision: h.state.revision, requestId: 'req-dup-1' }
+    const first = await call(h.byName('check_work'), input)
+    const revisionAfterFirst = h.state.revision
+    const second = await call(h.byName('check_work'), input)
+    expect(first).toEqual(second)
+    expect(h.state.revision).toBe(revisionAfterFirst)
+  })
+
+  it('lets a corrected retry succeed after a failure', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const bad = await call(h.byName('check_work'), { expectedRevision: 999, requestId: 'req-retry-1' })
+    expect(bad.ok).toBe(false)
+    const good = await call(h.byName('check_work'), { expectedRevision: h.state.revision, requestId: 'req-retry-1' })
+    expect(good.ok).toBe(true)
+  })
+
+  it('a concurrent duplicate awaits the original rather than racing it', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const input = { expectedRevision: h.state.revision, requestId: 'req-race-1' }
+    const [a, b] = await Promise.all([
+      call(h.byName('check_work'), input),
+      call(h.byName('check_work'), input),
+    ])
+    expect(a).toEqual(b)
+  })
+})
+
+describe('the policy layer is visible to the agent', () => {
+  it('refuses a proposal before the learner has tried, and says what to do instead', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const result = await call(h.byName('propose_step'), {
+      stepId: 'step-1',
+      latex: '2x',
+      rationale: 'power rule',
+      expectedRevision: h.state.revision,
+      requestId: 'req-prop-1',
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('refused_policy')
+      expect(result.error.recovery).toContain('annotate_step')
+    }
+  })
+
+  it('returns pending_learner_acceptance, never applied', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    h.learner({ type: 'EDIT_STEP', stepId: 'step-1', latex: 'x^3' })
+    const result = await call(h.byName('propose_step'), {
+      stepId: 'step-1',
+      latex: 'REPLACEMENT',
+      rationale: 'because',
+      expectedRevision: h.state.revision,
+      requestId: 'req-prop-2',
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.status).toBe('pending_learner_acceptance')
+    expect(h.state.steps[0].latex).toBe('x^3')
+  })
+
+  it('refuses annotation during the unaided attempt', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-new-1' })
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const result = await call(h.byName('annotate_step'), {
+      stepId: h.state.steps[0].id,
+      note: 'try this',
+      expectedRevision: h.state.revision,
+      requestId: 'req-ann-1',
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('refused_policy')
+  })
+})
+
+describe('phase gating', () => {
+  it('refuses new_problem before the work has been checked', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const result = await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-np-1' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('invalid_phase')
+      expect(result.error.recovery).toContain('check_work')
+    }
+  })
+
+  it('refuses the receipt before any round has finished', async () => {
+    const result = await call(h.byName('get_receipt'), {})
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('invalid_phase')
+  })
+
+  it('reports an unknown step id as not_found', async () => {
+    const result = await call(h.byName('annotate_step'), {
+      stepId: 'no-such-step',
+      note: 'hello',
+      expectedRevision: h.state.revision,
+      requestId: 'req-nf-1',
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('not_found')
+  })
+})
+
+describe('the verdict belongs to the engine, not the agent', () => {
+  it('an agent calling check_work on wrong work still gets a mismatch', async () => {
+    // The demonstration the submission rests on: the agent cannot make a wrong step
+    // correct, because it does not author the verdict.
+    h.learner({ type: 'ADD_STEP', latex: '3x^3 + x^2' })
+    h.learner({ type: 'ADD_STEP', latex: '9x^2' }) // drops the 2x term
+    const result = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-truth-1',
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.allSound).toBe(false)
+      expect(result.data.firstBrokenStep).toBe(2)
+    }
+    expect(h.state.report?.verdicts['step-2'].status).toBe('broken')
+  })
+})
+
+describe('the receipt', () => {
+  it('states its own limits', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-r-1' })
+    const result = await call(h.byName('get_receipt'), {})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const limits = result.data.limits as string[]
+      expect(limits.length).toBeGreaterThanOrEqual(2)
+      expect(limits.join(' ')).toContain('not')
+    }
+  })
+
+  it('reports agent involvement per round', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    await call(h.byName('annotate_step'), {
+      stepId: 'step-1',
+      note: 'look again at the second term',
+      expectedRevision: h.state.revision,
+      requestId: 'req-a-1',
+    })
+    h.learner({ type: 'CHECK_WORK' })
+    await call(h.byName('new_problem'), { expectedRevision: h.state.revision, requestId: 'req-n-2' })
+    const result = await call(h.byName('get_receipt'), {})
+    if (result.ok) {
+      const rounds = result.data.rounds as Array<{ agentAnnotations: number }>
+      expect(rounds[0].agentAnnotations).toBe(1)
+    }
+  })
+})

@@ -1,0 +1,410 @@
+/**
+ * The six WebMCP tools.
+ *
+ * Written against what Chrome 151 actually does, which differs from the published
+ * IDL in ways that matter (see docs/overnight-audit/02b). The two that bite:
+ *
+ *   1. `execute` receives EXACTLY ONE argument. There is no `{ signal }` second
+ *      parameter. The previous implementation opened every handler with
+ *      `context.signal?.aborted`, which threw a TypeError on every call - so all five
+ *      tools failed in shipped Chrome while the page displayed "5 agent tools live".
+ *      Handlers here take `(input)` and nothing else.
+ *
+ *   2. A THROWN error is flattened by the browser to a generic `UnknownError` and our
+ *      message is discarded. A RETURNED envelope survives verbatim, `recovery` string
+ *      and all. So nothing here throws; every failure is a value.
+ *
+ * These definitions are deliberately free of any browser dependency so the whole
+ * surface can be executed in tests.
+ */
+
+import type { ActionResult, SessionAction, SessionState } from '../session/types'
+
+export type ToolErrorCode =
+  | 'stale_revision'
+  | 'invalid_phase'
+  | 'invalid_input'
+  | 'refused_policy'
+  | 'not_found'
+  | 'not_ready'
+
+export type ToolEnvelope =
+  | { ok: true; revision: number; data: Record<string, unknown> }
+  | { ok: false; revision: number; error: { code: ToolErrorCode; message: string; recovery: string } }
+
+export type ToolAnnotations = {
+  // Chrome 151 silently drops every other annotation key. Only these two survive.
+  readOnlyHint: boolean
+  untrustedContentHint: boolean
+}
+
+export type ToolDefinition = {
+  name: string
+  title: string
+  description: string
+  inputSchema: Record<string, unknown>
+  annotations: ToolAnnotations
+  execute: (input: unknown) => Promise<ToolEnvelope>
+}
+
+export type ToolBridge = {
+  /** Never throws. Returns null when the scratchpad is not mounted. */
+  getState: () => SessionState | null
+  /** Runs an action through the one shared reducer and awaits the repaint. */
+  run: (action: SessionAction) => Promise<ActionResult>
+  requestCache: Map<string, ToolEnvelope | Promise<ToolEnvelope>>
+}
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/
+
+const NOT_MOUNTED: ToolEnvelope = {
+  ok: false,
+  revision: -1,
+  error: {
+    code: 'not_ready',
+    message: 'The scratchpad is not open.',
+    recovery: 'Ask the learner to open the Second Try scratchpad, then read it again.',
+  },
+}
+
+function failure(revision: number, code: ToolErrorCode, message: string, recovery: string): ToolEnvelope {
+  return { ok: false, revision, error: { code, message, recovery } }
+}
+
+/**
+ * Chrome hands the handler one argument. In Chrome 151 that is the parsed object,
+ * but the caller supplies a JSON *string* to `executeTool`, and the local inspector
+ * may pass either. Accept both rather than depending on which side did the parsing.
+ */
+function readInput(input: unknown): Record<string, unknown> | null {
+  if (typeof input === 'string') {
+    if (!input.trim()) return {}
+    try {
+      const parsed: unknown = JSON.parse(input)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null
+    } catch {
+      return null
+    }
+  }
+  if (input === undefined || input === null) return {}
+  if (typeof input === 'object' && !Array.isArray(input)) return input as Record<string, unknown>
+  return null
+}
+
+const revisionField = {
+  type: 'integer',
+  minimum: 0,
+  description:
+    'The revision you read from get_scratchpad. If the learner has edited since, the call is rejected as stale.',
+} as const
+
+const requestIdField = {
+  type: 'string',
+  minLength: 6,
+  maxLength: 64,
+  pattern: '^[A-Za-z0-9_-]+$',
+  description:
+    'A unique id you invent for this call, so a retry cannot apply the same change twice.',
+} as const
+
+/** Keeps tool output small. Context is the scarce resource, not the transport. */
+function summariseSteps(state: SessionState) {
+  const limit = 8
+  const shown = state.steps.slice(0, limit)
+  const steps = shown.map((step, index) => {
+    const verdict = state.report?.verdicts[step.id]
+    return {
+      id: step.id,
+      n: index + 1,
+      latex: step.latex.length > 80 ? step.latex.slice(0, 77) + '...' : step.latex,
+      attempts: step.attempts,
+      verdict: verdict ? verdict.status : 'unchecked',
+    }
+  })
+  return { steps, truncated: state.steps.length > limit }
+}
+
+function scratchpadData(state: SessionState): Record<string, unknown> {
+  const { steps, truncated } = summariseSteps(state)
+  const firstBroken =
+    state.report && state.report.firstBrokenIndex !== null
+      ? { position: state.report.firstBrokenIndex + 1, stepId: state.report.firstBrokenId }
+      : null
+
+  const available: string[] = ['check_work']
+  if (state.round === 'practice') {
+    available.push('annotate_step')
+    if (state.steps.some((s) => s.attempts >= 2)) available.push('propose_step')
+  }
+  if (state.report) available.push('new_problem')
+  if (state.history.length > 0) available.push('get_receipt')
+
+  return {
+    sessionId: state.sessionId,
+    revision: state.revision,
+    round: state.round,
+    problem: {
+      prompt: state.problem.prompt,
+      given: state.problem.definitions.map((d) => `${d.name} = ${d.latex}`),
+      variable: state.problem.variable,
+    },
+    steps,
+    ...(truncated ? { truncated: true } : {}),
+    checked: state.report !== null,
+    firstBrokenStep: firstBroken,
+    pendingProposal: state.proposal ? { stepId: state.proposal.stepId } : null,
+    availableActions: available,
+    note:
+      state.round === 'transfer'
+        ? 'Unaided attempt. annotate_step and propose_step are closed until it ends.'
+        : 'You cannot write, edit, or accept steps. Only the learner can.',
+  }
+}
+
+function receiptData(state: SessionState): Record<string, unknown> {
+  const rounds = state.history.map((round) => ({
+    round: round.round,
+    allStepsSound: round.sound,
+    checksRun: round.checks,
+    agentAnnotations: round.agentAnnotations,
+    agentProposalsOffered: round.agentProposalsOffered,
+    agentProposalsAccepted: round.agentProposalsAccepted,
+  }))
+  const transfer = state.round === 'transfer' && state.report ? state.report.allSound : null
+  return {
+    sessionId: state.sessionId,
+    rounds,
+    unaidedTransfer:
+      transfer === null
+        ? 'not attempted yet'
+        : transfer
+          ? 'every step sound, with no agent annotations or proposals'
+          : 'attempted, not yet sound',
+    limits: [
+      'This records what happened in this browser session.',
+      'It does not establish that the learner could do this again tomorrow, or unassisted elsewhere.',
+      'Steps were checked by the page computer algebra system, not by the agent.',
+    ],
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Wraps a mutating tool: validates the envelope fields every write shares, enforces
+ * idempotency, and rejects stale revisions.
+ */
+async function mutate(
+  bridge: ToolBridge,
+  input: unknown,
+  allowedKeys: readonly string[],
+  build: (values: Record<string, unknown>) => SessionAction | { invalid: string; recovery: string },
+): Promise<ToolEnvelope> {
+  const state = bridge.getState()
+  if (!state) return NOT_MOUNTED
+
+  const values = readInput(input)
+  if (!values) {
+    return failure(state.revision, 'invalid_input', 'The arguments were not a JSON object.', 'Send the arguments described by the input schema.')
+  }
+  for (const key of Object.keys(values)) {
+    if (!allowedKeys.includes(key)) {
+      return failure(state.revision, 'invalid_input', `Unexpected argument "${key}".`, `This tool accepts: ${allowedKeys.join(', ')}.`)
+    }
+  }
+  const { expectedRevision, requestId } = values
+  if (typeof requestId !== 'string' || !REQUEST_ID_PATTERN.test(requestId)) {
+    return failure(state.revision, 'invalid_input', 'requestId must be 6-64 characters of letters, digits, hyphen or underscore.', 'Invent a unique requestId for this call and try again.')
+  }
+
+  const cached = bridge.requestCache.get(requestId)
+  if (cached) return cached
+
+  if (!Number.isInteger(expectedRevision)) {
+    return failure(state.revision, 'invalid_input', 'expectedRevision must be an integer.', `Read the scratchpad and send its revision, currently ${state.revision}.`)
+  }
+  if (expectedRevision !== state.revision) {
+    return failure(state.revision, 'stale_revision', `The scratchpad has changed since revision ${expectedRevision}.`, `Call get_scratchpad again and retry with revision ${state.revision}.`)
+  }
+
+  const action = build(values)
+  if ('invalid' in action) {
+    return failure(state.revision, 'invalid_input', action.invalid, action.recovery)
+  }
+
+  const pending = (async (): Promise<ToolEnvelope> => {
+    const result = await bridge.run(action)
+    if (!result.ok) {
+      const after = bridge.getState()
+      return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery)
+    }
+    return { ok: true, revision: result.state.revision, data: result.data }
+  })()
+
+  bridge.requestCache.set(requestId, pending)
+  const envelope = await pending
+  // Keep successes cached so a retry is a no-op; evict failures so a corrected retry
+  // can succeed.
+  if (bridge.requestCache.get(requestId) === pending) {
+    if (envelope.ok) bridge.requestCache.set(requestId, envelope)
+    else bridge.requestCache.delete(requestId)
+  }
+  return envelope
+}
+
+const EMPTY_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const
+
+export function createTools(bridge: ToolBridge): ToolDefinition[] {
+  return [
+    {
+      name: 'get_scratchpad',
+      title: 'Read the scratchpad',
+      description:
+        "Read the learner's current problem, every step they have written, each step's verdict, the first step that broke, and what you may do next.",
+      inputSchema: EMPTY_SCHEMA,
+      // Every step is learner-authored text. Chrome's guidance is to mark that.
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      async execute(input) {
+        const state = bridge.getState()
+        if (!state) return NOT_MOUNTED
+        if (!readInput(input)) {
+          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
+        }
+        return { ok: true, revision: state.revision, data: scratchpadData(state) }
+      },
+    },
+
+    {
+      name: 'check_work',
+      title: 'Check the derivation',
+      description:
+        'Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. This writes the verdict badges the learner sees; the verdict is the engine\'s, not yours.',
+      inputSchema: {
+        type: 'object',
+        properties: { expectedRevision: revisionField, requestId: requestIdField },
+        required: ['expectedRevision', 'requestId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute: (input) => mutate(bridge, input, ['expectedRevision', 'requestId'], () => ({ type: 'CHECK_WORK' })),
+    },
+
+    {
+      name: 'annotate_step',
+      title: 'Explain one step',
+      description:
+        "Attach a short explanation to one step, shown in the margin beside the learner's own line. Use this to teach the step that broke; it is not a chat message.",
+      inputSchema: {
+        type: 'object',
+        properties: {
+          stepId: { type: 'string', maxLength: 64, description: 'The id of the step to annotate, from get_scratchpad.' },
+          note: { type: 'string', minLength: 1, maxLength: 400, description: 'The explanation the learner will read. Address the mistake, not the answer.' },
+          focus: { type: 'boolean', description: 'Scroll the step into view and select it.' },
+          expectedRevision: revisionField,
+          requestId: requestIdField,
+        },
+        required: ['stepId', 'note', 'expectedRevision', 'requestId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute: (input) =>
+        mutate(bridge, input, ['stepId', 'note', 'focus', 'expectedRevision', 'requestId'], (values) => {
+          if (typeof values.stepId !== 'string' || !values.stepId) {
+            return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
+          }
+          if (typeof values.note !== 'string' || !values.note.trim()) {
+            return { invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
+          }
+          return {
+            type: 'ANNOTATE_STEP',
+            stepId: values.stepId,
+            note: values.note,
+            focus: values.focus === true,
+          }
+        }),
+    },
+
+    {
+      name: 'propose_step',
+      title: 'Offer a replacement step',
+      description:
+        'Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          stepId: { type: 'string', maxLength: 64, description: 'The id of the step you are offering to replace.' },
+          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The replacement expression, in LaTeX.' },
+          rationale: { type: 'string', minLength: 1, maxLength: 400, description: 'Why this replacement is right. The learner reads this before deciding.' },
+          expectedRevision: revisionField,
+          requestId: requestIdField,
+        },
+        required: ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute: (input) =>
+        mutate(bridge, input, ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'], (values) => {
+          if (typeof values.stepId !== 'string' || !values.stepId) {
+            return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
+          }
+          if (typeof values.latex !== 'string' || !values.latex.trim()) {
+            return { invalid: 'latex must be the replacement expression.', recovery: 'Send the step you would write instead.' }
+          }
+          if (typeof values.rationale !== 'string' || !values.rationale.trim()) {
+            return { invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
+          }
+          return {
+            type: 'PROPOSE_STEP',
+            stepId: values.stepId,
+            latex: values.latex,
+            rationale: values.rationale,
+          }
+        }),
+    },
+
+    {
+      name: 'new_problem',
+      title: 'Start a fresh problem',
+      description:
+        'Generate a fresh problem in the same skill family, with its answer derived by the page engine, and hand it to the learner unaided. Requires that the current work has been checked.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          familyId: { type: 'string', maxLength: 64, description: 'Optional. Omit to stay in the current skill family.' },
+          expectedRevision: revisionField,
+          requestId: requestIdField,
+        },
+        required: ['expectedRevision', 'requestId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute: (input) =>
+        mutate(bridge, input, ['familyId', 'expectedRevision', 'requestId'], (values) => ({
+          type: 'NEW_PROBLEM',
+          ...(typeof values.familyId === 'string' ? { familyId: values.familyId } : {}),
+        })),
+    },
+
+    {
+      name: 'get_receipt',
+      title: 'Read the session evidence',
+      description:
+        'Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven.',
+      inputSchema: EMPTY_SCHEMA,
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      async execute(input) {
+        const state = bridge.getState()
+        if (!state) return NOT_MOUNTED
+        if (!readInput(input)) {
+          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
+        }
+        if (state.history.length === 0) {
+          return failure(state.revision, 'invalid_phase', 'No round has finished yet.', 'There is nothing to report until a fresh problem has been started.')
+        }
+        return { ok: true, revision: state.revision, data: receiptData(state) }
+      },
+    },
+  ]
+}

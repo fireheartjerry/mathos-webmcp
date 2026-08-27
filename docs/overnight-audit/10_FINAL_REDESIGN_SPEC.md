@@ -128,8 +128,12 @@ Rules, all enforced by tests:
 7. **Persistence to `localStorage`**, versioned, so a refresh mid-demo recovers (fixes `08`
    §2.4). Corrupt or version-mismatched state is discarded to a clean session, never
    half-restored.
-8. **No `throw` reaches a tool handler.** Every failure is an envelope. (Required by `02b`:
-   a thrown error is flattened by the browser and our message is discarded.)
+8. **No `throw` escapes a tool handler.** Every failure is an envelope. Required by `02b`:
+   a thrown error is flattened by the browser and our message is discarded, whereas a
+   returned envelope survives verbatim.
+9. **`getState()` never throws.** When the studio is unmounted it returns a sentinel the
+   tools render as an `invalid_phase` envelope, rather than the current build's exception or
+   its stale cached snapshot (`08` §2.2).
 
 ---
 
@@ -152,22 +156,55 @@ page-native claim: `03` §6.1. Why six and not five or seven: `03` §6.2.
 
 ### 3.1 Non-negotiable implementation rules
 
-From `02` and `02b`:
+**Amended 2026-08-26 after live verification against Chrome 151.0.7922.174 (`02b`).** The
+documentation-derived rules were wrong on three points, and one of them means the current
+build's WebMCP layer does not work at all. Where `02` and `02b` disagree, **`02b` governs** —
+it was executed, `02` was read.
 
-1. **Every `inputSchema` property carries a `description`** (≤150 chars). Agents read them.
+1. **`execute` receives EXACTLY ONE argument.** There is no second `{ signal }` parameter.
+   Proven by `arguments.length === 1`, and unchanged even when the caller supplies a signal.
+   The current build opens every handler with `context.signal?.aborted`, which throws
+   `TypeError: Cannot read properties of undefined (reading 'signal')` — so **all five tools
+   fail on every call in shipped Chrome, while the header continues to display "5 agent tools
+   live."** Handlers take `(input)` and nothing else.
+2. **There is therefore no AbortSignal to honour.** Abort handling is removed from the tool
+   layer rather than faked. If a future Chrome supplies one, handlers accept an optional
+   second parameter and use it defensively. Nothing may dereference it unguarded.
+3. **The only working invocation is
+   `executeTool(registeredToolObject, '<json string>')`,** and it always returns a `string`.
+   Passing an object throws `Failed to parse input arguments`; passing the tool's name throws
+   `not of type 'RegisteredTool'`. Any snippet we publish uses this form. (`02` recommended
+   the opposite order; that recommendation is withdrawn.)
+4. **Returned error envelopes survive verbatim** — `stale_revision`, `invalid_phase`,
+   `invalid_input` all reach the caller with their `recovery` strings intact. **Thrown errors
+   are flattened** to a generic `UnknownError` with the message discarded. So: never throw,
+   always return an envelope.
+5. **Do not abort registration on `pagehide`.** Confirmed live: after Back, our tools are gone
+   while the badge still claims they are live, whereas a control tool registered *without* a
+   `pagehide` teardown survived. Chrome preserves registrations across bfcache correctly; the
+   current build destroys its own.
+6. **`Promise.allSettled`, not `Promise.all`.** Registration is **not atomic** — a rejected
+   `Promise.all` leaves partial registrations, and the current build's `.catch(abort)` then
+   unregisters all five.
+7. **Every `inputSchema` property carries a `description`** (≤150 chars). Agents read them.
    The current build has none.
-2. **Every tool carries a `title`.** ChatGPT's site-tools panel renders it.
-3. **`untrustedContentHint: true`** on any tool returning learner-authored text, and the
+8. **Every tool carries a `title`.** ChatGPT's site-tools panel renders it.
+9. **`untrustedContentHint: true`** on any tool returning learner-authored text, and the
    README says why. It maps onto Chrome's published security guidance.
-4. **`Promise.allSettled`, not `Promise.all`,** when registering. One duplicate-name
-   `InvalidStateError` must not unregister the other five.
-5. **Never `return;`** from a handler. `JSON.stringify(undefined)` throws and the call is
-   scored a failure.
-6. **Do not abort registration on `pagehide`** — that kills the tools on bfcache entry and a
-   judge pressing Back sees zero tools.
-7. `AbortSignal` checked at handler entry and before commit.
-8. Tool output stays under the **1.5K-character** budget. `get_scratchpad` truncates the step
-   list with an explicit `truncated: true` rather than silently.
+10. **Never `return;` implicitly.** An `undefined` return does not fail — it reaches the
+    caller as the literal string `"undefined"`, which is worse. Always return an envelope.
+11. **Do not `JSON.stringify(getTools())`** — `RegisteredTool` carries a live `window`
+    reference and stringifying it throws. The Agent Console must project the fields it needs.
+12. Tool output stays compact for the agent's sake, not the platform's: **the 1.5K cap is
+    unenforced** (200 KB round-tripped successfully). `get_scratchpad` still truncates long
+    step lists with an explicit `truncated: true`, because context economy is real even when
+    the limit is not.
+
+Measured round-trip latency: **p50 0.2 ms**.
+
+**This finding is also an asset.** "We tested against shipped Chrome 151 and found the spec
+IDL is ahead of the binary" belongs in the README, with the evidence. It is the difference
+between having read the explainer and having run it.
 
 ### 3.2 The policy layer
 
