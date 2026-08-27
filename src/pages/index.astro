@@ -21,7 +21,7 @@ const TOOLS = [
   {
     name: 'propose_step',
     kind: 'Write',
-    description: 'Offers a replacement after two learner edits. The learner still decides.',
+    description: 'Offers a replacement after the learner has written and revised that line. The learner still decides.',
   },
   {
     name: 'new_problem',
@@ -65,23 +65,14 @@ const TOOLS = [
     <main id="main" class="landing-shell">
       <section class="opening" aria-labelledby="page-title">
         <div class="opening-copy">
-          <div>
-            <p class="product-context">Product-rule practice in a shared browser page</p>
-            <h1 id="page-title">A learner-owned derivation, checked at the first break.</h1>
-          </div>
-          <div class="opening-action">
-            <p>
-              Write each line yourself. The page checks equivalence. An agent can explain or offer
-              a replacement, but it cannot alter the verdict or apply its proposal.
-            </p>
-            <a class="button button-lg" href="/learn">Open the scratchpad <span aria-hidden="true">→</span></a>
-          </div>
+          <p class="product-context">Product-rule practice in a shared browser page</p>
+          <h1 id="page-title">A learner-owned derivation, checked at the first break.</h1>
         </div>
 
         <figure class="transaction" aria-labelledby="transaction-title">
           <figcaption id="transaction-title">
             <span>Current derivation</span>
-            <span>Static preview — decisions become active in the scratchpad</span>
+            <span>Preview — controls are inactive here</span>
           </figcaption>
 
           <ol class="derivation-preview">
@@ -115,7 +106,7 @@ const TOOLS = [
                 <div class="engine-note">
                   <span class="actor actor-engine">Page engine</span>
                   <strong>Missing term: +8x</strong>
-                  <p>Differentiating 4x² contributes 8x. The checked result is 36x² + 8x.</p>
+                  <p>4x² contributes 8x. Checked result: 36x² + 8x.</p>
                 </div>
                 <div class="proposal-preview">
                   <span class="actor actor-agent">Agent</span>
@@ -132,11 +123,18 @@ const TOOLS = [
             </li>
           </ol>
         </figure>
+
+        <div class="opening-action">
+          <p>
+            Write each line yourself. The page checks equivalence. An agent can explain or offer
+            a replacement, but it cannot alter the verdict or apply its proposal.
+          </p>
+          <a class="button button-lg" href="/learn">Open the scratchpad <span aria-hidden="true">→</span></a>
+        </div>
       </section>
 
       <section class="document-section mechanism" aria-labelledby="mechanism-title">
         <div class="section-heading">
-          <p class="section-index">01</p>
           <h2 id="mechanism-title">The page owns mathematical truth</h2>
         </div>
         <div class="section-body">
@@ -165,7 +163,6 @@ const TOOLS = [
 
       <section class="document-section shared-state" aria-labelledby="shared-state-title">
         <div class="section-heading">
-          <p class="section-index">02</p>
           <h2 id="shared-state-title">One live document, two possible writers</h2>
         </div>
         <div class="section-body">
@@ -186,7 +183,6 @@ const TOOLS = [
 
       <section class="document-section boundary" aria-labelledby="boundary-title">
         <div class="section-heading">
-          <p class="section-index">03</p>
           <h2 id="boundary-title">The exact six-tool boundary</h2>
           <p class="section-note">Two read-only tools. Four tools that can change page state.</p>
         </div>
@@ -211,7 +207,6 @@ const TOOLS = [
 
       <section class="document-section falsifiability" aria-labelledby="falsifiability-title">
         <div class="section-heading">
-          <p class="section-index">04</p>
           <h2 id="falsifiability-title">The contradiction stays visible</h2>
         </div>
         <div class="section-body contradiction-test">
@@ -233,7 +228,6 @@ const TOOLS = [
 
       <section class="document-section scope" aria-labelledby="scope-title">
         <div class="section-heading">
-          <p class="section-index">05</p>
           <h2 id="scope-title">What one session can establish</h2>
         </div>
         <div class="section-body">

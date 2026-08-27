@@ -52,15 +52,10 @@
 .opening { padding-block: var(--s-9) var(--s-10); }
 
 .opening-copy {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  align-items: end;
-  gap: var(--s-10);
   margin-bottom: var(--s-8);
 }
 
 .product-context,
-.section-index,
 .actor,
 .section-note {
   color: var(--ink-muted);
@@ -85,7 +80,15 @@ h1 {
   line-height: var(--lh-prose);
 }
 
-.opening-action .button { margin-top: var(--s-5); }
+.opening-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-8);
+  margin-top: var(--s-6);
+}
+
+.opening-action .button { flex: none; }
 
 .transaction {
   margin: 0;
@@ -264,22 +267,16 @@ h1 {
 .proposal-actions button {
   min-height: 40px;
   padding: var(--s-2) var(--s-3);
-  border: var(--bw-hairline) solid var(--indigo-line);
+  border: var(--bw-hairline) solid var(--line-strong);
   border-radius: var(--r-control);
-  background: var(--surface);
-  color: var(--indigo-deep);
+  background: var(--surface-subtle);
+  color: var(--ink-disabled);
   font-size: var(--fs-meta);
   font-weight: var(--fw-ui);
 }
 
-.proposal-actions button:first-child {
-  border-color: var(--indigo);
-  background: var(--indigo);
-  color: var(--surface);
-}
-
 .proposal-actions button:disabled {
-  cursor: default;
+  cursor: not-allowed;
   opacity: 1;
 }
 
@@ -288,15 +285,12 @@ h1 {
   grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.5fr);
   gap: var(--s-10);
   padding-block: var(--s-10);
-  border-top: var(--bw-hairline) solid var(--line-strong);
 }
 
 .section-heading { align-self: start; }
 
-.section-index {
-  margin-bottom: var(--s-4);
-  font-family: var(--font-mono);
-}
+.mechanism,
+.scope { border-top: var(--bw-hairline) solid var(--line-strong); }
 
 .section-heading h2 {
   max-width: 420px;
@@ -491,11 +485,6 @@ h1 {
 }
 
 @media (max-width: 1079px) {
-  .opening-copy {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
-    gap: var(--s-8);
-  }
-
   .derivation-line {
     grid-template-columns: 36px minmax(240px, 1fr) 168px minmax(220px, 0.75fr);
   }
@@ -506,7 +495,6 @@ h1 {
 @media (max-width: 839px) {
   .header-context { display: none; }
 
-  .opening-copy,
   .document-section {
     grid-template-columns: 1fr;
     gap: var(--s-6);
@@ -541,22 +529,61 @@ h1 {
   .line-start .line-number { grid-row: 1 / span 2; }
 
   .document-section { padding-block: var(--s-9); }
-  .section-index { margin-bottom: var(--s-2); }
 }
 
-@media (max-width: 599px) {
-  .opening { padding-block: var(--s-7) var(--s-9); }
-  .opening-copy { margin-bottom: var(--s-6); }
-  h1 { font-size: clamp(32px, 11vw, 42px); }
+@media (max-width: 719px) {
+  .opening { padding-block: var(--s-4) var(--s-9); }
+  .opening-copy { margin-bottom: var(--s-4); }
+  .product-context { margin-bottom: var(--s-2); font-size: var(--fs-micro); }
+  h1 { font-size: 29px; line-height: 1.04; }
 
-  .transaction > figcaption {
-    display: block;
-    padding: var(--s-3) var(--s-4);
+  .opening-action {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--s-4);
+    margin-top: var(--s-5);
   }
 
-  .transaction > figcaption span { display: block; }
-  .transaction > figcaption span + span { margin-top: var(--s-1); }
+  .transaction > figcaption {
+    min-height: 40px;
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-micro);
+  }
+
   .line-number { padding-inline: var(--s-2); }
+
+  .line-expression { padding: var(--s-2) var(--s-3); }
+
+  .line-expression .actor,
+  .line-evidence .actor { margin-bottom: var(--s-1); font-size: var(--fs-micro); }
+
+  .math-expression { font-size: 20px; line-height: 1.3; }
+
+  .relation {
+    min-height: 40px;
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-micro);
+  }
+
+  .line-evidence { padding: var(--s-2) var(--s-3) var(--s-3); }
+
+  .engine-note,
+  .proposal-preview { padding: var(--s-3); }
+
+  .engine-note strong,
+  .proposal-preview strong { margin-bottom: var(--s-1); font-size: var(--fs-meta); }
+
+  .engine-note p { font-size: var(--fs-micro); line-height: var(--lh-body); }
+
+  .proposal-preview { margin-top: var(--s-2); }
+  .proposal-math { font-size: var(--fs-sm); }
+  .proposal-actions { margin-top: var(--s-2); }
+
+  .proposal-actions button {
+    min-height: 36px;
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-micro);
+  }
 
   .fact-list > div,
   .tool-list li { grid-template-columns: minmax(0, 1fr) auto; }
