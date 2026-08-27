@@ -419,13 +419,15 @@ export default function Scratchpad() {
                     )}
                     {notes.map((note) => (
                       <p key={note.id} className="step-note">
-                        <span className="note-source">{note.source === 'agent' ? 'Agent' : 'Inspector'}</span>
+                        <span className="note-source">{note.source === 'agent' ? 'Agent' : 'Local inspector'}</span>
                         {note.note}
                       </p>
                     ))}
                     {state.proposal?.stepId === step.id && (
                       <div className="proposal">
-                        <p className="proposal-head">The agent suggests</p>
+                        <p className="proposal-head">
+                          {state.proposal.source === 'agent' ? 'The agent suggests' : 'The inspector suggests'}
+                        </p>
                         <Tex latex={state.proposal.latex} />
                         <p className="proposal-why">{state.proposal.rationale}</p>
                         <div className="proposal-actions">
