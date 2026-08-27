@@ -523,3 +523,40 @@
   line-height: var(--lh-prose);
   color: var(--ink-60);
 }
+
+/* A line must be rewritable. Without this the only per-step control was Remove,
+   which made fixing a mistake impossible and left propose_step unreachable,
+   because its gate counts learner attempts on that step. */
+.step-latex {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: var(--r-chip);
+  color: inherit;
+  font: inherit;
+  transition: background-color var(--d-instant) var(--ease-out);
+}
+.step-latex:hover { background: var(--wash); }
+.step-latex:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+.step-latex:active { background: var(--hairline); }
+
+.step-edit { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.step-edit input {
+  flex: 1;
+  min-width: 200px;
+  height: 40px;
+  padding: 0 var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  color: var(--ink);
+  background: var(--panel);
+  border: var(--bw-hairline) solid var(--ink);
+  border-radius: var(--r-control);
+}
+.step-edit input:focus-visible { outline: var(--bw-focus) solid var(--ink); outline-offset: 2px; }
+
+.step-focused { background: var(--panel-tint); }

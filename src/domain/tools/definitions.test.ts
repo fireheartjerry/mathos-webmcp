@@ -188,6 +188,29 @@ describe('idempotency', () => {
     expect(good.ok).toBe(true)
   })
 
+  it('re-checks rather than replaying a stale verdict when the work has changed', async () => {
+    // An agent asked to "check it again" often reuses its requestId. Keyed on the id
+    // alone it would receive the previous verdict presented as a fresh one.
+    h.learner({ type: 'ADD_STEP', latex: '3x^3 + x^2' })
+    const first = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-again-1',
+    })
+    expect(first.ok).toBe(true)
+    if (first.ok) expect(first.data.allSound).toBe(true)
+
+    h.learner({ type: 'ADD_STEP', latex: '999' }) // now broken, and a new revision
+    const second = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-again-1', // deliberately the same id
+    })
+    expect(second.ok).toBe(true)
+    if (second.ok) {
+      expect(second.data.allSound).toBe(false)
+      expect(second.data.firstBrokenStep).toBe(2)
+    }
+  })
+
   it('a concurrent duplicate awaits the original rather than racing it', async () => {
     h.learner({ type: 'ADD_STEP', latex: 'x^2' })
     const input = { expectedRevision: h.state.revision, requestId: 'req-race-1' }

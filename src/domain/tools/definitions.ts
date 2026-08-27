@@ -106,7 +106,7 @@ const requestIdField = {
   maxLength: 64,
   pattern: '^[A-Za-z0-9_-]+$',
   description:
-    'A unique id you invent for this call, so a retry cannot apply the same change twice.',
+    'A new unique id for each distinct call. Reusing one returns the earlier result instead of acting again, which is what makes a retry safe.',
 } as const
 
 /** Keeps tool output small. Context is the scarce resource, not the transport. */
@@ -219,7 +219,15 @@ async function mutate(
     return failure(state.revision, 'invalid_input', 'requestId must be 6-64 characters of letters, digits, hyphen or underscore.', 'Invent a unique requestId for this call and try again.')
   }
 
-  const cached = bridge.requestCache.get(requestId)
+  // Keyed by requestId AND revision, not requestId alone.
+  //
+  // A genuine retry repeats both, so it is served from the cache and cannot apply
+  // twice. But an agent asked to "check it again" after the learner edited something
+  // often reuses its id; keyed on the id alone it would receive the previous verdict,
+  // presented as a fresh one. Including the revision makes that a different operation,
+  // which is what it actually is.
+  const cacheKey = `${requestId}@${String(expectedRevision)}`
+  const cached = bridge.requestCache.get(cacheKey)
   if (cached) return cached
 
   if (!Number.isInteger(expectedRevision)) {
@@ -243,13 +251,13 @@ async function mutate(
     return { ok: true, revision: result.state.revision, data: result.data }
   })()
 
-  bridge.requestCache.set(requestId, pending)
+  bridge.requestCache.set(cacheKey, pending)
   const envelope = await pending
   // Keep successes cached so a retry is a no-op; evict failures so a corrected retry
   // can succeed.
-  if (bridge.requestCache.get(requestId) === pending) {
-    if (envelope.ok) bridge.requestCache.set(requestId, envelope)
-    else bridge.requestCache.delete(requestId)
+  if (bridge.requestCache.get(cacheKey) === pending) {
+    if (envelope.ok) bridge.requestCache.set(cacheKey, envelope)
+    else bridge.requestCache.delete(cacheKey)
   }
   return envelope
 }
@@ -280,7 +288,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'check_work',
       title: 'Check the derivation',
       description:
-        'Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. This writes the verdict badges the learner sees; the verdict is the engine\'s, not yours.',
+        'Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you.',
       inputSchema: {
         type: 'object',
         properties: { expectedRevision: revisionField, requestId: requestIdField },
@@ -368,7 +376,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'new_problem',
       title: 'Start a fresh problem',
       description:
-        'Generate a fresh problem in the same skill family, with its answer derived by the page engine, and hand it to the learner unaided. Requires that the current work has been checked.',
+        'End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: annotate_step and propose_step close for the new round. Requires a check first.',
       inputSchema: {
         type: 'object',
         properties: {

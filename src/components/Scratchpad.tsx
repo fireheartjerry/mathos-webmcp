@@ -121,6 +121,8 @@ export default function Scratchpad() {
   })
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [flash, setFlash] = useState<string>('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
   const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
 
   const stateRef = useRef(state)
@@ -180,6 +182,14 @@ export default function Scratchpad() {
           stateRef.current = result.state
           setState(result.state)
           await awaitPaint(result.state.revision)
+          // `focus: true` is a real effect, not a decoration: it puts the line the
+          // agent is talking about in front of the person reading the annotation.
+          if (action.type === 'ANNOTATE_STEP' && action.focus) {
+            const el = document.getElementById(`line-${action.stepId}`)
+            el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            el?.classList.add('step-focused')
+            window.setTimeout(() => el?.classList.remove('step-focused'), 1600)
+          }
         } else if (result.code === 'refused_policy') {
           // The page declining the agent is the point, not an internal detail.
           setRefusal({ source, message: result.message, recovery: result.recovery })
@@ -329,6 +339,7 @@ export default function Scratchpad() {
               return (
                 <li
                   key={step.id}
+                  id={`line-${step.id}`}
                   className={[
                     'step',
                     broken ? 'step-broken' : '',
@@ -339,7 +350,51 @@ export default function Scratchpad() {
                 >
                   <span className="step-n">{index + 1}</span>
                   <div className="step-body">
-                    <Tex latex={step.latex} />
+                    {editingId === step.id ? (
+                      <form
+                        className="step-edit"
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          const next = editDraft.trim()
+                          if (!next) return
+                          const result = run(
+                            { type: 'EDIT_STEP', stepId: step.id, latex: next },
+                            'learner',
+                          )
+                          if (result.ok) setEditingId(null)
+                          else setFlash(result.message)
+                        }}
+                      >
+                        <input
+                          aria-label={`Line ${index + 1}`}
+                          value={editDraft}
+                          autoFocus
+                          spellCheck={false}
+                          onChange={(event) => setEditDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') setEditingId(null)
+                          }}
+                        />
+                        <button type="submit" className="button button-sm">
+                          Save
+                        </button>
+                        <button type="button" className="button-text" onClick={() => setEditingId(null)}>
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        className="step-latex"
+                        aria-label={`Line ${index + 1}. Select to rewrite.`}
+                        onClick={() => {
+                          setEditingId(step.id)
+                          setEditDraft(step.latex)
+                        }}
+                      >
+                        <Tex latex={step.latex} />
+                      </button>
+                    )}
                     {verdict?.status === 'unreadable' && (
                       <p className="step-detail">{verdict.message}</p>
                     )}
