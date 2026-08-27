@@ -8,8 +8,10 @@
  *
  *   equals          - the line is equivalent to its predecessor (an algebraic rewrite)
  *   differentiates  - the line is equivalent to the derivative of its predecessor
+ *   evaluates       - the line is the predecessor's value at the point the problem asks
+ *                     about, which is the line "find dy/dx at x = 2" actually asks for
  *
- * If either holds, the step is sound and we report which one held. If neither holds,
+ * If any holds, the step is sound and we report which one held. If neither holds,
  * the step is broken.
  *
  * The product's attention goes to the FIRST broken step, because every line after it
@@ -22,7 +24,7 @@ import type { BoxedExpression } from '@cortex-js/compute-engine'
 import { compareExpressions } from './equivalence'
 import { computeEngine, parseExpression } from './expression'
 
-export type StepRelation = 'first' | 'equals' | 'differentiates'
+export type StepRelation = 'first' | 'equals' | 'differentiates' | 'evaluates'
 
 export type StepVerdict =
   | {
@@ -92,6 +94,17 @@ function describeDifference(
   return { difference: candidates[0] }
 }
 
+/** The previous line's value at the problem's point, as a decimal literal, or null. */
+function evaluateAt(expr: BoxedExpression, variable: string, point: number): string | null {
+  try {
+    const substituted = expr.subs({ [variable]: computeEngine().box(point) }).N()
+    const value = typeof substituted.re === 'number' ? substituted.re : Number.NaN
+    return Number.isFinite(value) ? String(value) : null
+  } catch {
+    return null
+  }
+}
+
 function differentiate(expr: BoxedExpression, variable: string): BoxedExpression | null {
   try {
     const derived = computeEngine().box(['D', expr, variable]).evaluate().simplify()
@@ -104,8 +117,16 @@ function differentiate(expr: BoxedExpression, variable: string): BoxedExpression
 /**
  * @param lines     the learner's work, in order
  * @param variable  the problem's variable, e.g. 'x'
+ * @param evaluationPoint  The point the problem asks about, when it asks for a value
+ *   rather than a function. Without it the last line of "find dy/dx at x = 2" - the
+ *   number - is judged against the derivative it came from and marked wrong, which is
+ *   exactly the line the problem asked the learner to write.
  */
-export function checkDerivation(lines: readonly DerivationLine[], variable: string): DerivationReport {
+export function checkDerivation(
+  lines: readonly DerivationLine[],
+  variable: string,
+  evaluationPoint?: number,
+): DerivationReport {
   const verdicts: Record<string, StepVerdict> = {}
   const allowed = [variable]
   let firstBrokenIndex: number | null = null
@@ -149,19 +170,30 @@ export function checkDerivation(lines: readonly DerivationLine[], variable: stri
     }
 
     const derived = differentiate(previousParsed.expr, variable)
+    let derivativeUncertain = false
     if (derived) {
       const asDerivative = compareExpressions(line.latex, derived.latex, allowed)
       if (asDerivative.status === 'match') {
         verdicts[line.id] = { status: 'sound', relation: 'differentiates' }
         continue
       }
-      // If either reading is merely undecided, we must not call the step wrong.
-      if (asRewrite.status === 'uncertain' || asDerivative.status === 'uncertain') {
-        verdicts[line.id] = { status: 'uncertain' }
-        firstBrokenIndex = i
+      derivativeUncertain = asDerivative.status === 'uncertain'
+    }
+
+    // The third legal move: substituting the point the problem asks about.
+    const evaluated = evaluationPoint === undefined
+      ? null
+      : evaluateAt(previousParsed.expr, variable, evaluationPoint)
+    if (evaluated !== null) {
+      const asEvaluation = compareExpressions(line.latex, evaluated, [])
+      if (asEvaluation.status === 'match') {
+        verdicts[line.id] = { status: 'sound', relation: 'evaluates' }
         continue
       }
-    } else if (asRewrite.status === 'uncertain') {
+    }
+
+    // If any reading is merely undecided, we must not call the step wrong.
+    if (asRewrite.status === 'uncertain' || derivativeUncertain) {
       verdicts[line.id] = { status: 'uncertain' }
       firstBrokenIndex = i
       continue

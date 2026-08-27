@@ -32,8 +32,8 @@ const VERDICT_LABEL: Record<StepVerdict['status'], string> = {
 function StepBadge({ verdict }: { verdict: StepVerdict | undefined }) {
   if (!verdict) return <span className="badge badge-idle">unchecked</span>
   const label =
-    verdict.status === 'sound' && verdict.relation === 'differentiates'
-      ? 'differentiates'
+    verdict.status === 'sound' && verdict.relation !== 'first'
+      ? verdict.relation
       : VERDICT_LABEL[verdict.status]
   return <span className={`badge badge-${verdict.status}`}>{label}</span>
 }
@@ -325,9 +325,9 @@ export default function Scratchpad() {
 
           {state.steps.length === 0 && (
             <p className="how">
-              Write your working one line at a time. Each line should either be equal to the line
-              above it, or its derivative. Second Try checks every line against the one above and
-              marks the first that stops being true.
+              Write your working one line at a time. Each line should be equal to the line above
+              it, or its derivative, or its value at the point in the question. Second Try checks
+              every line against the one above and marks the first that stops being true.
             </p>
           )}
 

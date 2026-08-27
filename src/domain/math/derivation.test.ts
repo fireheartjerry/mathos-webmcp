@@ -65,6 +65,37 @@ describe('finding the FIRST broken step', () => {
   })
 })
 
+describe('evaluating at the point the problem asks about', () => {
+  // "Find dy/dx at x = 2" asks for a number. Without this relation the last line of a
+  // correct answer is judged against the derivative it came from and marked wrong.
+  it('accepts the final numeric answer', () => {
+    const report = checkDerivation(lines('4x^3 + x^2', '12x^2 + 2x', '52'), 'x', 2)
+    expect(report.allSound).toBe(true)
+    expect(report.verdicts.s3).toEqual({ status: 'sound', relation: 'evaluates' })
+  })
+
+  it('accepts it written in another form', () => {
+    const report = checkDerivation(lines('4x^3 + x^2', '12x^2 + 2x', '52.0'), 'x', 2)
+    expect(report.allSound).toBe(true)
+  })
+
+  it('still catches a wrong evaluation', () => {
+    const report = checkDerivation(lines('4x^3 + x^2', '12x^2 + 2x', '48'), 'x', 2)
+    expect(report.firstBrokenIndex).toBe(2)
+  })
+
+  it('does not accept a number when no point was supplied', () => {
+    const report = checkDerivation(lines('4x^3 + x^2', '12x^2 + 2x', '52'), 'x')
+    expect(report.firstBrokenIndex).toBe(2)
+  })
+
+  it('evaluates from whichever line precedes it', () => {
+    // Evaluating the function itself, rather than its derivative, is also legal.
+    const report = checkDerivation(lines('4x^3 + x^2', '36'), 'x', 2)
+    expect(report.verdicts.s2).toEqual({ status: 'sound', relation: 'evaluates' })
+  })
+})
+
 describe('refusing to over-claim', () => {
   it('reports an unreadable line as unreadable, not as wrong', () => {
     const report = checkDerivation(lines('3x^3 + x^2', '((((' ), 'x')

@@ -183,7 +183,7 @@ export function applyAction(
       if (state.steps.length === 0) {
         return fail('invalid_phase', 'There is nothing to check yet.', 'Write at least one step first.')
       }
-      const report = checkDerivation(state.steps, state.problem.variable)
+      const report = checkDerivation(state.steps, state.problem.variable, state.problem.evaluationPoint)
       // A check is the moment attempts reset: the learner has committed to this work.
       const steps = state.steps.map((s) => ({ ...s, attempts: 0 }))
       const description = report.allSound
