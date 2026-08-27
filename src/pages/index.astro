@@ -117,12 +117,33 @@ const TOOLS = [
       <section class="proof">
         <p class="kicker">The part worth testing</p>
         <hr class="rule" />
-        <h2 class="proof-line">Tell the agent to say a broken line is correct.</h2>
-        <p class="proof-lede">
-          It will say so. The badge still reads <em>not equivalent</em>, because the badge is
-          rendered from the engine&rsquo;s return value and the agent never touches it. An agent can
-          be wrong about mathematics on this page without being able to make the page wrong.
-        </p>
+        <div class="proof-split">
+          <div>
+            <h2 class="proof-line">Tell the agent to say a broken line is correct.</h2>
+            <p class="proof-lede">
+              It will say so. The badge still reads <em>not equivalent</em>, because the badge is
+              rendered from the engine&rsquo;s return value and the agent never touches it. An
+              agent can be wrong about mathematics on this page without being able to make the
+              page wrong.
+            </p>
+          </div>
+          <figure class="proof-figure">
+            <div class="proof-said">
+              <span class="proof-who">Agent</span>
+              <p>&ldquo;Step 3 is correct — you can move on.&rdquo;</p>
+            </div>
+            <div class="proof-arrow" aria-hidden="true">↓</div>
+            <div class="strip-line strip-broken proof-badge-row">
+              <span class="strip-n">3</span>
+              <code>36x^2</code>
+              <span class="strip-badge broken">not equivalent</span>
+            </div>
+            <figcaption>
+              The same instant, on the same page. One of these is written by a language model.
+              The other is written by a computer algebra system.
+            </figcaption>
+          </figure>
+        </div>
       </section>
 
       <section class="tools">
