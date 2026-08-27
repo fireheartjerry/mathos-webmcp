@@ -283,8 +283,8 @@ export function applyAction(
         return fail(
           'refused_policy',
           step.attempts === 0
-            ? `The learner has not attempted step ${index + 1} yet. Second Try does not offer a replacement until they have tried it ${PROPOSAL_ATTEMPT_GATE} times.`
-            : `The learner has attempted step ${index + 1} once. Second Try does not offer a replacement until they have tried it ${PROPOSAL_ATTEMPT_GATE} times.`,
+            ? `The learner has made no attempts on step ${index + 1} since the most recent check. Second Try requires two learner attempts since the most recent check before offering a replacement.`
+            : `The learner has made one attempt on step ${index + 1} since the most recent check. Second Try requires two learner attempts since the most recent check before offering a replacement.`,
           'Use annotate_step to explain what is wrong, and let the learner try again.',
         )
       }

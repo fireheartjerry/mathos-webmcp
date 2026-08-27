@@ -54,6 +54,12 @@ describe('the tool surface itself', () => {
     for (const tool of h.tools) expect(tool.title.length).toBeGreaterThan(0)
   })
 
+  it('states proposal eligibility relative to the most recent check', () => {
+    expect(h.byName('propose_step').description).toContain(
+      'after two learner attempts since the most recent check',
+    )
+  })
+
   it('describes every input property, because agents read those descriptions', () => {
     for (const tool of h.tools) {
       const properties = (tool.inputSchema as { properties: Record<string, { description?: string }> }).properties

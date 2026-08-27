@@ -14,7 +14,7 @@ export type Round = 'practice' | 'transfer'
 export type Step = {
   id: string
   latex: string
-  /** Learner edits to this step since it was last checked. Gates `propose_step`. */
+  /** Learner writes or edits to this step since it was last checked. Gates `propose_step`. */
   attempts: number
 }
 

@@ -11,6 +11,10 @@ import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import SessionDetails from './SessionDetails'
 import {
+  actionFeedbackAfterResult,
+  EMPTY_ACTION_FEEDBACK,
+} from './actionFeedback'
+import {
   actorLabel,
   registrationStatusLabel,
   relationDetail,
@@ -118,7 +122,7 @@ export default function Scratchpad() {
     state: 'unsupported',
     detail: 'Checking this browser…',
   })
-  const [flash, setFlash] = useState<string>('')
+  const [feedback, setFeedback] = useState(EMPTY_ACTION_FEEDBACK)
   // The first problem renders server-side, so the page is readable immediately. The
   // controls only become live once the island has hydrated; say so rather than
   // accepting keystrokes that would be discarded.
@@ -126,7 +130,7 @@ export default function Scratchpad() {
   const [tabConflict, setTabConflict] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
-  const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
+  const { flash, refusal } = feedback
 
   const stateRef = useRef(state)
   const paintBarrier = useRef(createPaintBarrier(state.sessionId, state.revision))
@@ -140,10 +144,10 @@ export default function Scratchpad() {
   const run = useCallback((action: SessionAction, source: ActionSource) => {
     if (tabConflictRef.current) return conflictFailure()
     const result = applyAction(stateRef.current, action, source)
+    setFeedback((current) => actionFeedbackAfterResult(current, result, source))
     if (result.ok) {
       stateRef.current = result.state
       setState(result.state)
-      setRefusal(null)
     }
     return result
   }, [])
@@ -183,6 +187,7 @@ export default function Scratchpad() {
       run: async (action) => {
         if (tabConflictRef.current) return conflictFailure()
         const result = applyAction(stateRef.current, action, source)
+        setFeedback((current) => actionFeedbackAfterResult(current, result, source))
         if (result.ok) {
           stateRef.current = result.state
           setState(result.state)
@@ -204,9 +209,6 @@ export default function Scratchpad() {
             el?.classList.add('step-focused')
             window.setTimeout(() => el?.classList.remove('step-focused'), 1600)
           }
-        } else if (result.code === 'refused_policy') {
-          // The page declining the agent is the point, not an internal detail.
-          setRefusal({ source, message: result.message, recovery: result.recovery })
         }
         return result
       },
@@ -289,8 +291,6 @@ export default function Scratchpad() {
     if (result.ok) {
       setDraft('')
       composerRef.current?.focus()
-    } else {
-      setFlash(result.message)
     }
   }
 
@@ -299,8 +299,7 @@ export default function Scratchpad() {
     // A double-click used to record two checks and two revisions for one intent.
     if (checking.current) return
     checking.current = true
-    const result = run({ type: 'CHECK_WORK' }, 'learner')
-    setFlash(result.ok ? '' : result.message)
+    run({ type: 'CHECK_WORK' }, 'learner')
     window.setTimeout(() => {
       checking.current = false
     }, 350)
@@ -416,7 +415,7 @@ export default function Scratchpad() {
                                 .querySelector<HTMLButtonElement>(`#line-${step.id} .step-latex`)
                                 ?.focus(),
                             )
-                          } else setFlash(result.message)
+                          }
                         }}
                       >
                         <input
@@ -568,8 +567,7 @@ export default function Scratchpad() {
                 type="button"
                 className="button-text"
                 onClick={() => {
-                  const result = run({ type: 'NEW_PROBLEM' }, 'learner')
-                  setFlash(result.ok ? '' : result.message)
+                  run({ type: 'NEW_PROBLEM' }, 'learner')
                   setDraft('')
                 }}
               >
@@ -589,9 +587,8 @@ export default function Scratchpad() {
                 stateRef.current = fresh
                 setState(fresh)
                 setDraft('')
-                setRefusal(null)
                 setEditingId(null)
-                setFlash('')
+                setFeedback(EMPTY_ACTION_FEEDBACK)
               }}
             >
               Start over
@@ -605,7 +602,13 @@ export default function Scratchpad() {
               </p>
               <p className="refusal-body">{refusal.message}</p>
               <p className="refusal-recovery">{refusal.recovery}</p>
-              <button type="button" className="button-text" onClick={() => setRefusal(null)}>
+              <button
+                type="button"
+                className="button-text"
+                onClick={() =>
+                  setFeedback((current) => ({ ...current, refusal: null }))
+                }
+              >
                 Dismiss
               </button>
             </div>

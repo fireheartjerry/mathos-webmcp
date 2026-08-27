@@ -74,13 +74,26 @@ describe('relationDetail', () => {
     )
   })
 
-  it('preserves the parser detail for an unreadable step', () => {
+  it('preserves parser detail and adds a concrete recovery for an unreadable step', () => {
     const verdict: StepVerdict = {
       status: 'unreadable',
       code: 'parse_error',
       message: 'Use a complete expression.',
     }
-    expect(relationDetail(verdict)).toBe('Use a complete expression.')
+    expect(relationDetail(verdict)).toBe(
+      'Use a complete expression. Rewrite it as a complete expression, then check again.',
+    )
+  })
+
+  it('makes the generic unreadable parser message actionable', () => {
+    const verdict: StepVerdict = {
+      status: 'unreadable',
+      code: 'parse_error',
+      message: 'That expression could not be read.',
+    }
+    expect(relationDetail(verdict)).toBe(
+      'That expression could not be read. Rewrite it as a complete expression, then check again.',
+    )
   })
 
   it('does not invent detail for a checked step', () => {

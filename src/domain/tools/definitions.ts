@@ -390,7 +390,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'propose_step',
       title: 'Offer a replacement step',
       description:
-        'During guided practice, offer a replacement after the learner has edited that step twice since the last check. The learner must accept or reject it; you cannot apply it.',
+        'During guided practice, offer a replacement after two learner attempts since the most recent check. The learner must accept or reject it; you cannot apply it.',
       inputSchema: {
         type: 'object',
         properties: {

@@ -89,6 +89,9 @@ describe('the pedagogy firewall', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.code).toBe('refused_policy')
+      expect(result.message).toBe(
+        'The learner has made one attempt on step 1 since the most recent check. Second Try requires two learner attempts since the most recent check before offering a replacement.',
+      )
       expect(result.recovery).toContain('annotate_step')
     }
   })

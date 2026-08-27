@@ -51,8 +51,11 @@ export function relationDetail(verdict: StepVerdict | undefined): string | null 
   switch (verdict.status) {
     case 'uncertain':
       return 'The page engine could not verify this relation. Rewrite it in a simpler equivalent form, then check again.'
-    case 'unreadable':
-      return verdict.message
+    case 'unreadable': {
+      const parserMessage = verdict.message.trim()
+      const separator = /[.!?]$/.test(parserMessage) ? ' ' : '. '
+      return `${parserMessage}${separator}Rewrite it as a complete expression, then check again.`
+    }
     default:
       return null
   }
