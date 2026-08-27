@@ -1,12 +1,7 @@
-/* =========================================================================
-   MATHOS x SARSA - FROZEN DESIGN TOKENS  v1.0  (2026-08-26)
-   Foundation & rhythm: Sarsa (sarsa.app, measured).
-   Identity, typeface, math & product grammar: Mathos (mathos.ai, measured).
-   Rulings: docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md  section 3.3
-   ========================================================================= */
+/* Proof Margin foundation.
+   The derivation is the interface: cool neutral surfaces, compact Archivo prose,
+   exact technical text in Fira Code, and semantic color reserved for trust state. */
 
-/* Self-hosted, so the judged path makes no third-party requests at all. One variable
-   file per family covers every weight used. Licences: public/fonts/OFL-NOTICE.md */
 @font-face {
   font-family: 'Archivo';
   font-style: normal;
@@ -17,6 +12,7 @@
     U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
     U+FEFF, U+FFFD;
 }
+
 @font-face {
   font-family: 'Fira Code';
   font-style: normal;
@@ -29,313 +25,407 @@
 }
 
 :root {
-  /* ---- SURFACES (Sarsa ground, Mathos-compatible) --------------------- */
-  --paper:            #FAFAF7;   /* page ground - Sarsa exact; Mathos #FCFCFB is equivalent */
-  --paper-sunk:       #F0F0EB;   /* recessed rails, table zebra, inert wells */
-  --panel:            #FFFFFF;   /* the ONE raised surface. Both refs agree. */
-  --panel-tint:       #ECF6FE;   /* Mathos --color-brand-50: formula banners, step badges */
-  --panel-verify:     #EEF4F0;   /* verification strip ground (green-tinted paper) */
-  --panel-path:       #FBF2EC;   /* diagnostic / attempted-route ground (rust-tinted paper) */
+  /* Proof Margin surfaces */
+  --canvas: #f4f6f8;
+  --surface: #ffffff;
+  --surface-subtle: #e9eef2;
+  --surface-hover: #e3eaf0;
 
-  /* ---- INK ------------------------------------------------------------ */
-  --ink:              #16150F;   /* Sarsa exact. Headings, primary text, primary button fill */
-  --ink-cool:         #0A0E1B;   /* Mathos --color-ink-900. Dark inline chips only */
-  --ink-70:  rgba(22, 21, 15, 0.68);  /* body prose, nav at rest */
-  --ink-60:  rgba(22, 21, 15, 0.62);  /* kickers, numerals, meta */
-  --ink-35:  rgba(22, 21, 15, 0.35);
-  --ink-meta: rgba(22, 21, 15, 0.60);
-  --ink-disabled: rgba(22, 21, 15, 0.46);  /* inactive but still legible; WCAG exempts disabled controls, the first thing a judge sees should not be unreadable anyway */   /* smallest readable text; measured 4.57:1 on --paper */  /* faint strokes, disabled */
-  --hairline:         rgba(22, 21, 15, 0.12);  /* EVERY divider and card border */
-  --hairline-strong:  rgba(22, 21, 15, 0.22);
-  --wash:             rgba(22, 21, 15, 0.06);  /* hover ground, unfilled progress track */
+  /* Neutral ink and structure */
+  --ink: #11161b;
+  --ink-soft: #3f4b55;
+  --ink-muted: #5d6974;
+  --ink-disabled: #77838d;
+  --graphite: #586570;
+  --graphite-subtle: #6d7882;
+  --line: #cbd4dc;
+  --line-strong: #7a8995;
 
-  /* ---- BRAND (Mathos identity, at Sarsa's saturation) ------------------ */
-  --brand:            #155D97;   /* Mathos --color-brand-700. Links, active state, identity */
-  --brand-deep:       #144D7C;   /* Mathos --color-brand-800. Hover on brand text */
-  --brand-bright:     #339AEF;   /* Mathos --color-brand-500. RATIONED: wordmark + focus/selected ONLY */
-  --brand-line:       #AEDAFB;   /* Mathos --color-brand-200. Tinted-panel borders */
-  --brand-tint:       #ECF6FE;   /* Mathos --color-brand-50 */
+  /* Identity, verification, and bounded state roles */
+  --blue: #0b63a5;
+  --blue-hover: #084f85;
+  --blue-active: #063b65;
+  --blue-tint: #e7f1f8;
+  --blue-line: #98bfdc;
+  --focus: #0b63a5;
 
-  /* ---- SEMANTIC ------------------------------------------------------- */
-  --verify:           #33724F;   /* Sarsa --verify. CHECKED/PASSED ONLY. Never a button. */
-  --verify-deep:      #2A5E41;
-  --warn:             #8A6A1F;   /* derived; muted to Sarsa register. Use sparingly. */
+  --green: #176642;
+  --green-deep: #104d32;
+  --green-tint: #e7f2ec;
 
-  /* ---- PATH / DATA ENCODING (Sarsa exact - NEVER type, buttons, links) - */
-  --path-human:       #16150F;   /* the learner's own route */
-  --path-a:           #C2541E;
-  --path-a-text:      #B04C1B;   /* rust that may carry text; 4.88:1 on --panel-path */   /* rust  - the route under discussion / attempted route */
-  --path-b:           #2E5E8C;   /* steel - alternative route */
-  --path-c:           #33724F;   /* green - verified route */
-     /* violet - fourth route */
-  --path-faint:       rgba(22, 21, 15, 0.42);  /* de-emphasise by ALPHA, never by hue */
+  --rust: #a13d24;
+  --rust-deep: #7a2b18;
+  --rust-tint: #faebe6;
 
-  /* ---- TYPE FAMILIES -------------------------------------------------- */
-  --font-sans: "Archivo", "Hanken Grotesk", system-ui, -apple-system, sans-serif;
-  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-math: KaTeX_Main, KaTeX_Math, serif;  /* KaTeX owns this. Never set math in --font-sans. */
-  /* NO SERIF TOKEN EXISTS. This is deliberate - see section 4.2 M1. */
+  --indigo: #4d5198;
+  --indigo-deep: #383b73;
+  --indigo-tint: #eeeef8;
+  --indigo-line: #b9badb;
 
-  /* ---- TYPE SIZES ----------------------------------------------------- */
-  --fs-micro:   11px;  /* pills, legends */
-  --fs-kicker:  12px;  /* uppercase eyebrow */
-  /* step indices, tnum meta */
-  --fs-meta:    14px;  /* footer meta, nav CTA */
-  /* nav links, button label, dense body */
-  --fs-sm:      16px;  /* column body */
-  --fs-body:    17px;  /* BASE */
-  --fs-lg:      18px;  /* section prose */
-  /* wordmark, hero sub */
-  --fs-2xl:     21px;  /* premise paragraph */
-  /* card / pillar h3 */
-  --fs-pull:    clamp(24px, 3.0vw, 36px);   /* pull quote */
-  --fs-section: clamp(28px, 3.4vw, 44px);   /* Sarsa --display-section */
-  --fs-hero:    clamp(40px, 5.6vw, 76px);   /* Sarsa --display-hero */
-  --fs-lede:    clamp(46px, 7.0vw, 92px);   /* full-bleed lede */
+  --ochre: #77570d;
+  --ochre-deep: #5c4208;
+  --ochre-tint: #f7f0dc;
 
-  /* ---- TYPE WEIGHTS - big is Sarsa-light, small is Mathos-strong ------- */
-  --fw-display: 300;   /* EVERYTHING >= 26px */
-  --fw-body:    400;
-  --fw-medium:  500;   /* h3, wordmark, emphasis inside prose */
-  --fw-ui:      600;   /* buttons, kickers, step labels, table heads */
+  /* Typography */
+  --font-sans: 'Archivo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-math: KaTeX_Main, KaTeX_Math, serif;
 
-  /* ---- TRACKING ------------------------------------------------------- */
-  --ls-lede:    -0.022em;
-  --ls-hero:    -0.015em;
-  --ls-section: -0.012em;
-  --ls-h3:      -0.010em;
-  --ls-body:     0em;
-  --ls-kicker:   0.14em;   /* uppercase 12px */
-  --ls-pill:     0.08em;   /* uppercase 11px */
+  --fs-micro: 12px;
+  --fs-meta: 14px;
+  --fs-sm: 16px;
+  --fs-body: 16px;
+  --fs-lg: 18px;
+  --fs-2xl: 22px;
+  --fs-section: clamp(28px, 3vw, 40px);
+  --fs-hero: clamp(36px, 5vw, 60px);
 
-  /* ---- LINE HEIGHTS --------------------------------------------------- */
-  --lh-lede:    0.98;
-  --lh-hero:    1.08;
+  --fw-body: 400;
+  --fw-medium: 500;
+  --fw-ui: 600;
+  --fw-display: 650;
+
+  --lh-tight: 1.2;
+  --lh-h3: 1.3;
+  --lh-body: 1.5;
+  --lh-prose: 1.55;
   --lh-section: 1.12;
-  --lh-h3:      1.25;
-  --lh-tight:   1.35;
-  --lh-prose:   1.55;
-  --lh-body:    1.65;   /* 17px -> 28.05px, Sarsa exact */
+  --lh-hero: 1.05;
 
-  /* ---- MEASURE (hard caps - Sarsa exact) ------------------------------ */
-  --measure-lede:     14ch;
-  --measure-headline: 640px;
-  --measure-prose:    620px;
-  --measure-hero:     720px;
-  --measure-pull:     760px;
-  --measure-premise:  680px;
+  --ls-body: 0;
+  --ls-h3: -0.01em;
+  --ls-section: -0.025em;
+  --ls-hero: -0.035em;
+  --ls-pill: 0;
 
-  /* ---- LAYOUT --------------------------------------------------------- */
-  --container:      min(1120px, 92vw);   /* Sarsa exact; gutter = 4vw per side */
-  --container-wide: min(1120px, 94vw);   /* hero panel */
-  --nav-h:          64px;
-  --space-section:       clamp(96px, 14vh, 160px);
-  --space-section-tight: calc(var(--space-section) * 0.6);  /* in-app DEFAULT */
-  --space-section-cta:   calc(var(--space-section) * 0.8);
-  --col-pad:        36px;   /* padding inside hairline-divided columns */
-  --col-gap:        48px;   /* pillar grid gap */
-  --stagger:        28px;   /* pillar nth-child(2); nth-child(3) = 2x */
+  /* Measures and compact document rhythm */
+  --measure-prose: 68ch;
+  --measure-headline: 760px;
+  --measure-hero: 780px;
+  --measure-pull: 1120px;
+  --container: min(1120px, calc(100vw - 48px));
+  --nav-h: 64px;
+  --space-section-tight: 64px;
+  --col-pad: 32px;
 
-  /* ---- SPACING SCALE (4px base) --------------------------------------- */
-  --s-1:   4px;  --s-2:   8px;  --s-3:  12px;  --s-4:  16px;
-  --s-5:  20px;  --s-6:  24px;  --s-7:  28px;  --s-8:  32px;
-  --s-9:  40px;  --s-10: 48px;  --s-11: 56px;  --s-12: 72px;
-  --s-13: 96px;  --s-14: 120px; --s-15: 160px;
-  --rule-margin: 18px 0 40px;   /* the kicker -> rule -> headline gap. Sarsa exact. */
+  /* 4px base scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 28px;
+  --s-8: 32px;
+  --s-9: 40px;
+  --s-10: 48px;
+  --s-11: 56px;
+  --s-12: 64px;
+  --s-13: 72px;
+  --s-14: 80px;
 
-  /* ---- GEOMETRY (Sarsa wins - section 3.3 Conflict 4) ------------------ */
-  --r-focus:     2px;
-  --r-chip:      4px;
-  --r-control:   8px;    /* buttons, inputs, selects */
-  --r-panel:    12px;    /* cards, hero panel, code wells */
-  --r-pill:    999px;
-  --r-dot:       50%;
-
+  /* Low-radius application geometry */
+  --r-focus: 2px;
+  --r-chip: 3px;
+  --r-control: 6px;
+  --r-panel: 6px;
+  --r-pill: 6px;
+  --r-dot: 50%;
   --bw-hairline: 1px;
-  --bw-rule:     1px;    /* structural ink top-rule */
-  --bw-focus:  1.5px;
-  --bw-node:   1.5px;    /* the 8px waypoint dot ring */
-  --bw-track:    2px;    /* progress segments */
-  --stroke-diagram: 1px; /* SVG default; 1.2-1.9px for emphasis ONLY */
-  --node-size:   8px;
+  --bw-focus: 3px;
+  --bw-track: 3px;
+  --bw-node: 2px;
 
-  /* ---- ELEVATION ------------------------------------------------------ */
-  --shadow-none: none;   /* THE ONLY ELEVATION TOKEN. Both references measure zero shadows. */
+  /* Causal motion only */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --d-instant: 120ms;
+  --d-quick: 180ms;
+  --d-fill: 180ms;
+  --d-signature: 200ms;
 
-  /* ---- MOTION (Sarsa exact) ------------------------------------------- */
-  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-emph:   cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Shared control sizes */
+  --btn-pad-sm: 10px 14px;
+  --btn-pad-md: 11px 18px;
+  --btn-pad-lg: 13px 22px;
+  --btn-fs-sm: 14px;
+  --btn-fs-md: 15px;
+  --btn-fs-lg: 16px;
+  --btn-gap: 8px;
+  --pill-pad: 3px 7px;
 
-  --d-instant:    150ms;  /* transforms, opacity, press */
-  --d-quick:      250ms;  /* colour */
-  --d-link:       300ms;  /* underline sweep */
-  --d-fill:       350ms;  /* button wipe, arrow nudge */
-  --d-chrome:     400ms;  /* nav background / border */
-  --d-ripple:     600ms;
-  --d-signature:  700ms;
-  --d-pulse:     2000ms;  /* looping scroll hint */
-
-  /* ---- CONTROL GEOMETRY ----------------------------------------------- */
-  --btn-pad-sm: 11px 16px;  --btn-fs-sm: 14px;  /* nav CTA,  ~38px tall */
-  --btn-pad-md: 12px 22px;  --btn-fs-md: 15px;  /* default,  ~45px tall */
-  --btn-pad-lg: 15px 28px;  --btn-fs-lg: 16px;  /* hero/CTA, ~53px tall */
-  --btn-gap:     8px;
-  --pill-pad:   2px 8px;    --pill-fs:   11px;
+  /* Temporary compatibility aliases for the landing stylesheet until its rewrite. */
+  --paper: var(--canvas);
+  --paper-sunk: var(--surface-subtle);
+  --panel: var(--surface);
+  --panel-tint: var(--blue-tint);
+  --panel-verify: var(--green-tint);
+  --panel-path: var(--rust-tint);
+  --ink-70: var(--ink-soft);
+  --ink-60: var(--ink-muted);
+  --ink-35: var(--line-strong);
+  --ink-meta: var(--ink-muted);
+  --hairline: var(--line);
+  --hairline-strong: var(--line-strong);
+  --wash: var(--surface-hover);
+  --brand: var(--blue);
+  --brand-deep: var(--blue-hover);
+  --brand-line: var(--blue-line);
+  --brand-tint: var(--blue-tint);
+  --verify: var(--green);
+  --verify-deep: var(--green-deep);
+  --path-a: var(--rust);
+  --path-a-text: var(--rust-deep);
+  --warn: var(--ochre);
 }
 
-/* ---- BASE ------------------------------------------------------------- */
-*, *::before, *::after { box-sizing: border-box; }
-html { scroll-padding-top: calc(var(--nav-h) + 24px); }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-padding-top: calc(var(--nav-h) + var(--s-4));
+}
 
 body {
+  min-width: 320px;
   margin: 0;
-  background: var(--paper);
+  overflow-x: hidden;
+  background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-weight: var(--fw-body);
   font-size: var(--fs-body);
+  font-weight: var(--fw-body);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-body);
   line-height: var(--lh-body);
-  letter-spacing: -0.011em;              /* Mathos global */
-  font-variant-numeric: tabular-nums;    /* both references */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-h1, h2, h3, p { margin: 0; }
-strong, b { font-weight: var(--fw-ui); }   /* the browser default is 700 */
-a { color: inherit; text-decoration: none; }
-button { font: inherit; cursor: pointer; }
-::selection { background: var(--ink); color: var(--paper); }
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+strong,
+b {
+  font-weight: var(--fw-ui);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--blue);
+  color: var(--surface);
+}
+
 :focus-visible {
-  outline: var(--bw-focus) solid var(--ink);
+  outline: var(--bw-focus) solid var(--focus);
   outline-offset: 3px;
   border-radius: var(--r-focus);
 }
 
-.container { width: var(--container); margin-inline: auto; }
-
-/* The three-part section opener. Use it everywhere. */
-.kicker {
-  font-size: var(--fs-kicker); font-weight: var(--fw-ui);
-  letter-spacing: var(--ls-kicker); text-transform: uppercase;
-  color: var(--ink-60);
+.container {
+  width: var(--container);
+  margin-inline: auto;
 }
-.rule { border: none; border-top: var(--bw-hairline) solid var(--hairline); margin: var(--rule-margin); }
+
 .headline {
-  font-size: var(--fs-section); font-weight: var(--fw-display);
-  letter-spacing: var(--ls-section); line-height: var(--lh-section);
   max-width: var(--measure-headline);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-display);
+  letter-spacing: var(--ls-section);
+  line-height: var(--lh-section);
 }
 
-/* The one button. Vary by padding only. */
 .button {
-  display: inline-flex; align-items: center; gap: var(--btn-gap);
-  padding: var(--btn-pad-md); font-size: var(--btn-fs-md); font-weight: var(--fw-ui);
-  background: var(--ink); color: var(--paper);
-  border: var(--bw-hairline) solid var(--ink); border-radius: var(--r-control);
-  box-shadow: var(--shadow-none);
-  position: relative; overflow: hidden;
-  transition: color var(--d-fill) var(--ease-out), background-color var(--d-fill) var(--ease-out), transform var(--d-instant) var(--ease-out);
-}
-.button:hover { color: var(--ink); background: var(--paper); }
-.button > span, .button .arrow { position: relative; }
-.button .arrow { transition: transform var(--d-fill) var(--ease-out); }
-.button:hover .arrow { transform: translateX(4px); }
-.button:active { transform: scale(0.97); }
-
-/* Waypoint node straddling a structural rule. */
-.node-rule { position: relative; border-top: var(--bw-rule) solid var(--ink); padding-top: var(--s-5); }
-.node-rule::before {
-  content: ""; position: absolute; top: calc(var(--node-size) / -2 - 0.5px); left: 0;
-  width: var(--node-size); height: var(--node-size); border-radius: var(--r-dot);
-  background: var(--paper); border: var(--bw-node) solid var(--ink);
+  position: relative;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+  padding: var(--btn-pad-md);
+  border: var(--bw-hairline) solid var(--blue);
+  border-radius: var(--r-control);
+  background: var(--blue);
+  color: var(--surface);
+  font-size: var(--btn-fs-md);
+  font-weight: var(--fw-ui);
+  line-height: 1.25;
+  transition:
+    background-color var(--d-instant) var(--ease-out),
+    border-color var(--d-instant) var(--ease-out),
+    color var(--d-instant) var(--ease-out);
 }
 
-/* Hairline-divided columns: the divider IS the gutter. */
-.streams { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-.stream  { padding: 0 var(--col-pad); border-left: var(--bw-hairline) solid var(--hairline); }
-.stream:first-child { padding-left: 0; border-left: none; }
-@media (max-width: 767px) {
-  .streams { grid-template-columns: 1fr; gap: var(--s-8); }
-  .stream, .stream:first-child {
-    padding: 0 0 0 var(--s-5);
-    border-left: var(--bw-hairline) solid var(--hairline);
-  }
+.button:hover {
+  border-color: var(--blue-hover);
+  background: var(--blue-hover);
 }
 
-/* Diagrams: 1px stroke, no fill, path tokens only, fade by alpha. */
-.diagram path, .diagram line, .diagram circle, .diagram rect {
-  fill: none; stroke-width: var(--stroke-diagram); vector-effect: non-scaling-stroke;
+.button:active {
+  border-color: var(--blue-active);
+  background: var(--blue-active);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 1ms !important; animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important; scroll-behavior: auto !important;
-  }
+.button:focus-visible {
+  outline-color: var(--focus);
+  outline-offset: 3px;
 }
-
-/* ---- ADDITIONS FOR THE APPLICATION -----------------------------------
-   The reference is a marketing page; these are the control states an
-   application needs. Scale the one button by padding, per ruling 9. */
-
-.button-sm { padding: var(--btn-pad-sm); font-size: var(--btn-fs-sm); }
-.button-lg { padding: var(--btn-pad-lg); font-size: var(--btn-fs-lg); }
 
 .button:disabled,
 .button[aria-disabled='true'] {
-  background: var(--paper-sunk);
+  border-color: var(--line-strong);
+  background: var(--surface-subtle);
   color: var(--ink-disabled);
-  border-color: var(--hairline-strong);
   cursor: not-allowed;
-  transform: none;
 }
-.button:disabled:hover { color: var(--ink-disabled); background: var(--paper-sunk); }
 
-/* The secondary affordance. Never a second filled button competing with the first. */
-.button-text {
-  background: none;
-  border: 0;
-  padding: 0;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--ink-60);
-  border-bottom: var(--bw-hairline) solid var(--hairline-strong);
-  transition: color var(--d-instant) var(--ease-out), border-color var(--d-instant) var(--ease-out);
+.button:disabled:hover,
+.button:disabled:active,
+.button[aria-disabled='true']:hover,
+.button[aria-disabled='true']:active {
+  border-color: var(--line-strong);
+  background: var(--surface-subtle);
+  color: var(--ink-disabled);
 }
-.button-text:hover { color: var(--ink); border-color: var(--ink); }
-.button-text:active { color: var(--brand-deep); }
-.button-text:disabled { color: var(--ink-disabled); border-color: var(--hairline); cursor: not-allowed; }
+
+.button[aria-busy='true'] {
+  cursor: progress;
+}
+
+.button-sm {
+  min-height: 44px;
+  padding: var(--btn-pad-sm);
+  font-size: var(--btn-fs-sm);
+}
+
+.button-lg {
+  min-height: 48px;
+  padding: var(--btn-pad-lg);
+  font-size: var(--btn-fs-lg);
+}
+
+.button-text {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-2) 2px;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-ui);
+  line-height: 1.3;
+  text-decoration: underline;
+  text-decoration-color: var(--blue-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition:
+    color var(--d-instant) var(--ease-out),
+    text-decoration-color var(--d-instant) var(--ease-out);
+}
+
+.button-text:hover {
+  color: var(--blue-hover);
+  text-decoration-color: currentColor;
+}
+
+.button-text:active {
+  color: var(--blue-active);
+}
+
+.button-text:focus-visible {
+  outline-color: var(--focus);
+  outline-offset: 3px;
+}
+
+.button-text:disabled {
+  color: var(--ink-disabled);
+  cursor: not-allowed;
+  text-decoration-color: var(--line-strong);
+}
 
 .skip-link {
   position: absolute;
+  top: -80px;
   left: var(--s-4);
-  top: calc(var(--s-4) * -6);
-  z-index: 10;
+  z-index: 20;
+  min-height: 44px;
   padding: var(--btn-pad-sm);
-  background: var(--ink);
-  color: var(--paper);
   border-radius: var(--r-control);
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: var(--fw-ui);
   transition: top var(--d-instant) var(--ease-out);
 }
-.skip-link:focus { top: var(--s-4); }
 
-/* ---- STATE CLASSES (rule 36: these must exist, not be improvised) ---- */
+.skip-link:focus {
+  top: var(--s-4);
+}
+
+.skip-link:hover {
+  background: var(--blue-hover);
+}
+
+.skip-link:active {
+  background: var(--blue-active);
+}
 
 .is-loading {
-  color: transparent;
-  background: linear-gradient(90deg, var(--wash), var(--paper-sunk), var(--wash));
-  border-radius: var(--r-chip);
   min-height: 1em;
-}
-.is-empty { color: var(--ink-meta); font-size: var(--fs-sm); }
-.is-error {
-  color: var(--warn);
-  font-size: var(--fs-sm);
-  border-left: var(--bw-track) solid var(--warn);
-  padding-left: var(--s-3);
+  border-radius: var(--r-chip);
+  background: var(--surface-subtle);
+  color: transparent;
 }
 
-/* rule 32: every interactive element defines all four states. */
-.skip-link:hover { background: var(--brand-deep); }
-.skip-link:active { background: var(--brand); }
+.is-empty {
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.is-error {
+  padding: var(--s-3) var(--s-4);
+  border-inline-start: var(--bw-track) solid var(--rust);
+  background: var(--rust-tint);
+  color: var(--rust-deep);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-prose);
+}
+
+@media (max-width: 719px) {
+  :root {
+    --container: min(100% - 32px, 1120px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
