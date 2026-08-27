@@ -21,5 +21,11 @@ import Scratchpad from '../components/Scratchpad'
   <body>
     <a class="skip-link" href="#main">Skip to the scratchpad</a>
     <Scratchpad client:load />
+    <noscript>
+      <div class="noscript-recovery is-error" role="alert">
+        <p>The scratchpad needs JavaScript to save and check your derivation.</p>
+        <p>Enable JavaScript, then <a href="/learn">reload the scratchpad</a>.</p>
+      </div>
+    </noscript>
   </body>
 </html>

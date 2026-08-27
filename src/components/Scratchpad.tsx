@@ -25,6 +25,11 @@ import {
   reportStatusMessage,
 } from './proofPresentation'
 import { proposalSeedForSession } from './inspectorPresentation'
+import {
+  interventionLiveMessage,
+  proposalDecisionLiveMessage,
+  stepExpressionAccessibleName,
+} from './scratchpadAccessibility'
 import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
@@ -83,15 +88,14 @@ function TransferSignal({ state }: { state: SessionState }) {
           <span className="receipt-mark" aria-hidden="true">
             ✓
           </span>
-          The fresh problem was generated after the first round and its answer was derived here,
-          not stored.
+          The fresh problem was generated for this round, not selected from an answer bank.
         </li>
         <li>
           <span className="receipt-mark" aria-hidden="true">
             ✓
           </span>
-          Nothing annotated or proposed anything during this attempt — those tools are closed to
-          every caller in the unaided round.
+          No annotation or proposal was added during this attempt. Those two actions are closed to
+          every caller in the unaided round; reading and checking remain available.
         </li>
         {practice && (
           <li>
@@ -148,6 +152,8 @@ export default function Scratchpad() {
   const [tabConflict, setTabConflict] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
+  const [composerError, setComposerError] = useState('')
+  const [announcement, setAnnouncement] = useState({ key: 0, text: '' })
   const { flash, refusal } = feedback
 
   const stateRef = useRef(state)
@@ -155,8 +161,23 @@ export default function Scratchpad() {
   const composerRef = useRef<HTMLInputElement | null>(null)
   const hydrated = useRef(false)
   const tabConflictRef = useRef(false)
+  const announcementKey = useRef(0)
 
   stateRef.current = state
+
+  const announce = useCallback((text: string) => {
+    announcementKey.current += 1
+    setAnnouncement({ key: announcementKey.current, text })
+  }, [])
+
+  const focusLineOrComposer = useCallback((stepId: string | null) => {
+    requestAnimationFrame(() => {
+      const line = stepId
+        ? document.querySelector<HTMLButtonElement>(`#line-${stepId} .step-latex`)
+        : null
+      ;(line ?? composerRef.current)?.focus()
+    })
+  }, [])
 
   /** The one path. Learner clicks, agent tool calls and the inspector all land here. */
   const run = useCallback((action: SessionAction, source: ActionSource) => {
@@ -209,6 +230,23 @@ export default function Scratchpad() {
         if (result.ok) {
           stateRef.current = result.state
           setState(result.state)
+          if (action.type === 'ANNOTATE_STEP' || action.type === 'PROPOSE_STEP') {
+            const position = result.state.steps.findIndex((step) => step.id === action.stepId) + 1
+            if (position > 0) {
+              announce(
+                interventionLiveMessage(
+                  source,
+                  action.type === 'PROPOSE_STEP' ? 'proposal' : 'annotation',
+                  position,
+                ),
+              )
+            }
+          }
+          if (action.type === 'NEW_PROBLEM') {
+            setDraft('')
+            setComposerError('')
+            setEditingId(null)
+          }
           await awaitPaint(result.state.sessionId, result.state.revision)
           if (stateRef.current.sessionId !== result.state.sessionId) {
             return {
@@ -227,6 +265,10 @@ export default function Scratchpad() {
             el?.classList.add('step-focused')
             window.setTimeout(() => el?.classList.remove('step-focused'), 1600)
           }
+          if (action.type === 'NEW_PROBLEM') {
+            focusLineOrComposer(null)
+            announce('Fresh unaided problem started. Focus moved to Write your first line.')
+          }
         }
         return result
       },
@@ -234,7 +276,7 @@ export default function Scratchpad() {
       onToolSuccess: () =>
         setFeedback((current) => actionFeedbackAfterToolSuccess(current)),
     }),
-    [awaitPaint, cacheFor],
+    [announce, awaitPaint, cacheFor, focusLineOrComposer],
   )
 
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
@@ -306,12 +348,33 @@ export default function Scratchpad() {
   function submitStep(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     const latex = draft.trim()
-    if (!latex) return
+    if (!latex) {
+      setComposerError('Write an expression before adding the line.')
+      composerRef.current?.focus()
+      return
+    }
     const result = run({ type: 'ADD_STEP', latex }, 'learner')
     if (result.ok) {
       setDraft('')
+      setComposerError('')
+      composerRef.current?.focus()
+    } else {
+      setComposerError(result.message)
       composerRef.current?.focus()
     }
+  }
+
+  function cancelEdit(stepId: string, position: number) {
+    setEditingId(null)
+    focusLineOrComposer(stepId)
+    announce(`Rewrite canceled for line ${position}. Focus returned to that line.`)
+  }
+
+  function resolveProposal(accept: boolean, stepId: string, position: number) {
+    const result = run({ type: 'RESOLVE_PROPOSAL', accept }, 'learner')
+    if (!result.ok) return
+    focusLineOrComposer(stepId)
+    announce(proposalDecisionLiveMessage(accept, position))
   }
 
   const checking = useRef(false)
@@ -448,18 +511,17 @@ export default function Scratchpad() {
                           onChange={(event) => setEditDraft(event.target.value)}
                           onKeyDown={(event) => {
                             if (event.key !== 'Escape') return
-                            setEditingId(null)
-                            requestAnimationFrame(() =>
-                              document
-                                .querySelector<HTMLButtonElement>(`#line-${step.id} .step-latex`)
-                                ?.focus(),
-                            )
+                            cancelEdit(step.id, index + 1)
                           }}
                         />
                         <button type="submit" className="button button-sm">
                           Save
                         </button>
-                        <button type="button" className="button-text" onClick={() => setEditingId(null)}>
+                        <button
+                          type="button"
+                          className="button-text"
+                          onClick={() => cancelEdit(step.id, index + 1)}
+                        >
                           Cancel
                         </button>
                       </form>
@@ -467,7 +529,7 @@ export default function Scratchpad() {
                       <button
                         type="button"
                         className="step-latex"
-                        aria-label={`Line ${index + 1}. Select to rewrite.`}
+                        aria-label={stepExpressionAccessibleName(index + 1, step.latex)}
                         onClick={() => {
                           setEditingId(step.id)
                           setEditDraft(step.latex)
@@ -513,20 +575,27 @@ export default function Scratchpad() {
                         <p className="proposal-head">
                           Proposed replacement — not applied · {actorLabel(state.proposal.source)}
                         </p>
-                        <Tex latex={state.proposal.latex} />
+                        <div
+                          className="proposal-math"
+                          role="region"
+                          tabIndex={0}
+                          aria-label={`Proposed replacement for line ${index + 1}: ${state.proposal.latex}. Use the arrow keys to review the full expression if needed.`}
+                        >
+                          <Tex latex={state.proposal.latex} />
+                        </div>
                         <p className="proposal-why">{state.proposal.rationale}</p>
                         <div className="proposal-actions">
                           <button
                             type="button"
                             className="button button-sm"
-                            onClick={() => run({ type: 'RESOLVE_PROPOSAL', accept: true }, 'learner')}
+                            onClick={() => resolveProposal(true, step.id, index + 1)}
                           >
                             Use this
                           </button>
                           <button
                             type="button"
                             className="button-text"
-                            onClick={() => run({ type: 'RESOLVE_PROPOSAL', accept: false }, 'learner')}
+                            onClick={() => resolveProposal(false, step.id, index + 1)}
                           >
                             Keep mine
                           </button>
@@ -538,7 +607,17 @@ export default function Scratchpad() {
                     type="button"
                     className="step-remove"
                     aria-label={`Remove step ${index + 1}`}
-                    onClick={() => run({ type: 'REMOVE_STEP', stepId: step.id }, 'learner')}
+                    onClick={() => {
+                      const nextFocusId = state.steps[index + 1]?.id ?? state.steps[index - 1]?.id ?? null
+                      const result = run({ type: 'REMOVE_STEP', stepId: step.id }, 'learner')
+                      if (!result.ok) return
+                      focusLineOrComposer(nextFocusId)
+                      announce(
+                        nextFocusId
+                          ? `Line ${index + 1} removed. Focus moved to the nearest remaining line.`
+                          : `Line ${index + 1} removed. Focus moved to Write your first line.`,
+                      )
+                    }}
                   >
                     ×
                   </button>
@@ -559,13 +638,22 @@ export default function Scratchpad() {
                 autoComplete="off"
                 spellCheck={false}
                 disabled={!ready}
+                aria-invalid={composerError ? true : undefined}
+                aria-describedby="next-step-error"
                 placeholder={state.steps.length === 0 ? `write ${state.problem.resultName} in terms of ${state.problem.variable}` : 'the next line of your working'}
                 onChange={(event) => setDraft(event.target.value)}
               />
-              <button type="submit" className="button button-sm" disabled={!ready || !draft.trim()}>
+              <button type="submit" className="button button-sm" disabled={!ready}>
                 Add line
               </button>
             </div>
+            <p
+              id="next-step-error"
+              className={composerError ? 'composer-error' : 'composer-help'}
+              aria-live="polite"
+            >
+              {composerError || 'Enter one mathematical expression, then add the line.'}
+            </p>
             {draft.trim() && (
               <p className="composer-preview">
                 <Tex latex={draft} />
@@ -589,8 +677,13 @@ export default function Scratchpad() {
                 type="button"
                 className="button-text"
                 onClick={() => {
-                  run({ type: 'NEW_PROBLEM' }, 'learner')
+                  const result = run({ type: 'NEW_PROBLEM' }, 'learner')
+                  if (!result.ok) return
                   setDraft('')
+                  setComposerError('')
+                  setEditingId(null)
+                  focusLineOrComposer(null)
+                  announce('Fresh unaided problem started. Focus moved to Write your first line.')
                 }}
               >
                 Try a fresh problem, unaided
@@ -609,8 +702,11 @@ export default function Scratchpad() {
                 stateRef.current = fresh
                 setState(fresh)
                 setDraft('')
+                setComposerError('')
                 setEditingId(null)
                 setFeedback(EMPTY_ACTION_FEEDBACK)
+                focusLineOrComposer(null)
+                announce('A new session started. Focus moved to Write your first line.')
               }}
             >
               Start over
@@ -643,7 +739,12 @@ export default function Scratchpad() {
             </p>
           )}
 
-          {!ready && <p className="is-empty">Loading the mathematics engine…</p>}
+          {!ready && (
+            <div className="loading-recovery is-empty" role="status" aria-live="polite">
+              <p>Loading the mathematics engine…</p>
+              <a href="/learn">Reload the scratchpad</a>
+            </div>
+          )}
 
           {tabConflict && (
             <p className="is-error" role="alert">
@@ -654,6 +755,10 @@ export default function Scratchpad() {
 
           <p className="live-status" role="status" aria-live="polite">
             {flash || reportStatusMessage(report)}
+          </p>
+
+          <p className="live-announcement" role="status" aria-live="polite" aria-atomic="true">
+            <span key={announcement.key}>{announcement.text}</span>
           </p>
 
           <SessionDetails

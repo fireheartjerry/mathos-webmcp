@@ -609,6 +609,23 @@
   line-height: 1.4;
 }
 
+.proposal-math {
+  max-width: 100%;
+  padding: var(--s-2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: var(--bw-hairline) solid transparent;
+  border-radius: var(--r-control);
+  overscroll-behavior-inline: contain;
+  white-space: nowrap;
+}
+
+.proposal-math:focus-visible {
+  border-color: var(--focus);
+  outline: var(--bw-focus) solid var(--focus);
+  outline-offset: 2px;
+}
+
 .proposal-why {
   margin: var(--s-2) 0 var(--s-3);
   color: var(--ink-soft);
@@ -690,6 +707,28 @@
   font-size: var(--fs-lg);
 }
 
+.composer-help,
+.composer-error {
+  min-height: 1.5em;
+  margin-top: var(--s-2);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-body);
+}
+
+.composer-help {
+  color: var(--ink-muted);
+}
+
+.composer-error {
+  color: var(--rust-deep);
+  font-weight: var(--fw-medium);
+}
+
+.composer-row input[aria-invalid='true'] {
+  border-color: var(--rust);
+  background: var(--rust-tint);
+}
+
 .work-actions {
   display: flex;
   align-items: center;
@@ -710,6 +749,55 @@
   padding: var(--s-3) var(--s-4);
   border-inline-start: var(--bw-track) solid var(--graphite);
   background: var(--surface-subtle);
+}
+
+.loading-recovery p {
+  margin: 0;
+}
+
+.loading-recovery a,
+.noscript-recovery a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--blue);
+  font-weight: var(--fw-ui);
+  text-decoration: underline;
+  text-decoration-color: var(--blue-line);
+  text-underline-offset: 4px;
+}
+
+.loading-recovery a:hover,
+.noscript-recovery a:hover {
+  color: var(--blue-hover);
+  text-decoration-color: currentColor;
+}
+
+.loading-recovery a:active,
+.noscript-recovery a:active {
+  color: var(--blue-active);
+}
+
+.noscript-recovery {
+  width: var(--container);
+  margin: var(--s-6) auto;
+}
+
+.noscript-recovery p + p {
+  margin-top: var(--s-2);
+}
+
+.live-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
 }
 
 .work > .is-error {
@@ -1359,6 +1447,10 @@
     align-items: flex-start;
     flex-direction: column;
     gap: var(--s-1);
+  }
+
+  .proposal-math {
+    width: 100%;
   }
 
   .console-tool-head {
