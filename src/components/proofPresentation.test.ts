@@ -1,7 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import type { StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
-import { actorLabel, relationLabel } from './proofPresentation'
+import type { RegistrationStatus } from '../domain/tools/registry'
+import { actorLabel, registrationStatusLabel, relationLabel } from './proofPresentation'
+
+describe('registrationStatusLabel', () => {
+  it.each<[RegistrationStatus, string]>([
+    [
+      { state: 'unsupported', detail: 'Checking this browser…' },
+      'Checking page tool availability',
+    ],
+    [
+      { state: 'unsupported', detail: 'This browser does not expose document.modelContext.' },
+      'WebMCP unavailable',
+    ],
+    [{ state: 'live', registered: 6, total: 6 }, '6 page tools available'],
+    [
+      { state: 'partial', registered: 4, total: 6, failures: ['annotate_step'] },
+      '4 of 6 page tools available',
+    ],
+    [{ state: 'failed', detail: 'Registration threw unexpectedly.' }, 'Page tool registration failed'],
+  ])('labels $status.state as %s', (status, label) => {
+    expect(registrationStatusLabel(status)).toBe(label)
+  })
+})
 
 describe('relationLabel', () => {
   it('labels a missing verdict as not checked', () => {

@@ -1,5 +1,21 @@
 import type { StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
+import type { RegistrationStatus } from '../domain/tools/registry'
+
+export function registrationStatusLabel(status: RegistrationStatus): string {
+  switch (status.state) {
+    case 'live':
+      return `${status.registered} page tools available`
+    case 'partial':
+      return `${status.registered} of ${status.total} page tools available`
+    case 'failed':
+      return 'Page tool registration failed'
+    case 'unsupported':
+      return status.detail.startsWith('Checking')
+        ? 'Checking page tool availability'
+        : 'WebMCP unavailable'
+  }
+}
 
 export function actorLabel(source: ActionSource): string {
   switch (source) {

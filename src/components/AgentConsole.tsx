@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
+import { registrationStatusLabel } from './proofPresentation'
 
 /** The exact page-tool inspector, including its truthful no-WebMCP recovery path. */
 
@@ -34,7 +35,7 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
     return (
       <p className="console-status console-live">
         <span className="dot" aria-hidden="true" />
-        {status.registered} tools registered with this tab
+        {registrationStatusLabel(status)}
       </p>
     )
   }
@@ -42,7 +43,7 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
     return (
       <p className="console-status console-warn">
         <span className="dot" aria-hidden="true" />
-        {status.registered} of {status.total} tools registered. Failed: {status.failures.join(', ')}
+        {registrationStatusLabel(status)}. Failed: {status.failures.join(', ')}
       </p>
     )
   }
@@ -50,14 +51,14 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
     return (
       <p className="console-status console-warn">
         <span className="dot" aria-hidden="true" />
-        {status.detail}
+        {registrationStatusLabel(status)}. {status.detail}
       </p>
     )
   }
   return (
     <p className="console-status console-idle">
       <span className="dot" aria-hidden="true" />
-      WebMCP unavailable in this browser
+      {registrationStatusLabel(status)}
     </p>
   )
 }
@@ -70,6 +71,8 @@ export default function AgentConsole({ status, tools, onRun, revision, suggested
   const [busy, setBusy] = useState(false)
 
   const connected = status.state === 'live' || status.state === 'partial'
+  const checking =
+    status.state === 'unsupported' && status.detail.startsWith('Checking')
 
   async function run(name: string) {
     setBusy(true)
@@ -91,7 +94,7 @@ export default function AgentConsole({ status, tools, onRun, revision, suggested
   }
 
   return (
-    <section className="agent-console">
+    <div className="agent-console">
       <StatusLine status={status} />
       <ul className="console-tools">
         {tools.map((tool) => {
@@ -147,7 +150,7 @@ export default function AgentConsole({ status, tools, onRun, revision, suggested
         </div>
       )}
 
-      {!connected && (
+      {!connected && !checking && (
         <div className="console-connect">
           <p className="console-connect-head">Test with a real agent</p>
           {status.state === 'unsupported' && (
@@ -161,6 +164,6 @@ export default function AgentConsole({ status, tools, onRun, revision, suggested
           </ul>
         </div>
       )}
-    </section>
+    </div>
   )
 }

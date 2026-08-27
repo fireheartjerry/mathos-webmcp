@@ -2,7 +2,7 @@ import type { Activity } from '../domain/session/types'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import AgentConsole from './AgentConsole'
-import { actorLabel } from './proofPresentation'
+import { actorLabel, registrationStatusLabel } from './proofPresentation'
 
 type Props = {
   status: RegistrationStatus
@@ -11,21 +11,6 @@ type Props = {
   revision: number
   suggestedLatex: string
   activities: Activity[]
-}
-
-function connectionLabel(status: RegistrationStatus): string {
-  switch (status.state) {
-    case 'live':
-      return `${status.registered} page tools available`
-    case 'partial':
-      return `${status.registered} of ${status.total} page tools available`
-    case 'failed':
-      return 'Page tool registration failed'
-    case 'unsupported':
-      return status.detail.startsWith('Checking')
-        ? 'Checking page tool availability'
-        : 'WebMCP unavailable'
-  }
 }
 
 export default function SessionDetails({
@@ -39,7 +24,12 @@ export default function SessionDetails({
   return (
     <details className="session-details">
       <summary>
-        Session details <span>· {connectionLabel(status)}</span>
+        Session details{' '}
+        <span className="session-details-status">· {registrationStatusLabel(status)}</span>
+        <span className="session-details-marker" aria-hidden="true">
+          <span className="session-details-marker-closed">+</span>
+          <span className="session-details-marker-open">−</span>
+        </span>
       </summary>
       <div className="session-details-body">
         <p className="session-details-intro">

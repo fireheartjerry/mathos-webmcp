@@ -68,7 +68,7 @@
   max-width: var(--measure-pull);
   width: 100%;
   margin: 0 auto;
-  padding: var(--s-10) var(--s-9) var(--s-13);
+  padding: var(--s-8) var(--s-9) var(--s-13);
 }
 
 .work { min-width: 0; }
@@ -300,6 +300,7 @@
 
 .console-tool-head {
   width: 100%;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -391,7 +392,7 @@
   border-radius: var(--r-chip);
 }
 
-.console-connect { margin-top: var(--s-6); padding-top: var(--s-5); border-top: var(--bw-hairline) solid var(--hairline); }
+.console-connect { margin-top: var(--s-5); padding-top: var(--s-5); border-top: var(--bw-hairline) solid var(--hairline); }
 .console-connect-head {
   margin: 0 0 var(--s-3);
   font-size: var(--fs-meta);
@@ -425,14 +426,15 @@
   color: var(--ink-70);
 }
 .session-details > summary::-webkit-details-marker { display: none; }
-.session-details > summary::after {
-  content: '+';
+.session-details-marker {
   margin-left: auto;
   font-family: var(--font-mono);
   color: var(--ink-60);
 }
-.session-details[open] > summary::after { content: '−'; }
-.session-details > summary span { color: var(--ink-meta); font-weight: var(--fw-body); }
+.session-details-marker-open { display: none; }
+.session-details[open] .session-details-marker-closed { display: none; }
+.session-details[open] .session-details-marker-open { display: inline; }
+.session-details-status { color: var(--ink-meta); font-weight: var(--fw-body); }
 .session-details > summary:hover { color: var(--ink); }
 .session-details > summary:focus-visible {
   outline: var(--bw-focus) solid var(--ink);
@@ -459,7 +461,7 @@
 .activity ol { list-style: none; margin: 0; padding: 0; }
 .activity li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: var(--s-3);
   padding: var(--s-3) 0;
@@ -654,10 +656,6 @@
 
 /* ---------- rescue pass: the proof ledger ---------- */
 
-.scratch-grid {
-  padding-top: var(--s-8);
-}
-
 .problem-prompt { margin-bottom: var(--s-4); }
 .given { margin-bottom: var(--s-6); }
 
@@ -747,11 +745,6 @@
 .step-remove,
 .step-edit input { min-width: 44px; min-height: 44px; }
 .step-remove { padding: 0; }
-
-.console-tool-head { min-height: 44px; }
-.console-connect { margin-top: var(--s-5); }
-
-.activity li { grid-template-columns: auto minmax(0, 1fr); }
 
 @media (max-width: 980px) {
   .start-cue { grid-template-columns: 1fr; gap: 0; margin-bottom: var(--s-4); padding: var(--s-3) 0; }
