@@ -69,9 +69,25 @@ green buttons, no rust type** — are done, on tokens measured from both referen
 Verified in the running page: Archivo, display type at weight 300, UI type at 600,
 hairline separation, KaTeX-typeset mathematics, and **zero third-party requests**.
 
-The mechanical score is in `13`. The gate is ≥36/40; the build scored 19/40 before the
-redesign and 29/40 at the first post-redesign audit, and every flagged rule has since been
-addressed. **The re-scored figure in `13` governs, not this paragraph.**
+The mechanical score is in `13`. The gate is ≥36/40.
+
+| Stage | Score |
+| --- | --- |
+| The build inherited at the start of the night | **19 / 40** |
+| First audit after the redesign | **29 / 40** |
+| After repair | **37 / 40** |
+| After the final pass on rules 6, 26 and 32 | measured clean; see below |
+
+The three rules that survived the 37/40 re-score were then closed: contrast failures on
+`/learn` went from 27 pairs to 2, and both remaining are *disabled controls*, which
+WCAG 1.4.3 explicitly exempts — raised from 2.23:1 to 2.98:1 regardless, because
+"Check my work" is disabled on first paint and should still be readable. The empty regions
+went from 480×410 and 880×730 to 260 and 60, against a 400 px threshold. Every text field
+now defines hover, focus, active and disabled.
+
+The auditor's note on the thinnest pass is worth keeping: rule 9 (chromatic colour under
+5% of painted elements) passes at 4.73% **by area** but sits at 9.6% **by element count**.
+The rule says area. It is a pass, and it is close.
 
 ### Is it free of AI-slop patterns?
 
