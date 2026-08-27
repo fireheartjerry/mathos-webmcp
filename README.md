@@ -112,7 +112,7 @@ the ones in `src/domain/tools/definitions.ts`.
 |---|---|---|---|
 | 1 | `get_scratchpad` — *Read the scratchpad* | **read** | Read the learner's current problem, every step they have written, each step's verdict, the first step that broke, and what you may do next. |
 | 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
-| 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown in the margin beside the learner's own line. Use this to teach the step that broke; it is not a chat message. |
+| 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message. |
 | 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step. |
 | 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires a check first. |
 | 6 | `get_receipt` — *Read the session evidence* | **read** | Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven. |

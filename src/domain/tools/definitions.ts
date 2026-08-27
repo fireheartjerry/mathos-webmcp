@@ -303,7 +303,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'annotate_step',
       title: 'Explain one step',
       description:
-        "Attach a short explanation to one step, shown in the margin beside the learner's own line. Use this to teach the step that broke; it is not a chat message.",
+        "Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message.",
       inputSchema: {
         type: 'object',
         properties: {

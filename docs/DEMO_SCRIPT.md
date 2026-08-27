@@ -31,8 +31,8 @@ In the right pane, the agent calls `check_work` with `expectedRevision` and a `r
 Hold on the page as the verdicts land: line 1 `follows`, line 2 `differentiates`, **line 3
 `not equivalent`**, line 4 dimmed and badged `after the first break`.
 
-Immediately after, the agent calls `annotate_step` on line 3's `stepId`. The note appears in
-the margin, level with line 3, attributed to the agent.
+Immediately after, the agent calls `annotate_step` on line 3's `stepId`. The note appears attached to line 3 itself, inside the learner's working and attributed to
+the agent.
 
 Do not cut. This is one continuous take.
 
@@ -50,7 +50,7 @@ Do not cut. This is one continuous take.
 **Screen**
 
 Stay on the same frame. Briefly highlight the margin: the problem statement, the Agent
-Console listing six tools, the annotation anchored to line 3. Then a slow zoom to the badge
+Console listing six tools, the annotation attached to line 3. Then a slow zoom to the badge
 on line 3 reading `not equivalent`.
 
 **Audio**
