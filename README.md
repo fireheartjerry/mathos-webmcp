@@ -32,7 +32,9 @@ learner writes multi-line working, not a single number.
 4. The **first** line that stopped being equivalent is marked `not equivalent`. Every line
    after it is dimmed and badged `after the first break`, because everything downstream of a
    mistake is downstream of a mistake. Sound lines read `follows` or `differentiates`.
-5. Fix that one line. Check again.
+5. **Click that line to rewrite it**, then check again. Only the learner can edit a line —
+   an agent that tries is refused, and it may not offer a replacement until you have genuinely
+   attempted the step yourself.
 6. Press **Try a fresh problem, unaided.** A new problem in the same skill family is
    generated with its answer derived by the engine. `annotate_step` and `propose_step` are
    closed for this round — the page returns `refused_policy` to any caller, so the attempt
@@ -46,11 +48,9 @@ states the detection result verbatim, and gives each tool a **Run this tool** co
 invokes the *identical* `execute` path with a pre-filled argument set. The page really
 mutates. Nothing is simulated and no agent is faked.
 
-*Known gap:* inspector-initiated calls are currently attributed to `agent` in the session
-activity log rather than to `local-inspector`, because the tool bridge passes a fixed source.
-The `local-inspector` source exists in the domain model and is what the console text
-promises; the bridge does not yet pass it. Treat the console's attribution line as aspirational
-until that is fixed.
+Inspector-initiated calls are attributed to `local-inspector` in the session activity log,
+not to `agent`. Each caller identity gets its own bridge into the reducer, so the console's
+attribution line and the activity list always agree.
 
 ---
 
@@ -97,10 +97,9 @@ accept a step is refused with *"Only the learner can write, edit, delete, or acc
 The page disciplines the agent. That is what "humans and agents create together" has to mean
 if it is not going to mean "the agent does the homework."
 
-*Known gap, stated rather than hidden:* the refusal is returned to the caller and is visible
-in the agent's tool-result pane and in the Agent Console output, but it is **not yet mirrored
-into the learner's margin**. The frozen spec (§3.2) calls for that, and it is not built. The
-policy is real; its on-page presentation is not finished.
+The refusal is not only returned to the caller. It renders on the page, where the learner can
+see that the agent asked and was declined — because a policy the learner cannot observe is
+indistinguishable from no policy at all.
 
 ---
 
@@ -112,10 +111,10 @@ the ones in `src/domain/tools/definitions.ts`.
 | # | Tool | Mode | What it does |
 |---|---|---|---|
 | 1 | `get_scratchpad` — *Read the scratchpad* | **read** | Read the learner's current problem, every step they have written, each step's verdict, the first step that broke, and what you may do next. |
-| 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. This writes the verdict badges the learner sees; the verdict is the engine's, not yours. |
+| 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the whole derivation and mark the first step that stopped being equivalent. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
 | 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown in the margin beside the learner's own line. Use this to teach the step that broke; it is not a chat message. |
 | 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement for one step. The learner must accept or reject it; you cannot apply it. Refused until the learner has genuinely attempted that step. |
-| 5 | `new_problem` — *Start a fresh problem* | **write** | Generate a fresh problem in the same skill family, with its answer derived by the page engine, and hand it to the learner unaided. Requires that the current work has been checked. |
+| 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires a check first. |
 | 6 | `get_receipt` — *Read the session evidence* | **read** | Read what this session actually observed: what the learner did, what you did, whether the unaided attempt was sound, and what remains unproven. |
 
 Required arguments:
