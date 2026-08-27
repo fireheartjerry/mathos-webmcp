@@ -264,7 +264,9 @@ export function applyAction(
       if (step.attempts < PROPOSAL_ATTEMPT_GATE) {
         return fail(
           'refused_policy',
-          `The learner has attempted step ${index + 1} ${step.attempts} time(s). Second Try does not offer a replacement before ${PROPOSAL_ATTEMPT_GATE}.`,
+          step.attempts === 0
+            ? `The learner has not attempted step ${index + 1} yet. Second Try does not offer a replacement until they have tried it ${PROPOSAL_ATTEMPT_GATE} times.`
+            : `The learner has attempted step ${index + 1} once. Second Try does not offer a replacement until they have tried it ${PROPOSAL_ATTEMPT_GATE} times.`,
           'Use annotate_step to explain what is wrong, and let the learner try again.',
         )
       }

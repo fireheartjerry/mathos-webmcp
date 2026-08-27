@@ -76,17 +76,18 @@ function Receipt({ state }: { state: SessionState }) {
           <span className="receipt-mark" aria-hidden="true">
             ✓
           </span>
-          No agent annotated or proposed anything during this attempt — those tools are closed in
-          the unaided round.
+          Nothing annotated or proposed anything during this attempt — those tools are closed to
+          every caller in the unaided round.
         </li>
         {practice && (
           <li>
             <span className="receipt-mark" aria-hidden="true">
               ·
             </span>
-            In the first round the agent {assisted ? 'did' : 'did not'} intervene:{' '}
-            {practice.agentAnnotations} annotation(s), {practice.agentProposalsOffered} proposal(s)
-            offered, {practice.agentProposalsAccepted} accepted.
+            In the first round an agent or the local inspector {assisted ? 'did' : 'did not'}{' '}
+            intervene: {practice.agentAnnotations} annotation(s),{' '}
+            {practice.agentProposalsOffered} proposal(s) offered,{' '}
+            {practice.agentProposalsAccepted} accepted.
           </li>
         )}
       </ul>
@@ -121,6 +122,10 @@ export default function Scratchpad() {
   })
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [flash, setFlash] = useState<string>('')
+  // The first problem renders server-side, so the page is readable immediately. The
+  // controls only become live once the island has hydrated; say so rather than
+  // accepting keystrokes that would be discarded.
+  const [ready, setReady] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [refusal, setRefusal] = useState<{ source: ActionSource; message: string; recovery: string } | null>(null)
@@ -225,6 +230,7 @@ export default function Scratchpad() {
     const restored = loadSession()
     const next = restored ?? createSession(FIRST_PROBLEM_SEED, newSessionId())
     hydrated.current = true
+    setReady(true)
     stateRef.current = next
     paintedRevision.current = next.revision
     setState(next)
@@ -277,9 +283,16 @@ export default function Scratchpad() {
     }
   }
 
+  const checking = useRef(false)
   function check() {
+    // A double-click used to record two checks and two revisions for one intent.
+    if (checking.current) return
+    checking.current = true
     const result = run({ type: 'CHECK_WORK' }, 'learner')
     setFlash(result.ok ? '' : result.message)
+    window.setTimeout(() => {
+      checking.current = false
+    }, 350)
   }
 
   const report = state.report
@@ -377,8 +390,16 @@ export default function Scratchpad() {
                             { type: 'EDIT_STEP', stepId: step.id, latex: next },
                             'learner',
                           )
-                          if (result.ok) setEditingId(null)
-                          else setFlash(result.message)
+                          if (result.ok) {
+                            setEditingId(null)
+                            // Put focus back on the line that was just edited, rather
+                            // than dropping it to <body> and losing the keyboard user.
+                            requestAnimationFrame(() =>
+                              document
+                                .querySelector<HTMLButtonElement>(`#line-${step.id} .step-latex`)
+                                ?.focus(),
+                            )
+                          } else setFlash(result.message)
                         }}
                       >
                         <input
@@ -388,7 +409,13 @@ export default function Scratchpad() {
                           spellCheck={false}
                           onChange={(event) => setEditDraft(event.target.value)}
                           onKeyDown={(event) => {
-                            if (event.key === 'Escape') setEditingId(null)
+                            if (event.key !== 'Escape') return
+                            setEditingId(null)
+                            requestAnimationFrame(() =>
+                              document
+                                .querySelector<HTMLButtonElement>(`#line-${step.id} .step-latex`)
+                                ?.focus(),
+                            )
                           }}
                         />
                         <button type="submit" className="button button-sm">
@@ -490,10 +517,11 @@ export default function Scratchpad() {
                 value={draft}
                 autoComplete="off"
                 spellCheck={false}
+                disabled={!ready}
                 placeholder={state.steps.length === 0 ? `write ${state.problem.resultName} in terms of ${state.problem.variable}` : 'the next line of your working'}
                 onChange={(event) => setDraft(event.target.value)}
               />
-              <button type="submit" className="button button-sm" disabled={!draft.trim()}>
+              <button type="submit" className="button button-sm" disabled={!ready || !draft.trim()}>
                 Add line
               </button>
             </div>
@@ -505,7 +533,12 @@ export default function Scratchpad() {
           </form>
 
           <div className="work-actions">
-            <button type="button" className="button" onClick={check} disabled={state.steps.length === 0}>
+            <button
+              type="button"
+              className="button"
+              onClick={check}
+              disabled={!ready || state.steps.length === 0}
+            >
               Check my work
             </button>
             {report && state.round === 'practice' && (
@@ -562,6 +595,8 @@ export default function Scratchpad() {
               the point in the question. Click any line to rewrite it.
             </p>
           )}
+
+          {!ready && <p className="is-empty">Loading the mathematics engine…</p>}
 
           <p className="live-status" role="status" aria-live="polite">
             {flash ||
