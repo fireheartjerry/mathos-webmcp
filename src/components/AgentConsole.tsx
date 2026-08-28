@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import {
@@ -56,7 +56,9 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
   const suggested = useMemo(() => suggestedInspectorArgs(proposalSeed), [proposalSeed])
   const [openTool, setOpenTool] = useState<string | null>(null)
   const [args, setArgs] = useState<string>('')
-  const [output, setOutput] = useState<{ tool: string; text: string } | null>(null)
+  const [output, setOutput] = useState<{ tool: string; text: string; runId: number } | null>(null)
+  // Every run is its own event, even when it returns the same bytes.
+  const runCount = useRef(0)
   const [busy, setBusy] = useState(false)
 
   const connected = registrationAllowsDirectCalls(status)
@@ -78,7 +80,8 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
     setBusy(true)
     try {
       const text = await onRun(name, args || (suggested[name]?.(revision) ?? '{}'))
-      setOutput({ tool: name, text })
+      runCount.current += 1
+      setOutput({ tool: name, text, runId: runCount.current })
     } finally {
       setBusy(false)
     }
@@ -153,7 +156,12 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
       </ul>
 
       {output && (
-        <div className="console-output">
+        /* Keyed on the run, not the returned text. Keying on the text looked
+           right and failed the case that matters: running get_scratchpad twice
+           on unchanged state returns identical bytes, so React reused the node
+           and the second click produced no motion at all. A run is an event
+           whether or not the answer changed. */
+        <div className="console-output" key={output.runId}>
           <p className="console-output-head">
             <code>{output.tool}</code> returned
           </p>

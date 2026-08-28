@@ -1894,3 +1894,34 @@
     transform: none;
   }
 }
+
+/* ---- The console answers ------------------------------------------------
+
+   Two changes in the margin are direct responses to a click and had no motion
+   at all: the body of a tool row when it is expanded, and the envelope that
+   comes back from running one.
+
+   The second matters more. A returned envelope is a verdict from a tool — the
+   same kind of event as a verdict on a line — so it settles the same way. The
+   expanded body is disclosed content, so it rises like anything else being
+   revealed.
+
+   The persistent labels around them stay still. They are not answers to
+   anything. */
+
+.scratch-shell .console-tool-body {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+}
+
+.scratch-shell .console-output {
+  animation: verdict-land var(--d-signature) var(--ease-draw) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .console-tool-body,
+  .scratch-shell .console-output {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
