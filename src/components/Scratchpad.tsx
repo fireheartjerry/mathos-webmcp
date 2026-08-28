@@ -721,8 +721,9 @@ export default function Scratchpad() {
 
           {refusal && (
             <div className="refusal" role="alert">
-              <p className="refusal-head">
-                Second Try declined the {refusal.source === 'agent' ? 'agent' : 'inspector'}
+              <p className="refusal-head">Not yet.</p>
+              <p className="refusal-source">
+                from the {refusal.source === 'agent' ? 'agent' : 'inspector'}
               </p>
               <p className="refusal-body">{refusal.message}</p>
               <p className="refusal-recovery">{refusal.recovery}</p>

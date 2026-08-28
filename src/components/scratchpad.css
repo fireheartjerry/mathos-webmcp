@@ -813,10 +813,17 @@
 }
 
 .refusal-head {
-  margin-bottom: var(--s-1);
   color: var(--ochre-deep);
-  font-size: var(--fs-meta);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-ui);
+}
+
+/* Attribution is quiet and permanent: the learner can tell who acted without
+   being told loudly. 23_PRIMER_REDESIGN_SPEC.md section 3.1. */
+.refusal-source {
+  margin-bottom: var(--s-2);
+  color: var(--ink-muted);
+  font-size: var(--fs-micro);
 }
 
 .refusal-body {
