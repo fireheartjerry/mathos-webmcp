@@ -142,6 +142,7 @@
   --d-sweep: 350ms;
   --d-rise: 700ms;
   --d-draw: 900ms;
+  --d-scan: 1100ms;
   --stagger: 80ms;
 }
 
@@ -154,6 +155,7 @@
     --d-sweep: 0ms;
     --d-rise: 0ms;
     --d-draw: 0ms;
+    --d-scan: 0ms;
     --stagger: 0ms;
   }
 }

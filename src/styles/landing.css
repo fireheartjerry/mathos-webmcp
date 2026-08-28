@@ -261,7 +261,7 @@
   transform-origin: top center;
   animation: draw-x var(--d-draw) var(--ease-draw) both;
   animation-name: draw-y;
-  animation-delay: calc(var(--stagger) * 7);
+  animation-delay: calc(var(--stagger) * 16);
 }
 
 @keyframes draw-y {
@@ -271,7 +271,7 @@
 
 .reading-note {
   animation: rise var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 8);
+  animation-delay: calc(var(--stagger) * 19);
 }
 
 /* The note's top hairline draws across as the verdict lands. */
@@ -284,10 +284,112 @@
   content: '';
   transform-origin: left center;
   animation: draw-x var(--d-draw) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 8);
+  animation-delay: calc(var(--stagger) * 19);
 }
 
 .reading-note {
   position: relative;
   border-top: 0;
+}
+
+/* ---- The read ----------------------------------------------------------
+   The panel used to present the finished verdict, which states the claim
+   without showing it. A hairline now travels down the derivation before the
+   verdict lands: the page reading the work, which is the whole thesis. It is
+   decorative and aria-hidden — the marked step and the note carry the meaning
+   for anyone who never sees it move. */
+
+@keyframes scan {
+  from { transform: translateY(0); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  to   { transform: translateY(var(--scan-travel)); opacity: 0; }
+}
+
+/* The element is the full height of the derivation, not the height of the line
+   it draws. `translateY(100%)` resolves against the element's OWN height, so a
+   2px bar would have travelled 2px. The bar itself is the ::after at its top
+   edge; the container overflows, and .reading already clips. */
+.reading-scan {
+  --scan-travel: 100%;
+  position: absolute;
+  list-style: none;
+  z-index: 2;
+  inset-inline: 0;
+  top: 0;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  animation: scan var(--d-scan) var(--ease-sweep) both;
+  animation-delay: calc(var(--stagger) * 7.5);
+}
+
+.reading-scan::after {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--rust) 18%,
+    var(--rust) 82%,
+    transparent
+  );
+  content: '';
+}
+
+.reading-steps {
+  position: relative;
+}
+
+/* A row lifts under the pointer — the derivation is a live object, not a
+   picture of one. */
+.reading-step {
+  transition:
+    background-color var(--d-signature) var(--ease-out),
+    transform var(--d-signature) var(--ease-out);
+}
+
+.reading-step:hover {
+  background: var(--surface-subtle);
+  transform: translateX(3px);
+}
+
+/* Sarsa: the arrow nudges rather than the whole control moving. */
+.hero-copy .button span[aria-hidden] {
+  transition: transform var(--d-signature) var(--ease-out);
+}
+
+.hero-copy .button:hover span[aria-hidden] {
+  transform: translateX(4px);
+}
+
+/* Nav and footer links draw their underline on instead of switching colour. */
+.wordmark,
+.webmcp-mark {
+  position: relative;
+}
+
+.wordmark::after {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 10px;
+  height: 1px;
+  background: currentColor;
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--d-sweep) var(--ease-sweep);
+}
+
+.wordmark:hover::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The scan is pure decoration and has no still frame worth showing. */
+  .reading-scan { display: none; }
+
+  .reading-step:hover { transform: none; }
 }

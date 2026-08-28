@@ -28,6 +28,9 @@ export default function HomePage() {
             aria-label="A derivation with the first step that stopped being equivalent marked"
           >
             <ol className="reading-steps">
+              {/* An li, not a span: ol may only contain li. Absolutely positioned,
+                  so it adds no row. */}
+              <li className="reading-scan" aria-hidden="true" />
               <li className="reading-step" style={{ ["--i" as string]: 0 }}>
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
