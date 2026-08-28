@@ -1871,3 +1871,26 @@
     transform: none;
   }
 }
+
+/* The reason follows the verdict.
+
+   Everything else in a landed verdict moves — the row, the expression, the
+   label, the track — but the detail line, which carries the counterexample or
+   the difference, simply appeared. So the page stated its conclusion with
+   motion and then produced the evidence for it without any.
+
+   It settles like the verdict does, one beat later: the conclusion first, then
+   why. The delay is what makes it read as support rather than as a second,
+   competing announcement. */
+.scratch-shell .step-detail {
+  animation: verdict-land var(--d-signature) var(--ease-draw) both;
+  animation-delay: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .step-detail {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

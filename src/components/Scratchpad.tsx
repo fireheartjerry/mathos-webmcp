@@ -548,9 +548,17 @@ export default function Scratchpad() {
                     <span>{relationLabel(verdict, firstIssueKind)}</span>
                   </p>
                   <div className="line-evidence">
-                    {verdictDetail && <p className="step-detail">{verdictDetail}</p>}
+                    {/* Keyed on the text so a re-check re-fires the arrival.
+                        Without it React reuses the node and the reason for a
+                        new verdict appears without motion while the verdict
+                        itself lands. */}
+                    {verdictDetail && (
+                      <p className="step-detail" key={verdictDetail}>
+                        {verdictDetail}
+                      </p>
+                    )}
                     {broken && verdict?.status === 'broken' && (
-                      <p className="step-detail">
+                      <p className="step-detail" key={verdict.difference?.latex ?? 'counterexample'}>
                         {verdict.difference ? (
                           <>
                             {verdict.difference.against === 'derivative'
