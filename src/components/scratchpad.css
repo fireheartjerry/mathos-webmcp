@@ -1028,11 +1028,33 @@
     color var(--d-instant) var(--ease-out);
 }
 
+/* The disclosure marker is two bars rather than a "+" character, because
+   content: '+' swapping to content: '−' cannot be transitioned — the one part
+   of this control that states which way it is about to go was the only part
+   that snapped, while the body it opens rises over --d-rise.
+
+   Both are placed in the same cell explicitly, so ::before appearing first in
+   source order does not take the row's opening column. The vertical bar lies
+   down onto the horizontal one on open: the plus becomes a minus by rotating,
+   and the same gesture reversed reopens it.
+
+   currentColor, so the marker follows the head through hover and active
+   instead of holding a colour of its own. */
+.console-tool-head::before,
 .console-tool-head::after {
-  color: var(--blue);
-  content: '+';
-  font-size: var(--fs-lg);
-  text-align: center;
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  width: 11px;
+  height: 1px;
+  background: currentColor;
+  content: '';
+  transition: transform var(--d-signature) var(--ease-out);
+}
+
+.console-tool-head::after {
+  transform: rotate(90deg);
 }
 
 .console-tool-head:hover {
@@ -1045,7 +1067,7 @@
 }
 
 .is-open > .console-tool-head::after {
-  content: '−';
+  transform: rotate(0deg);
 }
 
 .console-tool-name {
@@ -1467,6 +1489,9 @@
     text-align: left;
   }
 
+  /* Both bars, not just ::after. Moving one of the two into the narrow
+     layout's marker column would leave the other in the label column. */
+  .console-tool-head::before,
   .console-tool-head::after {
     grid-column: 2;
     grid-row: 1 / 3;
