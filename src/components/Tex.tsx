@@ -4,6 +4,10 @@ import katex from 'katex'
 // in the route that happened to be built first, which left every other route
 // rendering the MathML fallback and the HTML on top of each other.
 import 'katex/dist/katex.min.css'
+// Must follow katex.min.css. It re-declares the six faces this product reaches
+// for with font-display: swap, because KaTeX ships all twenty as block — which
+// paints nothing, not a fallback, until the font lands.
+import '../styles/katex-font-display.css'
 
 /**
  * Math is typeset, never typed. `a = x²` set in the UI font is the single fastest way
