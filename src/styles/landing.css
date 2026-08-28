@@ -238,11 +238,6 @@
   to   { opacity: 1; transform: none; }
 }
 
-@keyframes draw-y {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
-}
-
 .hero-copy > p,
 .cta {
   animation: rise var(--d-rise) var(--ease-draw) both;
@@ -347,15 +342,15 @@
    before the incoming one starts. */
 
 @keyframes try-first {
-  0%, 44%    { opacity: 1; }
-  47%, 92%   { opacity: 0; }
-  95%, 100%  { opacity: 1; }
+  0%, 44%    { opacity: 1; transform: none; }
+  47%, 92%   { opacity: 0; transform: translateY(-5px); }
+  95%, 100%  { opacity: 1; transform: none; }
 }
 
 @keyframes try-second {
-  0%, 47%    { opacity: 0; }
-  50%, 89%   { opacity: 1; }
-  92%, 100%  { opacity: 0; }
+  0%, 47%    { opacity: 0; transform: translateY(7px); }
+  50%, 89%   { opacity: 1; transform: none; }
+  92%, 100%  { opacity: 0; transform: translateY(-5px); }
 }
 
 .reading-swap {
@@ -377,9 +372,21 @@
   animation: try-second var(--d-story) var(--ease-out) infinite both;
 }
 
-/* The break mark: a black bar in the margin of the line. Present during the
-   first attempt, gone once the rewrite is confirmed — its absence is the
-   verdict, which is what "sound" looks like without a colour to say it. */
+/* The break mark: a black bar in the margin of the line. Its absence is the
+   verdict, which is what "sound" looks like with no colour to say it.
+
+   One keyframe set for the whole life of the mark, so it is drawn afresh by
+   every read rather than drawn once on load and merely crossfaded on each
+   later cycle. It starts at zero height, is drawn downward just after the
+   first read passes the row at 5.8%, holds while the first attempt stands, and
+   goes when the rewrite is confirmed. */
+@keyframes mark-life {
+  0%, 5.8%   { opacity: 1; transform: scaleY(0); }
+  7.6%       { opacity: 1; transform: scaleY(1); }
+  44%        { opacity: 1; transform: scaleY(1); }
+  47%, 100%  { opacity: 0; transform: scaleY(1); }
+}
+
 .reading-step.is-broken::before {
   position: absolute;
   inset-block: var(--s-6);
@@ -388,10 +395,7 @@
   background: var(--bw-ink);
   content: '';
   transform-origin: top center;
-  animation:
-    draw-y var(--d-draw) var(--ease-draw) both,
-    try-first var(--d-story) var(--ease-out) infinite both;
-  animation-delay: calc(var(--stagger) * 16), 0ms;
+  animation: mark-life var(--d-story) var(--ease-draw) infinite both;
 }
 
 @media (max-width: 900px) {
@@ -446,6 +450,10 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .reading-step.is-broken::before {
+    transform: scaleY(1);
   }
 
   .hero-word {
