@@ -324,9 +324,18 @@
 /* Returns at 94%, not 92%, for the same reason try-second starts at 49%: the
    outgoing attempt's words carry delays of up to 220ms, so a return that began
    the moment the hold ended overlapped the tail of the clear. */
+/* The loop seam is a new attempt, not a regression.
+
+   This used to leave upward and then return from that same position, so the
+   corrected line appeared to sink back into the wrong one — the page showing
+   its own learning being undone, once every cycle. It now exits upward as
+   before, is repositioned below while still at zero opacity, and rises into
+   place the way a freshly written line does. The opacity envelope is
+   unchanged, so the no-overlap guarantee holds. */
 @keyframes try-first {
   0%, 44%    { opacity: 1; transform: none; }
   47%, 94%   { opacity: 0; transform: translateY(-5px); }
+  94.5%      { opacity: 0; transform: translateY(7px); }
   97%, 100%  { opacity: 1; transform: none; }
 }
 
