@@ -147,7 +147,7 @@
   --d-signature: 200ms;
   --d-sweep: 350ms;
   --d-rise: 700ms;
-  --d-story: 18000ms;
+  --d-story: 12000ms;
   --stagger: 80ms;
 }
 

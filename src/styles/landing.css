@@ -371,8 +371,8 @@
    yet found. It now arrives once the mark is drawn, and it does not return
    after the rewrite until the next cycle has read the work again. */
 @keyframes verdict-first {
-  0%, 11.7%   { opacity: 0; transform: translateY(4px); }
-  13.5%, 44%  { opacity: 1; transform: none; }
+  0%, 18%     { opacity: 0; transform: translateY(4px); }
+  20%, 44%    { opacity: 1; transform: none; }
   47%, 100%   { opacity: 0; transform: translateY(-5px); }
 }
 
@@ -400,19 +400,23 @@
    later cycle. It starts at zero height, is drawn downward just after the
    first read passes the row at 5.8%, holds while the first attempt stands, and
    goes when the rewrite is confirmed. */
-/* Drawn at 9.7%, after row three has been read, not at 5.8% before it. The
-   old timing was set by a line that used to sweep the column; with that gone
-   the only read left is the index brightening, which peaks on row three at
-   1698ms — and the mark was reaching full height at 1368ms, so the page was
-   marking the break before it had looked at the line. */
+/* Drawn at 15%, after row three has been read.
+
+   These percentages and the read-pulse delays are coupled and easy to break
+   apart. The read is timed in absolute milliseconds — it peaks on row three at
+   1698ms regardless of cycle length — while everything here is a fraction of
+   the cycle. Shortening the cycle therefore drags the mark earlier while the
+   read stays put, and at 12s the old 9.7% would have drawn the mark at 1164ms,
+   marking the break 500ms before the page looked at the line. Any future change
+   to --d-story has to move these with it. */
 /* Drawn downward when the break is found, retracted upward when it is fixed.
    It used to fade out, which reads as the mark being forgotten; retracting on
    the same axis and origin it was drawn on reads as the mark being withdrawn,
    which is what a corrected line earns. Opacity stays at 1 throughout — the
    height is doing the work. */
 @keyframes mark-life {
-  0%, 9.7%   { opacity: 1; transform: scaleY(0); }
-  11.7%      { opacity: 1; transform: scaleY(1); }
+  0%, 15%    { opacity: 1; transform: scaleY(0); }
+  18%        { opacity: 1; transform: scaleY(1); }
   44%        { opacity: 1; transform: scaleY(1); }
   47%, 100%  { opacity: 1; transform: scaleY(0); }
 }
