@@ -122,7 +122,7 @@ export default function HomePage() {
                   </Fragment>
                 ))}{' '}
                 <span className="note-word reading-point" style={{ ["--nw" as string]: 6 }}>
-                  x = −1.4
+                  <Tex latex={'x = -1.4'} ariaLabel="x equals negative 1.4" />
                 </span>
                 <span className="note-word" style={{ ["--nw" as string]: 6 }}>.</span>
               </span>

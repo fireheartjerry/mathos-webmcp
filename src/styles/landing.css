@@ -228,10 +228,13 @@
    crosses this row — the line acknowledging that it is being read. Opacity
    only, on an element with no other animation, so nothing conflicts with the
    row's own entrance or hover transform. */
+/* Set in the body serif, not the mono. These are three numerals; asking for a
+   36KB code face to draw them put a third typographic voice on a page that
+   otherwise holds two, and the tabular figures the alignment depends on are
+   present in STIX Two Text anyway. */
 .reading-index {
   color: var(--bw-ink);
   opacity: 0.42;
-  font-family: var(--font-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   animation: read-pulse var(--d-story) linear infinite both;
@@ -282,10 +285,12 @@
   grid-area: 1 / 1;
 }
 
+/* The point where the step stopped being true is mathematics, so it is set as
+   mathematics. In the mono it read as a code literal — an italic variable and
+   an upright numeral is what the sentence actually means, and KaTeX is the
+   only thing on the page that gets that distinction right. */
 .reading-point {
   color: var(--bw-ink);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
