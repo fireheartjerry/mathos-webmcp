@@ -30,17 +30,32 @@ export default function HomePage() {
                 </Fragment>
               ))}
             </h1>
-            {/* Two constraints on this sentence. It stays concrete about what
-                happens today, because the product is session-scale and
-                PROVENANCE records one failure of advertising a capability the
-                build did not have. And the learner stays the subject: an
-                earlier draft read "what it learns about how you think", which
-                makes an unnamed thing the actor and a person's mind its
-                object — the grammar of surveillance, not of a prosthesis. */}
+            {/* The page never named the product, so a visitor had nothing to
+                remember it by.
+
+                Three constraints on this copy. It names the thing and says
+                plainly what it does. It explains the Primer, because "a second
+                mind" means nothing without it. And it stays honest about
+                scale: this holds one session, the Primer is a years-scale
+                artifact, so Second Try is the step toward it rather than the
+                thing itself. PROVENANCE records one failure of advertising a
+                capability the build did not have.
+
+                The learner also stays the subject throughout. An earlier draft
+                read "what it learns about how you think", which makes an
+                unnamed thing the actor and a person's mind its object — the
+                grammar of surveillance, not of a prosthesis. */}
             <p>
-              It starts as a scratchpad that checks your working, line by line.
-              What you build here stays yours, and goes with you to whichever
-              agent you bring.
+              <strong>Second Try</strong> is a calculus scratchpad. You write
+              the working; the page checks every line and marks the first one
+              that stopped being true.
+            </p>
+            <p>
+              In <em>The Diamond Age</em>, a child is given a Primer: a book
+              that learns her mind over years and reshapes itself around who
+              she is becoming. This is a first step toward that. What the page
+              learns about your reasoning stays here, and any agent you bring
+              can read it through WebMCP.
             </p>
             <a className="cta" href="/learn">
               <span className="cta-label">Open the scratchpad</span>

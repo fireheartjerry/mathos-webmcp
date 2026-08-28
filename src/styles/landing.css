@@ -106,11 +106,22 @@
 .hero-copy > p {
   max-width: 54ch;
   margin-top: var(--s-4);
+  /* Both paragraphs share the entrance; the second follows the first. */
   color: var(--bw-soft);
   font-size: var(--fs-sm);
   line-height: var(--lh-prose);
   /* Keeps the last line from stranding a single word. */
   text-wrap: pretty;
+}
+
+/* Emphasis inside prose stays at the prose weight in this serif; bold would
+   shout, and the product name only needs to be findable. */
+.hero-copy strong {
+  font-weight: var(--fw-ui);
+}
+
+.hero-copy em {
+  font-style: italic;
 }
 
 /* The only control on the page. A link, not a chrome-heavy button. */
@@ -299,8 +310,9 @@
   animation-delay: calc(var(--stagger) * var(--w, 0) * 0.5);
 }
 
-.hero-copy > p { animation-delay: calc(var(--stagger) * 3.5); }
-.cta { animation-delay: calc(var(--stagger) * 4.5); }
+.hero-copy > p:nth-of-type(1) { animation-delay: calc(var(--stagger) * 3.5); }
+.hero-copy > p:nth-of-type(2) { animation-delay: calc(var(--stagger) * 4.5); }
+.cta { animation-delay: calc(var(--stagger) * 5.5); }
 
 .reading {
   animation: rise var(--d-rise) var(--ease-draw) both;
