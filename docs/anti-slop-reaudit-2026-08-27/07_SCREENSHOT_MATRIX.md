@@ -3,6 +3,7 @@
 Date: 2026-08-27  
 Runtime: installed Chrome 151, opened as a new tab in the user's real Chrome profile  
 Local origin: `http://127.0.0.1:4322`
+Production origin for rows 40–41: `https://mathos-second-try.fireheartjerry.chatgpt.site`
 
 The raster width can be 15–16 pixels narrower than the emulated CSS viewport because Chrome excludes its vertical scrollbar from the captured document width. Overflow judgments compare `scrollWidth` with `innerWidth`; no page-level horizontal overflow was observed. “Zoom equivalent” means the same CSS-pixel reflow pressure at a narrower viewport, not a claim that Chrome's zoom UI was changed.
 
@@ -44,6 +45,8 @@ The raster width can be 15–16 pixels narrower than the emulated CSS viewport b
 | `37-invalid-input-recovery-390x844.png` | 390 × 844, 257-char reject → valid Add | Valid line appears and obsolete length error is gone | Live-region state follows the successful learner action | Pass after repair |
 | `38-unreadable-line-recovery-390x844.png` | 390 × 844, `(` then Check, recaptured after pedagogy/mobile repair | Parser truth, “first unresolved line,” and a concrete rewrite/check recovery | Compact rail-free row; remove target stays beside the expression; no false “does not follow” claim | Pass after repair |
 | `39-landing-laptop-1024x768.png` | 1024 × 768 first viewport, `/` | Laptop landing headline and complete transaction | Clean non-stitched capture; no horizontal page overflow | Pass after repair |
+| `40-sites-production-learn-profile-chrome.png` | 1707 × 898 installed Chrome profile, Sites production `/learn` | Checked learner line, page-owned verdict, composer, and truthful WebMCP-unavailable state | Production fonts loaded; no page overflow; add/check interaction previously exercised in the same tab | Pass |
+| `41-sites-production-landing-profile-chrome.png` | 1692 × 890 installed Chrome profile, Sites production `/` | Final landing headline and complete learner/page/agent transaction | Authenticated owner-only deployment; no page overflow | Pass |
 
 ## Coverage gaps
 
