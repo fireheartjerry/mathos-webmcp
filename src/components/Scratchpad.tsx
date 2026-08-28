@@ -658,8 +658,6 @@ export default function Scratchpad() {
             )}
           </form>
 
-          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <TransferSignal state={state} />}
-
           {/* An empty scratchpad has nothing to check and nothing to start over
               from. The row appears with the first line, so the only control on
               a blank page is the one that writes one. */}
@@ -740,6 +738,16 @@ export default function Scratchpad() {
               Each line should be equal to the line above it, or its derivative, or its value at
               the point in the question. Click any line to rewrite it.
             </p>
+          )}
+
+          {/* Last, deliberately. 23_PRIMER_REDESIGN_SPEC.md §1.5 calls this the
+              product's thesis object — the thing the demo ends on — and it was
+              rendering above the actions and the guidance, so the page carried
+              on past it with two buttons and a paragraph of instruction. A
+              conclusion cannot be the conclusion if there is more page after
+              it. */}
+          {state.round === 'transfer' && report?.allSound && report.reachesAnswer && (
+            <TransferSignal state={state} />
           )}
 
           {!ready && (
