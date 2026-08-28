@@ -1584,3 +1584,38 @@
 .step:has(.relation-unreadable) {
   --relation-track: var(--line-strong);
 }
+
+/* ---- The type scale -----------------------------------------------------
+
+   Measured before this block: fifteen type sizes and five weights, against
+   four and two on the home page. Excluding KaTeX's own sub and superscript
+   scaling, six sizes were doing real work and three were one-off oddballs — a
+   15px button, a 13px relation label, a 24px remove glyph — each with exactly
+   one user. Three of the five weights had one user each.
+
+   Sizes now: 42 problem · 20 derivation · 18 wordmark · 16 base · 14 meta ·
+   12 micro. Weights: 400 for prose, 600 for anything that leads, matching the
+   home page. */
+
+.scratch-shell {
+  --fw-medium: 600;
+  --fw-display: 600;
+  --btn-fs-md: 16px;
+}
+
+/* 750 was heavier than the problem statement it sits above. */
+.scratch-shell .wordmark {
+  font-weight: var(--fw-ui);
+}
+
+/* The remove control is a glyph, not a heading. 24px made it the third
+   largest thing on the page. */
+.scratch-shell .step-remove {
+  font-size: var(--fs-lg);
+}
+
+/* 13px existed between the 14px meta scale and nothing else. */
+.scratch-shell .relation,
+.scratch-shell .activity-source {
+  font-size: var(--fs-meta);
+}
