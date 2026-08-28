@@ -395,6 +395,18 @@ export default function Scratchpad() {
   }
 
   const report = state.report
+  // A check is an event even when it returns the same verdict. The reducer
+  // replaces state.report on every CHECK_WORK, so its identity is the event;
+  // this turns that into a value the verdict elements can be keyed on. Keying
+  // them on the verdict itself does not work — checking twice without editing
+  // leaves the class and the text unchanged, so nothing re-fires and the
+  // primary action of the page goes unacknowledged.
+  const checkSeq = useRef(0)
+  const lastReport = useRef<typeof report>(null)
+  if (report !== lastReport.current) {
+    lastReport.current = report
+    checkSeq.current += 1
+  }
   const firstBrokenId = report?.firstBrokenId ?? null
   const firstIssueKind = report ? getFirstIssue(report)?.kind : undefined
   const proposalSeed = proposalSeedForSession(state)
@@ -543,22 +555,24 @@ export default function Scratchpad() {
                       </button>
                     )}
                   </div>
-                  <p className={`relation relation-${verdict?.status ?? 'idle'}`}>
+                  <p
+                    key={`relation-${checkSeq.current}`}
+                    className={`relation relation-${verdict?.status ?? 'idle'}`}
+                  >
                     <span className="relation-mark" aria-hidden="true" />
                     <span>{relationLabel(verdict, firstIssueKind)}</span>
                   </p>
                   <div className="line-evidence">
-                    {/* Keyed on the text so a re-check re-fires the arrival.
-                        Without it React reuses the node and the reason for a
-                        new verdict appears without motion while the verdict
-                        itself lands. */}
+                    {/* Keyed on the check, not the text. See the note beside
+                        checkSeq: identical bytes on a second check meant the
+                        reason never moved. */}
                     {verdictDetail && (
-                      <p className="step-detail" key={verdictDetail}>
+                      <p className="step-detail" key={`detail-${checkSeq.current}`}>
                         {verdictDetail}
                       </p>
                     )}
                     {broken && verdict?.status === 'broken' && (
-                      <p className="step-detail" key={verdict.difference?.latex ?? 'counterexample'}>
+                      <p className="step-detail" key={`difference-${checkSeq.current}`}>
                         {verdict.difference ? (
                           <>
                             {verdict.difference.against === 'derivative'
