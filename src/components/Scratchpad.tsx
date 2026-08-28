@@ -533,7 +533,13 @@ export default function Scratchpad() {
                           setEditDraft(step.latex)
                         }}
                       >
-                        <Tex latex={step.latex} />
+                        {/* Keyed on the expression itself, so React remounts
+                            this when the line changes and the rewrite animation
+                            fires. Without the key the node is reused and an
+                            accepted proposal or a learner's own edit swaps the
+                            text with no motion at all — the one moment the
+                            product is named after, passing silently. */}
+                        <Tex key={step.latex} latex={step.latex} />
                       </button>
                     )}
                   </div>

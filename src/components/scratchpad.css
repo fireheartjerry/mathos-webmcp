@@ -1796,3 +1796,31 @@
     transform: none;
   }
 }
+
+/* A line that has just been rewritten.
+
+   The home page dramatises the second try; when it actually happens here — a
+   learner editing their own line, or accepting a proposed replacement — the
+   expression was simply swapping. This is the moment the product is named
+   after, and it was the one change on the page with no motion at all.
+
+   The Tex node is keyed on the expression, so React remounts it on any change
+   and this fires. It rises further than a first arrival, because a rewrite is
+   a larger event than a line being added. */
+@keyframes rewrite-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.scratch-shell .step-latex > * {
+  display: inline-block;
+  animation: rewrite-in var(--d-rise) var(--ease-draw) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .step-latex > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
