@@ -186,16 +186,17 @@
   align-items: baseline;
   gap: var(--s-4);
   padding: var(--s-4) 0 var(--s-4) var(--s-4);
-  transition: transform var(--d-signature) var(--ease-out);
 }
 
 .reading-step + .reading-step {
   border-top: 1px solid var(--bw-rule);
 }
 
-.reading-step:hover {
-  transform: translateX(4px);
-}
+/* No hover state. These rows are plain li — not focusable, not inside a link,
+   with nothing bound to a click. A lift under the pointer promises an
+   interaction that does not exist, and offers nothing at all to a keyboard.
+   The motion on this page belongs to what the page is doing, not to decorating
+   things that do not respond. */
 
 /* Held back at 0.42 so it reads as grey, and brought to full black as the read
    crosses this row — the line acknowledging that it is being read. Opacity
@@ -452,8 +453,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reading-step:hover { transform: none; }
-
   /* The first attempt and its verdict are the still frame, which is what
      assistive tech reads anyway. */
   .reading-swap > .try-second,
