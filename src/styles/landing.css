@@ -359,13 +359,31 @@
   display: inline-block;
 }
 
+/* The verdict follows the reading rather than preceding it. try-first puts the
+   wrong step on the page from 0%, which is right — the learner wrote it before
+   the page ever looked. But the note is the page's conclusion about that step,
+   and it was also showing from 0%, so the page announced a break it had not
+   yet found. It now arrives once the mark is drawn, and it does not return
+   after the rewrite until the next cycle has read the work again. */
+@keyframes verdict-first {
+  0%, 11.7%   { opacity: 0; transform: translateY(4px); }
+  13.5%, 44%  { opacity: 1; transform: none; }
+  47%, 100%   { opacity: 0; transform: translateY(-5px); }
+}
+
+@keyframes verdict-second {
+  0%, 52%     { opacity: 0; transform: translateY(7px); }
+  55%, 89%    { opacity: 1; transform: none; }
+  92%, 100%   { opacity: 0; transform: translateY(-5px); }
+}
+
 .reading-note > .try-first > .note-word {
-  animation: try-first var(--d-story) var(--ease-out) infinite both;
+  animation: verdict-first var(--d-story) var(--ease-out) infinite both;
   animation-delay: calc(var(--nw, 0) * 55ms);
 }
 
 .reading-note > .try-second > .note-word {
-  animation: try-second var(--d-story) var(--ease-out) infinite both;
+  animation: verdict-second var(--d-story) var(--ease-out) infinite both;
   animation-delay: calc(var(--nw, 0) * 55ms);
 }
 
@@ -377,9 +395,14 @@
    later cycle. It starts at zero height, is drawn downward just after the
    first read passes the row at 5.8%, holds while the first attempt stands, and
    goes when the rewrite is confirmed. */
+/* Drawn at 9.7%, after row three has been read, not at 5.8% before it. The
+   old timing was set by a line that used to sweep the column; with that gone
+   the only read left is the index brightening, which peaks on row three at
+   1698ms — and the mark was reaching full height at 1368ms, so the page was
+   marking the break before it had looked at the line. */
 @keyframes mark-life {
-  0%, 5.8%   { opacity: 1; transform: scaleY(0); }
-  7.6%       { opacity: 1; transform: scaleY(1); }
+  0%, 9.7%   { opacity: 1; transform: scaleY(0); }
+  11.7%      { opacity: 1; transform: scaleY(1); }
   44%        { opacity: 1; transform: scaleY(1); }
   47%, 100%  { opacity: 0; transform: scaleY(1); }
 }
