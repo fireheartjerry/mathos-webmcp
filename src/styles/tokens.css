@@ -104,7 +104,6 @@
   --s-4: 16px;
   --s-5: 20px;
   --s-6: 24px;
-  --s-7: 28px;
   --s-8: 32px;
   --s-9: 40px;
   --s-10: 48px;
@@ -115,7 +114,6 @@
   --r-focus: 2px;
   --r-chip: 3px;
   --r-control: 6px;
-  --r-panel: 6px;
   --r-dot: 50%;
   --bw-hairline: 1px;
   --bw-focus: 3px;
@@ -149,8 +147,6 @@
   --d-signature: 200ms;
   --d-sweep: 350ms;
   --d-rise: 700ms;
-  --d-draw: 900ms;
-  --d-scan: 1100ms;
   --d-story: 18000ms;
   --stagger: 80ms;
 }
@@ -163,8 +159,6 @@
     --d-signature: 0ms;
     --d-sweep: 0ms;
     --d-rise: 0ms;
-    --d-draw: 0ms;
-    --d-scan: 0ms;
     --d-story: 0ms;
     --stagger: 0ms;
   }

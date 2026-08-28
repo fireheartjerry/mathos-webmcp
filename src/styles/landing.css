@@ -172,7 +172,6 @@
 }
 
 .reading-steps {
-  position: relative;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -180,8 +179,6 @@
 
 .reading-step {
   position: relative;
-  /* Above the reads, so the line passes behind the mathematics. */
-  z-index: 1;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
   align-items: baseline;
@@ -219,14 +216,12 @@
   100%   { opacity: 0.42; }
 }
 
-/* The find read reaches each row at a different moment, and animation-delay
+/* Each row brightens at its own moment, so the read still travels down the
+   derivation without a line drawing itself across the page. animation-delay
    shifts an infinite animation's phase permanently, so one keyframe set with a
-   per-row delay is enough.
-
-   The delay is set in the markup rather than by nth-of-type: the two scan
-   elements are the first two `li` in this list, so `.reading-step:nth-of-type(1)`
-   matches nothing at all. The gaps are uneven (888 / 1167 / 1536ms) because the
-   read decelerates over the break, so no linear formula would fit either. */
+   per-row delay is enough. The delay is set in the markup, not by
+   nth-of-type. The gaps are uneven (888 / 1167 / 1536ms) because the read
+   slows over the step that broke. */
 
 .reading-tex {
   min-width: 0;
@@ -309,77 +304,6 @@
   animation: rise var(--d-rise) var(--ease-draw) both;
   animation-delay: calc(var(--stagger) * (var(--i, 0) + 4));
 }
-
-/* ---- The reads ---------------------------------------------------------
-   Both are black. The first finds the break and slows over it; the second
-   confirms the rewrite and passes clean. The difference is pace, not colour —
-   which is the only difference black and white can express, and it turns out
-   to be the more expressive one. */
-
-/* The three rows occupy roughly 0-34%, 34-64% and 64-100% of the column. This
-   read crosses the first two evenly, then covers only 10% of the column
-   between 4.6% and 5.8% of the cycle — about a third of the speed — before
-   completing. A reader who finds an error does not glide past it.
-
-   The pacing lives entirely in these keyframe positions, so the element is
-   timed `linear`; an eased timing function would fight them. */
-@keyframes scan-find {
-  0%     { transform: translateY(0); opacity: 0; }
-  0.8%   { opacity: 1; }
-  2.4%   { transform: translateY(34%); }
-  3.9%   { transform: translateY(64%); }
-  4.6%   { transform: translateY(72%); }
-  5.8%   { transform: translateY(82%); }
-  6.8%   { transform: translateY(100%); opacity: 1; }
-  7.2%   { transform: translateY(100%); opacity: 0; }
-  100%   { transform: translateY(100%); opacity: 0; }
-}
-
-/* Held at the top and invisible until 40% of the cycle, so it sweeps just as
-   the corrected step lands and the verdict clears at 44-50%. It does not
-   hesitate — there is nothing to stop for, and the contrast is the point. */
-@keyframes scan-confirm {
-  0%, 39.9% { transform: translateY(0); opacity: 0; }
-  40.8%     { opacity: 1; }
-  45.3%     { opacity: 1; }
-  46.1%     { transform: translateY(100%); opacity: 0; }
-  100%      { transform: translateY(100%); opacity: 0; }
-}
-
-/* Full height of the derivation, not of the line it draws: translateY(100%)
-   resolves against the element's own height, so a 2px bar would have travelled
-   2px. The visible line is the ::after at its top edge. */
-.reading-scan {
-  position: absolute;
-  list-style: none;
-  /* Behind the rows, never over them. A 2px line crossing the glyphs reads as
-     a strikethrough — the expression being crossed out — which is the opposite
-     of what a read means. Passing behind it reads as a reader moving down the
-     page. */
-  z-index: 0;
-  inset-inline: 0;
-  top: 0;
-  height: 100%;
-  opacity: 0;
-  pointer-events: none;
-  animation-duration: var(--d-story);
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-fill-mode: both;
-  animation-delay: calc(var(--stagger) * 7.5);
-}
-
-.reading-scan::after {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 2px;
-  background: var(--bw-ink);
-  content: '';
-}
-
-.scan-find { animation-name: scan-find; }
-.scan-confirm { animation-name: scan-confirm; }
 
 /* ---- Second try --------------------------------------------------------
    One shared 18s cycle: the page reads the working, marks the third step, the
@@ -491,9 +415,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The reads are pure decoration and have no still frame worth showing. */
-  .reading-scan { display: none; }
-
   .reading-step:hover { transform: none; }
 
   /* The first attempt and its verdict are the still frame, which is what

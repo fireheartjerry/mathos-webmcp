@@ -45,10 +45,6 @@ export default function HomePage() {
             aria-label="A derivation whose third step stopped being equivalent, and the corrected second attempt"
           >
             <ol className="reading-steps">
-              {/* An li, not a span: ol may only contain li. Absolutely positioned,
-                  so it adds no row. */}
-              <li className="reading-scan scan-find" aria-hidden="true" />
-              <li className="reading-scan scan-confirm" aria-hidden="true" />
               <li className="reading-step" style={{ ["--i" as string]: 0, ["--pulse-delay" as string]: "888ms" }}>
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
