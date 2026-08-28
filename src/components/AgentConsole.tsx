@@ -95,7 +95,13 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
 
   return (
     <div className="agent-console">
-      <StatusLine status={status} />
+      {/* The header already carries registration state. Repeating it verbatim
+          here made the same six words appear twice on one screen. Only a
+          partial or failed registration says anything the header does not,
+          so only those speak. */}
+      {(status.state === 'partial' || status.state === 'failed') && (
+        <StatusLine status={status} />
+      )}
       {partialRecovery && <p className="console-hint">{partialRecovery}</p>}
       <ul className="console-tools">
         {tools.map((tool) => {

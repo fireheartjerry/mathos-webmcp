@@ -453,20 +453,11 @@ export default function Scratchpad() {
             </p>
           )}
 
-          {state.steps.length === 0 && (
-            <div className="start-cue" aria-label="How to structure your derivation">
-              <p>
-                Write one true line at a time. The page checks the chain and stops at the first
-                unresolved relation—not at every consequence of it.
-              </p>
-              <ol>
-                <li><span>01</span> Rewrite in terms of {state.problem.variable}</li>
-                <li><span>02</span> Differentiate</li>
-                <li><span>03</span> Evaluate at {state.problem.variable} = {state.problem.evaluationPoint}</li>
-              </ol>
-            </div>
-          )}
-
+{/* Nothing stands between the problem and the first line. The page used to
+    open with a paragraph about how checking works and a three-step plan it
+    does not enforce — both explaining a thing that had not happened yet. The
+    placeholder says what to write; the page says the rest once there is work
+    to say it about. */}
           <ol className="steps" aria-label="Your working">
             {state.steps.map((step: Step, index) => {
               const verdict = report?.verdicts[step.id]
@@ -654,12 +645,11 @@ export default function Scratchpad() {
                 Add line
               </button>
             </div>
-            <p
-              id="next-step-error"
-              className={composerError ? 'composer-error' : 'composer-help'}
-              aria-live="polite"
-            >
-              {composerError || 'Enter one mathematical expression, then add the line.'}
+            {/* Speaks only when something is wrong. The standing instruction it
+                used to carry repeated the placeholder directly above it. The
+                node stays mounted for aria-describedby and aria-live. */}
+            <p id="next-step-error" className="composer-error" aria-live="polite">
+              {composerError}
             </p>
             {draft.trim() && (
               <p className="composer-preview">
@@ -670,12 +660,16 @@ export default function Scratchpad() {
 
           {state.round === 'transfer' && report?.allSound && report.reachesAnswer && <TransferSignal state={state} />}
 
+          {/* An empty scratchpad has nothing to check and nothing to start over
+              from. The row appears with the first line, so the only control on
+              a blank page is the one that writes one. */}
+          {state.steps.length > 0 && (
           <div className="work-actions">
             <button
               type="button"
               className="button"
               onClick={check}
-              disabled={!ready || state.steps.length === 0}
+              disabled={!ready}
             >
               Check my work
             </button>
@@ -719,6 +713,7 @@ export default function Scratchpad() {
               Start over
             </button>
           </div>
+          )}
 
           {refusal && (
             <div className="refusal" role="alert">
@@ -769,24 +764,24 @@ export default function Scratchpad() {
             <span key={announcement.key}>{announcement.text}</span>
           </p>
 
-          <SessionDetails activities={state.activities} />
+          {/* A disclosure that opens onto "nothing yet" is a control that
+              cannot do anything. It arrives with the first recorded action. */}
+          {state.activities.length > 0 && <SessionDetails activities={state.activities} />}
         </main>
 
         {/* The margin is the page's own voice: what it holds about this
             session, and the exact tools it hands to whatever agent arrives.
             It is never empty — 05 #26, and 23_PRIMER_REDESIGN_SPEC.md §4. */}
         <aside className="margin" aria-labelledby="margin-heading">
-          <h2 id="margin-heading" className="margin-heading">
-            What this page can hand an agent
-          </h2>
           {/* Counted, never written. 05 #28: no hardcoded figure may drift
               away from what the page actually registered. */}
-          <p className="margin-lede">
-            {inspectorTools.length} tools, registered by this page.{' '}
-            {inspectorTools.filter((t) => t.annotations.readOnlyHint).length} read,{' '}
-            {inspectorTools.filter((t) => !t.annotations.readOnlyHint).length} write.
-            The agent supplies the language. The verdicts stay here.
-          </p>
+          <h2 id="margin-heading" className="margin-heading">
+            {inspectorTools.length} tools for an agent
+            <span className="margin-split">
+              {inspectorTools.filter((t) => t.annotations.readOnlyHint).length} read ·{' '}
+              {inspectorTools.filter((t) => !t.annotations.readOnlyHint).length} write
+            </span>
+          </h2>
           <AgentConsole
             status={status}
             tools={inspectorTools}
