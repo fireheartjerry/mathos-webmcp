@@ -89,13 +89,33 @@ export default function HomePage() {
               </li>
             </ol>
 
+            {/* The verdict is composed word by word rather than swapped as a
+                block. The words carry the animation, not the wrapper, so the
+                two never multiply their opacities. */}
             <figcaption className="reading-note">
               <span className="try-first">
-                Step 3 stopped being equivalent at{' '}
-                <span className="reading-point">x = −1.4</span>.
+                {['Step', '3', 'stopped', 'being', 'equivalent', 'at'].map((w, i) => (
+                  <Fragment key={w + i}>
+                    {i > 0 ? ' ' : null}
+                    <span className="note-word" style={{ ["--nw" as string]: i }}>
+                      {w}
+                    </span>
+                  </Fragment>
+                ))}{' '}
+                <span className="note-word reading-point" style={{ ["--nw" as string]: 6 }}>
+                  x = −1.4
+                </span>
+                <span className="note-word" style={{ ["--nw" as string]: 6 }}>.</span>
               </span>
               <span className="try-second" aria-hidden="true">
-                Checked. Sound through step 3.
+                {['Checked.', 'Sound', 'through', 'step', '3.'].map((w, i) => (
+                  <Fragment key={w + i}>
+                    {i > 0 ? ' ' : null}
+                    <span className="note-word" style={{ ["--nw" as string]: i }}>
+                      {w}
+                    </span>
+                  </Fragment>
+                ))}
               </span>
             </figcaption>
           </figure>

@@ -390,15 +390,22 @@
    corruption rather than as a transition. The outgoing text is fully gone
    before the incoming one starts. */
 
+/* Returns at 94%, not 92%, for the same reason try-second starts at 49%: the
+   outgoing attempt's words carry delays of up to 220ms, so a return that began
+   the moment the hold ended overlapped the tail of the clear. */
 @keyframes try-first {
   0%, 44%    { opacity: 1; transform: none; }
-  47%, 92%   { opacity: 0; transform: translateY(-5px); }
-  95%, 100%  { opacity: 1; transform: none; }
+  47%, 94%   { opacity: 0; transform: translateY(-5px); }
+  97%, 100%  { opacity: 1; transform: none; }
 }
 
+/* Starts at 49%, not 47%, so the per-word stagger fits inside the gap. The
+   verdict's words carry delays up to 330ms; with both attempts starting their
+   transition at the same percentage, the last outgoing word was still fading
+   while the first incoming one appeared. 49% clears 47% + 330ms. */
 @keyframes try-second {
-  0%, 47%    { opacity: 0; transform: translateY(7px); }
-  50%, 89%   { opacity: 1; transform: none; }
+  0%, 49%    { opacity: 0; transform: translateY(7px); }
+  52%, 89%   { opacity: 1; transform: none; }
   92%, 100%  { opacity: 0; transform: translateY(-5px); }
 }
 
@@ -411,14 +418,31 @@
   grid-area: 1 / 1;
 }
 
-.reading-swap > .try-first,
-.reading-note > .try-first {
+.reading-swap > .try-first {
   animation: try-first var(--d-story) var(--ease-out) infinite both;
 }
 
-.reading-swap > .try-second,
-.reading-note > .try-second {
+.reading-swap > .try-second {
   animation: try-second var(--d-story) var(--ease-out) infinite both;
+}
+
+/* The verdict composes rather than appearing. Each word carries the animation
+   with a 55ms offset, so the sentence assembles left to right and clears the
+   same way. inline-block is required — transforms do not apply to inline
+   boxes — and the space lives between the spans, never inside one, because an
+   inline-block swallows its own trailing whitespace. */
+.note-word {
+  display: inline-block;
+}
+
+.reading-note > .try-first > .note-word {
+  animation: try-first var(--d-story) var(--ease-out) infinite both;
+  animation-delay: calc(var(--nw, 0) * 55ms);
+}
+
+.reading-note > .try-second > .note-word {
+  animation: try-second var(--d-story) var(--ease-out) infinite both;
+  animation-delay: calc(var(--nw, 0) * 55ms);
 }
 
 /* The break mark: a black bar in the margin of the line. Its absence is the
@@ -477,6 +501,12 @@
   .reading-swap > .try-second,
   .reading-note > .try-second {
     display: none;
+  }
+
+  .reading-note > .try-first > .note-word {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 
   .reading-swap > .try-first,
