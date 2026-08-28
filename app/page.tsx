@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { Tex } from '../src/components/Tex'
 
 export default function HomePage() {
@@ -13,7 +14,23 @@ export default function HomePage() {
       <main id="main" className="landing-shell">
         <section className="hero" aria-labelledby="page-title">
           <div className="hero-copy">
-            <h1 id="page-title">A page that knows how you think.</h1>
+            {/* Split per word so the line assembles rather than arriving whole
+                (Sarsa section 8: staggered 80ms). The words are spans inside a
+                single h1, so the accessible name is unchanged. */}
+            <h1 id="page-title">
+              {'A page that knows how you think.'.split(' ').map((word, i) => (
+                <Fragment key={word + i}>
+                  {/* The space lives between the spans, never inside one. An
+                      inline-block collapses its own trailing whitespace, so a
+                      space inside the span disappears and the words run
+                      together — while textContent still reads correctly. */}
+                  {i > 0 ? ' ' : null}
+                  <span className="hero-word" style={{ ["--w" as string]: i }}>
+                    {word}
+                  </span>
+                </Fragment>
+              ))}
+            </h1>
             <p>
               You write the mathematics. The page reads it, keeps what it learns
               about you, and hands that to whichever agent you bring.
@@ -33,7 +50,7 @@ export default function HomePage() {
                   so it adds no row. */}
               <li className="reading-scan scan-find" aria-hidden="true" />
               <li className="reading-scan scan-confirm" aria-hidden="true" />
-              <li className="reading-step" style={{ ["--i" as string]: 0 }}>
+              <li className="reading-step" style={{ ["--i" as string]: 0, ["--pulse-delay" as string]: "888ms" }}>
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
                   <Tex
@@ -42,7 +59,7 @@ export default function HomePage() {
                   />
                 </span>
               </li>
-              <li className="reading-step" style={{ ["--i" as string]: 1 }}>
+              <li className="reading-step" style={{ ["--i" as string]: 1, ["--pulse-delay" as string]: "1167ms" }}>
                 <span className="reading-index">2</span>
                 <span className="reading-tex">
                   <Tex
@@ -57,7 +74,7 @@ export default function HomePage() {
                   Only the first attempt is exposed to assistive tech — the
                   swapped-in second is decorative narrative, and the figure's
                   label carries the whole story. */}
-              <li className="reading-step is-broken" style={{ ["--i" as string]: 2 }}>
+              <li className="reading-step is-broken" style={{ ["--i" as string]: 2, ["--pulse-delay" as string]: "1536ms" }}>
                 <span className="reading-index">3</span>
                 <span className="reading-swap">
                   <span className="reading-tex try-first">

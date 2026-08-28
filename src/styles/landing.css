@@ -153,12 +153,35 @@
   transform: translateX(4px);
 }
 
+/* Held back at 0.42 so it reads as grey, and brought to full black as the read
+   crosses this row — the line acknowledging that it is being read. Opacity
+   only, on an element with no other animation, so nothing conflicts with the
+   row's own entrance or hover transform. */
 .reading-index {
-  color: var(--bw-muted);
+  color: var(--bw-ink);
+  opacity: 0.42;
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
+  animation: read-pulse var(--d-story) linear infinite both;
+  animation-delay: var(--pulse-delay, 0ms);
 }
+
+@keyframes read-pulse {
+  0%     { opacity: 0.42; }
+  0.9%   { opacity: 1; }
+  3.2%   { opacity: 0.42; }
+  100%   { opacity: 0.42; }
+}
+
+/* The find read reaches each row at a different moment, and animation-delay
+   shifts an infinite animation's phase permanently, so one keyframe set with a
+   per-row delay is enough.
+
+   The delay is set in the markup rather than by nth-of-type: the two scan
+   elements are the first two `li` in this list, so `.reading-step:nth-of-type(1)`
+   matches nothing at all. The gaps are uneven (888 / 1167 / 1536ms) because the
+   read decelerates over the break, so no linear formula would fit either. */
 
 .reading-tex {
   min-width: 0;
@@ -220,14 +243,22 @@
   to   { transform: scaleY(1); }
 }
 
-.hero-copy h1,
 .hero-copy > p,
 .cta {
   animation: rise var(--d-rise) var(--ease-draw) both;
 }
 
-.hero-copy > p { animation-delay: var(--stagger); }
-.cta { animation-delay: calc(var(--stagger) * 2); }
+/* Each word carries its own entrance. inline-block is required — transforms do
+   not apply to inline boxes, so without it the stagger would silently do
+   nothing. */
+.hero-word {
+  display: inline-block;
+  animation: rise var(--d-rise) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * var(--w, 0) * 0.5);
+}
+
+.hero-copy > p { animation-delay: calc(var(--stagger) * 3.5); }
+.cta { animation-delay: calc(var(--stagger) * 4.5); }
 
 .reading {
   animation: rise var(--d-rise) var(--ease-draw) both;
@@ -415,5 +446,14 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .hero-word {
+    animation: none;
+  }
+
+  .reading-index {
+    animation: none;
+    opacity: 1;
   }
 }
