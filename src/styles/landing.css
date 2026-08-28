@@ -46,7 +46,7 @@
   color: var(--bw-ink);
   font-size: var(--fs-lg);
   font-weight: var(--fw-ui);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.008em;
 }
 
 /* Every interactive selector defines hover, focus-visible and active (05 #32).
