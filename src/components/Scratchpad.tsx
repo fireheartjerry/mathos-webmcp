@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { SyntheticEvent } from 'react'
 import { applyAction, createSession } from '../domain/session/reducer'
 import { getFirstIssue } from '../domain/math/derivation'
@@ -422,6 +422,42 @@ export default function Scratchpad() {
   const proposalSeed = proposalSeedForSession(state)
   const annotationsFor = (stepId: string) => state.annotations.filter((a) => a.stepId === stepId)
 
+  /**
+   * Removing a line made every line below it jump. It was the last change on
+   * this page with no motion, and the only one absent because it is awkward
+   * rather than because it would be wrong.
+   *
+   * This is FLIP, and deliberately read-only: it measures where each line was,
+   * and after the re-render animates it from there to where it now is. It
+   * emits no markup and changes no styles, so if the measurement is ever wrong
+   * the rows simply sit still — the failure mode is the behaviour we have
+   * today, not a broken list.
+   *
+   * A line that has just appeared has no previous position and is skipped;
+   * its own entrance already covers it.
+   */
+  const stepListRef = useRef<HTMLOListElement | null>(null)
+  const previousTops = useRef(new Map<string, number>())
+  // useLayoutEffect warns when this component renders on the server.
+  const useAfterLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect
+  useAfterLayout(() => {
+    const list = stepListRef.current
+    if (!list) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const nextTops = new Map<string, number>()
+    for (const row of list.querySelectorAll<HTMLLIElement>('.step')) {
+      const top = row.getBoundingClientRect().top
+      nextTops.set(row.id, top)
+      const previous = previousTops.current.get(row.id)
+      if (reduced || previous === undefined || previous === top) continue
+      row.animate(
+        [{ transform: `translateY(${previous - top}px)` }, { transform: 'none' }],
+        { duration: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+      )
+    }
+    previousTops.current = nextTops
+  })
+
   return (
     <div className="scratch-shell">
       <header className="scratch-header">
@@ -480,7 +516,7 @@ export default function Scratchpad() {
     does not enforce — both explaining a thing that had not happened yet. The
     placeholder says what to write; the page says the rest once there is work
     to say it about. */}
-          <ol className="steps" aria-label="Your working">
+          <ol className="steps" aria-label="Your working" ref={stepListRef}>
             {state.steps.map((step: Step, index) => {
               const verdict = report?.verdicts[step.id]
               const broken = step.id === firstBrokenId && isBrokenVerdict(verdict)
