@@ -127,8 +127,10 @@
   padding-inline-start: calc(var(--s-6) - var(--bw-track));
 }
 
+/* The rule beside the row carries the state through the whole cycle, so the
+   index does not need a colour role of its own — and it must stay legible in
+   both attempts. */
 .reading-step.is-broken .reading-index {
-  color: var(--rust-deep);
   font-weight: var(--fw-ui);
 }
 
@@ -303,11 +305,11 @@
    page keeps reading rather than reading once and going inert — a judge who
    looks away for ten seconds still sees the thesis happen. */
 @keyframes scan {
-  0%    { transform: translateY(0); opacity: 0; }
-  1.5%  { opacity: 1; }
-  10.5% { opacity: 1; }
-  12%   { transform: translateY(var(--scan-travel)); opacity: 0; }
-  100%  { transform: translateY(var(--scan-travel)); opacity: 0; }
+  0%     { transform: translateY(0); opacity: 0; }
+  0.8%   { opacity: 1; }
+  5.3%   { opacity: 1; }
+  6.1%   { transform: translateY(var(--scan-travel)); opacity: 0; }
+  100%   { transform: translateY(var(--scan-travel)); opacity: 0; }
 }
 
 /* The element is the full height of the derivation, not the height of the line
@@ -324,7 +326,7 @@
   height: 100%;
   opacity: 0;
   pointer-events: none;
-  animation: scan var(--d-scan-cycle) var(--ease-sweep) infinite both;
+  animation: scan var(--d-story) var(--ease-sweep) infinite both;
   animation-delay: calc(var(--stagger) * 7.5);
 }
 
@@ -396,4 +398,87 @@
   .reading-scan { display: none; }
 
   .reading-step:hover { transform: none; }
+}
+
+/* ---- Second try --------------------------------------------------------
+   The hero plays the product's own loop on one shared 18s cycle: the page
+   reads the working, marks the third step, the learner rewrites it, and the
+   verdict clears. Everything crossfades on opacity so the audit stays clean —
+   the two rules are stacked bars rather than one bar changing colour. */
+
+@keyframes try-first {
+  0%, 44%   { opacity: 1; }
+  50%, 89%  { opacity: 0; }
+  100%      { opacity: 1; }
+}
+
+@keyframes try-second {
+  0%, 44%   { opacity: 0; }
+  50%, 89%  { opacity: 1; }
+  100%      { opacity: 0; }
+}
+
+.reading-swap {
+  display: grid;
+  min-width: 0;
+}
+
+.reading-swap > .reading-tex {
+  grid-area: 1 / 1;
+}
+
+.reading-swap > .try-first,
+.reading-note > .try-first {
+  animation: try-first var(--d-story) var(--ease-out) infinite both;
+}
+
+.reading-swap > .try-second,
+.reading-note > .try-second {
+  animation: try-second var(--d-story) var(--ease-out) infinite both;
+}
+
+/* The note's two readings stack so the panel never changes height. */
+.reading-note {
+  display: grid;
+}
+
+.reading-note > .try-first,
+.reading-note > .try-second {
+  grid-area: 1 / 1;
+}
+
+/* The verified rule. Stacked over the rust one and crossfaded, so no colour
+   is animated. */
+.reading-step.is-broken::after {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--bw-track);
+  background: var(--green);
+  content: '';
+  animation: try-second var(--d-story) var(--ease-out) infinite both;
+}
+
+.reading-step.is-broken::before {
+  animation:
+    draw-y var(--d-draw) var(--ease-draw) both,
+    try-first var(--d-story) var(--ease-out) infinite both;
+  animation-delay: calc(var(--stagger) * 16), 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No story, no swap. The first attempt and its verdict are the still frame,
+     which is what assistive tech reads anyway. */
+  .reading-swap > .try-second,
+  .reading-note > .try-second,
+  .reading-step.is-broken::after {
+    display: none;
+  }
+
+  .reading-swap > .try-first,
+  .reading-note > .try-first,
+  .reading-step.is-broken::before {
+    animation: none;
+    opacity: 1;
+  }
 }

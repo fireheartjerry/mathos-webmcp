@@ -143,7 +143,7 @@
   --d-rise: 700ms;
   --d-draw: 900ms;
   --d-scan: 1100ms;
-  --d-scan-cycle: 9000ms;
+  --d-story: 18000ms;
   --stagger: 80ms;
 }
 
@@ -157,7 +157,7 @@
     --d-rise: 0ms;
     --d-draw: 0ms;
     --d-scan: 0ms;
-    --d-scan-cycle: 0ms;
+    --d-story: 0ms;
     --stagger: 0ms;
   }
 }

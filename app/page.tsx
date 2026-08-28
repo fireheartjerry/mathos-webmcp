@@ -25,7 +25,7 @@ export default function HomePage() {
 
           <figure
             className="reading"
-            aria-label="A derivation with the first step that stopped being equivalent marked"
+            aria-label="A derivation whose third step stopped being equivalent, and the corrected second attempt"
           >
             <ol className="reading-steps">
               {/* An li, not a span: ol may only contain li. Absolutely positioned,
@@ -49,19 +49,36 @@ export default function HomePage() {
                   />
                 </span>
               </li>
+              {/* The product is called Second Try, so the hero shows both. The
+                  first attempt drops the 8x; the second evaluates the real
+                  derivative at the requested point. 36(4) + 8(2) = 160.
+                  Only the first attempt is exposed to assistive tech — the
+                  swapped-in second is decorative narrative, and the figure's
+                  label carries the whole story. */}
               <li className="reading-step is-broken" style={{ ["--i" as string]: 2 }}>
                 <span className="reading-index">3</span>
-                <span className="reading-tex">
-                  <Tex
-                    latex={'\\frac{dy}{dx} = 36x^2'}
-                    ariaLabel="d y by d x equals thirty-six x squared"
-                  />
+                <span className="reading-swap">
+                  <span className="reading-tex try-first">
+                    <Tex
+                      latex={'\\frac{dy}{dx} = 36x^2'}
+                      ariaLabel="d y by d x equals thirty-six x squared"
+                    />
+                  </span>
+                  <span className="reading-tex try-second" aria-hidden="true">
+                    <Tex latex={'\\frac{dy}{dx}\\bigg|_{x=2} = 160'} />
+                  </span>
                 </span>
               </li>
             </ol>
 
             <figcaption className="reading-note">
-              Step 3 stopped being equivalent at <span className="reading-point">x = −1.4</span>.
+              <span className="try-first">
+                Step 3 stopped being equivalent at{' '}
+                <span className="reading-point">x = −1.4</span>.
+              </span>
+              <span className="try-second" aria-hidden="true">
+                Checked. Sound through step 3.
+              </span>
             </figcaption>
           </figure>
         </section>
