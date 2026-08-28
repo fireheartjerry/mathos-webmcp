@@ -12,6 +12,7 @@ import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
+import AgentConsole from './AgentConsole'
 import SessionDetails from './SessionDetails'
 import {
   actionFeedbackAfterResult,
@@ -768,15 +769,28 @@ export default function Scratchpad() {
             <span key={announcement.key}>{announcement.text}</span>
           </p>
 
-          <SessionDetails
+          <SessionDetails activities={state.activities} />
+        </main>
+
+        {/* The margin is the page's own voice: what it holds about this
+            session, and the exact tools it hands to whatever agent arrives.
+            It is never empty — 05 #26, and 23_PRIMER_REDESIGN_SPEC.md §4. */}
+        <aside className="margin" aria-labelledby="margin-heading">
+          <h2 id="margin-heading" className="margin-heading">
+            What this page can hand an agent
+          </h2>
+          <p className="margin-lede">
+            Six tools, registered by this page. The agent supplies the language.
+            The verdicts stay here.
+          </p>
+          <AgentConsole
             status={status}
             tools={inspectorTools}
             onRun={runFromInspector}
             revision={state.revision}
             proposalSeed={proposalSeed}
-            activities={state.activities}
           />
-        </main>
+        </aside>
       </div>
     </div>
   )
