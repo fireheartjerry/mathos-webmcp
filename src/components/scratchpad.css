@@ -1619,3 +1619,58 @@
 .scratch-shell .activity-source {
   font-size: var(--fs-meta);
 }
+
+/* ---- Motion -------------------------------------------------------------
+
+   The scratchpad had none. Only colour transitions, and once the palette went
+   greyscale those became changes between two near-identical greys — motion in
+   name only.
+
+   It does not get the home page's vocabulary wholesale. That page runs a 12s
+   story on a loop because it is arguing something to a visitor; this one is an
+   instrument someone is using, so every movement here is tied to an event the
+   learner caused. Nothing loops, nothing plays on a timer.
+
+   Two moments earn it. A line arriving, because the learner just wrote it. And
+   a verdict landing, because that is the page changing its mind about the work
+   — 23_PRIMER_REDESIGN_SPEC.md section 3.1. */
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Settles rather than pops: down 5px and slightly contracted, because a
+   verdict arriving should read as the page concluding, not as a notification. */
+@keyframes verdict-land {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.scratch-shell .step {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+}
+
+/* Each verdict state is its own rule, so switching between them changes the
+   animation-name and the keyframes re-fire. relation-idle is excluded: it is
+   the state a line is born in, and the row is already arriving under step-in. */
+.scratch-shell .relation-sound,
+.scratch-shell .relation-broken,
+.scratch-shell .relation-uncertain,
+.scratch-shell .relation-unreadable,
+.scratch-shell .relation-downstream {
+  animation: verdict-land var(--d-signature) var(--ease-draw) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .step,
+  .scratch-shell .relation-sound,
+  .scratch-shell .relation-broken,
+  .scratch-shell .relation-uncertain,
+  .scratch-shell .relation-unreadable,
+  .scratch-shell .relation-downstream {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
