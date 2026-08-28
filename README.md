@@ -250,10 +250,10 @@ Full transcript with the probe code and exact return values:
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:4321/learn
-pnpm test       # 178 tests
-pnpm typecheck  # Astro + TypeScript diagnostics
-pnpm build      # static production build
+pnpm dev        # local Sites-compatible development server
+pnpm test       # 226 tests
+pnpm typecheck  # TypeScript diagnostics
+pnpm build      # Sites-compatible Cloudflare Worker build
 
 # Optional: with flagged Chrome already running on CDP port 9444
 pnpm test:webmcp

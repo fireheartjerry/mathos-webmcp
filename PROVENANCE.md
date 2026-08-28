@@ -25,8 +25,8 @@ All application source in this repository is new challenge-period work. This wor
 - The six WebMCP tool definitions, their input schemas and annotations, and the registration bridge.
 - The scratchpad interface, the Agent Console, and the local inspector.
 - The evidence receipt and its stated claim boundary.
-- The Astro landing page and the visual system built on the frozen token set.
-- The test suite (178 tests).
+- The landing page and the visual system built on the frozen token set.
+- The test suite (226 tests).
 - The deployment configuration and judge-facing documents.
 
 The first application-source commit is `8150dc4`, dated August 26, 2026. No application source in this repository predates the submission period.
@@ -38,7 +38,7 @@ These were built during the challenge period and are no longer on the judged pat
 - **The tiny transformer lab.** A real one-block causal transformer trained in the browser with TensorFlow.js. Moved to `experiments/tiny-transformer/`. It is out of the build, out of the bundle, and out of the demo. `@tensorflow/tfjs` is no longer a dependency of the shipped application. The reason is stated in the README under "What we cut, and why": it exercised no WebMCP tool.
 - **The ten-stage curriculum rail.** Deleted. Nine of its ten stages did not exist.
 - **The curated `36` / `8` diagnosis-and-transfer loop.** Replaced by generated problems and a real equivalence check.
-- **The plain-HTTP proxy to a bare IP address** in `vercel.json` and `astro.config.mjs`. Removed.
+- **The plain-HTTP proxy to a bare IP address** in the former deployment configuration. Removed.
 
 ## Pre-existing Mathos work
 
@@ -56,13 +56,13 @@ The submission must not describe the existing Mathos video engine as new challen
 
 ## External software
 
-The application depends on Astro, React, TypeScript, and:
+The application uses the ChatGPT Sites Vinext runtime, React, TypeScript, and:
 
 | Package | Role | Pre-existing or new |
 | --- | --- | --- |
 | `@cortex-js/compute-engine` | The computer algebra system that writes every verdict. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
 | `katex` | Typesetting the problem, the learner's steps, and the engine's expressions. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
-| `vitest` | The test runner for the 178-test suite. | Pre-existing third-party tool |
+| `vitest` | The test runner for the 226-test suite. | Pre-existing third-party tool |
 
 Package names and versions appear in `package.json` and `pnpm-lock.yaml`. No third-party source is vendored, forked, or modified in this repository.
 
@@ -73,7 +73,7 @@ The verdict logic is ours; the symbolic engine underneath it is not, and this do
 The product uses two design references:
 
 - The [YC Requests for Startups Primer](https://www.ycombinator.com/rfs#the-primer) influenced the long-form learning narrative and ambitious thesis.
-- [Sarsa](https://sarsa.app/) influenced the quiet Astro page, the hairline rules, the restrained motion, and the layout rhythm. The measured reference values are recorded in `docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md`.
+- [Sarsa](https://sarsa.app/) influenced the quiet document page, the hairline rules, the restrained motion, and the layout rhythm. The measured reference values are recorded in `docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md`.
 
 The project does not copy source code, text, images, icons, video, or other assets from either reference. The visual system and implementation in this repository are original challenge-period work.
 

@@ -2,6 +2,9 @@
 node_modules/
 dist/
 .astro/
+.next/
+.wrangler/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
