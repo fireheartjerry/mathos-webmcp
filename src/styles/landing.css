@@ -140,8 +140,27 @@
   position: relative;
 }
 
-/* The rule under the label retracts to the right on hover rather than a colour
-   changing. */
+/* Two rules stacked on the same baseline. The resting one is a hairline; the
+   ink draws across it from the left on hover.
+
+   This used to be a single black rule that retracted to the right. It was the
+   only subtractive hover on the page — the wordmark's underline draws in, and
+   hovering the one primary action took its underline away, which reads as the
+   link going quiet exactly when it is being reached for. Sarsa's spec asks for
+   the opposite in both places: section 8 gives the CTA an ink sweep from the
+   left and links an underline that draws on.
+
+   Making the resting rule a hairline is the other half of the trade. The
+   static state gets quieter and the motion gets the whole contrast. */
+.cta-label::before {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -4px;
+  height: 2px;
+  background: var(--bw-rule);
+  content: '';
+}
+
 .cta-label::after {
   position: absolute;
   inset-inline: 0;
@@ -149,13 +168,14 @@
   height: 2px;
   background: var(--bw-ink);
   content: '';
+  transform: scaleX(0);
   transform-origin: left center;
   transition: transform var(--d-sweep) var(--ease-sweep);
 }
 
-.cta:hover .cta-label::after {
-  transform: scaleX(0);
-  transform-origin: right center;
+.cta:hover .cta-label::after,
+.cta:focus-visible .cta-label::after {
+  transform: scaleX(1);
 }
 
 .cta:focus-visible {
