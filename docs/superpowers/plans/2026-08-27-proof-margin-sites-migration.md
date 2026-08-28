@@ -259,19 +259,19 @@ Open the production Sites URL in the existing browser tab and prove `/`, `/learn
 
 ### Task 11: Remove Vercel only after cutover
 
-- [ ] **Step 1: Re-read `.vercel/project.json` and fetch the remote project**
+- [x] **Step 1: Re-read `.vercel/project.json` and fetch the remote project**
 
 Confirm exact project `prj_zNVcaOmUHFSMyNKEzguAxGRSMlpg`, team `team_k1RFHVFi2t7XEI5uNw1Id3Pn`, and project name `hackathon-build` immediately before deletion.
 
-- [ ] **Step 2: Delete the remote project**
+- [x] **Step 2: Delete the remote project**
 
 Use an authenticated Vercel deletion mechanism. If the installed connector lacks deletion, use the authenticated Vercel CLI/API already linked to this exact project. Do not delete any team, domain, or adjacent project.
 
-- [ ] **Step 3: Remove local Vercel linkage**
+- [x] **Step 3: Remove local Vercel linkage**
 
 After remote deletion is confirmed, remove `.vercel/` and `vercel.json`; record whether recovery is possible in `06_IMPLEMENTATION_CHANGELOG.md` and `10_FINAL_VERDICT.md`.
 
-- [ ] **Step 4: Final commit and clean-state audit**
+- [x] **Step 4: Final commit and clean-state audit**
 
 Commit the verified redesign, audit artifacts, Sites configuration, and Vercel removal. Require `git status --short` to be empty and re-open the Sites production URL.
 
@@ -280,4 +280,3 @@ Commit the verified redesign, audit artifacts, Sites configuration, and Vercel r
 - Spec coverage: research, four directions, approval, contract, implementation, complete states, rendered loop, five reviewers, all technical gates, required 00–10 artifacts, Sites cutover, and Vercel deletion are each mapped to a task.
 - Placeholder scan: no TODO/TBD or unspecified “handle edge cases” steps remain.
 - Type consistency: actor sources, verdict statuses, tool props, Sites IDs, and deployment/version IDs match current source and connector contracts.
-
