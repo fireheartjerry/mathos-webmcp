@@ -304,12 +304,25 @@
 /* The sweep occupies the first ~12% of a long cycle and the rest is rest. The
    page keeps reading rather than reading once and going inert — a judge who
    looks away for ten seconds still sees the thesis happen. */
-@keyframes scan {
+/* The first read: finds the break. Sweeps in the first ~6% of the cycle, then
+   parks out of sight for the rest. */
+@keyframes scan-find {
   0%     { transform: translateY(0); opacity: 0; }
   0.8%   { opacity: 1; }
   5.3%   { opacity: 1; }
   6.1%   { transform: translateY(var(--scan-travel)); opacity: 0; }
   100%   { transform: translateY(var(--scan-travel)); opacity: 0; }
+}
+
+/* The second read: confirms the rewrite. Held at the top and invisible until
+   40% of the cycle, so it sweeps just as the corrected step lands and the
+   verdict clears at 44-50%. */
+@keyframes scan-confirm {
+  0%, 39.9% { transform: translateY(0); opacity: 0; }
+  40.8%     { opacity: 1; }
+  45.3%     { opacity: 1; }
+  46.1%     { transform: translateY(var(--scan-travel)); opacity: 0; }
+  100%      { transform: translateY(var(--scan-travel)); opacity: 0; }
 }
 
 /* The element is the full height of the derivation, not the height of the line
@@ -326,9 +339,16 @@
   height: 100%;
   opacity: 0;
   pointer-events: none;
-  animation: scan var(--d-story) var(--ease-sweep) infinite both;
+  animation-duration: var(--d-story);
+  animation-timing-function: var(--ease-sweep);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
   animation-delay: calc(var(--stagger) * 7.5);
 }
+
+.scan-find { animation-name: scan-find; }
+.scan-confirm { animation-name: scan-confirm; }
+
 
 .reading-scan::after {
   position: absolute;
@@ -343,6 +363,20 @@
     transparent
   );
   content: '';
+}
+
+/* Must follow .reading-scan::after: same specificity, so source order decides.
+   The reads are coloured by what they conclude — the first is the colour of
+   the break it is about to mark, the second the colour of the verdict it
+   clears. */
+.scan-confirm::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--green) 18%,
+    var(--green) 82%,
+    transparent
+  );
 }
 
 .reading-steps {
@@ -406,16 +440,20 @@
    verdict clears. Everything crossfades on opacity so the audit stays clean —
    the two rules are stacked bars rather than one bar changing colour. */
 
+/* The two attempts never overlap. A symmetric crossfade puts both at 0.5 for
+   an instant, and two legible expressions on top of each other read as
+   corruption, not as a transition. The outgoing text is fully gone before the
+   incoming one starts, so the swap is a cut through nothing. */
 @keyframes try-first {
-  0%, 44%   { opacity: 1; }
-  50%, 89%  { opacity: 0; }
-  100%      { opacity: 1; }
+  0%, 44%    { opacity: 1; }
+  47%, 92%   { opacity: 0; }
+  95%, 100%  { opacity: 1; }
 }
 
 @keyframes try-second {
-  0%, 44%   { opacity: 0; }
-  50%, 89%  { opacity: 1; }
-  100%      { opacity: 0; }
+  0%, 47%    { opacity: 0; }
+  50%, 89%   { opacity: 1; }
+  92%, 100%  { opacity: 0; }
 }
 
 .reading-swap {

@@ -30,7 +30,8 @@ export default function HomePage() {
             <ol className="reading-steps">
               {/* An li, not a span: ol may only contain li. Absolutely positioned,
                   so it adds no row. */}
-              <li className="reading-scan" aria-hidden="true" />
+              <li className="reading-scan scan-find" aria-hidden="true" />
+              <li className="reading-scan scan-confirm" aria-hidden="true" />
               <li className="reading-step" style={{ ["--i" as string]: 0 }}>
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
