@@ -17,7 +17,7 @@ export default function HomePage() {
                 (Sarsa section 8: staggered 80ms). The words are spans inside a
                 single h1, so the accessible name is unchanged. */}
             <h1 id="page-title">
-              {'It learns the shape of your thinking.'.split(' ').map((word, i) => (
+              {'A second mind, shaped by yours.'.split(' ').map((word, i) => (
                 <Fragment key={word + i}>
                   {/* The space lives between the spans, never inside one. An
                       inline-block collapses its own trailing whitespace, so a
@@ -30,13 +30,16 @@ export default function HomePage() {
                 </Fragment>
               ))}
             </h1>
-            {/* The headline carries the trajectory; this stays concrete about
-                what happens today. The product is session-scale — eight rounds,
-                surviving a reload — and PROVENANCE records one failure of
-                advertising a capability the build did not have. */}
+            {/* Two constraints on this sentence. It stays concrete about what
+                happens today, because the product is session-scale and
+                PROVENANCE records one failure of advertising a capability the
+                build did not have. And the learner stays the subject: an
+                earlier draft read "what it learns about how you think", which
+                makes an unnamed thing the actor and a person's mind its
+                object — the grammar of surveillance, not of a prosthesis. */}
             <p>
-              It starts as a scratchpad that reads your working. What it learns
-              about how you think stays here — and goes with you to whichever
+              It starts as a scratchpad that checks your working, line by line.
+              What you build here stays yours, and goes with you to whichever
               agent you bring.
             </p>
             <a className="cta" href="/learn">
