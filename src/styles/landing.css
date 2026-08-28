@@ -503,14 +503,16 @@
     display: none;
   }
 
-  .reading-note > .try-first > .note-word {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
 
+  /* tokens.css forces `animation-iteration-count: 1 !important` on everything
+     under this query, which parks each infinite animation on its own 100%
+     keyframe. For try-first that frame happens to be opacity 1, so the first
+     attempt survives by luck rather than by intent — and would vanish the
+     moment those keyframes were re-timed. Every element that must remain
+     visible states so here instead of inheriting a final frame. */
   .reading-swap > .try-first,
   .reading-note > .try-first,
+  .reading-note > .try-first > .note-word,
   .reading-step.is-broken::before {
     animation: none;
     opacity: 1;
