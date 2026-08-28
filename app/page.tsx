@@ -17,7 +17,7 @@ export default function HomePage() {
                 (Sarsa section 8: staggered 80ms). The words are spans inside a
                 single h1, so the accessible name is unchanged. */}
             <h1 id="page-title">
-              {'A page that knows how you think.'.split(' ').map((word, i) => (
+              {'It learns the shape of your thinking.'.split(' ').map((word, i) => (
                 <Fragment key={word + i}>
                   {/* The space lives between the spans, never inside one. An
                       inline-block collapses its own trailing whitespace, so a
@@ -30,9 +30,14 @@ export default function HomePage() {
                 </Fragment>
               ))}
             </h1>
+            {/* The headline carries the trajectory; this stays concrete about
+                what happens today. The product is session-scale — eight rounds,
+                surviving a reload — and PROVENANCE records one failure of
+                advertising a capability the build did not have. */}
             <p>
-              You write the mathematics. The page reads it, keeps what it learns
-              about you, and hands that to whichever agent you bring.
+              It starts as a scratchpad that reads your working. What it learns
+              about how you think stays here — and goes with you to whichever
+              agent you bring.
             </p>
             <a className="cta" href="/learn">
               <span className="cta-label">Open the scratchpad</span>

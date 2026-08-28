@@ -105,6 +105,8 @@
   color: var(--bw-soft);
   font-size: var(--fs-sm);
   line-height: var(--lh-prose);
+  /* Keeps the last line from stranding a single word. */
+  text-wrap: pretty;
 }
 
 /* The only control on the page. A link, not a chrome-heavy button. */
