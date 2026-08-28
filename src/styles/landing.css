@@ -214,8 +214,29 @@
   padding: var(--s-4) 0 var(--s-4) var(--s-4);
 }
 
-.reading-step + .reading-step {
-  border-top: 1px solid var(--bw-rule);
+/* The rules between steps draw rather than appear. A border arrives with the
+   row in a single frame; a drawn rule reads as the page ruling the paper
+   before it writes on it, which is the order the figure is arguing for.
+
+   ::after, because ::before on this element is the break mark on the row that
+   stopped being true. The row is already position: relative for that mark. */
+.reading-step + .reading-step::after {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: var(--bw-rule);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
+  /* One beat ahead of the row it separates, which rises at (--i + 4). The
+     rule lands, then the line lands on it. */
+  animation-delay: calc(var(--stagger) * (var(--i, 0) + 3));
+}
+
+@keyframes draw-rule {
+  to { transform: scaleX(1); }
 }
 
 /* No hover state. These rows are plain li — not focusable, not inside a link,
@@ -271,13 +292,30 @@
 
 .reading-tex .katex { font-size: 1em; }
 
+/* Drawn like the rules between the steps, and last, so the figure finishes
+   ruling itself before it says anything. Absolute rather than a border,
+   because a ::before on a grid container becomes a grid item and would take
+   the cell the two verdicts share. */
 .reading-note {
+  position: relative;
   display: grid;
   padding-top: var(--s-5);
-  border-top: 1px solid var(--bw-rule);
   color: var(--bw-soft);
   font-size: var(--fs-sm);
   line-height: var(--lh-prose);
+}
+
+.reading-note::before {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: var(--bw-rule);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
+  animation-delay: calc(var(--stagger) * 7);
 }
 
 .reading-note > .try-first,
@@ -523,6 +561,14 @@
 
   .hero-word {
     animation: none;
+  }
+
+  /* These start at scaleX(0). Without the explicit restore, removing the
+     animation removes the rules themselves and the figure loses its ruling. */
+  .reading-step + .reading-step::after,
+  .reading-note::before {
+    animation: none;
+    transform: scaleX(1);
   }
 
   /* The link states stay — they are feedback, not decoration. Only their
