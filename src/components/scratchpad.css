@@ -312,10 +312,9 @@
   --relation-track: var(--graphite-subtle);
 }
 
-.step:first-child {
-  border-top: var(--bw-hairline) solid var(--line);
-}
-
+/* No opening rule. The givens block already closes with one, and adding a
+   second 24px below it drew two parallel hairlines around empty space. Each
+   step carries its own border-bottom, so the list still reads as ruled rows. */
 .step-n {
   grid-area: number;
   padding-top: 10px;
@@ -1009,19 +1008,17 @@
   border-bottom-color: var(--line-strong);
 }
 
-/* Name on its own row, access below it. Side-by-side breaks `annotate_step`
-   mid-word in the 296px margin column. */
+/* One word of access text fits beside the name, so the row is one line again.
+   It was stacked only because "May change this session" broke `annotate_step`
+   mid-word in the 296px column. */
 .console-tool-head {
   display: grid;
   width: 100%;
-  min-height: 48px;
-  grid-template-columns: minmax(0, 1fr) 20px;
-  grid-template-areas:
-    'name marker'
-    'access marker';
-  align-items: center;
-  gap: 2px var(--s-3);
-  padding: var(--s-2) 0;
+  min-height: 44px;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
   border: 0;
   background: transparent;
   color: var(--ink);
@@ -1032,7 +1029,6 @@
 }
 
 .console-tool-head::after {
-  grid-area: marker;
   color: var(--blue);
   content: '+';
   font-size: var(--fs-lg);
@@ -1053,7 +1049,6 @@
 }
 
 .console-tool-name {
-  grid-area: name;
   min-width: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
@@ -1061,7 +1056,6 @@
 }
 
 .tool-access {
-  grid-area: access;
   color: var(--ink-muted);
   font-size: var(--fs-micro);
   line-height: 1.3;

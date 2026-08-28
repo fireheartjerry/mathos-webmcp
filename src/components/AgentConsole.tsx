@@ -117,8 +117,12 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
                 onClick={() => toggle(tool.name)}
               >
                 <span className="console-tool-name">{tool.name}</span>
+                {/* The heading defines the vocabulary once — "2 read · 4 write" —
+                    so each row only needs the word, not a sentence. Four rows
+                    reading "May change this session" was the longest repeated
+                    text on the page. */}
                 <span className="tool-access">
-                  {tool.annotations.readOnlyHint ? 'Read only' : 'May change this session'}
+                  {tool.annotations.readOnlyHint ? 'read' : 'write'}
                 </span>
               </button>
               {open && (

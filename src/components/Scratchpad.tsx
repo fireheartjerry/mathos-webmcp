@@ -420,7 +420,8 @@ export default function Scratchpad() {
       <div className="scratch-grid">
         <main className="work" id="main">
           <p className="kicker">
-            {state.round === 'transfer' ? 'Unaided attempt' : 'Practice'} · Product rule
+            {/* The header already names the round. This said it a second time. */}
+            Product rule
           </p>
           <hr className="rule" />
 
