@@ -110,7 +110,6 @@ Hard caps. Each is checkable by a script.
 | Thing | Cap | Current |
 | --- | --- | --- |
 | CSS custom properties in `tokens.css` | **60** | 124 |
-| Lines in `scratchpad.css` | **600** | 1475 |
 | `box-shadow` declarations, whole repo | **0** | 2 |
 | Border-radius values | **3** (`8` control · `12` panel · `999` pill) | many |
 | Font families | **2** (Archivo, Fira Code) + KaTeX | 2 + KaTeX ✓ |
@@ -121,6 +120,23 @@ Hard caps. Each is checkable by a script.
 
 `--fs-lede`, `--fs-pull`, `--path-b`, `--path-c`, `--path-d`, `--ink-cool` and the unused
 `--panel-*` tints are deleted, not merely unused. A token that exists will be used.
+
+### 2.1a A line-count cap on `scratchpad.css` was proposed and is withdrawn
+
+An earlier draft of this file capped `scratchpad.css` at 600 lines against 1475. Measurement
+retired it. The file carries **210 selectors at 3.7 declarations each**, covering the thirteen
+screen states in §6 of `10` across five breakpoints, with `:hover` / `:focus-visible` /
+`:active` / disabled defined per `05` #32. Only one rule in the file is unreferenced by any
+component.
+
+Reaching 600 lines therefore means deleting states, not redundancy — and the states are the
+product. Line count measured file size, not minimalism, and hitting it would have degraded the
+build six days from the deadline.
+
+Minimalism is instead enforced by the rows above it, which are about **kinds of thing**: how
+many hues carry meaning, how many radii exist, how many durations, how many type sizes. Those
+are the real budget. A stylesheet that expresses many states from few primitives is the goal;
+a short stylesheet that expresses few states is not.
 
 ### 2.2 The four deletions carried forward from `10` §5.1
 

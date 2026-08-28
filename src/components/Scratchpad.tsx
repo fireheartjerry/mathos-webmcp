@@ -779,9 +779,13 @@ export default function Scratchpad() {
           <h2 id="margin-heading" className="margin-heading">
             What this page can hand an agent
           </h2>
+          {/* Counted, never written. 05 #28: no hardcoded figure may drift
+              away from what the page actually registered. */}
           <p className="margin-lede">
-            Six tools, registered by this page. The agent supplies the language.
-            The verdicts stay here.
+            {inspectorTools.length} tools, registered by this page.{' '}
+            {inspectorTools.filter((t) => t.annotations.readOnlyHint).length} read,{' '}
+            {inspectorTools.filter((t) => !t.annotations.readOnlyHint).length} write.
+            The agent supplies the language. The verdicts stay here.
           </p>
           <AgentConsole
             status={status}

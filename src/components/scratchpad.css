@@ -1001,14 +1001,6 @@
   padding: var(--s-3) 0 var(--s-6);
 }
 
-.session-details-intro {
-  max-width: var(--measure-prose);
-  margin-bottom: var(--s-5);
-  color: var(--ink-muted);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-prose);
-}
-
 .agent-console {
   min-width: 0;
 }
@@ -1352,10 +1344,6 @@
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
     gap: 0 var(--s-10);
-  }
-
-  .session-details-intro {
-    grid-column: 1 / -1;
   }
 
   .activity {
