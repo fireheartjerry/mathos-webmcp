@@ -1,4 +1,10 @@
-/* The home page is black and white. Nothing else.
+/* The home page is black and white, one column, at prose scale.
+ *
+ * An earlier pass was black and white but still maximalist in every other
+ * respect: a 72px poster headline, a two-column hero, the wordmark repeated in
+ * the footer, and a label naming the page to itself. Restraint in colour alone
+ * is not restraint. The type now sits at reading size, the page is a single
+ * vertical stack, and nothing appears twice.
  *
  * No hue, no panel, no card, no fill, no shadow, no radius. Text on paper, and
  * hairlines only where one thing genuinely ends and the next begins.
@@ -11,10 +17,13 @@
  * Motion keeps the entire budget. 23_PRIMER_REDESIGN_SPEC.md section 3.2.
  */
 
+/* One measure for the whole page. The header and footer rules used to span
+   1120px while the content sat at 44rem, so both rules ran on past the column
+   they were supposed to bound. */
 .site-header,
 .landing-shell,
 .site-footer {
-  width: min(1120px, calc(100vw - 48px));
+  width: min(44rem, calc(100vw - 48px));
   margin-inline: auto;
 }
 
@@ -67,12 +76,6 @@
   transform: translateY(1px);
 }
 
-.webmcp-mark {
-  color: var(--bw-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-}
-
 .landing-shell {
   min-height: calc(100svh - var(--nav-h) - 72px);
   display: grid;
@@ -81,27 +84,26 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
-  align-items: center;
-  gap: clamp(48px, 8vw, 128px);
-  padding-block: clamp(72px, 10vw, 144px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-10);
+  padding-block: clamp(48px, 8vw, 96px);
 }
 
 .hero-copy h1 {
-  max-width: 13ch;
+  max-width: 22ch;
   color: var(--bw-ink);
-  font-size: clamp(44px, 5.2vw, 72px);
-  font-weight: var(--fw-display);
-  letter-spacing: -0.045em;
-  line-height: 1;
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: var(--fw-ui);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   text-wrap: balance;
 }
 
 .hero-copy > p {
-  max-width: 34ch;
-  margin-top: var(--s-6);
+  max-width: 54ch;
+  margin-top: var(--s-4);
   color: var(--bw-soft);
-  font-size: clamp(18px, 1.7vw, 22px);
+  font-size: var(--fs-sm);
   line-height: var(--lh-prose);
 }
 
@@ -111,9 +113,9 @@
   align-items: center;
   gap: var(--s-2);
   min-height: 44px;
-  margin-top: var(--s-7);
+  margin-top: var(--s-4);
   color: var(--bw-ink);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-ui);
 }
 
@@ -178,11 +180,13 @@
 
 .reading-step {
   position: relative;
+  /* Above the reads, so the line passes behind the mathematics. */
+  z-index: 1;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: baseline;
-  gap: var(--s-5);
-  padding: var(--s-6) 0 var(--s-6) var(--s-5);
+  gap: var(--s-4);
+  padding: var(--s-4) 0 var(--s-4) var(--s-4);
   transition: transform var(--d-signature) var(--ease-out);
 }
 
@@ -233,7 +237,7 @@
   overflow-y: hidden;
   padding-block: var(--s-2);
   color: var(--bw-ink);
-  font-size: clamp(22px, 2.3vw, 32px);
+  font-size: var(--fs-lg);
   line-height: 1.35;
   white-space: nowrap;
 }
@@ -348,7 +352,11 @@
 .reading-scan {
   position: absolute;
   list-style: none;
-  z-index: 2;
+  /* Behind the rows, never over them. A 2px line crossing the glyphs reads as
+     a strikethrough — the expression being crossed out — which is the opposite
+     of what a read means. Passing behind it reads as a reader moving down the
+     page. */
+  z-index: 0;
   inset-inline: 0;
   top: 0;
   height: 100%;
@@ -430,7 +438,7 @@
 
 .reading-step.is-broken::before {
   position: absolute;
-  inset-block: var(--s-6);
+  inset-block: var(--s-4);
   inset-inline-start: 0;
   width: 2px;
   background: var(--bw-ink);
@@ -453,23 +461,9 @@
 @media (max-width: 560px) {
   .hero { padding-block: var(--s-9); }
 
-  .hero-copy h1 { font-size: clamp(44px, 13vw, 72px); }
+  .reading-tex { font-size: var(--fs-sm); }
 
-  .reading-step {
-    grid-template-columns: 24px minmax(0, 1fr);
-    gap: var(--s-3);
-    padding: var(--s-4) 0 var(--s-4) var(--s-4);
-  }
-
-  .reading-tex { font-size: 21px; }
-
-  .site-footer {
-    min-height: 88px;
-    align-items: flex-start;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--s-1);
-  }
+  .site-footer { min-height: 64px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

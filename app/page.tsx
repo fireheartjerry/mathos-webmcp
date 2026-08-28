@@ -8,7 +8,6 @@ export default function HomePage() {
 
       <header className="site-header">
         <a className="wordmark" href="/" aria-label="Mathos home">Mathos</a>
-        <span className="webmcp-mark">WebMCP</span>
       </header>
 
       <main id="main" className="landing-shell">
@@ -104,7 +103,6 @@ export default function HomePage() {
       </main>
 
       <footer className="site-footer">
-        <span>Mathos</span>
         <span>Built for the WebMCP Challenge</span>
       </footer>
     </>
