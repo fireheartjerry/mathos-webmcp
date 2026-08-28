@@ -173,16 +173,52 @@ as a console logging an event.
    and the local inspector, which are explicitly developer surfaces. In the work column the
    page speaks about the learner's mathematics.
 
-### 3.2 Motion
+### 3.2 Motion — minimalist static, maximalist motion
 
-Two durations only. `140ms` for a state change on an existing element; `240ms` for an element
-entering. `ease-out` entering, `ease-in` leaving, exit at 60–70% of enter. Only `opacity` and
-`transform` animate. Everything respects `prefers-reduced-motion`, which collapses both to
-`0ms` and keeps every final state identical.
+**Amended 2026-08-28.** An earlier draft capped motion at two durations, 140ms and 240ms. That
+was minimalism applied to the wrong layer, and it is withdrawn.
 
-The first broken step does not flash, pulse, or shake. It **settles** — a 240ms opacity and
-2px rise on the badge, and the downstream steps fade to `--path-faint` over the same interval.
-The page has read your work and formed a view. That is a calm act.
+The governing rule comes from the Sarsa design spec (`Kryonic/.worktrees/fire-topsoj-meta/
+docs/superpowers/specs/2026-08-18-sarsa-landing-page-design.md` §2):
+
+> Everything that does not move — type, colour, layout, ornament — is restrained to the point
+> of quietness. Everything that moves gets the entire drama budget. The contrast *is* the
+> brand: a calm page whose motion is unmistakably alive.
+
+So §2's budget on hues, radii and type sizes stays absolute, and motion is the **one** system
+that is allowed to be lavish. A page this quiet can carry motion that a busier one could not.
+
+**The durations.** Not two. Each is a different kind of event:
+
+| Token | Value | For |
+| --- | --- | --- |
+| `--d-instant` | 120ms | a control acknowledging a press |
+| `--d-signature` | 200ms | a small state change on an existing element |
+| `--d-sweep` | 350ms | ink sweeping across a control on hover |
+| `--d-rise` | 700ms | an element entering — rises 14px as it fades in |
+| `--d-draw` | 900ms | a hairline drawing itself left to right |
+| `--stagger` | 80ms | delay between siblings in a sequence |
+
+Easings: `--ease-out` for ordinary state, `--ease-draw` (`cubic-bezier(.16,1,.3,1)`) for
+entrances and draws, `--ease-sweep` for fills. Only `opacity` and `transform` animate, plus
+`transform: scaleX()` for rules — never `width`, `height`, or layout properties.
+
+**Where the drama goes.** Motion must still mean something (§3.1). The budget is spent on the
+moments where the page changes its mind about the learner:
+
+1. **A verdict landing.** The relation rule draws, the badge rises, and downstream steps drain
+   to `--path-faint` — staggered, not simultaneous, so the eye follows the derivation in the
+   order the engine read it.
+2. **A line entering.** Rises 14px over `--d-rise`.
+3. **The first broken step.** Its rule draws rather than appearing.
+4. **Controls.** Ink sweeps from the left on hover; links draw their underline on.
+
+The first broken step still does not flash, pulse, or shake. Maximalist does not mean frantic —
+it means the motion is choreographed and unmistakable rather than perfunctory.
+
+**`prefers-reduced-motion` is a full path, not a dimmer.** Every duration and the stagger
+collapse to `0ms`, and every final state is identical to the animated one. Nothing is
+reachable only by watching it move.
 
 ### 3.3 The one exception
 

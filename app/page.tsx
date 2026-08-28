@@ -28,7 +28,7 @@ export default function HomePage() {
             aria-label="A derivation with the first step that stopped being equivalent marked"
           >
             <ol className="reading-steps">
-              <li className="reading-step">
+              <li className="reading-step" style={{ ["--i" as string]: 0 }}>
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
                   <Tex
@@ -37,7 +37,7 @@ export default function HomePage() {
                   />
                 </span>
               </li>
-              <li className="reading-step">
+              <li className="reading-step" style={{ ["--i" as string]: 1 }}>
                 <span className="reading-index">2</span>
                 <span className="reading-tex">
                   <Tex
@@ -46,7 +46,7 @@ export default function HomePage() {
                   />
                 </span>
               </li>
-              <li className="reading-step is-broken">
+              <li className="reading-step is-broken" style={{ ["--i" as string]: 2 }}>
                 <span className="reading-index">3</span>
                 <span className="reading-tex">
                   <Tex

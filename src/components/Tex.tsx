@@ -1,5 +1,9 @@
 import { useMemo } from 'react'
 import katex from 'katex'
+// Belongs here, beside the only component that renders KaTeX. It used to live
+// in the route that happened to be built first, which left every other route
+// rendering the MathML fallback and the HTML on top of each other.
+import 'katex/dist/katex.min.css'
 
 /**
  * Math is typeset, never typed. `a = x²` set in the UI font is the single fastest way

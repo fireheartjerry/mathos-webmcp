@@ -196,3 +196,98 @@
     gap: var(--s-1);
   }
 }
+
+/* ---- Motion ------------------------------------------------------------
+   The static page is held quiet so this can be lavish. The hero reads as the
+   page working through the derivation: each line rises in turn, the rule that
+   marks the broken step draws itself, and the verdict arrives last — the same
+   order the engine reads them in. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes draw-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.hero-copy h1,
+.hero-copy > p,
+.hero-copy .button {
+  animation: rise var(--d-rise) var(--ease-draw) both;
+}
+
+.hero-copy > p { animation-delay: var(--stagger); }
+.hero-copy .button { animation-delay: calc(var(--stagger) * 2); }
+
+/* Each row waits for the one above it, so the eye reads down the derivation
+   rather than seeing three lines appear at once. --i is set per row in the
+   markup; the panel itself is offset behind the headline. */
+.reading {
+  animation: rise var(--d-rise) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * 1.5);
+}
+
+.reading-step {
+  animation: rise var(--d-rise) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * (var(--i, 0) + 4));
+}
+
+/* The rule marking the step that stopped being equivalent draws itself in
+   rather than simply being there. It becomes an absolutely-positioned bar, so
+   the row no longer needs the padding that compensated for a real border. */
+.reading-step.is-broken {
+  position: relative;
+  padding-inline-start: var(--s-6);
+  border-inline-start: 0;
+}
+
+.reading-step.is-broken::before {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--bw-track);
+  background: var(--rust);
+  content: '';
+  transform: scaleY(0);
+  transform-origin: top center;
+  animation: draw-x var(--d-draw) var(--ease-draw) both;
+  animation-name: draw-y;
+  animation-delay: calc(var(--stagger) * 7);
+}
+
+@keyframes draw-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.reading-note {
+  animation: rise var(--d-rise) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * 8);
+}
+
+/* The note's top hairline draws across as the verdict lands. */
+.reading-note::before {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: var(--bw-hairline);
+  background: var(--line);
+  content: '';
+  transform-origin: left center;
+  animation: draw-x var(--d-draw) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * 8);
+}
+
+.reading-note {
+  position: relative;
+  border-top: 0;
+}

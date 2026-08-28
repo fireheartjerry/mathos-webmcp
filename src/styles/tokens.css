@@ -131,16 +131,30 @@
   --btn-fs-lg: 16px;
   --btn-gap: 8px;
 
-  /* Motion. Two durations: state change, and entrance. Nothing else. */
+  /* Motion is the one maximalist system here. Everything static above is held
+     to the point of quietness precisely so this can be lavish — the contrast is
+     the whole design. See 23_PRIMER_REDESIGN_SPEC.md section 3.2. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-draw: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-sweep: cubic-bezier(0.4, 0, 0.2, 1);
   --d-instant: 120ms;
   --d-signature: 200ms;
+  --d-sweep: 350ms;
+  --d-rise: 700ms;
+  --d-draw: 900ms;
+  --stagger: 80ms;
 }
 
+/* A full path, not a dimmer. Every final state is identical to the animated
+   one, so nothing is reachable only by watching it move. */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --d-instant: 0ms;
     --d-signature: 0ms;
+    --d-sweep: 0ms;
+    --d-rise: 0ms;
+    --d-draw: 0ms;
+    --stagger: 0ms;
   }
 }
 
@@ -224,6 +238,7 @@ button {
 
 .button {
   position: relative;
+  isolation: isolate;
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -243,9 +258,36 @@ button {
     color var(--d-instant) var(--ease-out);
 }
 
+/* Ink sweeps in from the left rather than the fill simply changing colour.
+   The pseudo-element is transform-only, so nothing reflows.
+
+   `isolation: isolate` on the button is load-bearing: it makes the button its
+   own stacking context, so the z-index:-1 sweep paints above the button's own
+   background but below its label. Lifting the label instead would not work —
+   button text is a bare text node, not an element, so no selector can reach it
+   and it would be painted under the sweep. */
+.button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--blue-hover);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--d-sweep) var(--ease-sweep);
+}
+
 .button:hover {
   border-color: var(--blue-hover);
-  background: var(--blue-hover);
+}
+
+.button:hover::before {
+  transform: scaleX(1);
+}
+
+.button:disabled::before,
+.button[aria-disabled='true']::before {
+  display: none;
 }
 
 .button:active {
@@ -315,6 +357,7 @@ button {
 .button-text:hover {
   color: var(--blue-hover);
   text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
 }
 
 .button-text:active {
