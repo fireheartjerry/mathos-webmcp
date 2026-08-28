@@ -230,6 +230,51 @@ contradicts the agent in words.
 
 ---
 
+## 3.3 The home page story, and how to check it
+
+The landing page runs one 12s cycle: the page reads the working, marks the third
+step, the learner rewrites it, and the verdict clears. Four properties have to
+hold, and none of them are visible in a screenshot — every one was broken at
+some point by a change that looked correct.
+
+**Ordering.** The page must read a line before it marks it, and mark it before it
+judges it. Measured 2026-08-28: row three peaks at 1640ms, the mark reaches full
+height at 2040ms, the verdict is complete at 2340ms.
+
+**No two readings of the same thing are ever visible together.** Neither the two
+attempts at step three nor the two verdicts may overlap at any point in the
+cycle — two legible expressions stacked at half opacity read as corruption, not
+as a transition. Measured: 0.000 for both.
+
+**The break mark is never present while the sound verdict shows.** A mark beside
+a "sound" note is a contradiction. Measured: 0.000.
+
+**Stillness.** 64% of the cycle is static, longest unbroken gap 3.84s. Below
+roughly 2.5s the verdicts stop being readable, so this is near its floor.
+
+### Measuring it
+
+Drive the animations directly rather than watching. **Pause them first.** Setting
+`currentTime` on a running animation lets it advance during the
+`requestAnimationFrame` before the read, which puts every sample up to a frame
+late — enough to report a 60ms seam as broken when it is fine, and enough to
+have made every timing figure in this session's earlier commits slightly wrong.
+
+```js
+const a = document.getAnimations().filter(x => NAMES.includes(x.animationName))
+a.forEach(x => x.pause())
+// then set currentTime, await one rAF, and read computed styles
+```
+
+Two further traps, both hit here:
+
+- Read the mark's height from the y-scale in its transform matrix, not from
+  opacity. Its opacity is pinned at 1 for the whole cycle, so an opacity-based
+  check passes no matter what the mark does.
+- The read-pulse delays are absolute milliseconds while every other beat is a
+  percentage of the cycle. Any change to `--d-story` moves the mark and the
+  verdict relative to the read and must be re-timed with it.
+
 ## 4. Layout
 
 Two columns, unchanged from `10` §6: **work** (620–720px) and **margin**. The header carries
