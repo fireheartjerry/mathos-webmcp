@@ -32,6 +32,7 @@ import {
   proposalDecisionLiveMessage,
   stepExpressionAccessibleName,
 } from './scratchpadAccessibility'
+import 'katex/dist/katex.min.css'
 import './scratchpad.css'
 
 function newSessionId() {

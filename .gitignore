@@ -11,3 +11,7 @@ dist/
 playwright-report/
 test-results/
 .tmp-webmcp-*/
+.vinext/
+.openai/
+.vercel/
+.sites-scaffold-temp/

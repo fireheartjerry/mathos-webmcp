@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import 'katex/dist/katex.min.css'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Mathos — Math, taught together',
-  description: 'A shared math workspace where learners think, the web verifies, and agents help through WebMCP.',
+  title: 'Second Try — Mathos',
+  description:
+    "Second Try by Mathos checks a learner's calculus derivation line by line. A WebMCP agent may explain or propose, but the page engine owns the verdict and the learner owns every edit.",
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
