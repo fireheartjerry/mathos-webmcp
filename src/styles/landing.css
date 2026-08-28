@@ -34,6 +34,10 @@
   justify-content: space-between;
 }
 
+/* --fw-ui, not --fw-display. At 650 this small navigational label was set
+   heavier than the h1 at 600, so the wordmark outweighed the page's own
+   statement — and cost a third weight to do it. The home page now has two:
+   400 for prose, 600 for anything that leads. */
 .wordmark {
   position: relative;
   min-height: 44px;
@@ -41,7 +45,7 @@
   align-items: center;
   color: var(--bw-ink);
   font-size: var(--fs-lg);
-  font-weight: var(--fw-display);
+  font-weight: var(--fw-ui);
   letter-spacing: -0.025em;
 }
 
