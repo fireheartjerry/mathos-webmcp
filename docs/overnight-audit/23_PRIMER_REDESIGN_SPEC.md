@@ -305,6 +305,34 @@ after the claims it qualifies.
   `get_scratchpad` read-only, premature transfer returns `invalid_phase`, and
   the receipt reports one round with a sound unaided transfer.
 
+### Key on the event, never on the value
+
+Five separate elements in this build animated correctly the first time and went
+silent on a repeat, all from the same mistake: keying a React element on the
+content it displays. A value-key only re-fires when the value differs — which
+is exactly the case that needs no acknowledgement. The one that needs it is a
+learner or an agent asking again and getting the same answer.
+
+Each was found by repeating an action, never by performing it once:
+
+| Element | Repeated action that produced silence |
+| --- | --- |
+| the step expression | editing a line back to the same text |
+| the verdict detail | checking twice without editing |
+| the console output | running a read-only tool twice on unchanged state |
+| the verdict itself | checking twice — the page's primary action |
+| the policy notice | a caller hitting the same policy twice |
+
+The fix in every case is a counter incremented when the *event* occurs, not a
+key derived from what the event produced. Where the source of truth is an
+object the reducer replaces — `state.report`, the refusal in `feedback` — a
+ref-comparison in render turns identity into that counter.
+
+One deliberate exception. `.live-status` is `role="status" aria-live="polite"`
+and is left unanimated: remounting a live region to re-fire an animation risks
+suppressing or duplicating the announcement, and its job is to be heard, not
+seen. The verdict beside the line already moves.
+
 ### Two traps this page has already sprung
 
 - **Verdict colour was never the only encoding**, which is why removing it was

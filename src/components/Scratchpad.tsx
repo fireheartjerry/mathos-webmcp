@@ -407,6 +407,16 @@ export default function Scratchpad() {
     lastReport.current = report
     checkSeq.current += 1
   }
+  // The same for a refusal. A caller that hits the same policy twice is asking
+  // twice and must be answered twice; the notice is already on screen, so
+  // without this the second attempt lands in silence. setFeedback builds a new
+  // object each time, so identity is the event here too.
+  const refusalSeq = useRef(0)
+  const lastRefusal = useRef<typeof refusal>(null)
+  if (refusal !== lastRefusal.current) {
+    lastRefusal.current = refusal
+    refusalSeq.current += 1
+  }
   const firstBrokenId = report?.firstBrokenId ?? null
   const firstIssueKind = report ? getFirstIssue(report)?.kind : undefined
   const proposalSeed = proposalSeedForSession(state)
@@ -742,7 +752,7 @@ export default function Scratchpad() {
           )}
 
           {refusal && (
-            <div className="refusal" role="alert">
+            <div className="refusal" role="alert" key={`refusal-${refusalSeq.current}`}>
               <p className="refusal-head">Not yet.</p>
               <p className="refusal-source">
                 from the {refusal.source === 'agent' ? 'agent' : 'inspector'}
