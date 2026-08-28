@@ -1733,3 +1733,66 @@
     transition: none;
   }
 }
+
+/* ---- The remaining surfaces arrive --------------------------------------
+
+   Everything the page says back was still appearing instantly: the policy
+   notice, an agent's annotation, a proposed replacement, the round banner, and
+   the receipt. Each of these is the page responding to something the learner
+   or an agent just did, so each should arrive rather than be found already
+   there.
+
+   All of them are inserted into the DOM on a state change, so a mount
+   animation is the whole mechanism — no JavaScript, and nothing to keep in
+   sync with React. */
+
+/* The policy notice concludes something about the learner, so it settles the
+   way a verdict does. */
+.scratch-shell .refusal {
+  animation: verdict-land var(--d-signature) var(--ease-draw) both;
+}
+
+/* An annotation and a proposal are both text arriving beside a line, so they
+   rise the way a written line does. */
+.scratch-shell .step-note,
+.scratch-shell .proposal,
+.scratch-shell .round-banner {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+}
+
+/* The receipt is the thesis object, and it is a list of claims rather than one
+   statement — so the claims arrive in sequence, the way the derivation rows do
+   on the home page. nth-child is safe here: receipt-claims contains only li,
+   all of them claims. */
+.scratch-shell .receipt {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+}
+
+.scratch-shell .receipt-claims > li {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+}
+
+.scratch-shell .receipt-claims > li:nth-child(1) { animation-delay: calc(var(--stagger) * 1); }
+.scratch-shell .receipt-claims > li:nth-child(2) { animation-delay: calc(var(--stagger) * 2); }
+.scratch-shell .receipt-claims > li:nth-child(3) { animation-delay: calc(var(--stagger) * 3); }
+.scratch-shell .receipt-claims > li:nth-child(4) { animation-delay: calc(var(--stagger) * 4); }
+
+/* The limits line arrives last, after the claims it qualifies. */
+.scratch-shell .receipt-limits {
+  animation: step-in var(--d-rise) var(--ease-draw) both;
+  animation-delay: calc(var(--stagger) * 5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .refusal,
+  .scratch-shell .step-note,
+  .scratch-shell .proposal,
+  .scratch-shell .round-banner,
+  .scratch-shell .receipt,
+  .scratch-shell .receipt-claims > li,
+  .scratch-shell .receipt-limits {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
