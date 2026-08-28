@@ -45,6 +45,6 @@ All rendered checks in the `after/` directory were made in a new tab inside the 
 
 The current profile reports Chrome 151 but does not expose `document.modelContext`; the page therefore truthfully renders “WebMCP unavailable.” Connected-state re-verification remains gated on enabling Chrome's WebMCP testing flag and relaunching the same profile.
 
-## Pending cutover record
+## Cutover record
 
-ChatGPT Sites deployment and the subsequent exact Vercel project removal are intentionally not recorded as complete here. Vercel must remain until the Sites production URL passes `/`, `/learn`, asset, interaction, and WebMCP progressive-enhancement checks.
+ChatGPT Sites version 1 is live at `https://mathos-second-try.fireheartjerry.chatgpt.site`. The root route, `/learn`, fonts, responsive containment, and a real add/check interaction passed in a new tab inside the user's Chrome profile. The profile still does not expose `document.modelContext`, so connected WebMCP verification remains pending. The exact Vercel project is intentionally preserved until that last browser gate passes.

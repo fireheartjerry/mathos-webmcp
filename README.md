@@ -16,9 +16,8 @@ is rendered from that engine's return value — not from anything the model says
 
 Published by Mathos (Y Combinator W24 · Forbes 30 Under 30). MIT licensed.
 
-<!-- Before submission: paste the production URL on the line below, or delete the line. -->
-**Deployed build:** see the link in this repository's About section. To run it yourself,
-[jump to Run it locally](#run-it-locally) — it is three commands.
+**Deployed build:** [mathos-second-try.fireheartjerry.chatgpt.site](https://mathos-second-try.fireheartjerry.chatgpt.site).
+To run it yourself, [jump to Run it locally](#run-it-locally) — it is three commands.
 
 ---
 
