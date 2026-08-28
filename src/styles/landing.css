@@ -36,6 +36,37 @@
   letter-spacing: -0.025em;
 }
 
+/* Every interactive selector defines hover, focus-visible and active (05 #32).
+   The black-and-white rewrite dropped all three from this link, leaving a real
+   anchor with no feedback at all. With no colour to change, the states are
+   motion: the rule draws in from the left on hover, and the mark settles 1px
+   on press. */
+.wordmark::after {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 9px;
+  height: 2px;
+  background: var(--bw-ink);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--d-sweep) var(--ease-sweep);
+}
+
+.wordmark:hover::after,
+.wordmark:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.wordmark:focus-visible {
+  outline: 2px solid var(--bw-ink);
+  outline-offset: 6px;
+}
+
+.wordmark:active {
+  transform: translateY(1px);
+}
+
 .webmcp-mark {
   color: var(--bw-muted);
   font-family: var(--font-mono);
@@ -111,6 +142,16 @@
 .cta:focus-visible {
   outline: 2px solid var(--bw-ink);
   outline-offset: 6px;
+}
+
+/* Pressed. The arrow does not run ahead of the label on press the way it does
+   on hover — the whole control commits together. */
+.cta:active {
+  transform: translateY(1px);
+}
+
+.cta:active .cta-arrow {
+  transform: none;
 }
 
 .cta-arrow {
@@ -458,6 +499,19 @@
 
   .hero-word {
     animation: none;
+  }
+
+  /* The link states stay — they are feedback, not decoration. Only their
+     travel is removed. */
+  .wordmark::after,
+  .cta-label::after {
+    transition: none;
+  }
+
+  .wordmark:active,
+  .cta:active {
+    transform: none;
+    opacity: 0.6;
   }
 
   .reading-index {
