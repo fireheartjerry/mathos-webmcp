@@ -1824,3 +1824,50 @@
     transform: none;
   }
 }
+
+/* ---- The relation track draws ------------------------------------------
+
+   The home page draws its mark and later retracts it. Here the equivalent —
+   the vertical track linking one checked line to the next — simply appeared
+   the instant a verdict landed. It is the chain of reasoning, and it was the
+   only part of the verdict that did not arrive.
+
+   The two segments meet at the relation mark: ::before runs from the row above
+   down to it, ::after from it down to the row below. So they draw outward from
+   the mark, which is where the conclusion is — the connection forming from the
+   judgement rather than sweeping past it.
+
+   Each verdict state is its own selector, so switching from relation-idle
+   changes the animation-name and this fires. */
+
+@keyframes track-down {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.scratch-shell .step:has(.relation-sound)::before,
+.scratch-shell .step:has(.relation-broken)::before,
+.scratch-shell .step:has(.relation-uncertain)::before,
+.scratch-shell .step:has(.relation-unreadable)::before,
+.scratch-shell .step:has(.relation-downstream)::before {
+  /* Upward from the mark, so it grows back toward the line it follows from. */
+  transform-origin: bottom center;
+  animation: track-down var(--d-signature) var(--ease-draw) both;
+}
+
+.scratch-shell .step:has(.relation-sound)::after,
+.scratch-shell .step:has(.relation-broken)::after,
+.scratch-shell .step:has(.relation-uncertain)::after,
+.scratch-shell .step:has(.relation-unreadable)::after,
+.scratch-shell .step:has(.relation-downstream)::after {
+  transform-origin: top center;
+  animation: track-down var(--d-signature) var(--ease-draw) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scratch-shell .step::before,
+  .scratch-shell .step::after {
+    animation: none;
+    transform: none;
+  }
+}
