@@ -1674,3 +1674,62 @@
     transform: none;
   }
 }
+
+/* ---- Hover states the greyscale remap flattened --------------------------
+
+   Collapsing the palette turned two interactive selectors into no-ops. Both
+   signalled hover by moving `color` to --blue, and --blue now resolves to the
+   same ink they already were: measured delta 0 on colour and 0 on background,
+   across the six tool rows and the activity disclosure. They are real buttons
+   on the surface the WebMCP criterion is judged on, and they had no pointer or
+   keyboard feedback at all.
+
+   05 #32 requires every interactive selector to define hover, focus-visible
+   and active. With no colour left to change, the feedback is a ground tint and
+   a drawn underline — the same idiom as the home page. */
+
+.scratch-shell .console-tool-head,
+.scratch-shell .session-details > summary {
+  transition: background-color var(--d-instant) var(--ease-out);
+}
+
+.scratch-shell .console-tool-head:hover,
+.scratch-shell .console-tool-head:focus-visible,
+.scratch-shell .session-details > summary:hover,
+.scratch-shell .session-details > summary:focus-visible {
+  background: var(--surface-subtle);
+}
+
+.scratch-shell .console-tool-head:active,
+.scratch-shell .session-details > summary:active {
+  background: var(--surface-hover);
+}
+
+/* The tool name draws its underline rather than switching one on. */
+.scratch-shell .console-tool-name {
+  position: relative;
+}
+
+.scratch-shell .console-tool-name::after {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--d-sweep) var(--ease-sweep);
+}
+
+.scratch-shell .console-tool-head:hover .console-tool-name::after,
+.scratch-shell .console-tool-head:focus-visible .console-tool-name::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The states remain; only their travel goes. */
+  .scratch-shell .console-tool-name::after {
+    transition: none;
+  }
+}
