@@ -1,11 +1,20 @@
-/* A homepage, not a pitch deck.
-   The demonstration object is the page's reading of a learner's work — the product
-   itself, not an illustration of it. No shadows: depth is carried by hairlines. */
+/* The home page is black and white. Nothing else.
+ *
+ * No hue, no panel, no card, no fill, no shadow, no radius. Text on paper, and
+ * hairlines only where one thing genuinely ends and the next begins.
+ *
+ * The state a colour used to carry — this step broke, this step is sound — is
+ * now carried by whether a mark is present and by the words beside it. That is
+ * the more honest encoding anyway: it survives greyscale, colour blindness and
+ * print, none of which rust-versus-green does.
+ *
+ * Motion keeps the entire budget. 23_PRIMER_REDESIGN_SPEC.md section 3.2.
+ */
 
 .site-header,
 .landing-shell,
 .site-footer {
-  width: var(--container);
+  width: min(1120px, calc(100vw - 48px));
   margin-inline: auto;
 }
 
@@ -14,24 +23,21 @@
   min-height: var(--nav-h);
   align-items: center;
   justify-content: space-between;
-  border-bottom: var(--bw-hairline) solid var(--line);
 }
 
 .wordmark {
+  position: relative;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  color: var(--ink);
+  color: var(--bw-ink);
   font-size: var(--fs-lg);
   font-weight: var(--fw-display);
   letter-spacing: -0.025em;
 }
 
-.wordmark:hover { color: var(--blue); }
-.wordmark:active { color: var(--blue-active); }
-
 .webmcp-mark {
-  color: var(--ink-muted);
+  color: var(--bw-muted);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
 }
@@ -44,7 +50,7 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(440px, 1.15fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
   align-items: center;
   gap: clamp(48px, 8vw, 128px);
   padding-block: clamp(72px, 10vw, 144px);
@@ -52,6 +58,7 @@
 
 .hero-copy h1 {
   max-width: 13ch;
+  color: var(--bw-ink);
   font-size: clamp(44px, 5.2vw, 72px);
   font-weight: var(--fw-display);
   letter-spacing: -0.045em;
@@ -62,43 +69,92 @@
 .hero-copy > p {
   max-width: 34ch;
   margin-top: var(--s-6);
-  color: var(--ink-soft);
+  color: var(--bw-soft);
   font-size: clamp(18px, 1.7vw, 22px);
   line-height: var(--lh-prose);
 }
 
-.hero-copy .button { margin-top: var(--s-7); }
+/* The only control on the page. A link, not a chrome-heavy button. */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  margin-top: var(--s-7);
+  color: var(--bw-ink);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-ui);
+}
 
-/* ---- The reading ------------------------------------------------------- */
+.cta-label {
+  position: relative;
+}
+
+/* The rule under the label retracts to the right on hover rather than a colour
+   changing. */
+.cta-label::after {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -4px;
+  height: 2px;
+  background: var(--bw-ink);
+  content: '';
+  transform-origin: left center;
+  transition: transform var(--d-sweep) var(--ease-sweep);
+}
+
+.cta:hover .cta-label::after {
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--bw-ink);
+  outline-offset: 6px;
+}
+
+.cta-arrow {
+  transition: transform var(--d-signature) var(--ease-out);
+}
+
+.cta:hover .cta-arrow {
+  transform: translateX(4px);
+}
+
+/* ---- The reading -------------------------------------------------------
+   No panel. The derivation sits on the page as text. */
 
 .reading {
   margin: 0;
-  border: var(--bw-hairline) solid var(--line-strong);
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  overflow: hidden;
 }
 
 .reading-steps {
+  position: relative;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .reading-step {
+  position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr);
   align-items: baseline;
   gap: var(--s-5);
-  padding: var(--s-6);
+  padding: var(--s-6) 0 var(--s-6) var(--s-5);
+  transition: transform var(--d-signature) var(--ease-out);
 }
 
 .reading-step + .reading-step {
-  border-top: var(--bw-hairline) solid var(--line);
+  border-top: 1px solid var(--bw-rule);
+}
+
+.reading-step:hover {
+  transform: translateX(4px);
 }
 
 .reading-index {
-  color: var(--ink-muted);
+  color: var(--bw-muted);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
@@ -106,13 +162,13 @@
 
 .reading-tex {
   min-width: 0;
-  /* overflow-y must be stated. With only overflow-x set, it computes to `auto`
-     and KaTeX's fractions — taller than the line box — raise a vertical
-     scrollbar inside every row. */
+  /* overflow-y must be stated. With only overflow-x set it computes to `auto`,
+     and KaTeX fractions are taller than the line box, so every row would grow
+     a vertical scrollbar. */
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: var(--s-2);
-  color: var(--ink);
+  color: var(--bw-ink);
   font-size: clamp(22px, 2.3vw, 32px);
   line-height: 1.35;
   white-space: nowrap;
@@ -120,31 +176,22 @@
 
 .reading-tex .katex { font-size: 1em; }
 
-/* The step the page stopped agreeing with. Marked by rule and index weight,
-   not by a colour fill — the mathematics stays black. */
-.reading-step.is-broken {
-  border-inline-start: var(--bw-track) solid var(--rust);
-  padding-inline-start: calc(var(--s-6) - var(--bw-track));
-}
-
-/* The rule beside the row carries the state through the whole cycle, so the
-   index does not need a colour role of its own — and it must stay legible in
-   both attempts. */
-.reading-step.is-broken .reading-index {
-  font-weight: var(--fw-ui);
-}
-
 .reading-note {
-  padding: var(--s-5) var(--s-6);
-  border-top: var(--bw-hairline) solid var(--line);
-  background: var(--surface-subtle);
-  color: var(--ink-soft);
+  display: grid;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--bw-rule);
+  color: var(--bw-soft);
   font-size: var(--fs-sm);
   line-height: var(--lh-prose);
 }
 
+.reading-note > .try-first,
+.reading-note > .try-second {
+  grid-area: 1 / 1;
+}
+
 .reading-point {
-  color: var(--rust-deep);
+  color: var(--bw-ink);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -155,84 +202,33 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: var(--bw-hairline) solid var(--line);
-  color: var(--ink-muted);
+  border-top: 1px solid var(--bw-rule);
+  color: var(--bw-muted);
   font-size: var(--fs-meta);
 }
 
-@media (max-width: 900px) {
-  .landing-shell { min-height: auto; }
-
-  .hero {
-    grid-template-columns: 1fr;
-    gap: var(--s-9);
-  }
-
-  .hero-copy > p { max-width: 38ch; }
-}
-
-@media (max-width: 560px) {
-  .hero { padding-block: var(--s-9); }
-
-  .hero-copy h1 { font-size: clamp(44px, 13vw, 72px); }
-
-  .reading-step {
-    grid-template-columns: 28px minmax(0, 1fr);
-    gap: var(--s-3);
-    padding: var(--s-4);
-  }
-
-  .reading-step.is-broken {
-    padding-inline-start: calc(var(--s-4) - var(--bw-track));
-  }
-
-  .reading-tex { font-size: 21px; }
-
-  .reading-note { padding: var(--s-4); }
-
-  .site-footer {
-    min-height: 88px;
-    align-items: flex-start;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--s-1);
-  }
-}
-
 /* ---- Motion ------------------------------------------------------------
-   The static page is held quiet so this can be lavish. The hero reads as the
-   page working through the derivation: each line rises in turn, the rule that
-   marks the broken step draws itself, and the verdict arrives last — the same
-   order the engine reads them in. */
+   The static page is stripped to nothing so this can be lavish. */
 
 @keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
 }
 
-@keyframes draw-x {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+@keyframes draw-y {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
 
 .hero-copy h1,
 .hero-copy > p,
-.hero-copy .button {
+.cta {
   animation: rise var(--d-rise) var(--ease-draw) both;
 }
 
 .hero-copy > p { animation-delay: var(--stagger); }
-.hero-copy .button { animation-delay: calc(var(--stagger) * 2); }
+.cta { animation-delay: calc(var(--stagger) * 2); }
 
-/* Each row waits for the one above it, so the eye reads down the derivation
-   rather than seeing three lines appear at once. --i is set per row in the
-   markup; the panel itself is offset behind the headline. */
 .reading {
   animation: rise var(--d-rise) var(--ease-draw) both;
   animation-delay: calc(var(--stagger) * 1.5);
@@ -243,94 +239,46 @@
   animation-delay: calc(var(--stagger) * (var(--i, 0) + 4));
 }
 
-/* The rule marking the step that stopped being equivalent draws itself in
-   rather than simply being there. It becomes an absolutely-positioned bar, so
-   the row no longer needs the padding that compensated for a real border. */
-.reading-step.is-broken {
-  position: relative;
-  padding-inline-start: var(--s-6);
-  border-inline-start: 0;
-}
+/* ---- The reads ---------------------------------------------------------
+   Both are black. The first finds the break and slows over it; the second
+   confirms the rewrite and passes clean. The difference is pace, not colour —
+   which is the only difference black and white can express, and it turns out
+   to be the more expressive one. */
 
-.reading-step.is-broken::before {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: var(--bw-track);
-  background: var(--rust);
-  content: '';
-  transform: scaleY(0);
-  transform-origin: top center;
-  animation: draw-x var(--d-draw) var(--ease-draw) both;
-  animation-name: draw-y;
-  animation-delay: calc(var(--stagger) * 16);
-}
+/* The three rows occupy roughly 0-34%, 34-64% and 64-100% of the column. This
+   read crosses the first two evenly, then covers only 10% of the column
+   between 4.6% and 5.8% of the cycle — about a third of the speed — before
+   completing. A reader who finds an error does not glide past it.
 
-@keyframes draw-y {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
-}
-
-.reading-note {
-  animation: rise var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 19);
-}
-
-/* The note's top hairline draws across as the verdict lands. */
-.reading-note::before {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: var(--bw-hairline);
-  background: var(--line);
-  content: '';
-  transform-origin: left center;
-  animation: draw-x var(--d-draw) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 19);
-}
-
-.reading-note {
-  position: relative;
-  border-top: 0;
-}
-
-/* ---- The read ----------------------------------------------------------
-   The panel used to present the finished verdict, which states the claim
-   without showing it. A hairline now travels down the derivation before the
-   verdict lands: the page reading the work, which is the whole thesis. It is
-   decorative and aria-hidden — the marked step and the note carry the meaning
-   for anyone who never sees it move. */
-
-/* The sweep occupies the first ~12% of a long cycle and the rest is rest. The
-   page keeps reading rather than reading once and going inert — a judge who
-   looks away for ten seconds still sees the thesis happen. */
-/* The first read: finds the break. Sweeps in the first ~6% of the cycle, then
-   parks out of sight for the rest. */
+   The pacing lives entirely in these keyframe positions, so the element is
+   timed `linear`; an eased timing function would fight them. */
 @keyframes scan-find {
   0%     { transform: translateY(0); opacity: 0; }
   0.8%   { opacity: 1; }
-  5.3%   { opacity: 1; }
-  6.1%   { transform: translateY(var(--scan-travel)); opacity: 0; }
-  100%   { transform: translateY(var(--scan-travel)); opacity: 0; }
+  2.4%   { transform: translateY(34%); }
+  3.9%   { transform: translateY(64%); }
+  4.6%   { transform: translateY(72%); }
+  5.8%   { transform: translateY(82%); }
+  6.8%   { transform: translateY(100%); opacity: 1; }
+  7.2%   { transform: translateY(100%); opacity: 0; }
+  100%   { transform: translateY(100%); opacity: 0; }
 }
 
-/* The second read: confirms the rewrite. Held at the top and invisible until
-   40% of the cycle, so it sweeps just as the corrected step lands and the
-   verdict clears at 44-50%. */
+/* Held at the top and invisible until 40% of the cycle, so it sweeps just as
+   the corrected step lands and the verdict clears at 44-50%. It does not
+   hesitate — there is nothing to stop for, and the contrast is the point. */
 @keyframes scan-confirm {
   0%, 39.9% { transform: translateY(0); opacity: 0; }
   40.8%     { opacity: 1; }
   45.3%     { opacity: 1; }
-  46.1%     { transform: translateY(var(--scan-travel)); opacity: 0; }
-  100%      { transform: translateY(var(--scan-travel)); opacity: 0; }
+  46.1%     { transform: translateY(100%); opacity: 0; }
+  100%      { transform: translateY(100%); opacity: 0; }
 }
 
-/* The element is the full height of the derivation, not the height of the line
-   it draws. `translateY(100%)` resolves against the element's OWN height, so a
-   2px bar would have travelled 2px. The bar itself is the ::after at its top
-   edge; the container overflows, and .reading already clips. */
+/* Full height of the derivation, not of the line it draws: translateY(100%)
+   resolves against the element's own height, so a 2px bar would have travelled
+   2px. The visible line is the ::after at its top edge. */
 .reading-scan {
-  --scan-travel: 100%;
   position: absolute;
   list-style: none;
   z-index: 2;
@@ -340,110 +288,33 @@
   opacity: 0;
   pointer-events: none;
   animation-duration: var(--d-story);
-  animation-timing-function: var(--ease-sweep);
+  animation-timing-function: linear;
   animation-iteration-count: infinite;
   animation-fill-mode: both;
   animation-delay: calc(var(--stagger) * 7.5);
 }
-
-.scan-find { animation-name: scan-find; }
-.scan-confirm { animation-name: scan-confirm; }
-
 
 .reading-scan::after {
   position: absolute;
   inset-inline: 0;
   top: 0;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--rust) 18%,
-    var(--rust) 82%,
-    transparent
-  );
+  background: var(--bw-ink);
   content: '';
 }
 
-/* Must follow .reading-scan::after: same specificity, so source order decides.
-   The reads are coloured by what they conclude — the first is the colour of
-   the break it is about to mark, the second the colour of the verdict it
-   clears. */
-.scan-confirm::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--green) 18%,
-    var(--green) 82%,
-    transparent
-  );
-}
-
-.reading-steps {
-  position: relative;
-}
-
-/* A row lifts under the pointer — the derivation is a live object, not a
-   picture of one. */
-.reading-step {
-  transition:
-    background-color var(--d-signature) var(--ease-out),
-    transform var(--d-signature) var(--ease-out);
-}
-
-.reading-step:hover {
-  background: var(--surface-subtle);
-  transform: translateX(3px);
-}
-
-/* Sarsa: the arrow nudges rather than the whole control moving. */
-.hero-copy .button span[aria-hidden] {
-  transition: transform var(--d-signature) var(--ease-out);
-}
-
-.hero-copy .button:hover span[aria-hidden] {
-  transform: translateX(4px);
-}
-
-/* Nav and footer links draw their underline on instead of switching colour. */
-.wordmark,
-.webmcp-mark {
-  position: relative;
-}
-
-.wordmark::after {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 10px;
-  height: 1px;
-  background: currentColor;
-  content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--d-sweep) var(--ease-sweep);
-}
-
-.wordmark:hover::after {
-  transform: scaleX(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* The scan is pure decoration and has no still frame worth showing. */
-  .reading-scan { display: none; }
-
-  .reading-step:hover { transform: none; }
-}
+.scan-find { animation-name: scan-find; }
+.scan-confirm { animation-name: scan-confirm; }
 
 /* ---- Second try --------------------------------------------------------
-   The hero plays the product's own loop on one shared 18s cycle: the page
-   reads the working, marks the third step, the learner rewrites it, and the
-   verdict clears. Everything crossfades on opacity so the audit stays clean —
-   the two rules are stacked bars rather than one bar changing colour. */
+   One shared 18s cycle: the page reads the working, marks the third step, the
+   learner rewrites it, and the verdict clears.
 
-/* The two attempts never overlap. A symmetric crossfade puts both at 0.5 for
-   an instant, and two legible expressions on top of each other read as
-   corruption, not as a transition. The outgoing text is fully gone before the
-   incoming one starts, so the swap is a cut through nothing. */
+   The two attempts never overlap. A symmetric crossfade puts both at 0.5 for
+   an instant, and two legible expressions stacked on each other read as
+   corruption rather than as a transition. The outgoing text is fully gone
+   before the incoming one starts. */
+
 @keyframes try-first {
   0%, 44%    { opacity: 1; }
   47%, 92%   { opacity: 0; }
@@ -475,41 +346,66 @@
   animation: try-second var(--d-story) var(--ease-out) infinite both;
 }
 
-/* The note's two readings stack so the panel never changes height. */
-.reading-note {
-  display: grid;
-}
-
-.reading-note > .try-first,
-.reading-note > .try-second {
-  grid-area: 1 / 1;
-}
-
-/* The verified rule. Stacked over the rust one and crossfaded, so no colour
-   is animated. */
-.reading-step.is-broken::after {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: var(--bw-track);
-  background: var(--green);
-  content: '';
-  animation: try-second var(--d-story) var(--ease-out) infinite both;
-}
-
+/* The break mark: a black bar in the margin of the line. Present during the
+   first attempt, gone once the rewrite is confirmed — its absence is the
+   verdict, which is what "sound" looks like without a colour to say it. */
 .reading-step.is-broken::before {
+  position: absolute;
+  inset-block: var(--s-6);
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--bw-ink);
+  content: '';
+  transform-origin: top center;
   animation:
     draw-y var(--d-draw) var(--ease-draw) both,
     try-first var(--d-story) var(--ease-out) infinite both;
   animation-delay: calc(var(--stagger) * 16), 0ms;
 }
 
+@media (max-width: 900px) {
+  .landing-shell { min-height: auto; }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--s-9);
+  }
+
+  .hero-copy > p { max-width: 38ch; }
+}
+
+@media (max-width: 560px) {
+  .hero { padding-block: var(--s-9); }
+
+  .hero-copy h1 { font-size: clamp(44px, 13vw, 72px); }
+
+  .reading-step {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: var(--s-3);
+    padding: var(--s-4) 0 var(--s-4) var(--s-4);
+  }
+
+  .reading-tex { font-size: 21px; }
+
+  .site-footer {
+    min-height: 88px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--s-1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* No story, no swap. The first attempt and its verdict are the still frame,
-     which is what assistive tech reads anyway. */
+  /* The reads are pure decoration and have no still frame worth showing. */
+  .reading-scan { display: none; }
+
+  .reading-step:hover { transform: none; }
+
+  /* The first attempt and its verdict are the still frame, which is what
+     assistive tech reads anyway. */
   .reading-swap > .try-second,
-  .reading-note > .try-second,
-  .reading-step.is-broken::after {
+  .reading-note > .try-second {
     display: none;
   }
 
@@ -518,5 +414,6 @@
   .reading-step.is-broken::before {
     animation: none;
     opacity: 1;
+    transform: none;
   }
 }

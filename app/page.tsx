@@ -18,8 +18,9 @@ export default function HomePage() {
               You write the mathematics. The page reads it, keeps what it learns
               about you, and hands that to whichever agent you bring.
             </p>
-            <a className="button button-lg" href="/learn">
-              Open the scratchpad <span aria-hidden="true">→</span>
+            <a className="cta" href="/learn">
+              <span className="cta-label">Open the scratchpad</span>
+              <span className="cta-arrow" aria-hidden="true">→</span>
             </a>
           </div>
 
