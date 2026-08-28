@@ -287,7 +287,8 @@ validation branch.
   not intrinsically need to happen in the page — a server could do it. It earns its place
   because the generated problem must land in *this* document, in the same revision stream the
   learner is editing, and because it is what closes the loop from "the agent helped" to "the
-  learner did it alone." We would rather say that than pretend it is as page-bound as
+  learner completed a fresh round without annotation or proposal; reading and checking remained
+  available." We would rather say that than pretend it is as page-bound as
   `check_work`.
 - **The supported mathematics is bounded.** v1 handles derivatives of polynomial expressions
   evaluated at a point, and algebraic rewriting chains. That is the domain our equivalence

@@ -103,11 +103,15 @@ function TransferSignal({ state }: { state: SessionState }) {
               ·
             </span>
             In the first round an agent or the local inspector {assisted ? 'did' : 'did not'}{' '}
-            intervene. Agent: {practice.annotations.agent} annotation(s),{' '}
-            {practice.proposalsOffered.agent} proposal(s) offered,{' '}
+            intervene. Agent: {practice.annotations.agent}{' '}
+            {practice.annotations.agent === 1 ? 'annotation' : 'annotations'},{' '}
+            {practice.proposalsOffered.agent}{' '}
+            {practice.proposalsOffered.agent === 1 ? 'proposal' : 'proposals'} offered,{' '}
             {practice.proposalsAccepted.agent} accepted. Local inspector:{' '}
-            {practice.annotations.localInspector} annotation(s),{' '}
-            {practice.proposalsOffered.localInspector} proposal(s) offered,{' '}
+            {practice.annotations.localInspector}{' '}
+            {practice.annotations.localInspector === 1 ? 'annotation' : 'annotations'},{' '}
+            {practice.proposalsOffered.localInspector}{' '}
+            {practice.proposalsOffered.localInspector === 1 ? 'proposal' : 'proposals'} offered,{' '}
             {practice.proposalsAccepted.localInspector} accepted.
             {unattributed > 0 && (
               <> Earlier saved activity includes unattributed intervention counts.</>
