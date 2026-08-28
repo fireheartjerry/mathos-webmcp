@@ -299,11 +299,15 @@
    decorative and aria-hidden — the marked step and the note carry the meaning
    for anyone who never sees it move. */
 
+/* The sweep occupies the first ~12% of a long cycle and the rest is rest. The
+   page keeps reading rather than reading once and going inert — a judge who
+   looks away for ten seconds still sees the thesis happen. */
 @keyframes scan {
-  from { transform: translateY(0); opacity: 0; }
-  12%  { opacity: 1; }
-  88%  { opacity: 1; }
-  to   { transform: translateY(var(--scan-travel)); opacity: 0; }
+  0%    { transform: translateY(0); opacity: 0; }
+  1.5%  { opacity: 1; }
+  10.5% { opacity: 1; }
+  12%   { transform: translateY(var(--scan-travel)); opacity: 0; }
+  100%  { transform: translateY(var(--scan-travel)); opacity: 0; }
 }
 
 /* The element is the full height of the derivation, not the height of the line
@@ -320,7 +324,7 @@
   height: 100%;
   opacity: 0;
   pointer-events: none;
-  animation: scan var(--d-scan) var(--ease-sweep) both;
+  animation: scan var(--d-scan-cycle) var(--ease-sweep) infinite both;
   animation-delay: calc(var(--stagger) * 7.5);
 }
 
