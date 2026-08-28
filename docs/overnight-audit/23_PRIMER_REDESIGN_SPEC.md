@@ -275,6 +275,48 @@ Two further traps, both hit here:
   percentage of the cycle. Any change to `--d-story` moves the mark and the
   verdict relative to the read and must be re-timed with it.
 
+## 3.4 The scratchpad, and what its motion may not become
+
+The scratchpad shares the home page's palette, type scale and motion
+vocabulary, but not its behaviour. That page loops a 12s story because it is
+arguing something to a visitor. This one is an instrument someone is using, so
+**every animation here is tied to an action the learner or an agent took.
+Nothing loops and nothing plays on a timer.** Verified: zero infinite
+animations on `/learn`, against exactly one on the home page.
+
+Two arrivals carry the vocabulary. A line rises when it is written. A verdict —
+and the policy notice, which is a verdict about the learner rather than the
+mathematics — settles downward, because a conclusion should not read as a
+notification. Annotations, proposals and the round banner rise like written
+lines. The receipt's claims arrive in sequence and its limits line lands last,
+after the claims it qualifies.
+
+### Measured 2026-08-28, after the black-and-white redesign
+
+- Non-greyscale values: **0**. Type sizes **6**, weights **2**, matching the
+  home page's 4 and 2.
+- Only `transform` and `opacity` animate. No layout-property transitions.
+- Reduced-motion: zero animations running, every present surface at opacity 1
+  with no residual transform.
+- 320px: no horizontal scroll, nothing past the right edge, no clipped
+  mathematics, no interactive target under 44px.
+- **Live WebMCP acceptance passes**: `pnpm test:webmcp` exit 0, header reports
+  "6 page tools available", all six registered with `get_receipt` and
+  `get_scratchpad` read-only, premature transfer returns `invalid_phase`, and
+  the receipt reports one round with a sound unaided transfer.
+
+### Two traps this page has already sprung
+
+- **Verdict colour was never the only encoding**, which is why removing it was
+  safe: every state already carried a glyph (✓ × ? ! –) and an explicit word.
+  What replaced hue is weight — broken is the only filled mark, because it is
+  the only one asking for anything.
+- **Collapsing the palette silently killed two hover states.** Both moved
+  `color` to `--blue`, and `--blue` now resolves to the ink they already were:
+  measured delta 0 on the six tool rows and the activity disclosure. Any future
+  token remap must re-measure hover deltas, not assume the rules still do
+  something.
+
 ## 4. Layout
 
 Two columns, unchanged from `10` §6: **work** (620–720px) and **margin**. The header carries
