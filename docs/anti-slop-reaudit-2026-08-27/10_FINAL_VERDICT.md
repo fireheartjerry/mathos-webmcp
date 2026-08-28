@@ -4,7 +4,7 @@ Date: 2026-08-27
 
 ## Current verdict
 
-**Local product and code: approved. Sites production and Vercel cutover: verified. Final audit: pending connected WebMCP.**
+**Product release approved. Sites production, Vercel cutover, and real-profile WebMCP are verified.**
 
 The implementation meets the canonical design contract: the learner owns the derivation, the page owns mathematical verdicts, help stays line-local, proposals require explicit learner consent, unaided mode locks coaching for every caller, and the receipt makes bounded claims only.
 
@@ -20,18 +20,15 @@ The implementation meets the canonical design contract: the learner owns the der
 - Production `/`, `/learn`, fonts, containment, and an add/check interaction verified in the user's Chrome profile
 - Exact Vercel project `hackathon-build` deleted and confirmed absent; adjacent projects remained intact
 - Local `.vercel/` linkage and `vercel.json` removed after remote confirmation
-
-## Required before unconditional release
-
-1. Enable `chrome://flags/#enable-webmcp-testing`, relaunch the same Chrome profile, and execute all six page tools through connected `document.modelContext`.
-
-Until that gate passes, this document is intentionally a conditional verdict—not launch theater.
+- Chrome 151.0.7922.174 in the user's installed `Jerry` profile visibly registered all six production tools and executed them through the main-page-world `document.modelContext`
+- Real connected journey passed: read, check, annotation, premature-proposal refusal, two genuine learner attempts, learner-owned proposal acceptance, premature-transfer refusal, fresh unaided problem, coaching locks, completed transfer, stale revision, invalid input, and bounded receipt
+- Durable connected evidence: `after/webmcp-profile-run.json`, `after/10-webmcp-connected-1692x834.png`, and `after/11-webmcp-six-tools-1692x834.png`
 
 ## Remaining-risk accounting
 
-### High-confidence remaining problems — 1
+### High-confidence remaining problems — 0
 
-1. **Connected WebMCP execution is not yet proven in the final Chrome profile.** The production page truthfully reports `WebMCP unavailable` because `document.modelContext` is absent. Unit tests, the six-tool harness, local-inspector execution, and source review are supporting evidence, but they do not replace the required official browser path.
+No high-confidence visual, interaction, mathematical, accessibility, deployment, or WebMCP defect remains known. This conclusion is based on the complete screenshot matrix, five independent adversarial roles, 226 automated tests, typecheck, production build, production Sites verification, and the final connected Chrome-profile journey—not on the mechanical detector alone.
 
 ### Medium-confidence style risks — 2
 
@@ -48,6 +45,7 @@ Until that gate passes, this document is intentionally a conditional verdict—n
 
 - The 125/150/200/400 reflow rows are CSS-width equivalents, not literal Chrome zoom telemetry.
 - ChatGPT Desktop Site Tools were unavailable on this host and are not claimed as tested.
+- The final Chrome run proves direct production WebMCP registration and execution. Autonomous prompt-to-tool selection remains represented by the schema-selection evaluation rather than a ChatGPT Desktop runtime recording.
 - Community perception evidence is useful but anecdotal; it cannot certify design quality.
 - Independent reviewers reduce self-confirmation risk but do not make distinctiveness or taste objective.
 

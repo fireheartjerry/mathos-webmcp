@@ -3,7 +3,7 @@
 Date: 2026-08-27  
 Branch: `hackathon-build`
 
-## Outcome so far
+## Outcome
 
 The approved Proof Margin direction is implemented on `/` and `/learn`. The redesign treats the derivation as the product: learner-authored lines, page-owned mathematical verdicts, line-local evidence, visible agent limits, explicit proposal consent, and bounded transfer claims.
 
@@ -43,8 +43,8 @@ The approved Proof Margin direction is implemented on `/` and `/learn`. The rede
 
 All rendered checks in the `after/` directory were made in a new tab inside the user's installed Chrome profile. No headless browser result is counted as final visual proof. Tested behavior includes the full guided-practice-to-transfer journey, proposal refusal and consent, line-local annotation, persistence, multi-tab conflict, keyboard focus, reduced motion, loading recovery, long input, and 320 px reflow.
 
-The current profile reports Chrome 151 but does not expose `document.modelContext`; the page therefore truthfully renders “WebMCP unavailable.” Connected-state re-verification remains gated on enabling Chrome's WebMCP testing flag and relaunching the same profile.
+Chrome 151.0.7922.174 in the user's installed `Jerry` profile was verified with **WebMCP for testing** enabled. The production page visibly reported `6 page tools available`. Chrome's ordinary automation evaluation runs in an isolated world and initially produced a false negative; a main-page-world probe then confirmed `typeof document.modelContext === "object"`, enumerated all six tools, and executed the complete journey through `document.modelContext.executeTool(...)`. The durable transcript is `after/webmcp-profile-run.json`; the connected and completed-transfer captures are `after/10-webmcp-connected-1692x834.png` and `after/11-webmcp-six-tools-1692x834.png`.
 
 ## Cutover record
 
-ChatGPT Sites version 2 is live at `https://mathos-second-try.fireheartjerry.chatgpt.site`. The root route, `/learn`, fonts, responsive containment, and a real add/check interaction passed in a new tab inside the user's Chrome profile. The exact Vercel project `hackathon-build` (`prj_zNVcaOmUHFSMyNKEzguAxGRSMlpg`) was then deleted; a post-delete listing confirmed adjacent Mathos and unrelated projects remained. The remote deletion is permanent, although the application source and production replacement remain recoverable from Git and ChatGPT Sites. Local `.vercel/` metadata and `vercel.json` were removed. The profile still does not expose `document.modelContext`, so connected WebMCP verification remains pending.
+ChatGPT Sites version 3 is live at `https://mathos-second-try.fireheartjerry.chatgpt.site`. The root route, `/learn`, fonts, responsive containment, add/check interaction, six-tool registration, complete guided-to-unaided WebMCP journey, and bounded receipt passed in new tabs inside the user's Chrome profile. The exact Vercel project `hackathon-build` (`prj_zNVcaOmUHFSMyNKEzguAxGRSMlpg`) was then deleted; a post-delete listing confirmed adjacent Mathos and unrelated projects remained. The remote deletion is permanent, although the application source and production replacement remain recoverable from Git and ChatGPT Sites. Local `.vercel/` metadata and `vercel.json` were removed.

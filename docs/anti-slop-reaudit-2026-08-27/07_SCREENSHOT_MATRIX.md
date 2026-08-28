@@ -3,7 +3,7 @@
 Date: 2026-08-27  
 Runtime: installed Chrome 151, opened as a new tab in the user's real Chrome profile  
 Local origin: `http://127.0.0.1:4322`
-Production origin for rows 40–41: `https://mathos-second-try.fireheartjerry.chatgpt.site`
+Production origin for rows 40–43: `https://mathos-second-try.fireheartjerry.chatgpt.site`
 
 The raster width can be 15–16 pixels narrower than the emulated CSS viewport because Chrome excludes its vertical scrollbar from the captured document width. Overflow judgments compare `scrollWidth` with `innerWidth`; no page-level horizontal overflow was observed. “Zoom equivalent” means the same CSS-pixel reflow pressure at a narrower viewport, not a claim that Chrome's zoom UI was changed.
 
@@ -47,8 +47,10 @@ The raster width can be 15–16 pixels narrower than the emulated CSS viewport b
 | `39-landing-laptop-1024x768.png` | 1024 × 768 first viewport, `/` | Laptop landing headline and complete transaction | Clean non-stitched capture; no horizontal page overflow | Pass after repair |
 | `40-sites-production-learn-profile-chrome.png` | 1707 × 898 installed Chrome profile, Sites production `/learn` | Checked learner line, page-owned verdict, composer, and truthful WebMCP-unavailable state | Production fonts loaded; no page overflow; add/check interaction previously exercised in the same tab | Pass |
 | `41-sites-production-landing-profile-chrome.png` | 1692 × 890 installed Chrome profile, Sites production `/` | Final landing headline and complete learner/page/agent transaction | Authenticated owner-only deployment; no page overflow | Pass |
+| `10-webmcp-connected-1692x834.png` | 1692 × 834 installed `Jerry` Chrome profile, Sites production `/learn`, WebMCP testing enabled | Visible `6 page tools available`, completed fresh problem, three page-owned verdicts | Main-page-world `document.modelContext` confirmed; all six tools enumerated | Pass |
+| `11-webmcp-six-tools-1692x834.png` | 1692 × 834, same real-profile WebMCP run, receipt in view | Immediate-transfer signal with no unaided annotation/proposal and bounded claim language | Full six-tool journey completed; session details still reports six tools | Pass |
 
-## Coverage gaps
+## Coverage notes
 
-- Connected WebMCP: blocked in this Chrome profile because `document.modelContext` is unavailable until the WebMCP testing flag is enabled and Chrome is relaunched. The unavailable state is verified and truthful; connected proof is not fabricated.
+- Connected WebMCP is now verified in the same installed Chrome profile through the page's main JavaScript world. `after/webmcp-profile-run.json` records the six tools, successful journey, policy refusals, stale-revision recovery, invalid-input recovery, unaided locks, and bounded receipt.
 - Browser zoom UI: the 125/150/200/400 rows are CSS-width equivalents. They prove responsive reflow but are not represented as literal browser-zoom telemetry.

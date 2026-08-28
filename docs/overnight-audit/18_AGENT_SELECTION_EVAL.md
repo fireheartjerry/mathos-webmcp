@@ -35,4 +35,7 @@ ChatGPT Desktop runtime test**
 ## Runtime limit
 
 Actual ChatGPT Desktop tool choice remains **NOT TESTED** because an eligible client/account was
-not available. The exact pre-submission record is in `17_CHATGPT_DESKTOP_TEST_RECORD.md`.
+not available. Direct Chrome runtime behavior is separately proven: the installed-profile
+production run executed all six tools and every relevant recovery/policy branch. That proves the
+tool contracts and runtime, but it is not relabeled as autonomous prompt-to-tool selection. The
+exact pre-submission record is in `17_CHATGPT_DESKTOP_TEST_RECORD.md`.

@@ -11,8 +11,9 @@ about ChatGPT Desktop execution is made.
 What was tested instead:
 
 - ordinary embedded Chrome without WebMCP: complete human fallback and truthful unavailable state;
-- standalone Chrome 151.0.7922.174 with `WebMCPTesting`: all six tools and the full production
-  journey through `document.modelContext`.
+- the user's installed Chrome 151.0.7922.174 `Jerry` profile with **WebMCP for testing**: all six
+  tools and the full ChatGPT Sites production journey through the main-page-world
+  `document.modelContext`.
 
 Before submission, an authorized tester with an eligible ChatGPT Desktop account should record:
 

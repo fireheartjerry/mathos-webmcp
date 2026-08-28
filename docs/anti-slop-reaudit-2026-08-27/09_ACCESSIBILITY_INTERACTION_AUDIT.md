@@ -19,7 +19,8 @@ Approved after repair. The final local build passed 226 tests, typecheck with ze
 - Reduced-motion preference suppresses ornamental transitions and smooth scrolling.
 - Loading and no-script states explain the unavailable controls and provide a reload/recovery path.
 - Dense receipt JSON is contained, scrollable, and secondary to the learner task.
+- Connected WebMCP preserves the same accessible state: annotations remain line-local, proposal acceptance stays learner-owned, policy refusals are announced, and the unaided lock is visible in text rather than color alone.
 
 ## Known boundary
 
-The responsive zoom rows use equivalent CSS-width pressure. They verify reflow, not literal browser zoom telemetry. Connected WebMCP remains untested until the Chrome profile exposes `document.modelContext`.
+The responsive zoom rows use equivalent CSS-width pressure. They verify reflow, not literal browser zoom telemetry. Connected WebMCP was verified in the production page's main JavaScript world; ChatGPT Desktop Site Tools remain separately untested because an eligible client/account was unavailable.

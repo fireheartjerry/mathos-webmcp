@@ -35,13 +35,13 @@ Authoritative deadline: **September 3, 2026 at 1:00 PM Pacific**. Required submi
 | Backend/CAS/state/persistence/provenance audit | [`08_BACKEND_AND_MATH_AUDIT.md`](./08_BACKEND_AND_MATH_AUDIT.md), [`19_HOSTILE_MATH_STATE_TESTS.md`](./19_HOSTILE_MATH_STATE_TESTS.md) | COMPLETE |
 | Final redesign spec and execution plan | [`09_FINAL_REDESIGN_SPEC.md`](./09_FINAL_REDESIGN_SPEC.md), [`10_IMPLEMENTATION_PLAN.md`](./10_IMPLEMENTATION_PLAN.md), [`11_IMPLEMENTATION_ATTACK_PLAN.md`](./11_IMPLEMENTATION_ATTACK_PLAN.md) | COMPLETE |
 | Implement the reconceived candidate | [`12_IMPLEMENTATION_CHANGELOG.md`](./12_IMPLEMENTATION_CHANGELOG.md) + source history | COMPLETE |
-| Real WebMCP tools with exact runtime | Six statically registered `navigator.modelContext` tools; real Chrome 151 E2E in [`final-zero-slop/`](./final-zero-slop/) | COMPLETE |
+| Real WebMCP tools with exact runtime | Six statically registered `document.modelContext` tools; local harness plus installed-profile Sites production evidence in [`../anti-slop-reaudit-2026-08-27/after/webmcp-profile-run.json`](../anti-slop-reaudit-2026-08-27/after/webmcp-profile-run.json) | COMPLETE |
 | Concurrency, idempotency, stale writes, failure recovery | Tool/reducer tests; revision and request-ID enforcement; conflict/refusal UI | COMPLETE |
 | Model/agent selection and prompt strategy | [`18_AGENT_SELECTION_EVAL.md`](./18_AGENT_SELECTION_EVAL.md) | COMPLETE |
 | Five independent Luna visual reviewers | Consolidated in [`AI_SLOP_FINAL_SCREENSHOT_AUDIT.md`](./AI_SLOP_FINAL_SCREENSHOT_AUDIT.md) | COMPLETE |
-| Connected, unavailable, error, recovery, transfer, zoom, reduced-motion screenshots | 16 current captures + six metadata probes in [`final-zero-slop/`](./final-zero-slop/) | COMPLETE |
+| Connected, unavailable, error, recovery, transfer, zoom, reduced-motion screenshots | Original final-zero-slop set plus the dated 2026-08-27 production matrix and installed-profile connected captures | COMPLETE |
 | Accessibility, browser console, responsive and agentic audits | Lighthouse 100/100/100/100; zero console messages; full H1 accessible name; [`20_ACCESSIBILITY_PERFORMANCE.md`](./20_ACCESSIBILITY_PERFORMANCE.md) | COMPLETE |
-| Hostile browser/math/state acceptance | [`15_FINAL_HOSTILE_QA.md`](./15_FINAL_HOSTILE_QA.md), current 178-test suite, real runtime E2E | COMPLETE |
+| Hostile browser/math/state acceptance | [`15_FINAL_HOSTILE_QA.md`](./15_FINAL_HOSTILE_QA.md), current 226-test suite, real runtime E2E | COMPLETE |
 | Exact final AI-slop screenshot audit | [`AI_SLOP_FINAL_SCREENSHOT_AUDIT.md`](./AI_SLOP_FINAL_SCREENSHOT_AUDIT.md) | COMPLETE |
 | Demo narrative under three minutes | [`21_DEMO_VIDEO_RUNBOOK.md`](./21_DEMO_VIDEO_RUNBOOK.md) | SCRIPT COMPLETE; RECORDING EXTERNAL |
 | ChatGPT Desktop validation | [`17_CHATGPT_DESKTOP_TEST_RECORD.md`](./17_CHATGPT_DESKTOP_TEST_RECORD.md) | HONESTLY UNTESTED — compatible client/account not available |
@@ -49,30 +49,29 @@ Authoritative deadline: **September 3, 2026 at 1:00 PM Pacific**. Required submi
 
 ## Final local verification
 
-- Unit/integration: **178 / 178 passed**.
-- Type-check: **0 errors**; 23 upstream compute-engine deprecation hints.
+- Unit/integration: **226 / 226 passed**.
+- Type-check: **0 errors**.
 - Production build: **passed**; one non-blocking large-CAS-chunk warning.
-- Chrome runtime: **6 / 6 WebMCP tools registered** in Chrome 151 with the official testing flag.
+- Chrome runtime: **6 / 6 WebMCP tools registered and executed** in the installed `Jerry` Chrome 151 profile against the Sites production URL.
 - Full tool journey: diagnosis, refusal, annotation, proposal, learner acceptance, premature-transfer refusal, fresh transfer, receipt — **passed**.
 - Lighthouse desktop `/learn`: **Accessibility 100, Best Practices 100, SEO 100, Agentic Browsing 100**; 52 passed, 0 failed.
 - Browser console: **0 messages** after navigation audit.
 - Responsive probes: **no horizontal overflow** at 125%, 150%, or 200% equivalents.
 - Reduced motion: media query matched; primary button transition collapsed to **0.001s**.
-- Anti-slop: **40 / 40 PASS**, zero unresolved judge-visible violations.
+- Anti-slop: the dated re-audit records **0 high-confidence remaining problems** and **2 medium-confidence style risks**. The earlier mechanical 40/40 score is supporting evidence, not a taste certificate.
 
 ## Boundary of authorization and submission verdict
 
-The prompt pack explicitly forbids push/deployment without authorization. No code was pushed, no production URL was created, and no public video was uploaded. Those are external publication actions, not safe local implementation steps.
+ChatGPT Sites production is live and verified, and the retired Vercel project is deleted. The exact current branch is not yet published to the configured public GitHub `origin/main`, and no current public video was uploaded.
 
 Therefore the technically honest challenge verdict is:
 
 ## NOT SUBMISSION READY
 
-The local candidate is release-quality. The submission package is not complete until an authorized owner supplies or authorizes:
+The product is release-quality. The submission package is not complete until an authorized owner supplies or authorizes:
 
-1. production deployment URL;
-2. public repository state/URL;
-3. recorded public video under three minutes with audio;
-4. optional-but-requested ChatGPT Desktop site-tools validation on a supported account/model.
+1. public repository state/URL containing the exact current branch;
+2. recorded public video under three minutes with audio;
+3. optional-but-requested ChatGPT Desktop site-tools validation on a supported account/model.
 
 No remaining **local implementation, test, visual, WebMCP, accessibility, or anti-slop** blocker is known.

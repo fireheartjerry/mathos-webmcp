@@ -2,21 +2,22 @@
 
 ## 2026-08-27 frontier-rescue verdict
 
-**NOT SUBMISSION READY.**
+**NOT SUBMISSION READY — PRODUCT READY; PUBLIC SUBMISSION PACKAGE INCOMPLETE.**
 
-The current code is a release candidate: 178 tests, type checks and build pass; the human fallback
-journey passes; Chrome 151 registers all six real WebMCP tools and completes the full production
-journey; accessibility and performance gates pass. The remaining blockers are external submission
-work:
+The current product is release-ready: 226 tests, typecheck and build pass; the human fallback
+journey passes; Chrome 151 in the user's installed profile registers and executes all six real
+WebMCP tools against the ChatGPT Sites production URL; accessibility and performance gates pass;
+and the exact Vercel project has been deleted after the Sites cutover. The remaining blockers are
+external submission-package work:
 
-1. publish the current branch to the authorized public repository;
-2. publish and verify a stable working URL;
-3. replace the README deployment placeholder;
-4. record the 1:50–2:00 product-first demo video;
-5. run ChatGPT Desktop Site Tools against the public URL if an eligible client/account is
+1. publish the exact current branch to the authorized public GitHub repository—the configured
+   `origin/main` still does not contain the application;
+2. record and upload the 1:50–2:00 product-first demo video with audio;
+3. run ChatGPT Desktop Site Tools against the public URL if an eligible client/account is
    available, recording exact client/model/date/outcome.
 
-No deployment, push, or client-compatibility result was fabricated during this rescue.
+The stable production URL and README link are verified. No public-repository, video, or ChatGPT
+Desktop result is fabricated.
 
 Prompt-pack closure, archive integrity, exact artifact mapping, fresh runtime results, and the
 remaining authorization boundary are recorded in

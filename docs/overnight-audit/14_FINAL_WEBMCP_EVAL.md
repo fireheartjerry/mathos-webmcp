@@ -1,6 +1,28 @@
 # Final WebMCP evaluation — the six tools, executed in Chrome 151
 
-## 2026-08-27 production-build rerun
+## 2026-08-27 installed-profile Sites acceptance — authoritative
+
+The final production deployment at `https://mathos-second-try.fireheartjerry.chatgpt.site/learn`
+was opened as a visible new tab in the user's installed Chrome 151.0.7922.174 `Jerry` profile with
+**WebMCP for testing** enabled. The page visibly reported **“6 page tools available.”** A
+main-page-world Chrome probe confirmed `typeof document.modelContext === "object"`, enumerated all
+six tools, and invoked them through `document.modelContext.executeTool(toolObject, '<json>')`.
+
+The run passed `get_scratchpad`, `check_work`, `annotate_step`, `propose_step`, `new_problem`, and
+`get_receipt`; stale revision and invalid input recovery; the two-attempt proposal gate; explicit
+learner acceptance; premature-transfer refusal; completed guided practice; a generated fresh
+problem; unaided annotation/proposal locks; completed transfer; and bounded receipt language.
+
+Durable evidence is in
+`../anti-slop-reaudit-2026-08-27/after/webmcp-profile-run.json`,
+`../anti-slop-reaudit-2026-08-27/after/10-webmcp-connected-1692x834.png`, and
+`../anti-slop-reaudit-2026-08-27/after/11-webmcp-six-tools-1692x834.png`.
+
+Chrome's ordinary automation evaluation runs in an isolated world and does not expose this page
+API; that was a test-surface false negative, not a product or flag failure. The successful
+acceptance used Chrome's main page world in the same visible real-profile tab.
+
+## 2026-08-27 local production-build rerun
 
 The current rescue build was rebuilt, served by Astro preview at
 `http://127.0.0.1:4322/learn`, and driven by
