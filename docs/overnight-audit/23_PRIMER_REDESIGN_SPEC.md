@@ -317,6 +317,22 @@ after the claims it qualifies.
   token remap must re-measure hover deltas, not assume the rules still do
   something.
 
+  All five interactive types were then measured, not just the two that failed —
+  an incomplete audit is how the first one survived. Baseline to compare
+  against, in relative luminance out of 255:
+
+  | Control | Signal | Delta |
+  | --- | --- | --- |
+  | `.button` | ink sweep on `::before`, not the element's own background | 51 |
+  | `.button-text` | colour, plus underline 1px to 2px | 51 + thickness |
+  | `.step-latex` | background and border | 13 and 107 |
+  | `.step-remove` | background | 13 |
+  | `.console-tool-head`, `summary` | background, plus a drawn underline | 13 + draw |
+
+  Read the property that carries the effect. `.button`'s hover lives on a
+  pseudo-element, so reading the element's own `backgroundColor` reports delta 0
+  and argues for a fix that is not needed.
+
 ## 4. Layout
 
 Two columns, unchanged from `10` §6: **work** (620–720px) and **margin**. The header carries
