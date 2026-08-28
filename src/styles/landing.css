@@ -164,7 +164,18 @@
 }
 
 /* Pressed. The arrow does not run ahead of the label on press the way it does
-   on hover — the whole control commits together. */
+   on hover — the whole control commits together.
+
+   The transition is on the control itself and not only on its parts. Without
+   it the underline retracted over 350ms and the arrow slid over 200ms while
+   the press underneath them snapped in a single frame — the page's one primary
+   action had the least motion of its three pieces. --d-instant is short enough
+   to still read as a direct response to the finger, and it makes the release
+   travel back rather than teleport. */
+.cta {
+  transition: transform var(--d-instant) var(--ease-out);
+}
+
 .cta:active {
   transform: translateY(1px);
 }
@@ -512,7 +523,8 @@
   /* The link states stay — they are feedback, not decoration. Only their
      travel is removed. */
   .wordmark::after,
-  .cta-label::after {
+  .cta-label::after,
+  .cta {
     transition: none;
   }
 
