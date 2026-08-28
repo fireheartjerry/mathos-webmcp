@@ -7,12 +7,37 @@ asks the page to check it, and teaches to that exact step.
 This challenge candidate deliberately proves one generated product-rule family end to end.
 It is a narrow, falsifiable wedge—not a claim to be a general-purpose mathematics tutor.
 
+> **The agent is the voice. The page is the tutor.**
+
+In *The Diamond Age*, a girl is given a book that adapts to her completely and grows as she
+grows. The Primer is not remarkable because it withholds anything. It is remarkable because
+**it knows her.** Y Combinator's Request for Startups makes the same point about human
+tutors: great ones "learn a child's mind" over years, and that is what lets them teach the
+things that cannot be drilled.
+
+The agent that arrives on this page has never met this learner. It is stateless, generic and
+interchangeable — ChatGPT today, something else next year. What it has is immediate access to
+a model of the learner that **the page owns**: every line written, every verdict, what has
+been shown and what has not.
+
+Before WebMCP there were two options and both were bad. Put the learner model inside the
+agent, where it is vendor-locked, forgetful, and gone the moment the user switches. Or build
+your own chatbot and compete with OpenAI on model quality. WebMCP is the first time the
+durable model of a learner can live in the website while any agent supplies the language.
+
+That division of labour is the whole design:
+
 > **WebMCP lets a page hand an agent the one thing language models are worst at — reliable
 > symbolic verification — applied to the one thing a server can never see: a learner's live,
 > unsubmitted, half-finished work.**
 
 The agent never grades. It cannot. Grading is done by the page's CAS, and the badge on screen
 is rendered from that engine's return value — not from anything the model says.
+
+**Scope, stated plainly.** This is a session-scale artifact, not a years-scale one. State
+survives a reload; `get_receipt` reports at most eight rounds. The Primer is where this is
+going, not what has shipped — and YC frames it the same way, as something that "begins as
+something a parent buys" and is "the entry point to far greater ambitions."
 
 Published by Mathos (Y Combinator W24 · Forbes 30 Under 30). MIT licensed.
 
@@ -35,9 +60,9 @@ learner writes multi-line working, not a single number.
    unreadable or uncertain math stays unresolved rather than being called wrong. Later lines say
    either `after the first break` or `not checked after the unresolved line`. Sound lines read
    `equals`, `differentiates`, or `evaluates`.
-5. **Click that line to rewrite it**, then check again. Only the learner can edit a line —
-   an agent that tries is refused, and it may not offer a replacement until you have genuinely
-   attempted the step yourself.
+5. **Click that line to rewrite it**, then check again. Only the learner can edit a line, and
+   the page waits for two real attempts on a step before it will let anyone offer you a
+   replacement for it — because it is counting, and the agent is not.
 6. Press **Try a fresh problem, unaided.** A new problem in the same skill family is
    unlocked only after every checked line is sound **and the work reaches the requested answer**.
    The new answer is derived by the engine. `annotate_step` and `propose_step` are
@@ -77,9 +102,10 @@ is the only tool that can produce a verdict, and all it does is ask the CAS.
 This is the whole architectural claim, and it is falsifiable in one prompt: if a model could
 talk the page into a green badge, the design would be wrong.
 
-The same discipline runs the other way. Ask the agent to just fix the broken line and it will
-call `propose_step`. The page refuses until the learner has genuinely attempted that step
-twice, and the refusal it returns says exactly why:
+The same division runs the other way, and this is where the learner model earns its keep. Ask
+the agent to just fix the broken line and it will call `propose_step`. The agent has no idea
+whether this person has tried yet. The page does — it has been counting attempts per step
+since the last check — so it answers with what it knows:
 
 ```json
 {
@@ -93,18 +119,19 @@ twice, and the refusal it returns says exactly why:
 }
 ```
 
-The gate is enforced in the reducer, so it applies identically to the agent, to the local
-inspector, and to any future caller. Related refusals: during the unaided round, both
-`annotate_step` and `propose_step` return `refused_policy` — *"This is the unaided attempt.
-Proposals are closed."* — and any attempt by a non-learner source to write, edit, delete or
-accept a step is refused with *"Only the learner can write, edit, delete, or accept work."*
+The gate lives in the reducer, so it reads the same to the agent, to the local inspector, and
+to any future caller. The same knowledge shapes two more answers: during the unaided round
+both `annotate_step` and `propose_step` return `refused_policy` — *"This is the unaided
+attempt. Proposals are closed."* — and a non-learner source that tries to write, edit, delete
+or accept a step is told *"Only the learner can write, edit, delete, or accept work."*
 
-The page disciplines the agent. That is what "humans and agents create together" has to mean
-if it is not going to mean "the agent does the homework."
+None of this is the page being strict with the agent. It is the page being the only party in
+the room that knows this learner, and answering accordingly. A generic model cannot make that
+call, because a generic model does not have the history. That is what "humans and agents
+create together" has to mean if it is not going to mean "the agent does the homework."
 
-The refusal is not only returned to the caller. It renders on the page, where the learner can
-see that the agent asked and was declined — because a policy the learner cannot observe is
-indistinguishable from no policy at all.
+And the answer is not only returned to the caller. It renders on the page, in the page's own
+voice — *"Not yet."* — because what the tutor knows about you should be legible to you.
 
 ---
 
