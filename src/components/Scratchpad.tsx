@@ -807,12 +807,20 @@ export default function Scratchpad() {
             </div>
           )}
 
-          {state.steps.length > 0 && (
-            <p className="how how-foot">
-              Each line should be equal to the line above it, or its derivative, or its value at
-              the point in the question. Click any line to rewrite it.
-            </p>
-          )}
+          {/* The rule a line has to satisfy is true before any line exists, so
+              it is not gated. It used to be, which hid the one sentence
+              defining a valid line at exactly the moment someone had written
+              none — the empty scratchpad is the first thing anyone opening
+              this page sees, and it explained nothing.
+
+              Only the second sentence is gated, because it names an
+              affordance that genuinely is not there yet: with no lines,
+              there is nothing to click. */}
+          <p className="how how-foot">
+            Each line should be equal to the line above it, or its derivative, or its value at
+            the point in the question.
+            {state.steps.length > 0 && ' Click any line to rewrite it.'}
+          </p>
 
           {/* Last, deliberately. 23_PRIMER_REDESIGN_SPEC.md §1.5 calls this the
               product's thesis object — the thing the demo ends on — and it was
