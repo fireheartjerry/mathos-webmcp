@@ -250,9 +250,9 @@
   transform: scaleX(0);
   transform-origin: left center;
   animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
-  /* One beat ahead of the row it separates, which rises at (--i + 4). The
+  /* One beat ahead of the row it separates, which rises at (--i + 6.5). The
      rule lands, then the line lands on it. */
-  animation-delay: calc(var(--stagger) * (var(--i, 0) + 3));
+  animation-delay: calc(var(--stagger) * (var(--i, 0) + 5.5));
 }
 
 @keyframes draw-rule {
@@ -335,7 +335,7 @@
   transform: scaleX(0);
   transform-origin: left center;
   animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
-  animation-delay: calc(var(--stagger) * 7);
+  animation-delay: calc(var(--stagger) * 9);
 }
 
 .reading-note > .try-first,
@@ -388,14 +388,33 @@
 .hero-copy > p:nth-of-type(2) { animation-delay: calc(var(--stagger) * 4.5); }
 .cta { animation-delay: calc(var(--stagger) * 5.5); }
 
-.reading {
-  animation: rise var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 1.5);
-}
+/* The figure itself does not rise. Its rows and rules do, in order, and that
+   is the whole arrival.
 
+   Animating the container as well nested one rise inside another and both
+   properties compounded. Measured before removing it: at 200ms the first row
+   sat 20.39px down rather than the 14px the motion scale specifies, because
+   the container contributed 6.39px underneath it, and the amount changed every
+   frame as the two curves overlapped — so no row ever travelled the designed
+   distance. Opacity multiplied the same way: at 400ms a row with its own
+   opacity at 0.543 painted at 0.511.
+
+   This is the rule section 3.4 already records for the verdict words — the
+   parts carry the animation, never the wrapper, so the two never multiply.
+   It had not been applied here.
+
+   Removing it also fixes the order. The container started at 120ms, so the
+   largest object on the page began arriving while the headline was still
+   assembling and landed ahead of both paragraphs and the call to action. The
+   figure now follows the copy that introduces it. */
 .reading-step {
   animation: rise var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * (var(--i, 0) + 4));
+  /* + 6.5 puts the first row after the call to action at 5.5. At + 4 the rows
+     interleaved with the copy: row one landed at 320ms, ahead of the second
+     paragraph at 360 and the call to action at 440, so the page painted
+     content below before the content above it had arrived. The cascade now
+     runs straight down the page in the order it is read. */
+  animation-delay: calc(var(--stagger) * (var(--i, 0) + 6.5));
 }
 
 /* ---- Second try --------------------------------------------------------
