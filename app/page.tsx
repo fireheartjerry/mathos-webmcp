@@ -12,18 +12,15 @@ export default function HomePage() {
       <main id="main" className="landing-shell">
         <section className="hero" aria-labelledby="page-title">
           <div className="hero-copy">
-            <h1 id="page-title">A second mind, shaped by yours.</h1>
+            {/* This read "A second mind, shaped by yours", followed by a paragraph
+                about The Diamond Age. Neither said what the page does, and a landing
+                page that opens on a slogan and a literary reference is asking to be
+                skipped. The Primer framing is the thesis and it belongs in the README,
+                where a reader has already decided to care. Here: what it is, one line. */}
+            <h1 id="page-title">The first line that stopped being true.</h1>
             <p>
-              <strong>Second Try</strong> is a calculus scratchpad. You write
-              the working; the page checks every line and marks the first one
-              that stopped being true.
-            </p>
-            <p>
-              In <em>The Diamond Age</em>, a child is given a Primer: a book
-              that learns her mind over years and reshapes itself around who
-              she is becoming. This is a first step toward that. What the page
-              learns about your reasoning stays here, and any agent you bring
-              can read it through WebMCP.
+              <strong>Second Try</strong> is a calculus scratchpad. You write the working.
+              The page checks it, and any agent you bring reads it through WebMCP.
             </p>
             <a className="cta" href="/learn">
               <span className="cta-label">Open the scratchpad</span>
