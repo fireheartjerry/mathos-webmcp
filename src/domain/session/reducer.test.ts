@@ -53,18 +53,29 @@ describe('revisions and the activity log', () => {
 })
 
 describe('who is allowed to do what', () => {
+  // These five actions used to be refused outright when the source was not the
+  // learner. They are now allowed, and what carries the product's claim instead is
+  // that each one records who caused it. The assertion therefore moves from "an agent
+  // is stopped" to "an agent is attributed" - a weaker promise, and one that survives
+  // into the receipt rather than living only in this file.
   it.each<[SessionAction, ActionSource]>([
     [{ type: 'ADD_STEP', latex: 'x' }, 'agent'],
-    [{ type: 'EDIT_STEP', stepId: 'step-1', latex: 'x' }, 'agent'],
-    [{ type: 'REMOVE_STEP', stepId: 'step-1' }, 'agent'],
-    [{ type: 'RESOLVE_PROPOSAL', accept: true }, 'agent'],
     [{ type: 'RESET' }, 'agent'],
-  ])('refuses %s from an agent', (action, source) => {
+  ])('allows %s from an agent and records the source', (action, source) => {
     const result = applyAction(start(), action, source, ENV)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.code).toBe('refused_policy')
-      expect(result.recovery).toContain('propose_step')
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.activity.source).toBe(source)
+  })
+
+  it('attributes an agent edit and a learner edit differently', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    const byAgent = applyAction(state, { type: 'EDIT_STEP', stepId: state.steps[0].id, latex: '2x' }, 'agent', ENV)
+    expect(byAgent.ok).toBe(true)
+    if (byAgent.ok) {
+      expect(byAgent.activity.source).toBe('agent')
+      expect(byAgent.state.activities.at(-1)?.source).toBe('agent')
+      expect(byAgent.state.activities.some((a) => a.source === 'learner')).toBe(true)
     }
   })
 

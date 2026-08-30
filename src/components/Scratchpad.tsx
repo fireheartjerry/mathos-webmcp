@@ -282,6 +282,7 @@ export default function Scratchpad() {
         return result
       },
       requestCache: cacheFor(source),
+      probePlatform,
       onToolSuccess: () =>
         setFeedback((current) => actionFeedbackAfterToolSuccess(current)),
     }),

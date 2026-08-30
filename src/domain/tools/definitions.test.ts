@@ -17,6 +17,7 @@ function harness(initial?: SessionState, onToolSuccess: () => void = () => {}) {
     },
     requestCache: new Map(),
     onToolSuccess,
+    probePlatform: async () => [],
   }
   const tools = createTools(bridge)
   const byName = (name: string) => tools.find((t) => t.name === name) as ToolDefinition
@@ -46,9 +47,27 @@ beforeEach(() => {
 const call = (tool: ToolDefinition, input: unknown) => tool.execute(input)
 
 describe('the tool surface itself', () => {
-  it('exposes exactly six tools, two of them read-only', () => {
-    expect(h.tools).toHaveLength(6)
-    expect(h.tools.filter((t) => t.annotations.readOnlyHint)).toHaveLength(2)
+  // One tool per capability in docs/webmcp/capabilities.md. The count is asserted so
+  // that adding a tool without enumerating the capability it serves fails here.
+  it('exposes one tool per enumerated capability, nine of them read-only', () => {
+    expect(h.tools).toHaveLength(18)
+    expect(h.tools.filter((t) => t.annotations.readOnlyHint)).toHaveLength(9)
+  })
+
+  it('gives every tool a name an agent can address', () => {
+    for (const tool of h.tools) expect(tool.name).toMatch(/^[a-z][a-z0-9_]*$/)
+  })
+
+  it('tells an agent when each tool does not apply', () => {
+    // An agent reads descriptions and nothing else, so "when not to call this" has to
+    // be in the description or it does not exist.
+    for (const tool of h.tools) {
+      if (tool.name === 'get_scratchpad') console.log('DBG>>>', JSON.stringify(tool.description))
+      expect(
+        /\b(do not|don't|never|only when|not when|avoid|unless|rather than)\b/i.test(tool.description),
+        `${tool.name} does not say when not to call it`,
+      ).toBe(true)
+    }
   })
 
   it('gives every tool a title, because the site-tools panel renders it', () => {
@@ -159,10 +178,12 @@ describe('handlers never throw and never return undefined', () => {
 })
 
 describe('get_scratchpad', () => {
-  it('does not advertise actions that are invalid before the learner writes', async () => {
+  it('advertises only the actions that would succeed right now', async () => {
+    // Before anything is written, an agent can add a line or reset - but there is
+    // nothing yet to check, edit, remove or annotate.
     const result = await call(h.byName('get_scratchpad'), {})
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.data.availableActions).toEqual([])
+    if (result.ok) expect(result.data.availableActions).toEqual(['add_step', 'reset_session'])
   })
 
   it('reads the problem and the steps', async () => {
@@ -176,9 +197,16 @@ describe('get_scratchpad', () => {
     }
   })
 
-  it('tells the agent plainly that it may not write', async () => {
+  // This assertion used to require the note to say "Only the learner" could write.
+  // The product's claim is no longer that an agent is prevented from writing - it is
+  // that every change is attributed - so the note now has to carry that instead.
+  it('tells the agent it may write, and that the change will be attributed', async () => {
     const result = await call(h.byName('get_scratchpad'), {})
-    if (result.ok) expect(String(result.data.note)).toContain('Only the learner')
+    if (result.ok) {
+      const note = String(result.data.note)
+      expect(note).toContain('write')
+      expect(note).toMatch(/learner or an agent|recorded as agent work/)
+    }
   })
 
   it('accepts a JSON string as well as an object', async () => {
@@ -324,6 +352,7 @@ describe('unexpected bridge failures', () => {
       },
       requestCache: new Map(),
       onToolSuccess: () => {},
+    probePlatform: async () => [],
     }
     const tool = createTools(bridge).find((candidate) => candidate.name === 'check_work')!
     const result = await tool.execute({
@@ -649,5 +678,85 @@ describe('the receipt', () => {
         'previously checked sound; current work changed afterward',
       )
     }
+  })
+})
+
+describe('the tools added when agents became able to drive the page', () => {
+  let h: ReturnType<typeof harness>
+  beforeEach(() => {
+    h = harness()
+  })
+
+  const write = (name: string, extra: Record<string, unknown>) =>
+    call(h.byName(name), { expectedRevision: h.state.revision, requestId: `req-${name}-1`, ...extra })
+
+  it('writes, rewrites and deletes a line', async () => {
+    expect((await write('add_step', { latex: 'x^2' })).ok).toBe(true)
+    const id = h.state.steps[0].id
+    expect((await write('edit_step', { stepId: id, latex: '2x' })).ok).toBe(true)
+    expect(h.state.steps[0].latex).toBe('2x')
+    expect((await write('remove_step', { stepId: id })).ok).toBe(true)
+    expect(h.state.steps).toHaveLength(0)
+  })
+
+  it('names the field at fault rather than only describing it', async () => {
+    const result = await write('add_step', { latex: '' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.field).toBe('latex')
+  })
+
+  it('refuses a stale revision without touching the work', async () => {
+    await write('add_step', { latex: 'x^2' })
+    const before = JSON.stringify(h.state.steps)
+    const stale = await call(h.byName('add_step'), {
+      latex: 'nope',
+      expectedRevision: h.state.revision - 1,
+      requestId: 'req-stale-1',
+    })
+    expect(stale.ok).toBe(false)
+    if (!stale.ok) {
+      expect(stale.error.code).toBe('stale_revision')
+      expect(stale.error.field).toBe('expectedRevision')
+    }
+    expect(JSON.stringify(h.state.steps)).toBe(before)
+  })
+
+  it('differentiates, evaluates and compares without writing to the page', async () => {
+    const revision = h.state.revision
+    const derivative = await call(h.byName('differentiate_expression'), { latex: '4x^3 + x^2' })
+    expect(derivative.ok).toBe(true)
+
+    const value = await call(h.byName('evaluate_expression'), { latex: '12x^2 + 2x', at: 2 })
+    expect(value.ok).toBe(true)
+    if (value.ok) expect(value.data.value).toBe(52)
+
+    const comparison = await call(h.byName('compare_expressions'), { left: '2x + 2x', right: '4x' })
+    expect(comparison.ok).toBe(true)
+    if (comparison.ok) expect(comparison.data.status).toBe('match')
+
+    expect(h.state.revision).toBe(revision)
+  })
+
+  it('reports a parse failure without writing it', async () => {
+    const result = await call(h.byName('validate_expression'), { latex: '4x^^' })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.parses).toBe(false)
+    expect(h.state.steps).toHaveLength(0)
+  })
+
+  it('reports only what changed after a revision', async () => {
+    await write('add_step', { latex: 'x^2' })
+    const result = await call(h.byName('get_changes_since'), { since: 0 })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.upToDate).toBe(false)
+      expect((result.data.changes as { source: string }[])[0].source).toBe('agent')
+    }
+  })
+
+  it('rejects an unknown argument on a read tool, naming it', async () => {
+    const result = await call(h.byName('get_changes_since'), { since: 0, nope: 1 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.field).toBe('nope')
   })
 })

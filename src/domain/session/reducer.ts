@@ -40,13 +40,23 @@ import type {
   SessionState,
 } from './types'
 
-const LEARNER_ONLY: SessionAction['type'][] = [
-  'ADD_STEP',
-  'EDIT_STEP',
-  'REMOVE_STEP',
-  'RESOLVE_PROPOSAL',
-  'RESET',
-]
+/**
+ * Empty, deliberately.
+ *
+ * This list used to hold ADD_STEP, EDIT_STEP, REMOVE_STEP, RESOLVE_PROPOSAL and RESET,
+ * and every non-learner source was refused them outright. The product's claim was that
+ * an agent could not do the learner's work because it was not permitted to.
+ *
+ * The claim is now different: an agent may take any action the learner can, and every
+ * action carries the `ActionSource` that caused it, so the receipt reports the split
+ * rather than the guarantee. That is a weaker promise and a more honest one — a
+ * permission check in this file never bound anything outside this page, whereas an
+ * attribution survives into the evidence a reader actually sees.
+ *
+ * The array is kept rather than deleted because the mechanism is still the right place
+ * to withhold an action, should one ever need withholding.
+ */
+const LEARNER_ONLY: SessionAction['type'][] = []
 
 function fail(code: FailureCode, message: string, recovery: string): ActionResult {
   return { ok: false, code, message, recovery }

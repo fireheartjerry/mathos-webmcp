@@ -9,6 +9,7 @@ const bridge: ToolBridge = {
   },
   requestCache: new Map(),
   onToolSuccess: () => {},
+    probePlatform: async () => [],
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -26,7 +27,7 @@ describe('browser registration read-back', () => {
     expect(registration.status.state).toBe('partial')
     if (registration.status.state === 'partial') {
       expect(registration.status.registered).toBe(0)
-      expect(registration.status.failures).toHaveLength(6)
+      expect(registration.status.failures).toHaveLength(18)
     }
   })
 
@@ -46,11 +47,16 @@ describe('browser registration read-back', () => {
 
     const registration = await registerTools(bridge)
     expect(getTools).toHaveBeenCalledOnce()
-    expect(registration.status).toEqual({
-      state: 'partial',
-      registered: 2,
-      total: 6,
-      failures: ['annotate_step', 'propose_step', 'new_problem', 'get_receipt'],
-    })
+    // `failures` is every tool the read-back did not confirm, not merely the ones whose
+    // registerTool call rejected: a rejection is not proof of absence, and an
+    // acceptance is not proof of presence.
+    expect(registration.status.state).toBe('partial')
+    if (registration.status.state === 'partial') {
+      expect(registration.status.registered).toBe(2)
+      expect(registration.status.total).toBe(18)
+      expect(registration.status.failures).toHaveLength(16)
+      expect(registration.status.failures).not.toContain('get_scratchpad')
+      expect(registration.status.failures).toContain('annotate_step')
+    }
   })
 })
