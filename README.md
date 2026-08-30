@@ -350,6 +350,39 @@ validation branch.
 
 ---
 
+## Check any of this yourself
+
+Every claim in this README is produced by a script in `scripts/`, and each one prints the
+number it is claiming. Start the app, open it in a WebMCP-capable Chrome, then:
+
+```bash
+node scripts/webmcp-eval.mjs scripts/checks/judge-journey.js
+#   the journey a judge is told to follow, asserted step by step: 20 checks
+
+node scripts/webmcp-eval.mjs scripts/checks/c1-ceiling.js
+#   registers tools until something gives. Nothing did, at 1000
+
+node scripts/webmcp-eval.mjs scripts/checks/c2-full.js
+#   every tool, one valid call and one invalid, with transcripts
+
+node scripts/webmcp-eval.mjs scripts/checks/a11y-sweep.js
+#   unnamed controls, focus, contrast, hit targets
+
+node scripts/no-webmcp.mjs
+#   what an unflagged browser sees, with modelContext removed before page scripts run
+
+node scripts/console-watch.mjs
+#   console errors and warnings while the page is driven
+```
+
+![The Agent Console after pressing Probe this browser: seven WebMCP features with a status and the observation behind each, including two Chrome accepts and does not honour](docs/images/platform-probe.png)
+
+*Press **Probe this browser** and the page tells you what your browser actually did with
+seven WebMCP features — including the two it accepts and silently ignores. Nothing there
+is read from a table.*
+
+---
+
 ## Trust boundaries
 
 Chrome's guidance for WebMCP tool authors names prompt injection, tool poisoning and
