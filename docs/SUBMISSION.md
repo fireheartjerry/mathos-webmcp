@@ -21,6 +21,7 @@ Last checked 2026-08-30.
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
 | Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
 | Verified on the artifact that ships | **DONE.** Everything above had only been checked against the dev server. Against the **production build** (`vinext start`): 18 tools register, the judged journey passes **20/20**, the accessibility sweep finds **zero** problems, every one of the 12 network requests returns 200, and a fresh navigation logs **zero** console errors or warnings. |
+| Works without WebMCP at all | **DONE.** Simulated faithfully by removing `document.modelContext` before any page script runs. The page says `WebMCP unavailable`, never claims tools are live, names the reason (*"This browser does not expose document.modelContext"*), tells the reader both ways to get it — the Chrome flag and ChatGPT's browser — still shows all six tool groups with counts, and the learner flow still works: the problem renders, the composer accepts input, Add line is live. `scripts/no-webmcp.mjs`. |
 
 ### What is left, exactly
 
