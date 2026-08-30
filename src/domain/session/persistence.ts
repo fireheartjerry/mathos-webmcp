@@ -92,6 +92,9 @@ function migrateLegacyInterventionCounts(value: unknown): unknown {
     // Sessions saved before line authorship was recorded have no stepWrites. They are
     // migrated to zeroes rather than discarded: the counts are unknown for that round,
     // and zero is the only honest stand-in that keeps the session loadable.
+    // Sessions saved before restarts were counted report zero rather than being
+    // discarded; the true figure is unknown for them, and the receipt says so.
+    if (typeof value.resets !== 'number') value.resets = 0
     if (!isRecord(value.tally.stepWrites)) {
       value.tally.stepWrites = { learner: 0, agent: 0, localInspector: 0 }
     }

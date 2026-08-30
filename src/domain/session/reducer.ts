@@ -118,6 +118,7 @@ export function createSession(seed: number, sessionId: string, familyId = 'share
     nextStepNumber: 1,
     nextEventNumber: 1,
     tally: emptyTally(),
+    resets: 0,
   }
 }
 
@@ -496,7 +497,7 @@ export function applyAction(
         state,
         source,
         'Restarted the session',
-        { ...fresh, revision: state.revision, nextEventNumber: state.nextEventNumber, activities: [] },
+        { ...fresh, revision: state.revision, nextEventNumber: state.nextEventNumber, activities: [], resets: state.resets + 1 },
         { problemId: fresh.problem.id },
         env,
       )

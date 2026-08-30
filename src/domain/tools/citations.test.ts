@@ -21,16 +21,16 @@ const SCRATCHPAD = 'src/components/Scratchpad.tsx'
 const CITATIONS: Array<[string, number, string]> = [
   // The action union and its members, cited by capabilities.md's writes table.
   [TYPES, 9, 'ActionSource'],
-  [TYPES, 111, 'SessionAction ='],
-  [TYPES, 112, 'ADD_STEP'],
-  [TYPES, 113, 'EDIT_STEP'],
-  [TYPES, 114, 'REMOVE_STEP'],
-  [TYPES, 115, 'CHECK_WORK'],
-  [TYPES, 116, 'ANNOTATE_STEP'],
-  [TYPES, 117, 'PROPOSE_STEP'],
-  [TYPES, 118, 'RESOLVE_PROPOSAL'],
-  [TYPES, 119, 'NEW_PROBLEM'],
-  [TYPES, 120, "'RESET'"],
+  [TYPES, 121, 'SessionAction ='],
+  [TYPES, 122, 'ADD_STEP'],
+  [TYPES, 123, 'EDIT_STEP'],
+  [TYPES, 124, 'REMOVE_STEP'],
+  [TYPES, 125, 'CHECK_WORK'],
+  [TYPES, 126, 'ANNOTATE_STEP'],
+  [TYPES, 127, 'PROPOSE_STEP'],
+  [TYPES, 128, 'RESOLVE_PROPOSAL'],
+  [TYPES, 129, 'NEW_PROBLEM'],
+  [TYPES, 130, "'RESET'"],
   // State the reads table cites.
   [TYPES, 88, 'SessionState = {'],
   [TYPES, 100, 'activities: Activity[]'],
@@ -59,17 +59,29 @@ const DOCS = [
 
 /** file, from, to, text expected at `from`, text expected at `to`. */
 const RANGES: Array<[string, number, number, string, string]> = [
-  [TYPES, 88, 109, 'SessionState = {', '}'],
-  [TYPES, 111, 120, 'SessionAction =', "'RESET'"],
+  [TYPES, 88, 119, 'SessionState = {', '}'],
+  [TYPES, 121, 130, 'SessionAction =', "'RESET'"],
 ]
 
 const TOOL_LINES: Array<[string, number]> = [
-  ['get_scratchpad', 436], ['check_work', 453], ['annotate_step', 468], ['propose_step', 509],
-  ['new_problem', 553], ['get_receipt', 584], ['add_step', 614], ['edit_step', 642],
-  ['remove_step', 674], ['resolve_proposal', 699], ['reset_session', 724],
-  ['get_changes_since', 745], ['list_problem_families', 796], ['validate_expression', 816],
-  ['compare_expressions', 850], ['differentiate_expression', 881], ['evaluate_expression', 927],
-  ['get_platform', 978],
+  ['get_scratchpad', 446],
+  ['check_work', 463],
+  ['annotate_step', 478],
+  ['propose_step', 519],
+  ['new_problem', 563],
+  ['get_receipt', 594],
+  ['add_step', 624],
+  ['edit_step', 652],
+  ['remove_step', 684],
+  ['resolve_proposal', 712],
+  ['reset_session', 737],
+  ['get_changes_since', 758],
+  ['list_problem_families', 822],
+  ['validate_expression', 842],
+  ['compare_expressions', 876],
+  ['differentiate_expression', 907],
+  ['evaluate_expression', 953],
+  ['get_platform', 1004],
 ]
 
 describe('the file:line citations in docs/webmcp', () => {

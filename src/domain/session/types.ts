@@ -106,6 +106,16 @@ export type SessionState = {
   nextEventNumber: number
   /** Per-round tallies, folded into `history` when the round ends. */
   tally: InterventionTally
+  /**
+   * How many times this session has been restarted.
+   *
+   * Carried across RESET on purpose. An auditor driving the page pointed out that
+   * `reset_session` destroys the history and the receipt then presents a pristine
+   * round with nothing to indicate a wipe ever happened - so the artifact meant to be
+   * shown to a third party was the one artifact that could not reveal its own
+   * erasure. This counter is the only thing a reset does not clear.
+   */
+  resets: number
 }
 
 export type SessionAction =

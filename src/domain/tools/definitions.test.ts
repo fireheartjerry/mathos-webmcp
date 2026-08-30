@@ -821,3 +821,62 @@ describe('every argument refusal names the argument', () => {
     }
   })
 })
+
+describe('what three agents driving the live page found', () => {
+  it('refuses a revision that is ahead of the log instead of calling it out of date', async () => {
+    // An auditor found `since: 999999` returning ok:true with `upToDate: false` — being
+    // ahead of the log reported as being behind it, the one shape of wrong answer the
+    // rest of the surface refuses to give.
+    const result = await call(h.byName('get_changes_since'), { since: 999_999 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('invalid_input')
+      expect(result.error.field).toBe('since')
+    }
+  })
+
+  it('tells an agent a stale retry may be refused for a different reason', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const stale = await call(h.byName('check_work'), {
+      expectedRevision: h.state.revision - 1,
+      requestId: 'req-stale-round',
+    })
+    expect(stale.ok).toBe(false)
+    // A tutor agent retried at the revision the recovery named and was refused again,
+    // because the round had changed underneath it in the meantime.
+    if (!stale.ok) expect(stale.error.recovery).toContain('round')
+  })
+
+  it('reports restarts and what they destroyed, in the receipt itself', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const reset = await call(h.byName('reset_session'), {
+      expectedRevision: h.state.revision,
+      requestId: 'req-reset-audit',
+    })
+    expect(reset.ok).toBe(true)
+    expect(h.state.resets).toBe(1)
+  })
+
+  it('states in the receipt that attribution tracks who wrote, not who reasoned', () => {
+    // The gap an auditor proved it could not otherwise detect: an agent may compute the
+    // answer with the read-only tools and have a person type it, which records as
+    // learner work. It cannot be measured, so it is disclosed.
+    const state = { ...h.state, history: [{
+      round: 'practice' as const, problemId: 'p', sound: true,
+      stepWrites: { learner: 1, agent: 0, localInspector: 0 }, checks: 1,
+      annotations: { agent: 0, localInspector: 0, unattributed: 0 },
+      proposalsOffered: { agent: 0, localInspector: 0, unattributed: 0 },
+      proposalsAccepted: { agent: 0, localInspector: 0, unattributed: 0 },
+    }] }
+    const local = harness(state)
+    return call(local.byName('get_receipt'), {}).then((result) => {
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const limits = result.data.limits as string[]
+        expect(limits.join(' ')).toContain('who wrote a line, not who worked it out')
+        expect(limits.join(' ')).toContain('read-only tools leave no trace')
+        expect(result.data.sessionRestarts).toBe(0)
+      }
+    })
+  })
+})

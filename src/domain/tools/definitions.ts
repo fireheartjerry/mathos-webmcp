@@ -264,10 +264,20 @@ function receiptData(state: SessionState): Record<string, unknown> {
         : transfer
           ? 'every step sound, with no external annotations or proposals'
           : 'attempted, not yet sound',
+    // Restarts are reported because a restart destroys everything else. An auditor
+    // driving this page found that a reset leaves a pristine-looking receipt with no
+    // trace of the wipe, which made the artifact meant for a third party the one
+    // artifact unable to disclose its own erasure.
+    sessionRestarts: state.resets,
     limits: [
       'This records what happened in this browser session.',
       'It does not establish that the learner could do this again tomorrow, or unassisted elsewhere.',
       'Steps were checked by the page computer algebra system, not by the agent.',
+      state.resets > 0
+        ? `This session was restarted ${state.resets} time${state.resets === 1 ? '' : 's'}. Rounds completed before a restart are not in this record.`
+        : 'This session has not been restarted, so no earlier rounds are missing from it.',
+      'Attribution records who wrote a line, not who worked it out. An agent can read the problem, compute the answer with the read-only tools, and tell a person what to type; that lands here as learner work, and nothing in this record would show it.',
+      'The read-only tools leave no trace. Nothing here counts how much an agent read or computed, only what it wrote.',
     ],
   }
 }
@@ -325,7 +335,7 @@ async function mutate(
     return failure(state.revision, 'invalid_input', 'expectedRevision must be an integer.', `Read the scratchpad and send its revision, currently ${state.revision}.`, 'expectedRevision')
   }
   if (expectedRevision !== state.revision) {
-    return failure(state.revision, 'stale_revision', `The scratchpad has changed since revision ${expectedRevision}.`, `Call get_scratchpad again and retry with revision ${state.revision}.`, 'expectedRevision')
+    return failure(state.revision, 'stale_revision', `The scratchpad has changed since revision ${expectedRevision}.`, `Call get_scratchpad again and retry with revision ${state.revision}. Read its round and availableActions too: a stale revision can be hiding a round change, which will refuse the retry for a different reason.`, 'expectedRevision')
   }
 
   const action = build(values)
@@ -674,7 +684,10 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       name: 'remove_step',
       title: 'Delete a line',
       description:
-        'Delete one line of working. Every later line stays where it is. Do not use this to correct a line — edit_step preserves the learner\'s attempt count, and this discards it.',
+        // "edit_step preserves the attempt count" was wrong, and an agent driving the
+        // page reported being misled by it: EDIT_STEP increments `attempts`, exactly as
+        // a learner's own rewrite would.
+        'Delete one line of working. Every later line stays where it is. Do not use this to correct a line: edit_step keeps the line and counts another attempt against it, while this discards the line and its history entirely.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -774,6 +787,19 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
           return failure(state.revision, 'invalid_input', 'since must be an integer of 0 or more.', `Send the revision you last read, currently ${state.revision}.`, 'since')
         }
         const since = values.since as number
+        // Being ahead of the log is not the same as being behind it. This used to
+        // answer `upToDate: false` with an empty change list for a revision that does
+        // not exist yet — the one shape of wrong answer the rest of this surface
+        // refuses to give, found by an auditor agent driving the live page.
+        if (since > state.revision) {
+          return failure(
+            state.revision,
+            'invalid_input',
+            `There is no revision ${since}; the scratchpad is at ${state.revision}.`,
+            'Send a revision you actually read from get_scratchpad.',
+            'since',
+          )
+        }
         const changes = state.activities
           .filter((activity) => activity.revision > since)
           .slice(-20)

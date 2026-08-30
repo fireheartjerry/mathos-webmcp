@@ -32,7 +32,7 @@ failure.**
 
 **`|A| = 18`** binds. `L ≥ 1000`, so `min(L, |A|) = min(≥1000, 18) = 18`, and the
 surface must be exactly 18 tools. The enumeration is in `capabilities.md`: 9 write
-capabilities, one per member of the reducer's action union (`types.ts:111-120`), and 9
+capabilities, one per member of the reducer's action union (`types.ts:121-129`), and 9
 reads that each perform a distinct computation.
 
 This was the open question when the criteria were written: C1.6 requires
