@@ -501,6 +501,15 @@ infrastructure that should never have been in a public repository.
 
 ---
 
+## A note on the documents
+
+`docs/` holds two kinds of file, and [`docs/README.md`](docs/README.md) says which is
+which. Some are current. Others are point-in-time records that still describe a six-tool
+surface and a refusal this page no longer makes — kept unedited on purpose, because an
+audit quietly rewritten each time its findings are addressed is not an audit.
+
+---
+
 ## Provenance and licence
 
 [`PROVENANCE.md`](PROVENANCE.md) draws the challenge-period boundary: what is new work, what
