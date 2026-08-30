@@ -32,7 +32,7 @@ Baseline (round 0): **23/100**, all gates PASS.
 - Panel gains a nested scrollbar when a tool is expanded at 1280×800
 - Three competing left/right edges on `/`
 
-## Round 2 — score 59 → ?
+## Round 2 — score 59 → 80 (+21)
 ### Changes
 - Removed the last transform; the mark centres arithmetically → C1
 - Removed the tool-name underline, the wordmark's resting rule, the CTA arrow → C3
@@ -45,3 +45,30 @@ contributed only the `<strong>`'s box and read as blank. I reported 440px to the
 round-1 scorer on that basis and it scored C7 at 4/8 accordingly. Measured by text
 Ranges plus elements that actually paint, the true figure was **240px**. The
 number was wrong before the fix, not because of it.
+
+## Round 3 — score 80 → 86 (+6)
+**Accepted:** 3 · **Rejected:** 0 · **Deferred:** 2
+
+### Changes
+- One palette. `tokens.css` defined blue/green/rust/ochre/indigo; `scratchpad.css`
+  overrode all 31 to greyscale in a scoped block; the home page used none of them.
+  The greyscale values are now the definitions → C2, C4
+- Removed the third font weight — a 700 on the receipt marks → C4 (6 → 12)
+- Aligned the home page's verdict vocabulary with the product's. It advertised
+  "not equivalent"; `relationLabel` says "Does not follow".
+
+### Stopped here
+Six of eight criteria at full marks; all five gates pass. Both remaining gaps
+were independently confirmed unclosable without dishonesty:
+
+- **C2 (6/12).** 25.0% reduction against a 35% anchor. Every remaining class was
+  verified live or dynamically composed; the rest is 220 comment lines and 354
+  blank lines. Reaching 35% means deleting working CSS or reformatting to hit a
+  line count — which is the gaming the criterion exists to catch.
+- **C5 (8/16).** Three of six platform features work in Chrome 151. `exposedTo`
+  and `getTools({fromOrigins})` are accepted but do not filter; re-registration
+  throws. Scoring higher requires asserting capabilities the browser lacks.
+
+### Deferred (still open)
+- Panel gains a nested scrollbar when a tool is expanded at 1280×800
+- Three competing left/right edges on `/`

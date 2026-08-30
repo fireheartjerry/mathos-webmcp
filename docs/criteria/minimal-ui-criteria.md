@@ -220,4 +220,12 @@ scorer is verifying numbers it did not gather, and the final report must say so.
 
 | Round | Score | Δ | Gates | Note |
 |-------|-------|---|-------|------|
-| 0     | —     | — | —     | baseline |
+| 0     | 23    | — | all PASS | baseline |
+| 1     | 59    | +36 | all PASS | motion removed; two functional bugs fixed |
+| 2     | 80    | +21 | all PASS | last transform, decorations, measures bound |
+| 3     | 86    | +6  | all PASS | one palette; third weight removed |
+
+**Stopped at 86.** C2 and C5 are the only criteria short of full marks, and an
+independent scorer confirmed neither gap can be closed honestly — C2 would mean
+deleting ~317 lines of working CSS or gaming a line count, C5 would mean claiming
+Chrome capabilities that demonstrably do not work.

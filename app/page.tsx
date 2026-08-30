@@ -69,12 +69,12 @@ export default function HomePage() {
                     ariaLabel="d y by d x equals thirty-six x squared"
                   />
                 </span>
-                <span className="reading-verdict is-broken-verdict">not equivalent</span>
+                <span className="reading-verdict is-broken-verdict">does not follow</span>
               </li>
             </ol>
 
             <figcaption className="reading-note">
-              Step 3 stopped being equivalent at <Tex latex={'x = -1.4'} ariaLabel="x equals negative 1.4" />.
+              Step 3 does not follow from the line above, at <Tex latex={'x = -1.4'} ariaLabel="x equals negative 1.4" />.
             </figcaption>
           </figure>
         </section>
