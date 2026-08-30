@@ -20,7 +20,7 @@ Last checked 2026-08-30.
 | Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
 | Newness documentation | **DONE.** The rules require documented evidence distinguishing prior work from new work. [`PROVENANCE.md`](../PROVENANCE.md) draws the boundary explicitly: the challenge dates, the first application-source commit (`8150dc4`, 2026-08-26), what is new, what was built and then retired during the period, and what is pre-existing Mathos capability and therefore not submitted. |
 | Registered tool documented in the repository | **DONE.** The rules ask the repository to document a registered tool's name, description, `inputSchema` and `execute`. README §*One tool in full* quotes `add_step` verbatim with all four, plus the `registerTool` call itself, and `readme-example.test.ts` fails the build if the quotation drifts from the source. |
-| Builds and runs | **Ready** — `pnpm build` succeeds and 399 tests pass with a clean typecheck. |
+| Builds and runs | **Ready** — `pnpm build` succeeds and 415 tests pass with a clean typecheck. |
 | Verified on the artifact that ships | **DONE, and re-verified 2026-08-30 after the last change.** Everything above had only been checked against the dev server. Against the **production build** (`vinext start`): 18 tools register, the judged journey passes **20/20** (on a different generated family from the previous run — `shared-path` rather than `trig-chain`), the accessibility sweep finds **zero** problems with worst contrast 5.02:1, every one of the 12 network requests returns 200, a fresh navigation logs **zero** console errors or warnings, all six tool groups sit in the first viewport at 390–1280px with no horizontal scroll, and `get_platform` returns its seven verdicts identically on two consecutive runs leaving `getTools()` unchanged. |
 | Works without WebMCP at all | **DONE.** Simulated faithfully by removing `document.modelContext` before any page script runs. The page says `WebMCP unavailable`, never claims tools are live, names the reason (*"This browser does not expose document.modelContext"*), tells the reader both ways to get it — the Chrome flag and ChatGPT's browser — still shows all six tool groups with counts, and the learner flow still works: the problem renders, the composer accepts input, Add line is live. `scripts/no-webmcp.mjs`. |
 | Holds up at the widths judges use | **DONE.** Judges test in ChatGPT's in-app browser as well as desktop Chrome. Measured at 390, 430, 768, 1024 and 1280 px: **no horizontal scroll, zero overflowing elements, all six tool groups present, composer usable, no hit target under 32px** at any width. `scripts/responsive.mjs`. |
@@ -104,7 +104,7 @@ concept"*
 - Four problem families (product, chain, quotient, trigonometric chain), each a parameterised derivation
   with its own diagnosable error modes, so `list_problem_families` and
   `new_problem(familyId)` lead somewhere.
-- 399 tests, typecheck clean, production build green, zero console errors across the
+- 415 tests, typecheck clean, production build green, zero console errors across the
   judged journey, and no accessibility problem found by a sweep of both pages.
 - Still narrow by choice: one topic, session-scale state. Said plainly rather than hidden.
 
