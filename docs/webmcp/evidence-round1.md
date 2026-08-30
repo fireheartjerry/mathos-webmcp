@@ -116,3 +116,51 @@ returns normally carrying `paintedBeforeReturning: false`. Covered by two tests 
 
 Verdicts: `exposed-to: partial`, `from-origins: partial`, `toolchange: supported`,
 `declarative: supported`, `lifecycle: supported`, `annotations: partial`.
+
+---
+
+## C4.1–C4.3 — the blind agent test
+
+**Setup.** A separate agent, fresh context, received exactly one input: the JSON output
+of `document.modelContext.getTools()` (`scripts/checks/c4-toollist.js`, 18KB). It was
+told to read that one file and forbidden from reading any source, documentation, or
+other file in the repository. It could not execute anything; it proposed calls, the
+orchestrator executed them verbatim and returned raw envelopes.
+
+**Disclosure:** blindness was enforced by instruction, not by sandbox. The agent had
+file tools available and was told not to use them.
+
+**The journey, in the order it happened.**
+
+| Batch | What it did | Outcome |
+|---|---|---|
+| 1 | `get_scratchpad` | Correctly inferred from the tool list alone that this is a maths scratchpad with a CAS, a practice/transfer distinction, and revision-guarded writes. |
+| 2 | `differentiate_expression`, `compare_expressions`, `evaluate_expression`, then `add_step` | **Verified its own reasoning before writing.** Derived `y = 15x⁴ + 3x³`, confirmed `dy/dx = 60x³ + 9x²` and the value `516` at `x = 2` — all against the page CAS — and only then wrote the first line. |
+| 3 | Three `add_step`, then `check_work` | All applied. Check returned `allSound: false`; step 4 (`60(2)^3 + 9(2)^2 = 516`) came back `uncertain`. |
+| 4 | `get_scratchpad`, two read-only CAS calls | Diagnosed: steps 1–3 `sound`, only the final line unresolved. |
+| 5 | `edit_step` to `\frac{dy}{dx}\bigg\|_{x=2} = 516`, `check_work` | **Wrong turn.** The rewrite did not parse; step 4 went from `uncertain` to `unreadable`. |
+| 6 | Two `validate_expression`, `edit_step`, `check_work` | Recovered. Validated candidates *before* writing this time, wrote `\frac{dy}{dx} = 516`, and the check returned **`allSound: true, reachesAnswer: true`**. |
+| 7 | `new_problem`, `get_receipt` | Reasoned unprompted that `new_problem` preserves history while `reset_session` destroys it, closed the round, and read the receipt. |
+
+**Measured:**
+
+- **C4.1 journey completes** — yes. Reached the receipt.
+- **C4.2 dead calls** — calls returning `ok: false` and not followed by a corrected
+  retry: **0**. In fact *no call in the entire journey returned `ok: false`*; every one
+  was accepted. The single wrong turn (batch 5) was a semantically bad but structurally
+  valid write, which the derivation check reported rather than the tool refusing.
+- **C4.3 errors drive recovery** — **vacuous.** Because no call ever returned
+  `ok: false`, this check had zero instances to evaluate. Recorded as such rather than
+  claimed as a pass: the agent did recover from the `unreadable` verdict by using
+  `validate_expression` first, and it cited the tool description as the reason, but that
+  was a *verdict* in a successful envelope, not an error envelope. A scorer should
+  decide whether zero instances counts as PASS or BLOCKED.
+
+**A defect this test found.** After the agent wrote all four lines itself, `get_receipt`
+reported `annotations: {agent: 0}`, `proposalsOffered: {agent: 0}`,
+`proposalsAccepted: {agent: 0}` — every provenance column zero. The receipt counted
+interventions but never authorship, so a round written end to end by an agent read as
+unaided, while `get_scratchpad` was simultaneously telling agents that "get_receipt
+reports the split." Fixed: `WriteCounts` (with a learner column, which
+`ProvenanceCounts` lacks) now tallies added and rewritten lines by source, and the
+receipt returns them as `linesWritten`.
