@@ -1,4 +1,4 @@
-window.__CALLS__ = "[{\"tool\": \"get_scratchpad\", \"args\": {}}, {\"tool\": \"get_receipt\", \"args\": {}}, {\"tool\": \"list_problem_families\", \"args\": {}}]";
+window.__CALLS__ = "[{\"tool\": \"add_step\", \"args\": {\"latex\": \"40\", \"expectedRevision\": 114, \"requestId\": \"line-value-1\"}}, {\"tool\": \"get_scratchpad\", \"args\": {}}]";
 const mc = document.modelContext
 const tools = await mc.getTools()
 const by = Object.fromEntries(tools.map(t => [t.name, t]))
