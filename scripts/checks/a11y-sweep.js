@@ -5,26 +5,30 @@
  * and expensive to ship: unlabelled controls, unreachable focus, contrast below the
  * WCAG AA thresholds, and touch targets too small to hit.
  *
- * ONE KNOWN FALSE POSITIVE, 2026-08-30, resolved by reading pixels.
+ * WHY THE CONTRAST CHECK READS THE CASCADE, NOT ONLY getComputedStyle.
  *
- * On some runs this reports the composer's submit button at 4.17:1 against the 4.5
- * threshold, and on others it reports nothing at all. A check that is not reproducible
- * is not a finding, and the reading is wrong besides. The reason is worth knowing before
- * trusting any number here:
+ * It used to report the composer's submit button at 4.17:1 against a 4.5 threshold,
+ * reproducibly, on a healthy build. It was wrong:
  *
- *   - Chrome reports `.button` as the only matching rule, and it sets
- *     `color: var(--surface)`. `--surface` resolves to #fff on that element. The button
- *     matches neither `:disabled` nor `[aria-disabled="true"]`.
- *   - `getComputedStyle(button).color` nevertheless returns #949494.
- *   - A 4x screenshot of the button, decoded to raw RGB, is 89.1% #333333 (the ::before
- *     fill), 3.7% #ffffff (the glyphs) and 4.8% #000000 (the border). White on #333 is
- *     **12.63:1**.
+ *   - Two pixel samples, the button captured at 4x and decoded to raw RGB, agree - 90.7%
+ *     #333333 (the ::before fill), 4.5% #ffffff (the glyphs), 3.2% #000000 (the border).
+ *     White on #333 is **12.63:1**.
+ *   - `getComputedStyle(button).color` returns #949494, and so does
+ *     `-webkit-text-fill-color`.
+ *   - The cascade says #ffffff: `.button` sets `color: var(--surface)` and `--surface`
+ *     resolves to #fff on that element.
  *
- * The pixels are the product; the computed style is a reading of it that disagreed. Do
- * not change the button on the strength of this line. Two earlier findings from this
- * same script were also instrument artifacts, both fixed below, which is three in a row
- * — treat a single failure here as a lead, not a verdict, and check it against a
- * screenshot before acting.
+ * Two of the three agree, and they are the two that can be checked. So `declaredColor()`
+ * resolves the colour from the matching rules and wins when it disagrees with the
+ * computed value; on this page it disagrees exactly once, on that button. If a colour has
+ * no rule behind it *and* differs from what the element would inherit, it is reported as
+ * unverifiable rather than failed - that is the case where neither source can be trusted.
+ *
+ * Three earlier findings from this script were the measurement rather than the page, and
+ * two bugs in the fix itself were caught the same way: `visit()` treated every style rule
+ * as a group, because Chrome gives each one an empty `cssRules` for CSS nesting, and the
+ * colour parser read `#6f6f6f` as [6, 6, 6] by pulling decimal runs out of a hex string.
+ * Treat a single failure here as a lead, not a verdict.
   */
 /**
  * Measure the resting state, not a loading frame.
@@ -131,7 +135,49 @@ const bgLayers = (el) => {
   }
   return layers
 }
+/**
+ * The colour the cascade says the element has, which is not always what
+ * getComputedStyle reports. Walks the same-origin stylesheets for matching rules that
+ * set `color`, takes the last one to win, and resolves a `var(--x)` against the element.
+ */
+const declaredColor = (el) => {
+  let declared = null
+  const visit = (rules) => {
+    for (const rule of rules || []) {
+      // Do not treat "has cssRules" as "is a group": Chrome gives every CSSStyleRule an
+      // empty cssRules for CSS nesting, so that test skipped every rule in the sheet and
+      // declaredColor returned null for the whole page.
+      if (!rule.selectorText) { if (rule.cssRules) visit(rule.cssRules); continue }
+      if (rule.style && rule.style.color) {
+        let matches = false
+        try { matches = el.matches(rule.selectorText) } catch { matches = false }
+        if (matches) declared = rule.style.color
+      }
+      if (rule.cssRules && rule.cssRules.length) visit(rule.cssRules)
+    }
+  }
+  for (const sheet of document.styleSheets) {
+    let rules
+    try { rules = sheet.cssRules } catch { continue }
+    visit(rules)
+  }
+  if (!declared) return null
+  const variable = /^var\((--[\w-]+)\)$/.exec(declared.trim())
+  const value = variable ? getComputedStyle(el).getPropertyValue(variable[1]).trim() : declared
+  // Hex first: `parse` pulls decimal runs out of a string, so it reads #6f6f6f as
+  // [6, 6, 6] and quietly turns a mid grey into near-black.
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value)
+  if (hex) {
+    const h = hex[1].length === 3 ? [...hex[1]].map((c) => c + c).join('') : hex[1]
+    return [0, 2, 4].map((k) => parseInt(h.slice(k, k + 2), 16))
+  }
+  const rgb = parse(value)
+  return rgb.length === 3 ? rgb : null
+}
+
 let worst = { ratio: 99, text: '' }
+const disagreements = []
+const unverifiable = []
 for (const el of document.querySelectorAll('p, span, li, button, a, h1, h2, h3, label, code, td, th')) {
   // Zero-width characters are KaTeX struts, not text a person reads.
   const text = el.textContent?.replace(/[​-‍﻿]/g, '').trim()
@@ -144,7 +190,24 @@ for (const el of document.querySelectorAll('p, span, li, button, a, h1, h2, h3, 
   const bold = Number(s.fontWeight) >= 700
   const large = size >= 24 || (size >= 18.66 && bold)
   const need = large ? 3 : 4.5
-  const a = lum(parse(s.color)) + 0.05
+  // Prefer the cascade when it disagrees with the computed value: pixel samples of the
+  // one element where they differ agreed with the cascade, twice, on two builds.
+  const computed = parse(s.color)
+  const cascade = declaredColor(el)
+  if (!cascade) {
+    // No rule sets this element's colour, so it must be inheriting. If it is not, the
+    // computed value has no source and cannot be checked - see the header.
+    const parent = el.parentElement ? getComputedStyle(el.parentElement).color : null
+    if (parent && parse(parent).join() !== computed.join()) {
+      unverifiable.push({ text: text.slice(0, 30), computed: s.color, inherits: parent })
+      continue
+    }
+  }
+  const fg = cascade && cascade.join() !== computed.join() ? cascade : computed
+  if (cascade && cascade.join() !== computed.join()) {
+    disagreements.push({ text: text.slice(0, 30), computed: computed.join(), cascade: cascade.join() })
+  }
+  const a = lum(fg) + 0.05
   const ratio = Math.max(...bgLayers(el).map((layer) => {
     const b = lum(layer) + 0.05
     return a > b ? a / b : b / a
@@ -170,6 +233,8 @@ if (h1s !== 1) add('heading structure', `${h1s} h1 elements`)
 
 return {
   focusRules,
+  colorDisagreements: disagreements,
+  unverifiableColors: unverifiable,
   controls: interactive.length,
   worstContrast: worst,
   problemCount: problems.length,

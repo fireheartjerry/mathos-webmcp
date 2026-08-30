@@ -146,12 +146,14 @@ than measuring it against the rubric, and are recorded so the next scorer can se
   Two of those zeros were later found to be luck rather than evidence — the sweep's focus
   check depended on Chrome's `:focus-visible` heuristic and passed or failed by whether the
   tab had been typed in, and its contrast check missed backgrounds painted on a `::before`.
-  Both fixed. With them fixed the sweep raises one more failure, on the composer's submit
-  button, and that one is also the instrument: it reads 4.17:1, while a 4x screenshot of
-  the button decoded to raw RGB is 89.1% #333333 fill, 3.7% #ffffff glyphs and 4.8%
-  #000000 border - white on #333, **12.63:1**. Three findings from this script in a row
-  turned out to be the measurement rather than the page, which is itself the useful
-  result: a single failure here is a lead, not a verdict, and the script now says so;
+  Both fixed. A third failure, on the composer's submit button at 4.17:1, was also the
+  instrument: two pixel samples of the button decoded to raw RGB give 90.7% #333333 fill
+  with #ffffff glyphs, which is **12.63:1**. The cause is that `getComputedStyle` returns
+  a colour no rule in the codebase produces; the check now resolves colour from the
+  cascade and prefers it when the two disagree, which on this page happens exactly once.
+  Three findings in a row being the measurement rather than the page is itself the useful
+  result, and the script says so at the top: a single failure there is a lead, not a
+  verdict. With all three fixed: **0 problems on all three pages**, worst contrast 5.02:1;
   `color-scheme: light` declared so a dark-mode browser cannot repaint the palette.
 - **Four problem families**, each with its own diagnosable error modes and a shared
   collision guard.
