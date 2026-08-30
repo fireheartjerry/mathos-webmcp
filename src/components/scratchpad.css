@@ -1575,6 +1575,7 @@
 
 .console-platform { margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--bw-rule); }
 .console-platform-head { margin: 0 0 var(--s-4); color: var(--bw-ink); font-size: var(--fs-meta); }
+.console-platform-note { margin: var(--s-3) 0 0; color: var(--bw-soft); font-size: var(--fs-micro); line-height: var(--lh-prose); }
 .console-platform ul { margin: 0; padding: 0; list-style: none; }
 .console-platform li {
   display: grid;

@@ -75,7 +75,10 @@ const rows = (detail: string): PlatformFeature[] =>
  * tools available" - two contradictory claims on one screen, both from us.
  */
 export function unprobedPlatform(): PlatformFeature[] {
-  return rows('Not probed yet. Nothing here is claimed until it has been executed.')
+  // Empty on purpose. This used to carry a sentence, which the console then printed
+  // seven times, once under each row, before anything had been probed. The console
+  // states it once instead.
+  return rows('')
 }
 
 /** The genuine absence: this browser does not expose `document.modelContext`. */

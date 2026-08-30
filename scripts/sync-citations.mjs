@@ -83,7 +83,11 @@ for (const doc of DOCS) {
   text = text.replace(/types\.ts:\d+-\d+/g, (m) => {
     const start = Number(m.split(':')[1].split('-')[0])
     if (start === stateStart) return `types.ts:${stateStart}-${stateEnd}`
-    return `types.ts:${unionStart}-${unionStart + ACTIONS.length - 1}`
+    // Was `unionStart + ACTIONS.length - 1`, which is off by one: the union spans the
+    // `export type SessionAction =` line *plus* one line per member, so it ends at the
+    // RESET line, not one before it. That wrote types.ts:121-129 into two docs when the
+    // union ends at 130, and citations.test.ts caught it. Use the measured line.
+    return `types.ts:${unionStart}-${actionLines.RESET}`
   })
   for (const [action, line] of Object.entries(actionLines)) {
     text = text.replace(

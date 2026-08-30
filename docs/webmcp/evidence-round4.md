@@ -142,7 +142,12 @@ than measuring it against the rubric, and are recorded so the next scorer can se
   characters against the 1.5K limit.
 - **A production build that did not compile**, invisible because the dev server does not
   minify. `pnpm build` is now in the gate.
-- **Accessibility**: zero problems on both pages at 390–1280px; worst contrast 5.02:1;
+- **Accessibility**: zero problems on both pages at 390–1280px; worst contrast 5.02:1.
+  Two of those zeros were later found to be luck rather than evidence — the sweep's focus
+  check depended on Chrome's `:focus-visible` heuristic and passed or failed by whether the
+  tab had been typed in, and its contrast check missed backgrounds painted on a `::before`.
+  Both fixed. With them fixed the sweep raises one open question about the composer's
+  submit button, recorded in the script's header rather than resolved either way;
   `color-scheme: light` declared so a dark-mode browser cannot repaint the palette.
 - **Four problem families**, each with its own diagnosable error modes and a shared
   collision guard.

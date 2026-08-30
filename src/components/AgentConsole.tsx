@@ -226,12 +226,15 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
           <button type="button" className="button-text" onClick={() => void onProbePlatform()}>
             Probe this browser
           </button>
+          {platform.every((feature) => !feature.detail) && (
+            <p className="console-platform-note">Nothing is claimed here until it has been executed.</p>
+          )}
           <ul>
             {platform.map((feature) => (
               <li key={feature.id}>
                 <span className="platform-label">{feature.label}</span>
                 <span className={`platform-status platform-${feature.status}`}>{feature.status}</span>
-                <span className="platform-detail">{feature.detail}</span>
+                {feature.detail && <span className="platform-detail">{feature.detail}</span>}
               </li>
             ))}
           </ul>
