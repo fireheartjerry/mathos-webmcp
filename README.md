@@ -10,7 +10,7 @@ A math scratchpad. The learner writes real multi-step working; the page's own co
 algebra system finds the first step that stopped being true; a WebMCP agent reads that work,
 asks the page to check it, and teaches to that exact step.
 
-It proves three generated families end to end — product rule, chain rule, quotient rule —
+It proves four generated families end to end — product rule, chain rule, quotient rule, and the chain rule through a sine —
 each a parameterised derivation rather than a stored answer bank. That is a narrow,
 falsifiable wedge, not a claim to be a general-purpose mathematics tutor.
 
@@ -79,9 +79,11 @@ learner writes multi-line working, not a single number.
    establish.
 
 8. Press **Try a fresh problem, unaided** again, or have an agent call
-   `new_problem` with a `familyId`. There are three families — **product rule**, **chain
-   rule**, **quotient rule** — each a parameterised derivation with its own diagnosable
-   mistakes, not a list of stored answers. The heading names the rule you are on.
+   `new_problem` with a `familyId`. There are four families — **product rule**, **chain
+   rule**, **quotient rule**, and **the chain rule through a sine** — each a parameterised
+   derivation with its own diagnosable mistakes, not a list of stored answers. The heading
+   names the rule you are on. The trigonometric family is evaluated at `x = 0` on purpose,
+   so its answers stay whole numbers and the mistakes stay legible.
 
 You do not need an agent for any of that. If your browser has no WebMCP, the **Agent
 Console** in the margin still shows the whole surface — six groups with counts, summing to

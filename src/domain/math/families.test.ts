@@ -8,8 +8,8 @@ import { checkDerivation } from './derivation'
  * that leads nowhere, which is worse than not offering it.
  */
 describe('every problem family', () => {
-  it('offers three families', () => {
-    expect(FAMILY_IDS).toEqual(['shared-path', 'nested-power', 'quotient'])
+  it('offers four families', () => {
+    expect(FAMILY_IDS).toEqual(['shared-path', 'nested-power', 'quotient', 'trig-chain'])
   })
 
   it.each(FAMILY_IDS)('%s generates across many seeds without throwing', (familyId) => {

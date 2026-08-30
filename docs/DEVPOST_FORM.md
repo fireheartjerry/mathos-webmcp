@@ -67,7 +67,7 @@ against the page's engine, write and revise lines, and read a receipt of what ha
 The agent never grades. It cannot. Every verdict on screen is rendered from the return
 value of the page's engine, not from anything a model said.
 
-Three families of problem — product rule, chain rule, quotient rule — each a
+Four families of problem — product rule, chain rule, quotient rule, and the chain rule through a sine — each a
 parameterised derivation, not a stored answer bank. Every wrong answer a learner might
 reach is *derived* as a different way of doing the calculus, so the diagnosis survives
 regeneration. Instances where two distinct mistakes happen to give the same number at the

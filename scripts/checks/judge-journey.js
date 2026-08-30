@@ -102,6 +102,6 @@ for (const [name, args] of [['get_scratchpad', {}], ['get_receipt', {}], ['get_c
 
 // Every family reachable.
 const families = (await call('list_problem_families', {})).data.families
-expect('three problem families offered', families, (v) => v.length === 3, families.join(', '))
+expect('four problem families offered', families, (v) => v.length === 4, families.join(', '))
 
 return { premise: yExpr, derivative, value, at, given: start.problem.given, family: start.problem.given.length, failed: checks.filter((c) => !c.pass), passed: checks.filter((c) => c.pass).length, total: checks.length }

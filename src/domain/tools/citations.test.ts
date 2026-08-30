@@ -46,7 +46,7 @@ const CITATIONS: Array<[string, number, string]> = [
   ['src/domain/math/expression.ts', 21, 'computeEngine'],
   ['src/domain/math/expression.ts', 129, 'parseExpression'],
   ['src/domain/math/equivalence.ts', 185, 'compareExpressions'],
-  ['src/domain/math/problems.ts', 357, 'FAMILY_IDS'],
+  ['src/domain/math/problems.ts', 416, 'FAMILY_IDS'],
   ['src/domain/tools/platform.ts', 355, 'probePlatform'],
 ]
 

@@ -91,7 +91,7 @@ the code reflect genuine effort and a working, non-trivial implementation?"*
 **Execution** — *"a complete, coherent product experience — not just a technical proof of
 concept"*
 
-- Three problem families (product, chain, quotient), each a parameterised derivation
+- Four problem families (product, chain, quotient, trigonometric chain), each a parameterised derivation
   with its own diagnosable error modes, so `list_problem_families` and
   `new_problem(familyId)` lead somewhere.
 - 364 tests, typecheck clean, production build green, zero console errors across the

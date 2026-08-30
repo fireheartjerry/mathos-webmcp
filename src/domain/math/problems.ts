@@ -348,10 +348,69 @@ function finishFamily(
   }
 }
 
+/**
+ * The trigonometric chain family: `y = c\u00b7sin(kx)`.
+ *
+ * The other three families are polynomial, so a learner could pass all of them while
+ * believing differentiation is a rule about exponents. This one is transcendental, and
+ * it is evaluated at x = 0 on purpose: the derivative c\u00b7k\u00b7cos(kx) is exactly c\u00b7k there,
+ * so every predicted answer stays a clean integer and the mistakes stay legible rather
+ * than becoming a contest between decimal expansions.
+ */
+function buildTrigChain(seed: number): Problem | null {
+  const ce = computeEngine()
+  const rng = rngFrom(seed)
+
+  const outer = pick(rng, [2, 3, 4, 5])
+  const inner = pick(rng, [2, 3, 4, 5])
+  if (outer === inner) return null
+
+  const variable = 'x'
+  const innerLatex = `${inner}x`
+  const yLatex = `${outer}\\sin(${innerLatex})`
+
+  const a = ce.parse(innerLatex)
+  const y = ce.parse(yLatex)
+  const da = derivative(a, variable)
+
+  const candidates: Array<Omit<ErrorMode, 'latex' | 'value'> & { expr: BoxedExpression }> = [
+    { id: 'correct', label: 'Chain rule applied through the sine', teach: '', expr: derivative(y, variable) },
+    {
+      id: 'omits_inner_derivative',
+      label: 'Differentiated the sine but not what was inside it',
+      teach: 'the angle is a function of x, so its own derivative multiplies the result.',
+      expr: ce.parse(`${outer}\\cos(${innerLatex})`),
+    },
+    {
+      id: 'sign_slipped',
+      label: 'Differentiated the sine as if it were a cosine',
+      teach: 'sine differentiates to cosine; it is cosine that picks up the minus sign.',
+      expr: ce.box(['Negate', ce.parse(`${outer * inner}\\cos(${innerLatex})`)]),
+    },
+    {
+      id: 'left_the_sine',
+      label: 'Multiplied by the inner derivative but left the sine undifferentiated',
+      teach: 'the outer function has to change too: sin becomes cos.',
+      expr: ce.box(['Multiply', da, y]),
+    },
+  ]
+
+  return finishFamily('trig-chain', seed, variable, 0, candidates, {
+    // Evaluated at zero, where cos is 1 and every candidate lands on a whole number.
+    prompt: 'Find dy/dx at x = 0.',
+    definitions: [
+      { name: 'a', latex: innerLatex },
+      { name: 'y', latex: `${outer}\\sin(a)` },
+    ],
+    premise: y,
+  })
+}
+
 const FAMILIES: Record<string, (seed: number) => Problem | null> = {
   'shared-path': buildSharedPath,
   'nested-power': buildNestedPower,
   quotient: buildQuotient,
+  'trig-chain': buildTrigChain,
 }
 
 export const FAMILY_IDS = Object.keys(FAMILIES)
@@ -366,6 +425,7 @@ export const FAMILY_LABELS: Record<string, string> = {
   'shared-path': 'Product rule',
   'nested-power': 'Chain rule',
   quotient: 'Quotient rule',
+  'trig-chain': 'Chain rule through a sine',
 }
 
 /**
