@@ -15,7 +15,7 @@ Last checked 2026-08-30.
 | Repository contains all source | **DONE.** 163 commits pushed. `main` was docs-only (11 files) and has been **fast-forwarded** to the build, so it now carries all 329 files including the product. Fast-forward, so no commit was rewritten or lost. |
 | Open source licence, detectable at the top of the repo page | **DONE.** GitHub's own detector reports `MIT` for this repository. |
 | Repository presents itself | **DONE.** Description, homepage and six topics set; a public repo with none of these reads as unfinished. |
-| Working live project at a URL judges can test | **BLOCKED — owner only.** `mathos-second-try.fireheartjerry.chatgpt.site` returns **401**. Publishing needs `wrangler login`, which is interactive; this environment is not authenticated. **And the deployed build is stale** — it predates today's work, including the fix for a broken production build, so it must be redeployed, not merely unlocked. |
+| Working live project at a URL judges can test | **BLOCKED — owner only, and it is a visibility setting, not a bug.** The 401 is served by OpenAI Sites' own dispatch layer — the response body loads `/_sites/dispatch-assets/401-petbouncer-black.gif` and the OpenAI logo, which is the *not shared publicly* gate, not this application. Judges in ChatGPT's in-app browser would meet the same gate. The build artifact is correctly formed: `dist/.openai/hosting.json` is present, which the Sites plugin requires. **The deployed build is also stale**, predating the fix for a production build that did not compile, so it needs republishing rather than merely unlocking. |
 | Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED — owner only.** [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) is shot-by-shot for the current build, narration counted at 394 words (~2:38 spoken), with the seven shots that must be on camera. |
 | Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
@@ -24,13 +24,22 @@ Last checked 2026-08-30.
 
 ### What is left, exactly
 
-1. **Redeploy the current build**, then make the site reachable:
+1. **Republish the current build, and make the Site public.** Two separate things:
    ```bash
-   npx wrangler login      # interactive; cannot be done unattended
-   pnpm build
-   # publish through the Sites project in .openai/hosting.json
+   pnpm build              # dist/.openai/hosting.json is emitted; verified present
+   npx wrangler login      # interactive, so it cannot be done unattended
+   # then publish the Sites project identified by .openai/hosting.json
+   #   project_id: appgprj_6a90d5ad5fc08191992d9524e2fb970b
    ```
-   Confirm afterwards that `/` and `/learn` return 200 to a signed-out request.
+   Then set the Site's visibility to public in the ChatGPT Sites dashboard. The current
+   401 is that visibility gate, not authentication this app imposes.
+
+   Verify with a signed-out request, not just a browser that has your cookies:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}
+" https://mathos-second-try.fireheartjerry.chatgpt.site/learn
+   ```
+   It must print `200`. Anything else is what a judge will see.
 2. **Record the video** from `DEMO_SCRIPT.md` and upload it publicly to YouTube.
 3. **Flip the repository to public** — see the timing warning.
 4. Fill in the Devpost form by pasting from [`DEVPOST_FORM.md`](DEVPOST_FORM.md).
