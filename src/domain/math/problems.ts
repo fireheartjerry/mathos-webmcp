@@ -178,8 +178,180 @@ function buildSharedPath(seed: number): Problem | null {
   }
 }
 
+/**
+ * The nested-power family: `y = (a(x))^n`.
+ *
+ * Chosen because the chain rule's failure is a *missing factor*, not a wrong one. A
+ * learner who forgets the inner derivative still produces something that looks like a
+ * derivative and is often right at x = 1, which is exactly why the collision guard
+ * matters here more than anywhere else.
+ */
+function buildNestedPower(seed: number): Problem | null {
+  const ce = computeEngine()
+  const rng = rngFrom(seed)
+
+  const inner = pick(rng, [2, 3, 4, 5])
+  const shift = pick(rng, [1, 2, 3, -1, -2])
+  const power = pick(rng, [2, 2, 3])
+  const point = pick(rng, [-2, -1, 1, 2, 2, 3])
+
+  const variable = 'x'
+  const aLatex = shift >= 0 ? `${inner}x + ${shift}` : `${inner}x - ${Math.abs(shift)}`
+
+  const a = ce.parse(aLatex)
+  const y = ce.box(['Power', a, power])
+  const da = derivative(a, variable)
+
+  const candidates: Array<Omit<ErrorMode, 'latex' | 'value'> & { expr: BoxedExpression }> = [
+    { id: 'correct', label: 'Outer power and inner derivative both counted', teach: '', expr: derivative(y, variable) },
+    {
+      id: 'omits_inner_derivative',
+      label: 'Brought the power down but did not differentiate what was inside',
+      teach: 'the bracket is itself a function of x, so its own derivative multiplies the result.',
+      expr: ce.box(['Multiply', power, ce.box(['Power', a, power - 1])]),
+    },
+    {
+      id: 'inner_only',
+      label: 'Differentiated only what was inside the bracket',
+      teach: 'the power is still there; differentiating the inside is one factor of the answer, not all of it.',
+      expr: da,
+    },
+    {
+      id: 'kept_the_power',
+      label: 'Multiplied by the inner derivative but did not reduce the power',
+      teach: 'bringing the power down also lowers the exponent by one.',
+      expr: ce.box(['Multiply', power, ce.box(['Power', a, power]), da]),
+    },
+  ]
+
+  return finishFamily('nested-power', seed, variable, point, candidates, {
+    prompt: `Find dy/dx at x = ${point}.`,
+    definitions: [
+      { name: 'a', latex: aLatex },
+      { name: 'y', latex: `a^${power}` },
+    ],
+    premise: y,
+  })
+}
+
+/**
+ * The quotient family: `y = a(x) / b(x)`.
+ *
+ * Chosen because its two commonest failures are *sign order* and *a missing square*,
+ * and both stay wrong under every evaluation point rather than only some - so a
+ * diagnosis here is about structure, not about arithmetic luck.
+ */
+function buildQuotient(seed: number): Problem | null {
+  const ce = computeEngine()
+  const rng = rngFrom(seed)
+
+  const aCoefficient = pick(rng, [1, 2, 3, 4])
+  const aPower = pick(rng, [2, 2, 3])
+  const bCoefficient = pick(rng, [1, 2, 3])
+  const bShift = pick(rng, [1, 2, 3])
+  const point = pick(rng, [-2, -1, 1, 2, 2, 3])
+
+  const variable = 'x'
+  const aLatex = aCoefficient === 1 ? `x^${aPower}` : `${aCoefficient}x^${aPower}`
+  const bLatex = bCoefficient === 1 ? `x + ${bShift}` : `${bCoefficient}x + ${bShift}`
+
+  const a = ce.parse(aLatex)
+  const b = ce.parse(bLatex)
+  // A denominator that vanishes at the evaluation point would make every mode Infinity.
+  if (Math.abs(valueAt(b, variable, point)) < 1e-9) return null
+
+  const y = ce.box(['Divide', a, b])
+  const da = derivative(a, variable)
+  const db = derivative(b, variable)
+  const bSquared = ce.box(['Power', b, 2])
+
+  const candidates: Array<Omit<ErrorMode, 'latex' | 'value'> & { expr: BoxedExpression }> = [
+    { id: 'correct', label: 'Quotient rule applied in the right order', teach: '', expr: derivative(y, variable) },
+    {
+      id: 'reversed_numerator',
+      label: 'Subtracted the two numerator terms the wrong way round',
+      teach: 'the numerator is a\u2032b \u2212 ab\u2032; the term that keeps the denominator undifferentiated comes first.',
+      expr: ce.box(['Divide', ce.box(['Subtract', a.mul(db), da.mul(b)]), bSquared]),
+    },
+    {
+      id: 'quotient_of_derivatives',
+      label: 'Divided the two derivatives instead of applying the quotient rule',
+      teach: 'the derivative of a quotient is not the quotient of the derivatives.',
+      expr: ce.box(['Divide', da, db]),
+    },
+    {
+      id: 'denominator_not_squared',
+      label: 'Got the numerator right but did not square the denominator',
+      teach: 'the quotient rule divides by b squared, not by b.',
+      expr: ce.box(['Divide', ce.box(['Subtract', da.mul(b), a.mul(db)]), b]),
+    },
+  ]
+
+  return finishFamily('quotient', seed, variable, point, candidates, {
+    prompt: `Find dy/dx at x = ${point}.`,
+    definitions: [
+      { name: 'a', latex: aLatex },
+      { name: 'b', latex: bLatex },
+      { name: 'y', latex: '\\dfrac{a}{b}' },
+    ],
+    premise: y,
+  })
+}
+
+/**
+ * The shared tail of every family: evaluate each way of doing the calculus, reject the
+ * instance if two of them agree at this point, and assemble the problem.
+ *
+ * The collision guard is the reason this is shared rather than copied. A family whose
+ * guard is subtly different is a family that can name a diagnosis it cannot support.
+ */
+function finishFamily(
+  familyId: string,
+  seed: number,
+  variable: string,
+  point: number,
+  candidates: Array<Omit<ErrorMode, 'latex' | 'value'> & { expr: BoxedExpression }>,
+  shape: { prompt: string; definitions: ProblemDefinition[]; premise: BoxedExpression },
+): Problem | null {
+  const modes: ErrorMode[] = []
+  for (const candidate of candidates) {
+    const simplified = candidate.expr.simplify()
+    const value = valueAt(simplified, variable, point)
+    if (!Number.isFinite(value)) return null
+    modes.push({
+      id: candidate.id,
+      label: candidate.label,
+      teach: candidate.teach,
+      latex: simplified.latex,
+      value,
+    })
+  }
+  for (let i = 0; i < modes.length; i++) {
+    for (let j = i + 1; j < modes.length; j++) {
+      const scale = Math.max(1, Math.abs(modes[i].value), Math.abs(modes[j].value))
+      if (Math.abs(modes[i].value - modes[j].value) <= COLLISION_TOLERANCE * scale) return null
+    }
+  }
+  const [correct, ...errors] = modes
+  return {
+    id: `${familyId}-${seed}`,
+    familyId,
+    seed,
+    variable,
+    evaluationPoint: point,
+    prompt: shape.prompt,
+    definitions: shape.definitions,
+    resultName: 'y',
+    premiseLatex: shape.premise.simplify().latex,
+    answer: { latex: correct.latex, value: correct.value },
+    errorModes: errors,
+  }
+}
+
 const FAMILIES: Record<string, (seed: number) => Problem | null> = {
   'shared-path': buildSharedPath,
+  'nested-power': buildNestedPower,
+  quotient: buildQuotient,
 }
 
 export const FAMILY_IDS = Object.keys(FAMILIES)
