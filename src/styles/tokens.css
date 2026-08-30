@@ -33,47 +33,47 @@
   /* The only duration in the product. Colour and opacity only; nothing moves. */
   --motion: 80ms;
   /* Proof Margin surfaces */
-  --canvas: #f4f6f8;
+  --canvas: #ffffff;
   --surface: #ffffff;
-  --surface-subtle: #e9eef2;
-  --surface-hover: #e3eaf0;
+  --surface-subtle: #f2f2f2;
+  --surface-hover: #ebebeb;
 
   /* Neutral ink and structure */
-  --ink: #11161b;
-  --ink-soft: #3f4b55;
-  --ink-muted: #5d6974;
-  --ink-disabled: #77838d;
-  --graphite: #586570;
-  --graphite-subtle: #5b6670;
-  --line: #cbd4dc;
-  --line-strong: #7a8995;
+  --ink: #000000;
+  --ink-soft: #444444;
+  --ink-muted: #767676;
+  --ink-disabled: #949494;
+  --graphite: #767676;
+  --graphite-subtle: #949494;
+  --line: #e0e0e0;
+  --line-strong: #949494;
 
   /* Identity, verification, and bounded state roles */
-  --blue: #0b63a5;
-  --blue-hover: #084f85;
-  --blue-active: #063b65;
-  --blue-tint: #e7f1f8;
-  --blue-line: #98bfdc;
-  --focus: #0b63a5;
+  --blue: #000000;
+  --blue-hover: #333333;
+  --blue-active: #000000;
+  --blue-tint: #f2f2f2;
+  --blue-line: #949494;
+  --focus: #000000;
 
-  --green: #176642;
-  --green-deep: #104d32;
+  --green: #000000;
+  --green-deep: #000000;
 
-  --rust: #a13d24;
-  --rust-deep: #7a2b18;
-  --rust-tint: #faebe6;
+  --rust: #000000;
+  --rust-deep: #000000;
+  --rust-tint: #f2f2f2;
 
-  --indigo: #4d5198;
-  --indigo-deep: #383b73;
-  --indigo-tint: #eeeef8;
-  --indigo-line: #b9badb;
+  --indigo: #444444;
+  --indigo-deep: #000000;
+  --indigo-tint: #f2f2f2;
+  --indigo-line: #e0e0e0;
 
-  --ochre: #77570d;
-  --ochre-deep: #5c4208;
-  --ochre-tint: #f7f0dc;
+  --ochre: #767676;
+  --ochre-deep: #444444;
+  --ochre-tint: #f2f2f2;
 
   /* The learner's own route. Diagram strokes only, never type. */
-  --path-a: var(--rust);
+  --path-a: #000000;
 
   /* Typography. Two families; KaTeX owns math and is never overridden. */
   --font-sans: 'STIX Two Text', Georgia, 'Times New Roman', serif;

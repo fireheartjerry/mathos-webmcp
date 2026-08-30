@@ -832,11 +832,9 @@
 
 .receipt-mark {
   color: var(--green);
-  font-weight: 700;
 }
 
 .receipt-limits {
-  max-width: var(--measure-prose);
   max-width: var(--measure-prose);
   color: var(--ink-soft);
   font-size: var(--fs-sm);
@@ -1415,66 +1413,13 @@
   }
 }
 
-/* ==========================================================================
-   Black and white
-   ==========================================================================
+/* Black and white.
 
-   The scratchpad and the home page had drifted into two design systems: ten
-   non-greyscale values here against none there, fifteen type sizes against
-   four, five weights against two. Clicking "Open the scratchpad" moved between
-   two products.
-
-   This is a scoped remap rather than an edit of the rules above it, so the
-   whole layer can be read in one place and lifted out in one commit.
-
-   Removing hue is safe here because it was never the only encoding. Every
-   verdict already carries a glyph — ✓ × ? ! – — and an explicit word beside
-   it. Colour was reinforcement, and the glyph survives greyscale, colour
-   blindness and print, which rust-versus-green does not. What replaces hue is
-   weight: the state that needs attention is filled, the states that do not are
-   outlined. */
-
-.scratch-shell {
-  /* Surfaces */
-  --canvas: #ffffff;
-  --surface: #ffffff;
-  --surface-subtle: #f2f2f2;
-  --surface-hover: #ebebeb;
-
-  /* Ink. True black, not the blue-tinted #11161b. */
-  --ink: #000000;
-  --ink-soft: #444444;
-  --ink-muted: #767676;
-  --ink-disabled: #949494;
-  --graphite: #767676;
-  --graphite-subtle: #949494;
-  --line: #e0e0e0;
-  --line-strong: #949494;
-
-  /* Interactive. Black, with the state carried by the underline and the
-     ink sweep rather than by a colour change. */
-  --blue: #000000;
-  --blue-hover: #333333;
-  --blue-active: #000000;
-  --blue-tint: #f2f2f2;
-  --blue-line: #949494;
-  --focus: #000000;
-
-  /* Semantic roles collapse to ink. The glyph and the word carry the state. */
-  --green: #000000;
-  --green-deep: #000000;
-  --rust: #000000;
-  --rust-deep: #000000;
-  --rust-tint: #f2f2f2;
-  --ochre: #767676;
-  --ochre-deep: #444444;
-  --ochre-tint: #f2f2f2;
-  --indigo: #444444;
-  --indigo-deep: #000000;
-  --indigo-tint: #f2f2f2;
-  --indigo-line: #e0e0e0;
-  --path-a: #000000;
-}
+   Hue was never the only encoding: every verdict carries a glyph and an
+   explicit word beside it, and a glyph survives greyscale, colour blindness
+   and print in a way that rust-versus-green does not. The palette now lives
+   once, in tokens.css, rather than being defined in colour there and
+   overridden to ink here. */
 
 /* The relation marks, re-encoded by weight instead of hue.
 
