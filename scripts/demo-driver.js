@@ -55,7 +55,12 @@ window.__demo = {
     return Boolean(head)
   },
 
-  /** The agent rewrites the line it broke, and the page re-checks. */
+  /**
+   * The agent rewrites the line it broke, then writes the value the question asked for,
+   * so the round is genuinely complete. Without that last line the work is sound but
+   * does not reach the answer, and the page will not let the round close - which is
+   * why an earlier cut of this video could never show the receipt it talked about.
+   */
   async repair() {
     const s = await read()
     const last = s.steps[s.steps.length - 1]
@@ -66,8 +71,44 @@ window.__demo = {
       expectedRevision: await rev(),
       requestId: rid(),
     })
+    const at = Number(/x\s*=\s*(-?\d+)/.exec(s.problem.prompt)[1])
+    const value = (await call('evaluate_expression', { latex: window.__demo._full, at })).data.value
+    await call('add_step', { latex: `${BS}frac{dy}{dx} = ${value}`, expectedRevision: await rev(), requestId: rid() })
     const checked = await call('check_work', { expectedRevision: await rev(), requestId: rid() })
     return { allSound: checked.data.allSound, reaches: checked.data.reachesAnswer }
+  },
+
+  /**
+   * Closes the practice round and completes the unaided one, which is the only state in
+   * which the page renders its receipt. The narration claims the page records who wrote
+   * each line; this is what puts that claim on screen instead of in the voice-over.
+   */
+  async receipt() {
+    const moved = await call('new_problem', { expectedRevision: await rev(), requestId: rid() })
+    if (!moved.ok) return { failed: 'new_problem', error: moved.error }
+    const s = await read()
+    const defs = Object.fromEntries(s.problem.given.map((g) => {
+      const at = g.indexOf(' = ')
+      return [g.slice(0, at).trim(), g.slice(at + 3).trim()]
+    }))
+    const sub = (body, name, latex) =>
+      body.replace(new RegExp(`(^|[^A-Za-z])${name}(?![A-Za-z])`, 'g'), `$1(${latex})`)
+    const y = Object.entries(defs).filter(([k]) => k !== 'y').reduce((b, [k, v]) => sub(b, k, v), defs.y)
+    const d = (await call('differentiate_expression', { latex: y })).data.simplified
+    const at = Number(/x\s*=\s*(-?\d+)/.exec(s.problem.prompt)[1])
+    const value = (await call('evaluate_expression', { latex: d, at })).data.value
+    for (const latex of [`y = ${y}`, `${BS}frac{dy}{dx} = ${d}`, `${BS}frac{dy}{dx} = ${value}`]) {
+      const r = await call('add_step', { latex, expectedRevision: await rev(), requestId: rid() })
+      if (!r.ok) return { failed: latex, error: r.error }
+    }
+    const checked = await call('check_work', { expectedRevision: await rev(), requestId: rid() })
+    await new Promise((r) => setTimeout(r, 400))
+    document.querySelector('.receipt')?.scrollIntoView({ block: 'center' })
+    return {
+      allSound: checked.data.allSound,
+      reaches: checked.data.reachesAnswer,
+      receiptOnScreen: Boolean(document.querySelector('.receipt')),
+    }
   },
 
   async probe() {

@@ -1,5 +1,5 @@
 {
-  "note": "Narration aligned to the beats in scripts/record-demo.mjs, at HOLD_SCALE=8.5. Each segment starts when its beat starts. Word budgets assume ~150 words per minute; keep each segment inside its own duration or the track drifts.",
+  "note": "Narration aligned to the beats in scripts/record-demo.mjs at HOLD_SCALE=8.5. Each segment starts when its beat starts, and must fit inside its own duration at roughly 150 words per minute or the track drifts away from the picture. Nothing here describes something the video does not show.",
   "voice": "Microsoft Zira Desktop",
   "rate": -1,
   "segments": [
@@ -12,38 +12,38 @@
     {
       "beat": "hold",
       "startSeconds": 27.2,
-      "durationSeconds": 15.3,
-      "text": "That verdict did not come from a language model. It came from a computer algebra system running inside the page, and the badge you are looking at is rendered from its return value."
+      "durationSeconds": 11.9,
+      "text": "That verdict did not come from a language model. It came from a computer algebra system running inside the page."
     },
     {
       "beat": "console",
-      "startSeconds": 42.5,
+      "startSeconds": 39.1,
       "durationSeconds": 22.1,
       "text": "This is the whole WebMCP surface. Eighteen tools, nine that read and nine that write, grouped so that an agent, or a person, can see its shape and its size without clicking anything."
     },
     {
       "beat": "mathematics",
-      "startSeconds": 64.6,
-      "durationSeconds": 22.1,
-      "text": "These four are the interesting ones. An agent can differentiate, evaluate, and compare expressions against the page's own engine before it writes anything to a learner's work. Every agent we pointed at this page used them unprompted."
+      "startSeconds": 61.2,
+      "durationSeconds": 17.9,
+      "text": "These four matter most. An agent can differentiate, evaluate and compare against the page's own engine before it writes anything to a learner's work."
     },
     {
       "beat": "repair",
-      "startSeconds": 86.7,
+      "startSeconds": 79.1,
       "durationSeconds": 25.5,
-      "text": "Now the agent repairs the line it broke, and asks the page to check again. It can do that. This page used to refuse every agent write, and we withdrew the refusal, because a permission check in our own code never bound anything outside this page."
+      "text": "Now the agent repairs the line it broke, and finishes the answer. It is allowed to. This page used to refuse every agent write, and we withdrew the refusal, because a permission check in our own code never bound anything outside this page."
     },
     {
-      "beat": "sound",
-      "startSeconds": 112.2,
-      "durationSeconds": 17.0,
-      "text": "Every line is sound. What replaces the refusal is attribution: the receipt records who wrote each line, and says so even when the answer is that an agent wrote all of them."
+      "beat": "receipt",
+      "startSeconds": 104.6,
+      "durationSeconds": 30.6,
+      "text": "What replaces the refusal is on screen now. The round is closed, the unaided attempt is complete, and the page reports what it observed and who caused it. It also states what it does not establish. It does not claim anyone learned anything, and it says so in the same type size as everything else it claims."
     },
     {
       "beat": "probe",
-      "startSeconds": 129.2,
-      "durationSeconds": 34.5,
-      "text": "And this is the part we are proudest of. Every one of these seven verdicts was produced by executing the feature in your browser, just now. Three work. Two, origin scoping and cross origin reads, Chrome accepts and silently does not honour. One more is absent altogether. A page that believed origin scoping worked would be shipping a security assumption the browser does not implement. So we publish what the platform does not do, alongside what it does."
+      "startSeconds": 135.2,
+      "durationSeconds": 28.1,
+      "text": "And this is the part we are proudest of. Each of these seven verdicts was produced by executing the feature in this browser, just now. Three work. Two, origin scoping and cross origin reads, Chrome accepts and silently does not honour. We publish what the platform does not do."
     }
   ]
 }

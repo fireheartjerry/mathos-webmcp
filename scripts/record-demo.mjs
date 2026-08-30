@@ -76,12 +76,12 @@ await send('Runtime.enable')
 // The beats. Each returns quickly; the pauses are what make it watchable.
 const BEATS = [
   ['open on a derivation with a wrong line, checked', 'return await window.__demo.setup()', 3200],
-  ['let the marked line sit', 'return 1', 1800],
+  ['let the marked line sit', 'return 1', 1400],
   ['show the whole tool surface', 'return await window.__demo.showConsole()', 2600],
-  ['open the mathematics group', 'return await window.__demo.openGroup("Mathematics")', 2600],
-  ['the agent repairs the line', 'return await window.__demo.repair()', 3000],
-  ['everything sound', 'return 1', 2000],
-  ['probe what this browser really does', 'return await window.__demo.probe()', 4200],
+  ['open the mathematics group', 'return await window.__demo.openGroup("Mathematics")', 2100],
+  ['the agent repairs the line and reaches the answer', 'return await window.__demo.repair()', 3000],
+  ['close the round; the receipt appears', 'return await window.__demo.receipt()', 3600],
+  ['probe what this browser really does', 'return await window.__demo.probe()', 3300],
 ]
 
 console.log('injecting the driver…')
