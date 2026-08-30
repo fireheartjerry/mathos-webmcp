@@ -41,9 +41,12 @@
   /* Neutral ink and structure */
   --ink: #000000;
   --ink-soft: #444444;
-  --ink-muted: #767676;
+  /* 5.03:1 on white. This was #767676, which is 4.54:1 - a pass, with 0.04 of
+     headroom over the AA threshold, which is close enough that an audit tool rounding
+     differently could call it a failure. No colour was added; the grey moved. */
+  --ink-muted: #6f6f6f;
   --ink-disabled: #949494;
-  --graphite: #767676;
+  --graphite: #6f6f6f;
   --graphite-subtle: #949494;
   --line: #e0e0e0;
   --line-strong: #949494;
@@ -68,7 +71,7 @@
   --indigo-tint: #f2f2f2;
   --indigo-line: #e0e0e0;
 
-  --ochre: #767676;
+  --ochre: #6f6f6f;
   --ochre-deep: #444444;
   --ochre-tint: #f2f2f2;
 
@@ -139,7 +142,7 @@
   --bw-paper: #ffffff;
   --bw-ink: #000000;
   --bw-soft: #444444;
-  --bw-muted: #767676;
+  --bw-muted: #6f6f6f;
   --bw-rule: #e0e0e0;
 
 }
