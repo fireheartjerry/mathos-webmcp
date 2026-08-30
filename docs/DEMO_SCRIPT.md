@@ -187,3 +187,28 @@ limit before a single pause. Anything above roughly 400 words will not fit.
 - Do not say "AI tutor". The page is the tutor; the agent is the voice.
 - Do not show the Devpost page, a terminal, or the repository. Product only.
 - Do not claim mastery, proof, or understanding anywhere in the narration.
+
+## The delivered file
+
+`docs/video/second-try-demo.mp4` — 1920×1080, H.264, AAC 48 kHz stereo, **2:44.1**
+(164.1 s against the rules' 180 s limit), 4920 frames, `faststart`.
+
+Loudness was measured rather than assumed:
+
+```bash
+ffmpeg -i docs/video/second-try-demo.mp4 -af loudnorm=I=-16:TP=-1.5:print_format=json -f null -
+#  input_i  = -15.98 LUFS   (target -16)
+#  input_tp =  -1.43 dBTP   (ceiling -1.5)
+```
+
+Remotion wrote the audio at 96 kHz. That is legal AAC and every desktop player handles it,
+but a transcode on somebody else's server is not a thing to find out about after the
+deadline, so the track was resampled to 48 kHz with the video stream copied:
+
+```bash
+ffmpeg -i in.mp4 -c:v copy -c:a aac -ar 48000 -b:a 192k -movflags +faststart out.mp4
+```
+
+`-c:v copy` matters: the picture is bit-identical, and the frame count and duration were
+checked afterwards to prove it (4920 frames, 164.1 s, both unchanged). Re-encoding video to
+fix an audio problem would have thrown away quality for nothing.
