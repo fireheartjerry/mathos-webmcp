@@ -6,6 +6,12 @@
 console on the right is the whole WebMCP surface: eighteen tools, nine read and nine
 write, grouped so their shape and size are legible without a click.*
 
+**A 2:44 walkthrough is in the repository:
+[`docs/video/second-try-demo.mp4`](docs/video/second-try-demo.mp4).** It is a screencast of
+the production build driven through its own WebMCP tools — the marked line, the tool
+surface, the repair, the receipt, and the platform probe reporting what Chrome actually
+does. Nothing in it is staged; every state change went through `executeTool`.
+
 A math scratchpad. The learner writes real multi-step working; the page's own computer
 algebra system finds the first step that stopped being true; a WebMCP agent reads that work,
 asks the page to check it, and teaches to that exact step.
