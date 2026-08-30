@@ -58,10 +58,15 @@
   position: absolute;
   inset-inline: 0;
   bottom: 9px;
-  height: 2px;
-  background: var(--bw-ink);
+  height: 1px;
+  background: var(--bw-rule);
   content: '';
-  
+  transition: background-color var(--motion) linear;
+}
+
+.wordmark:hover::after,
+.wordmark:focus-visible::after {
+  background: var(--bw-ink);
 }
 
 .wordmark:focus-visible {
@@ -129,35 +134,22 @@
   position: relative;
 }
 
-/* Two rules stacked on the same baseline. The resting one is a hairline; the
-   ink draws across it from the left on hover.
-
-   This used to be a single black rule that retracted to the right. It was the
-   only subtractive hover on the page — the wordmark's underline draws in, and
-   hovering the one primary action took its underline away, which reads as the
-   link going quiet exactly when it is being reached for. Sarsa's spec asks for
-   the opposite in both places: section 8 gives the CTA an ink sweep from the
-   left and links an underline that draws on.
-
-   Making the resting rule a hairline is the other half of the trade. The
-   static state gets quieter and the motion gets the whole contrast. */
-.cta-label::before {
+/* One rule. There were two stacked here - a hairline and an ink rule revealed
+   by a sweep - and with the sweep gone both painted at once. The rule now
+   changes colour under the pointer, which is the whole motion budget. */
+.cta-label::after {
   position: absolute;
   inset-inline: 0;
   bottom: -4px;
   height: 2px;
   background: var(--bw-rule);
   content: '';
+  transition: background-color var(--motion) linear;
 }
 
-.cta-label::after {
-  position: absolute;
-  inset-inline: 0;
-  bottom: -4px;
-  height: 2px;
+.cta:hover .cta-label::after,
+.cta:focus-visible .cta-label::after {
   background: var(--bw-ink);
-  content: '';
-  
 }
 
 .cta:focus-visible {

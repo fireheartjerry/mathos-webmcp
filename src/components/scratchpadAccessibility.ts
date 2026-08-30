@@ -1,8 +1,10 @@
 import type { ActionSource } from '../domain/session/types'
 import { actorLabel } from './proofPresentation'
+import { speakLatex } from './speakLatex'
 
 export function stepExpressionAccessibleName(position: number, latex: string): string {
-  return `Line ${position}: ${latex}. Select to rewrite this expression.`
+  // Spoken, not source. The raw LaTeX was being read out as backslashes and braces.
+  return `Line ${position}: ${speakLatex(latex)}. Select to rewrite this expression.`
 }
 
 export function interventionLiveMessage(

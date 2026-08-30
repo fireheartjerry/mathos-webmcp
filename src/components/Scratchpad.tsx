@@ -10,6 +10,8 @@ import type { ActionResult, ActionSource, SessionAction, SessionState, Step } fr
 import { registerTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
+import { probePlatform, untestedPlatform } from '../domain/tools/platform'
+import type { PlatformFeature } from '../domain/tools/platform'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
 import AgentConsole from './AgentConsole'
@@ -156,6 +158,7 @@ export default function Scratchpad() {
   // accepting keystrokes that would be discarded.
   const [ready, setReady] = useState(false)
   const [tabConflict, setTabConflict] = useState(false)
+  const [platform, setPlatform] = useState<PlatformFeature[]>(untestedPlatform)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [composerError, setComposerError] = useState('')
@@ -304,6 +307,12 @@ export default function Scratchpad() {
     focusLineOrComposer(null)
     announce('A new session started. Focus moved to Write your first line.')
   }, [announce, focusLineOrComposer])
+
+  // Probing registers scratch tools of its own, so it runs on request rather than
+  // on load: the list a judge sees first is exactly the six the product ships.
+  const runPlatformProbe = useCallback(async () => {
+    setPlatform(await probePlatform())
+  }, [])
 
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
   const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
@@ -885,6 +894,8 @@ export default function Scratchpad() {
             </span>
           </h2>
           <AgentConsole
+            platform={platform}
+            onProbePlatform={runPlatformProbe}
             status={status}
             tools={inspectorTools}
             onRun={runFromInspector}

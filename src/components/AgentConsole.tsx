@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
+import type { PlatformFeature } from '../domain/tools/platform'
 import {
   registrationAllowsDirectCalls,
   registrationRecovery,
@@ -17,6 +18,8 @@ type Props = {
   onRun: (toolName: string, argsJson: string) => Promise<string>
   revision: number
   proposalSeed: ProposalSeed | null
+  platform: PlatformFeature[]
+  onProbePlatform: () => Promise<void>
 }
 
 function StatusLine({ status }: { status: RegistrationStatus }) {
@@ -52,7 +55,7 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
   )
 }
 
-export default function AgentConsole({ status, tools, onRun, revision, proposalSeed }: Props) {
+export default function AgentConsole({ status, tools, onRun, revision, proposalSeed, platform, onProbePlatform }: Props) {
   const suggested = useMemo(() => suggestedInspectorArgs(proposalSeed), [proposalSeed])
   const [openTool, setOpenTool] = useState<string | null>(null)
   const [args, setArgs] = useState<string>('')
@@ -166,6 +169,24 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
             <code>{output.tool}</code> returned
           </p>
           <pre>{output.text}</pre>
+        </div>
+      )}
+
+      {platform.length > 0 && (
+        <div className="console-platform">
+          <p className="console-platform-head">Platform, as this browser answered it</p>
+          <button type="button" className="button-text" onClick={() => void onProbePlatform()}>
+            Probe this browser
+          </button>
+          <ul>
+            {platform.map((feature) => (
+              <li key={feature.id}>
+                <span className="platform-label">{feature.label}</span>
+                <span className={`platform-status platform-${feature.status}`}>{feature.status}</span>
+                <span className="platform-detail">{feature.detail}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

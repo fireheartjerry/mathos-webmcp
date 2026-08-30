@@ -246,7 +246,6 @@
 }
 
 .step {
-  --relation-track: var(--line-strong);
   position: relative;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) minmax(240px, 270px) 44px;
@@ -260,51 +259,9 @@
   border-bottom: var(--bw-hairline) solid var(--line);
 }
 
-/* Two checked-chain segments meet at the relation mark. They span the whole row,
-   including its padding, so adjacent proof lines read as one derivation rather than
-   a stack of timeline cards. */
-.step::before,
-.step::after {
-  z-index: 0;
-  width: var(--bw-node);
-  grid-column: 3;
-  justify-self: start;
-  align-self: stretch;
-  background: var(--relation-track);
-  content: '';
-  pointer-events: none;
-}
-
-.step::before {
-  grid-row: 1 / 2;
-  margin-block: calc(var(--s-4) * -1) 22px;
-}
-
-.step::after {
-  grid-row: 1 / -1;
-  margin-block: 22px calc(var(--s-4) * -1);
-}
-
 .step:first-child::before,
 .step:last-child::after {
   display: none;
-}
-
-.step:has(.relation-sound) {
-  --relation-track: var(--green);
-}
-
-.step:has(.relation-broken) {
-  --relation-track: var(--rust);
-}
-
-.step:has(.relation-uncertain),
-.step:has(.relation-unreadable) {
-  --relation-track: var(--ochre);
-}
-
-.step:has(.relation-downstream) {
-  --relation-track: var(--graphite-subtle);
 }
 
 /* No opening rule. The givens block already closes with one, and adding a
@@ -1548,18 +1505,6 @@
 
 /* The relation track beside each row follows the same rule: present and solid
    for a break, faint otherwise. */
-.step:has(.relation-sound) {
-  --relation-track: var(--line);
-}
-
-.step:has(.relation-broken) {
-  --relation-track: var(--ink);
-}
-
-.step:has(.relation-uncertain),
-.step:has(.relation-unreadable) {
-  --relation-track: var(--line-strong);
-}
 
 /* ---- The type scale -----------------------------------------------------
 
@@ -1653,3 +1598,24 @@
 
 @
 
+.console-platform { margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--bw-rule); }
+.console-platform-head { margin: 0 0 var(--s-4); color: var(--bw-ink); font-size: var(--fs-meta); }
+.console-platform ul { margin: 0; padding: 0; list-style: none; }
+.console-platform li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--bw-rule);
+}
+.console-platform li:first-child { border-top: 0; }
+.platform-label { color: var(--bw-ink); font-size: var(--fs-meta); }
+.platform-status { justify-self: end; color: var(--bw-soft); font-size: var(--fs-micro); }
+.platform-status.platform-supported { color: var(--bw-ink); }
+.platform-detail {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: var(--bw-soft);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-prose);
+}

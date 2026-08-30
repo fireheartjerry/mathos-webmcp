@@ -6,10 +6,19 @@ import {
 } from './scratchpadAccessibility'
 
 describe('scratchpad accessibility copy', () => {
-  it('keeps the learner expression in the rewrite button name', () => {
+  // This previously asserted the raw LaTeX was preserved verbatim, which is the
+  // defect rather than the requirement: a screen reader announced the source,
+  // backslashes and braces included. The name now carries a spoken form.
+  it('speaks the learner expression in the rewrite button name', () => {
     expect(stepExpressionAccessibleName(2, '36x^2 + 8x')).toBe(
-      'Line 2: 36x^2 + 8x. Select to rewrite this expression.',
+      'Line 2: 36x squared plus 8x. Select to rewrite this expression.',
     )
+  })
+
+  it('leaves no LaTeX source in the rewrite button name', () => {
+    const name = stepExpressionAccessibleName(1, '\\frac{dy}{dx} = 12x^2 + 2x')
+    expect(name).not.toMatch(/[{}\\]/)
+    expect(name).toContain('d y by d x')
   })
 
   it('announces an incoming annotation with its actor and line', () => {
