@@ -27,7 +27,6 @@ export default function HomePage() {
             </p>
             <a className="cta" href="/learn">
               <span className="cta-label">Open the scratchpad</span>
-              <span className="cta-arrow" aria-hidden="true">→</span>
             </a>
           </div>
 

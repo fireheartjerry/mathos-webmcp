@@ -206,6 +206,7 @@
 }
 
 .round-banner {
+  max-width: var(--measure-prose);
   display: flex;
   align-items: baseline;
   gap: var(--s-3);
@@ -428,9 +429,13 @@
   color: inherit;
 }
 
+/* The mark is a known 14px, so it centres arithmetically. This was the last
+   transform in the product; centring is the one job a transform was still doing
+   and it did not need one. The font declarations went with it — the box carries
+   no text, so a size and a weight here set nothing. */
 .relation-mark::before {
   position: absolute;
-  top: 50%;
+  top: calc(50% - 7px);
   left: -6px;
   display: grid;
   width: 14px;
@@ -440,10 +445,7 @@
   background: var(--canvas);
   color: currentColor;
   content: '';
-  font-size: 10px;
-  font-weight: 700;
   line-height: 1;
-  transform: translateY(-50%);
 }
 
 .relation-idle {
@@ -817,6 +819,7 @@
 }
 
 .receipt-claims li {
+  max-width: var(--measure-prose);
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
   gap: var(--s-2);
@@ -833,6 +836,7 @@
 }
 
 .receipt-limits {
+  max-width: var(--measure-prose);
   max-width: var(--measure-prose);
   color: var(--ink-soft);
   font-size: var(--fs-sm);
@@ -1559,20 +1563,6 @@
 }
 
 /* The tool name draws its underline rather than switching one on. */
-.scratch-shell .console-tool-name {
-  position: relative;
-}
-
-.scratch-shell .console-tool-name::after {
-  position: absolute;
-  inset-inline: 0;
-  bottom: -2px;
-  height: 1px;
-  background: currentColor;
-  content: '';
-  
-}
-
 /* A line that has just been rewritten.
 
    The home page dramatises the second try; when it actually happens here — a

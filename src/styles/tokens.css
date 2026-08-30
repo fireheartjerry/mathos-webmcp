@@ -99,7 +99,7 @@
   --ls-section: -0.008em;
 
   /* Measures and compact document rhythm */
-  --measure-prose: 68ch;
+  --measure-prose: 60ch;
   --measure-headline: 760px;
   --container: min(1120px, calc(100vw - 48px));
   --nav-h: 64px;
@@ -130,10 +130,8 @@
   /* Shared control sizes */
   --btn-pad-sm: 10px 14px;
   --btn-pad-md: 11px 18px;
-  --btn-pad-lg: 13px 22px;
   --btn-fs-sm: 14px;
   --btn-fs-md: 15px;
-  --btn-fs-lg: 16px;
   --btn-gap: 8px;
 
   /* Black and white, for the home page. Four values, no hue at all. The

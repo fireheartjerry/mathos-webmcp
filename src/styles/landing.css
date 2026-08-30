@@ -59,7 +59,7 @@
   inset-inline: 0;
   bottom: 9px;
   height: 1px;
-  background: var(--bw-rule);
+  background: transparent;
   content: '';
   transition: background-color var(--motion) linear;
 }
@@ -74,10 +74,12 @@
   outline-offset: 6px;
 }
 
+/* Top-aligned. Centring inside a full-viewport grid put a tall empty band above
+   the headline and another below the figure - space the page did not use and the
+   reader had to scroll past. The content now starts where it is read. */
 .landing-shell {
-  min-height: calc(100svh - var(--nav-h) - 72px);
   display: grid;
-  align-items: center;
+  align-items: start;
 }
 
 .hero {
