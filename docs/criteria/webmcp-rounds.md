@@ -119,3 +119,90 @@ same overstatement in the next round would be harder to catch:
 
 Also noted: C1.8 was measured at 1442×906, not the 1440×900 the rubric names — a
 marginally easier viewport. Not scored against, but corrected next round.
+
+---
+
+## Round 2 — score 76 → 94 (of an adjusted maximum of 98)
+
+**Gate W1:** PASS (261 tests). **BLOCKED:** C3.9.
+
+| Criterion | Before | After |
+|---|---|---|
+| C1 | 16/20 | 16/20 |
+| C2 | 8/20 | **20/20** |
+| C3 | 18/18 | 18/18 |
+| C4 | 14/18 | **20/20** |
+| C5 | 20/20 | 20/20 |
+
+### Changes
+
+- **A real bug, found by the scorer rather than by me.**
+  `differentiate_expression({latex:'x', variable: 12})` returned `ok:true`: the schema
+  declares `variable` a string, and the handler treated a wrong-typed value as absent.
+  My own counter could not see it, because it only iterated refusals and this call was
+  never refused. `optionalVariable()` now returns a refusal naming `variable`.
+- **C2 8 → 20.** The measurement was at fault, not the product: my "valid" calls ran in
+  phases that refuse them, and one hard-coded a previous problem's answer while
+  `reset_session` regenerates the problem. The procedure now drives each tool into a
+  phase where it applies and computes the answer from the session's own givens.
+- `expectedRevision` gained a maximum; a test asserts every number field carries both
+  bounds. All 27 citations in `capabilities.md` rewritten. C1.8 re-measured at exactly
+  1440×900.
+- The blind-agent test re-run **without the `__NEEDS__` crutch**, so the agent supplies
+  every argument itself. It met a real refusal, corrected it, and C4.3 stopped being
+  vacuous.
+
+### What the scorer caught
+
+Five citations were still wrong *after the pack claimed every one had been verified*,
+and C1.9 was measured at 1282×800 rather than 1280×800 — the same defect the pack had
+just corrected for C1.8 and failed to apply next door.
+
+---
+
+## Round 3 — score 94 → 100/100. Target reached.
+
+**Gate W1:** PASS (307 tests, up from 261; typecheck clean). **Nothing BLOCKED.**
+
+| Criterion | Before | After |
+|---|---|---|
+| C1 | 16/20 | **20/20** |
+| C2 | 20/20 | 20/20 |
+| C3 | 18/18 adj | **20/20** |
+| C4 | 20/20 | 20/20 |
+| C5 | 20/20 | 20/20 |
+
+### Changes
+
+- **Citations are checked, not claimed.** Round 2's pack asserted that every file:line
+  had been verified; five were wrong. Asserting a verification that was never performed
+  is a worse failure than the original error, and it is precisely what the platform
+  probes exist to refuse. `citations.test.ts` now opens every cited file and asserts the
+  cited line contains what the doc claims, checks both endpoints of every range, and
+  fails if the docs cite anything the suite does not cover. It caught six stale
+  citations on its first run. → C1.2
+- **C1.9 re-measured at exactly 1280×800.** → C1.9
+- **C3.9 produced for real, at the third attempt.** Round 1 never backgrounded the tab;
+  round 2 overrode the page's own `visibilityState`, which reproduces the *report* and
+  not the state, and was correctly BLOCKED again. The override is deleted. The tab now
+  reports `hidden` unforced for 62 seconds. → C3.9
+- Every argument refusal names its field, including five that described it only in
+  prose. The `readOnlyHint` audit reports a failed call as `untested` instead of
+  counting it as a match — round 2 had `annotate_step` passing trivially because its
+  call had failed.
+
+### What the scorer caught, and what was done about it
+
+Four overstatements, none changing an outcome, all corrected after scoring:
+
+1. "`reset_session` twice" — it is `edit_step` twice, to satisfy the proposal gate.
+2. "extracts every `file.ts:NN`" — it extracted only range starts and compared by
+   basename. Both fixed; ranges now check both endpoints and paths are compared as
+   written.
+3. `types.ts:111-121` — the union spans 111–120; line 121 is blank.
+4. "45 assertions" — 43 are citation assertions; the other two are structural.
+
+The scorer also recorded what it could not verify without a browser: the viewport
+measurements, the live lifecycle scenarios, the rendered-DOM checks, and the
+blind-agent run, whose blindness is enforced by instruction rather than by sandbox.
+That limitation is real and is disclosed in every round.

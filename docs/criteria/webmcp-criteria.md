@@ -191,3 +191,5 @@ in every round and in the final report.
 |---|---|---|---|---|
 | 0 | 32 | — | PASS | baseline. C1 6, C2 8, C3 0, C4 6, C5 12. Nothing BLOCKED. |
 | 1 | 76 / 98 adj | +44 | PASS | C1 16, C2 8, C3 18/18, C4 14/18, C5 20/20. BLOCKED: C3.9, C4.3. |
+| 2 | 94 / 98 adj | +18 | PASS | C1 16, C2 20, C3 18/18, C4 20, C5 20. BLOCKED: C3.9. |
+| 3 | **100 / 100** | +6 | PASS | C1 20, C2 20, C3 20, C4 20, C5 20. Nothing BLOCKED. **Target reached.** |

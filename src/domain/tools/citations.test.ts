@@ -50,6 +50,19 @@ const CITATIONS: Array<[string, number, string]> = [
   ['src/domain/tools/platform.ts', 311, 'probePlatform'],
 ]
 
+/** Every doc that may cite source. Scanned by the coverage test below. */
+const DOCS = [
+  'docs/webmcp/capabilities.md',
+  'docs/webmcp/ceiling.md',
+  'docs/webmcp/platform.md',
+]
+
+/** file, from, to, text expected at `from`, text expected at `to`. */
+const RANGES: Array<[string, number, number, string, string]> = [
+  [TYPES, 88, 109, 'SessionState = {', '}'],
+  [TYPES, 111, 120, 'SessionAction =', "'RESET'"],
+]
+
 const TOOL_LINES: Array<[string, number]> = [
   ['get_scratchpad', 436], ['check_work', 453], ['annotate_step', 468], ['propose_step', 509],
   ['new_problem', 553], ['get_receipt', 584], ['add_step', 614], ['edit_step', 642],

@@ -28,7 +28,7 @@ count while lowering the score, which is the intended behaviour.
 
 ## Writes — every action the reducer accepts (9)
 
-The reducer's action union is `src/domain/session/types.ts:111-121`. Every member is a
+The reducer's action union is `src/domain/session/types.ts:111-120`. Every member is a
 learner-reachable capability, so under the current thesis every member needs a tool.
 Five of the nine had none at round 0.
 

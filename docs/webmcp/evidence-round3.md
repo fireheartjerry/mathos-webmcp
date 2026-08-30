@@ -57,7 +57,7 @@ procedure drives each tool into a phase where it applies.
 | # | Measurement | Source |
 |---|---|---|
 | C1.1 | 1000 tools registered, `getTools()` returned 1000, latency flat 8–11ms per 50; never rejected, never truncated. Terminating condition: probe maximum. **`L ≥ 1000`.** | `ceiling.md` |
-| C1.2 | `capabilities.md` lists 18 capabilities, each with a file:line. **Every citation is verified by test**: `citations.test.ts` asserts 45 of them against the files, and a further test fails if the docs cite anything the suite does not check. A wrong citation now breaks the build. | `capabilities.md`, `citations.test.ts` |
+| C1.2 | `capabilities.md` lists 18 capabilities, each with a file:line. **Every citation is verified by test**: `citations.test.ts` makes 43 citation assertions (25 single lines, 18 tool lines) plus 2 range assertions checking both endpoints, and a coverage test that scans `capabilities.md`, `ceiling.md` and `platform.md`, extracts every `path.ts:NN` and `path.ts:NN-MM`, and fails if any is not asserted — comparing on the written path rather than the basename. A wrong or uncited citation breaks the build. | `capabilities.md`, `citations.test.ts` |
 | C1.3 | Unmapped capabilities = **0**. | `capabilities.md` |
 | C1.4 | Reducible pairs = **0** under the test stated in `capabilities.md`. | `capabilities.md` |
 | C1.5 | **`|A| = 18` binds**, stated with the number: `min(L, \|A\|) = min(≥1000, 18) = 18`. | `ceiling.md` |
@@ -72,8 +72,9 @@ procedure drives each tool into a phase where it applies.
 ## C2 — execution
 
 `c2-full.js`, transcripts in `docs/webmcp/transcripts/round3.json`. 37 recorded calls:
-19 valid (one per tool, plus `reset_session` twice — once to clear, once recorded) and
-18 invalid (one per tool).
+19 valid and 18 invalid. Nineteen rather than eighteen because `edit_step` is called
+twice: the attempt gate requires two learner edits since the last check before
+`propose_step` is in phase.
 
 | # | Measurement |
 |---|---|
