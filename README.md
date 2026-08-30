@@ -472,8 +472,9 @@ node scripts/console-watch.mjs
 ![The Agent Console after pressing Probe this browser: seven WebMCP features with a status and the observation behind each, including two Chrome accepts and does not honour](docs/images/platform-probe.png)
 
 *Press **Probe this browser** and the page tells you what your browser actually did with
-seven WebMCP features — including the two it accepts and silently ignores. Nothing there
-is read from a table.*
+seven WebMCP features — including the two it accepts and silently ignores, and the one
+that is not on the prototype at all. Nothing there is read from a table; every line is the
+observation the probe made, in this browser, a moment before it was rendered.*
 
 ---
 
