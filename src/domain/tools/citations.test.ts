@@ -47,7 +47,7 @@ const CITATIONS: Array<[string, number, string]> = [
   ['src/domain/math/expression.ts', 114, 'parseExpression'],
   ['src/domain/math/equivalence.ts', 185, 'compareExpressions'],
   ['src/domain/math/problems.ts', 357, 'FAMILY_IDS'],
-  ['src/domain/tools/platform.ts', 311, 'probePlatform'],
+  ['src/domain/tools/platform.ts', 344, 'probePlatform'],
 ]
 
 /** Every doc that may cite source. Scanned by the coverage test below. */

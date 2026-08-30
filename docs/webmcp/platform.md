@@ -17,6 +17,7 @@ reading the specification. `unsupported` and `partial` are results, not omission
 | `toolchange` | **supported** | `document.modelContext` is an `EventTarget`; registering dispatched `toolchange` within 200ms. | `c5-probe.js` → `fired: true` |
 | Declarative `<form toolname>` | **supported** | A hidden form carrying `toolname` appeared in `getTools()` with no imperative call, and disappeared when the form was removed. | `c5-probe.js` → `declarative.present: true` |
 | Withdrawing a tool (`AbortSignal`) | **supported** | Aborting the signal passed to `registerTool` removed the tool and freed its name; re-registering then carried a new description. | `c5-abort.js` → `abortUnregisters: true` |
+| `requestUserInteraction()` | **unsupported** | Absent entirely. The whole `modelContext` prototype in Chrome 151 is `ontoolchange`, `executeTool`, `getTools`, `registerTool`. The spec's primitive for confirming an action mid-execution does not exist, so a page that needs confirmation must build it — `propose_step` and `resolve_proposal` are that. | `probe-userinteraction.js` |
 | Annotations beyond the two hints | **partial** | Sent four, `getTools()` returned two: `readOnlyHint`, `untrustedContentHint`. `destructiveHint` and `idempotentHint` were dropped without error. | `c5-probe.js` → `annotations.keys` |
 
 ## Two corrections this file exists to record
@@ -42,8 +43,13 @@ full run: 18 tools, 18 tools.
 - **`inputSchema` comes back as a JSON string**, not an object, when read from
   `getTools()`. Anything parsing the surface has to `JSON.parse` it.
 - **`executeTool` takes the tool object and a JSON *string***, not an object.
-- **`execute` receives exactly one argument.** There is no second `{ signal }`
-  parameter; assuming one throws on every call.
+- **`execute` receives exactly one argument.** Confirmed from the prototype, not only by
+  observation: there is no second `{ signal }` parameter, and assuming one throws on
+  every call.
+- **Output budgets are real and unenforced by the browser.** Chrome's tool-author
+  guidance sets 1.5K characters per tool output, 500 per tool description, 150 per
+  parameter description and 30 per name. Nothing rejects an over-budget payload, so the
+  page enforces it: see `withinOutputBudget` in `definitions.ts`.
 - **A thrown error is flattened** to a generic `UnknownError` and the message is
   discarded. A *returned* envelope survives verbatim, which is why no handler here
   throws.

@@ -69,6 +69,7 @@ export function untestedPlatform(): PlatformFeature[] {
     UNTESTED('declarative', 'Declarative tools (form toolname)'),
     UNTESTED('lifecycle', 'Withdrawing a tool (AbortSignal)'),
     UNTESTED('annotations', 'Annotations beyond the two hints'),
+    UNTESTED('user-confirmation', 'Confirming an action (requestUserInteraction)'),
   ]
 }
 
@@ -308,6 +309,38 @@ async function probeAnnotations(mc: ModelContext): Promise<PlatformFeature> {
   }
 }
 
+/**
+ * The specification describes `requestUserInteraction()` for asking the person to
+ * confirm an action while a tool is executing, and Chrome's security guidance for tool
+ * authors points at it for consequential operations.
+ *
+ * It is worth probing rather than assuming, because if it is absent the obligation does
+ * not disappear — it moves into the page. This product already carries it there:
+ * `propose_step` puts a replacement in front of the learner and `resolve_proposal`
+ * settles it, so a consequential change is confirmed by a person either way.
+ */
+async function probeUserConfirmation(mc: ModelContext): Promise<PlatformFeature> {
+  const id = 'user-confirmation'
+  const label = 'Confirming an action (requestUserInteraction)'
+  const onContext = typeof (mc as unknown as Record<string, unknown>).requestUserInteraction
+  const onNavigator = typeof (navigator as unknown as Record<string, unknown>).requestUserInteraction
+  let surface: string[] = []
+  try {
+    surface = Object.getOwnPropertyNames(Object.getPrototypeOf(mc)).filter((k) => k !== 'constructor')
+  } catch {
+    surface = []
+  }
+  const present = onContext === 'function' || onNavigator === 'function'
+  return {
+    id,
+    label,
+    status: present ? 'supported' : 'unsupported',
+    detail: present
+      ? `Available as a function, so a tool can ask the person to confirm mid-execution.`
+      : `Absent. The whole modelContext surface here is: ${surface.join(', ')}. Confirmation has to be built by the page, which is what propose_step and resolve_proposal do.`,
+  }
+}
+
 export async function probePlatform(): Promise<PlatformFeature[]> {
   const mc = document.modelContext
   if (!mc) return untestedPlatform()
@@ -321,7 +354,8 @@ export async function probePlatform(): Promise<PlatformFeature[]> {
     const declarative = await probeDeclarative(mc)
     const lifecycle = await probeLifecycle(mc)
     const annotations = await probeAnnotations(mc)
-    return [exposed, origins, change, declarative, lifecycle, annotations]
+    const confirmation = await probeUserConfirmation(mc)
+    return [exposed, origins, change, declarative, lifecycle, annotations, confirmation]
   } finally {
     scope.release()
   }

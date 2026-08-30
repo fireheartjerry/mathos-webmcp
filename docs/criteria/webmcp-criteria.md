@@ -164,17 +164,24 @@ from this repo, and its calls are recorded.
 
 ## C5 — Honest platform coverage · 20 pts
 
-**10 checks, 2 pts each.** Six probes, verified by hand in Chrome 151.
+**10 checks, 2 pts each.** Seven probes, verified by hand in Chrome 151.
+
+*A seventh probe was added after round 3: `requestUserInteraction()`, the spec's
+primitive for confirming an action mid-execution, which Chrome's own security guidance
+for tool authors points at. It is absent in Chrome 151 — the whole `modelContext`
+prototype is `ontoolchange`, `executeTool`, `getTools`, `registerTool` — so the
+obligation moves into the page, where `propose_step` and `resolve_proposal` already
+carry it.*
 
 | # | Check | Passes when |
 |---|---|---|
-| C5.1 | Verdicts accurate | Independent manual verification of all six agrees with the reported status. Disagreements = 0. |
+| C5.1 | Verdicts accurate | Independent manual verification of all seven agrees with the reported status. Disagreements = 0. |
 | C5.2 | No literals | A source scan of `platform.ts` finds zero `status` values not computed from a variable observed in that call. |
 | C5.3 | No did-not-throw verdicts | Zero probes report `supported` on the sole evidence that a call did not reject. |
-| C5.4 | Observations stated | All six `detail` strings name the concrete observation (a count, a name, a thrown message). Missing = 0. |
+| C5.4 | Observations stated | All seven `detail` strings name the concrete observation (a count, a name, a thrown message). Missing = 0. |
 | C5.5 | Accepted vs honoured | For every parameter Chrome accepts but ignores, the detail says so explicitly. Missing = 0. |
-| C5.6 | Console renders all six | All six rows and their details are present in the DOM without consulting source. |
-| C5.7 | Failure is legible | With WebMCP disabled, all six render `untested` with a reason. |
+| C5.6 | Console renders every probe | All seven rows and their details are present in the DOM without consulting source. |
+| C5.7 | Failure is legible | With WebMCP disabled, all seven render `untested` with a reason. |
 | C5.8 | Probes are reversible | `getTools()` after a full probe run equals `R` exactly. |
 | C5.9 | Probes are re-runnable | A second run returns identical statuses. |
 | C5.10 | Coverage documented | `docs/webmcp/platform.md` records each verdict with the date, Chrome version, and reproduction step. |
