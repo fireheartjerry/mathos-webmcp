@@ -53,6 +53,12 @@ the code reflect genuine effort and a working, non-trivial implementation?"*
   description, 150 per parameter description, 30 per name, and 1.5K per output — the
   last measured and held at runtime.
 - Concurrency proven with three agents on one live session at once.
+- **Chrome's security guidance answered, not cited.** Contaminated output was a real
+  hole here: a LaTeX text block parses to a symbol carrying prose, and the refusal
+  message repeated it into a tool's `error.message` — a field an agent reads as the page
+  speaking, and one `untrustedContentHint` does not cover. Found by executing the attack,
+  fixed, and covered by tests. Twelve markup-injection attacks assert KaTeX's
+  `trust: false` actually holds.
 
 **Execution** — *"a complete, coherent product experience — not just a technical proof of
 concept"*
@@ -78,8 +84,8 @@ differ from existing concepts?"*
 - The inversion: the page owns the durable model of the learner and the verification; the
   agent supplies only language.
 - The submission publishes its own failures — two Chrome features reported as
-  accepted-but-not-honoured, and a receipt that discloses the gap its own attribution
-  cannot close.
+  accepted-but-not-honoured, a receipt that discloses the gap its own attribution cannot
+  close, and a README section naming the injection channel we shipped and then closed.
 
 ---
 
