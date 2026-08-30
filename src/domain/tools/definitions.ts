@@ -129,6 +129,9 @@ function readInput(input: unknown): Record<string, unknown> | null {
 const revisionField = {
   type: 'integer',
   minimum: 0,
+  // Bounded above as well as below. A schema declaring no upper limit tells an agent
+  // that any integer is acceptable, and a revision is a small counter.
+  maximum: 1_000_000,
   description:
     'The revision you read from get_scratchpad. If the learner has edited since, the call is rejected as stale.',
 } as const
@@ -362,6 +365,28 @@ async function mutate(
 
 const EMPTY_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const
 
+/**
+ * Reads the optional `variable` argument. Returns the resolved name, or a refusal
+ * envelope when the argument is present but not a string of the declared length.
+ */
+function optionalVariable(
+  state: SessionState,
+  values: Record<string, unknown>,
+): string | ToolEnvelope {
+  if (!('variable' in values) || values.variable === undefined) return state.problem.variable
+  const given = values.variable
+  if (typeof given !== 'string' || given.length < 1 || given.length > 4) {
+    return failure(
+      state.revision,
+      'invalid_input',
+      'variable must be a string of 1 to 4 characters.',
+      `Omit it to use the problem variable, currently "${state.problem.variable}".`,
+      'variable',
+    )
+  }
+  return given
+}
+
 /** Every symbol a learner may legitimately mention: the variable, plus the givens. */
 function allowedVariables(state: SessionState): string[] {
   return [state.problem.variable, ...state.problem.definitions.map((d) => d.name)]
@@ -463,7 +488,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
             return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
           }
           if (typeof values.note !== 'string' || !values.note.trim()) {
-            return { invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
+            return { field: 'note', invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
           }
           if (values.note.length > 400) {
             return { invalid: 'note must be 400 characters or fewer.', recovery: 'Shorten the explanation and try again.' }
@@ -507,7 +532,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
             return { invalid: 'latex must be the replacement expression.', recovery: 'Send the step you would write instead.' }
           }
           if (typeof values.rationale !== 'string' || !values.rationale.trim()) {
-            return { invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
+            return { field: 'rationale', invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
           }
           if (values.latex.length > 256) {
             return { invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the replacement expression.' }
@@ -543,10 +568,10 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       execute: (input) =>
         mutate(bridge, 'new_problem', input, ['familyId', 'expectedRevision', 'requestId'], (values) => {
           if (values.familyId !== undefined && typeof values.familyId !== 'string') {
-            return { invalid: 'familyId must be a string.', recovery: 'Omit familyId to stay in the current skill family.' }
+            return { field: 'familyId', invalid: 'familyId must be a string.', recovery: 'Omit familyId to stay in the current skill family.' }
           }
           if (typeof values.familyId === 'string' && values.familyId.length > 64) {
-            return { invalid: 'familyId must be 64 characters or fewer.', recovery: 'Use a current family id from get_scratchpad.' }
+            return { field: 'familyId', invalid: 'familyId must be 64 characters or fewer.', recovery: 'Use a current family id from get_scratchpad.' }
           }
           return {
             type: 'NEW_PROBLEM',
@@ -876,7 +901,11 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
         if (typeof latex !== 'string' || !latex.trim()) {
           return failure(state.revision, 'invalid_input', 'latex must be a non-empty string.', 'Send the expression in LaTeX.', 'latex')
         }
-        const variable = typeof guard.values.variable === 'string' ? guard.values.variable : state.problem.variable
+        // An optional argument still has a declared type. Treating a wrong-typed one as
+        // absent silently accepts a malformed call, which teaches an agent that its
+        // mistake worked - the same failure this surface refuses for required fields.
+        const variable = optionalVariable(state, guard.values)
+        if (typeof variable !== 'string') return variable
         const parsed = parseExpression(latex, allowedVariables(state))
         if (!parsed.ok) {
           return failure(state.revision, 'invalid_input', parsed.message, 'Fix the expression and call again.', 'latex')
@@ -923,7 +952,11 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
         if (typeof at !== 'number' || !Number.isFinite(at)) {
           return failure(state.revision, 'invalid_input', 'at must be a finite number.', 'Send the point to evaluate at, for example { at: 2 }.', 'at')
         }
-        const variable = typeof guard.values.variable === 'string' ? guard.values.variable : state.problem.variable
+        // An optional argument still has a declared type. Treating a wrong-typed one as
+        // absent silently accepts a malformed call, which teaches an agent that its
+        // mistake worked - the same failure this surface refuses for required fields.
+        const variable = optionalVariable(state, guard.values)
+        if (typeof variable !== 'string') return variable
         const parsed = parseExpression(latex, allowedVariables(state))
         if (!parsed.ok) {
           return failure(state.revision, 'invalid_input', parsed.message, 'Fix the expression and call again.', 'latex')

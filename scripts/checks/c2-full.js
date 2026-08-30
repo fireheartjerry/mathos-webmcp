@@ -1,81 +1,145 @@
+/**
+ * One valid call and one invalid call for every registered tool, executed exactly as
+ * an agent reaches them.
+ *
+ * The round-1 version sequenced the valid calls badly: several ran while the session
+ * was in a phase that refuses them (get_receipt before any round had ended, new_problem
+ * before the work was sound, add_step past the step limit), so they returned ok:false
+ * and were reported as though they had succeeded. This version starts from a clean
+ * session and drives the phase each tool needs before calling it.
+ */
+const BS = String.fromCharCode(92)
+const CDOT = BS + 'cdot'
+const DYDX = BS + 'frac{dy}{dx}'
 const mc = document.modelContext
 const tools = await mc.getTools()
 const by = Object.fromEntries(tools.map(t => [t.name, t]))
 let n = 0
 const rid = () => `req_${Date.now().toString(36)}_${(n++).toString(36)}`
-const stamp = () => new Date().toISOString()
-const call = async (name, args) => {
-  const startedAt = stamp()
+const MUTATING = new Set(['add_step','edit_step','remove_step','check_work','annotate_step','propose_step','resolve_proposal','new_problem','reset_session'])
+const log = []
+
+const call = async (name, args, { record = true } = {}) => {
+  const startedAt = new Date().toISOString()
   const before = document.querySelector('.steps')?.innerHTML ?? ''
   const t0 = performance.now()
   let settled = 'resolved', result = null
+  // Fill the envelope fields only when the caller has not supplied them. Overwriting
+  // them unconditionally silently repaired the invalid calls that deliberately send a
+  // bad expectedRevision, so those were reported as accepted.
+  const payload = { ...args }
+  if (MUTATING.has(name)) {
+    if (!('expectedRevision' in payload)) payload.expectedRevision = await revision()
+    if (!('requestId' in payload)) payload.requestId = rid()
+  }
   try {
-    const raw = await mc.executeTool(by[name], JSON.stringify(args))
+    const raw = await mc.executeTool(by[name], JSON.stringify(payload))
     result = typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return raw } })() : raw
   } catch (e) { settled = 'REJECTED'; result = String(e).slice(0, 300) }
-  const after = document.querySelector('.steps')?.innerHTML ?? ''
-  return { tool: name, startedAt, ms: Math.round(performance.now() - t0), args, settled, domChanged: before !== after, result }
+  const entry = { tool: name, startedAt, ms: Math.round(performance.now() - t0), args: payload, settled,
+    domChanged: (document.querySelector('.steps')?.innerHTML ?? '') !== before, result }
+  if (record) log.push(entry)
+  return entry
 }
-const read = async () => (await call('get_scratchpad', {})).result
-const rev = async () => (await read()).data.revision
-const firstStep = async () => (await read()).data.steps?.[0]?.id ?? 'step-1'
+async function revision() {
+  const raw = await mc.executeTool(by.get_scratchpad, '{}')
+  return (typeof raw === 'string' ? JSON.parse(raw) : raw).data.revision
+}
+const read = async () => {
+  const raw = await mc.executeTool(by.get_scratchpad, '{}')
+  return (typeof raw === 'string' ? JSON.parse(raw) : raw).data
+}
 
-const out = []
-// Seed enough state that every tool has something to act on.
-out.push(await call('add_step', { latex: 'a = x^2', expectedRevision: await rev(), requestId: rid() }))
-out.push(await call('add_step', { latex: '12x^2 + 2x', expectedRevision: await rev(), requestId: rid() }))
-out.push(await call('check_work', { expectedRevision: await rev(), requestId: rid() }))
-const sid = await firstStep()
+// ---- Clean slate, so no earlier run's steps push us past the limit. -------------
+// A line is written first so that reset_session has something visible to clear:
+// resetting an already-empty scratchpad is a real success with no DOM diff, which
+// would read as an unobservable effect.
+await call('add_step', { latex: 'x^2' }, { record: false })
+await call('reset_session', {})
 
-const valid = [
-  ['get_scratchpad', {}],
-  ['get_changes_since', { since: 0 }],
-  ['list_problem_families', {}],
-  ['validate_expression', { latex: '4x^3 + x^2' }],
-  ['compare_expressions', { left: '2x + 2x', right: '4x' }],
-  ['differentiate_expression', { latex: '4x^3 + x^2' }],
-  ['evaluate_expression', { latex: '12x^2 + 2x', at: 2 }],
-  ['get_platform', {}],
-  ['annotate_step', { stepId: sid, note: 'Check the product rule here.' }],
-  ['edit_step', { stepId: sid, latex: 'a = x^2' }],
-  ['propose_step', { stepId: sid, latex: 'x^2', rationale: 'Matches the given definition.' }],
-  ['resolve_proposal', { accept: false }],
-  ['remove_step', { stepId: sid }],
-  ['get_receipt', {}],
-  ['new_problem', {}],
-  ['reset_session', {}],
-]
+// ---- Valid calls, each in a phase where it applies. -----------------------------
+await call('get_scratchpad', {})
+await call('list_problem_families', {})
+await call('validate_expression', { latex: '4x^3 + x^2' })
+await call('compare_expressions', { left: '2x + 2x', right: '4x' })
+await call('differentiate_expression', { latex: '4x^3 + x^2' })
+await call('evaluate_expression', { latex: '12x^2 + 2x', at: 2 })
+await call('get_platform', {})
+
+const problem = await read()
+const [d0, d1] = problem.problem.given.map(g => g.split(' = ')[1])
+await call('add_step', { latex: `y = ${d0} ${CDOT} ${d1}` })
+await call('get_changes_since', { since: 0 })
+
+let sid = (await read()).steps[0].id
+await call('edit_step', { stepId: sid, latex: `y = ${d1} ${CDOT} ${d0}` })
+await call('annotate_step', { stepId: sid, note: 'Multiplication commutes, so this is the same line.' })
+// propose_step needs two learner attempts since the last check; the edit above is one,
+// and this second edit is the other.
+await call('edit_step', { stepId: sid, latex: `y = ${d0} ${CDOT} ${d1}` })
+await call('propose_step', { stepId: sid, latex: `y = ${d0} ${CDOT} ${d1} + ${d0}`, rationale: 'The given definition adds a as well.' })
+await call('resolve_proposal', { accept: true })
+await call('check_work', {})
+await call('remove_step', { stepId: (await read()).steps.at(-1).id })
+
+// Drive to a sound derivation so new_problem and get_receipt are both in phase.
+// The problem is regenerated by reset_session, so the answer is computed from this
+// session's own givens rather than hard-coded - an earlier version pasted a previous
+// problem's answer and never reached `allSound`, leaving both tools out of phase.
+const compute = async (tool, args) => {
+  const entry = await call(tool, args, { record: false })
+  if (entry.result?.ok !== true) throw new Error(`${tool} failed: ${JSON.stringify(entry.result)}`)
+  return entry.result.data
+}
+const yExpr = `${d0} ${CDOT} ${d1} + ${d0}`
+const derivative = (await compute('differentiate_expression', { latex: yExpr })).simplified
+const at = Number(/x\s*=\s*(-?\d+)/.exec(problem.problem.prompt)?.[1] ?? 2)
+const value = (await compute('evaluate_expression', { latex: derivative, at })).value
+const answerSteps = [`y = ${yExpr}`, `${DYDX} = ${derivative}`, `${DYDX} = ${value}`]
+for (const s of (await read()).steps) await call('remove_step', { stepId: s.id }, { record: false })
+for (const latex of answerSteps) await call('add_step', { latex }, { record: false })
+await call('check_work', {}, { record: false })
+const checked = await read()
+const soundness = { allSound: checked.firstBrokenStep === null && checked.firstUnresolvedStep === null,
+  checked: checked.checked, steps: checked.steps.length, answerSteps }
+await call('new_problem', {})
+await call('get_receipt', {})
+
+// ---- Invalid calls: a missing required field, a wrong type, or out of range. ----
 const invalid = [
   ['get_scratchpad', { nope: 1 }],
   ['get_changes_since', { since: -5 }],
   ['list_problem_families', { nope: 1 }],
+  ['get_platform', { nope: 1 }],
+  ['get_receipt', { nope: 1 }],
   ['validate_expression', { latex: '' }],
   ['compare_expressions', { left: 'x' }],
   ['differentiate_expression', { latex: 'x', variable: 12 }],
   ['evaluate_expression', { latex: 'x', at: 'two' }],
-  ['get_platform', { nope: 1 }],
-  ['add_step', { latex: '', expectedRevision: 0, requestId: 'req-bad-1' }],
-  ['edit_step', { stepId: 'nope', latex: 'x', expectedRevision: 0, requestId: 'req-bad-2' }],
-  ['remove_step', { expectedRevision: 0, requestId: 'req-bad-3' }],
-  ['check_work', { requestId: 'req-bad-4' }],
-  ['annotate_step', { stepId: 'x', note: '', expectedRevision: 0, requestId: 'req-bad-5' }],
-  ['propose_step', { stepId: 'x', latex: 'x', rationale: 'r', expectedRevision: 'no', requestId: 'req-bad-6' }],
-  ['resolve_proposal', { accept: 'yes', expectedRevision: 0, requestId: 'req-bad-7' }],
-  ['new_problem', { familyId: 42, expectedRevision: 0, requestId: 'req-bad-8' }],
-  ['reset_session', { expectedRevision: 999999, requestId: 'req-bad-9' }],
-  ['get_receipt', { nope: 1 }],
+  ['add_step', { latex: '' }],
+  ['edit_step', { stepId: 'nope', latex: 'x' }],
+  ['remove_step', {}],
+  ['check_work', { expectedRevision: 'no' }],
+  ['annotate_step', { stepId: 'x', note: '' }],
+  ['propose_step', { stepId: 'x', latex: 'x' }],
+  ['resolve_proposal', { accept: 'yes' }],
+  ['new_problem', { familyId: 42 }],
+  ['reset_session', { nope: 1 }],
 ]
-const mutating = new Set(['add_step','edit_step','remove_step','check_work','annotate_step','propose_step','resolve_proposal','new_problem','reset_session'])
-for (const [name, args] of valid) {
-  out.push(await call(name, mutating.has(name) ? { ...args, expectedRevision: await rev(), requestId: rid() } : args))
-}
-for (const [name, args] of invalid) out.push(await call(name, args))
+for (const [name, args] of invalid) await call(name, args)
 
+const validEntries = log.filter((e, i) => i < log.length - invalid.length)
+const invalidEntries = log.slice(-invalid.length)
 return {
   toolCount: tools.length,
-  callCount: out.length,
-  rejected: out.filter(r => r.settled === 'REJECTED').length,
-  unstructured: out.filter(r => r.result && r.result.ok === false && !r.result.error?.code).length,
-  noField: out.filter(r => r.result && r.result.ok === false && r.result.error?.code === 'invalid_input' && !r.result.error?.field).length,
-  transcripts: out,
+  callCount: log.length,
+  rejected: log.filter(e => e.settled === 'REJECTED').length,
+  validFailures: validEntries.filter(e => e.result?.ok !== true).map(e => ({ tool: e.tool, code: e.result?.error?.code })),
+  validMutatingWithoutDomChange: validEntries.filter(e => MUTATING.has(e.tool) && e.result?.ok === true && !e.domChanged).map(e => e.tool),
+  invalidAccepted: invalidEntries.filter(e => e.result?.ok !== false).map(e => e.tool),
+  invalidWithoutCode: invalidEntries.filter(e => e.result?.ok === false && !e.result?.error?.code).map(e => e.tool),
+  invalidWithoutField: invalidEntries.filter(e => e.result?.ok === false && !e.result?.error?.field).map(e => e.tool),
+  toolsCovered: new Set(log.map(e => e.tool)).size,
+  soundReached: soundness,
+  transcripts: log,
 }

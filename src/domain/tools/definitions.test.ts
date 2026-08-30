@@ -769,3 +769,32 @@ describe('the tools added when agents became able to drive the page', () => {
     if (!result.ok) expect(result.error.field).toBe('nope')
   })
 })
+
+describe('optional arguments are still typed', () => {
+  // A wrong-typed optional argument used to be treated as absent, so
+  // `differentiate_expression({latex:'x', variable: 12})` returned ok:true and quietly
+  // used the default. Silently accepting a malformed call teaches an agent that its
+  // mistake worked, which is the failure this surface refuses for required fields.
+  it('refuses a wrong-typed optional argument instead of ignoring it', async () => {
+    for (const name of ['differentiate_expression', 'evaluate_expression']) {
+      const args: Record<string, unknown> = { latex: 'x^2', variable: 12 }
+      if (name === 'evaluate_expression') args.at = 2
+      const result = await call(h.byName(name), args)
+      expect(result.ok, `${name} accepted variable: 12`).toBe(false)
+      if (!result.ok) expect(result.error.field).toBe('variable')
+    }
+  })
+
+  it('every declared number field carries both bounds', () => {
+    for (const tool of h.tools) {
+      const props = (tool.inputSchema as {
+        properties: Record<string, { type?: string; minimum?: number; maximum?: number }>
+      }).properties
+      for (const [name, schema] of Object.entries(props)) {
+        if (schema.type !== 'number' && schema.type !== 'integer') continue
+        expect(schema.minimum, `${tool.name}.${name} minimum`).toBeTypeOf('number')
+        expect(schema.maximum, `${tool.name}.${name} maximum`).toBeTypeOf('number')
+      }
+    }
+  })
+})

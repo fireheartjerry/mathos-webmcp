@@ -31,7 +31,8 @@
       "tool": "annotate_step",
       "missing": "note",
       "refused": true,
-      "code": "invalid_input"
+      "code": "invalid_input",
+      "field": "note"
     },
     {
       "tool": "annotate_step",
@@ -161,7 +162,8 @@
       "tool": "propose_step",
       "missing": "rationale",
       "refused": true,
-      "code": "invalid_input"
+      "code": "invalid_input",
+      "field": "rationale"
     },
     {
       "tool": "propose_step",
@@ -242,8 +244,141 @@
     }
   ],
   "requiredNotRefused": [],
-  "readOnlyViolations": [],
-  "readOnlyChecked": 9,
+  "readOnlyMismatches": [],
+  "readOnlySkipped": [
+    {
+      "tool": "new_problem",
+      "skipped": "needs a phase built in the C2 transcript"
+    },
+    {
+      "tool": "propose_step",
+      "skipped": "needs a phase built in the C2 transcript"
+    },
+    {
+      "tool": "resolve_proposal",
+      "skipped": "needs a phase built in the C2 transcript"
+    }
+  ],
+  "readOnlyChecked": 15,
+  "readOnlyDetail": [
+    {
+      "tool": "add_step",
+      "readOnlyHint": false,
+      "ok": true,
+      "changedRevision": true,
+      "mismatch": false
+    },
+    {
+      "tool": "annotate_step",
+      "readOnlyHint": false,
+      "ok": false,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "check_work",
+      "readOnlyHint": false,
+      "ok": true,
+      "changedRevision": true,
+      "mismatch": false
+    },
+    {
+      "tool": "compare_expressions",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "differentiate_expression",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "edit_step",
+      "readOnlyHint": false,
+      "ok": true,
+      "changedRevision": true,
+      "mismatch": false
+    },
+    {
+      "tool": "evaluate_expression",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "get_changes_since",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "get_platform",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "get_receipt",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "get_scratchpad",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "list_problem_families",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    },
+    {
+      "tool": "new_problem",
+      "skipped": "needs a phase built in the C2 transcript"
+    },
+    {
+      "tool": "propose_step",
+      "skipped": "needs a phase built in the C2 transcript"
+    },
+    {
+      "tool": "remove_step",
+      "readOnlyHint": false,
+      "ok": true,
+      "changedRevision": true,
+      "mismatch": false
+    },
+    {
+      "tool": "reset_session",
+      "readOnlyHint": false,
+      "ok": true,
+      "changedRevision": true,
+      "mismatch": false
+    },
+    {
+      "tool": "resolve_proposal",
+      "skipped": "needs a phase built in the C2 transcript"
+    },
+    {
+      "tool": "validate_expression",
+      "readOnlyHint": true,
+      "ok": true,
+      "changedRevision": false,
+      "mismatch": false
+    }
+  ],
   "probeRun1": [
     "exposed-to:partial",
     "from-origins:partial",

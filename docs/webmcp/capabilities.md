@@ -28,21 +28,21 @@ count while lowering the score, which is the intended behaviour.
 
 ## Writes — every action the reducer accepts (9)
 
-The reducer's action union is `src/domain/session/types.ts:98-106`. Every member is a
+The reducer's action union is `src/domain/session/types.ts:111-121`. Every member is a
 learner-reachable capability, so under the current thesis every member needs a tool.
 Five of the nine had none at round 0.
 
-| # | Capability | Reducer action | Learner control | Round 0 |
-|---|---|---|---|---|
-| A1 | Write a new line of working | `ADD_STEP` | `Scratchpad.tsx:391` | **absent** |
-| A2 | Rewrite an existing line | `EDIT_STEP` | `Scratchpad.tsx:576` | **absent** |
-| A3 | Delete a line | `REMOVE_STEP` | `Scratchpad.tsx:713` | **absent** |
-| A4 | Check the derivation | `CHECK_WORK` | — | `check_work` |
-| A5 | Attach an explanation to a line | `ANNOTATE_STEP` | — | `annotate_step` |
-| A6 | Offer a replacement line | `PROPOSE_STEP` | — | `propose_step` |
-| A7 | Accept or reject a pending proposal | `RESOLVE_PROPOSAL` | `Scratchpad.tsx:409` | **absent** |
-| A8 | Start a fresh problem | `NEW_PROBLEM` | `Scratchpad.tsx:782` | `new_problem` |
-| A9 | Abandon the session and start over | `RESET` | `startOver` | **absent** |
+| # | Capability | Reducer action | Learner control | Tool | At round 0 |
+|---|---|---|---|---|---|
+| A1 | Write a new line of working | `ADD_STEP` (`types.ts:112`) | `Scratchpad.tsx:391` | `add_step` (`definitions.ts:614`) | absent |
+| A2 | Rewrite an existing line | `EDIT_STEP` (`types.ts:113`) | `Scratchpad.tsx:576` | `edit_step` (`definitions.ts:642`) | absent |
+| A3 | Delete a line | `REMOVE_STEP` (`types.ts:114`) | `Scratchpad.tsx:713` | `remove_step` (`definitions.ts:674`) | absent |
+| A4 | Check the derivation | `CHECK_WORK` (`types.ts:115`) | the Check control | `check_work` (`definitions.ts:453`) | present |
+| A5 | Attach an explanation to a line | `ANNOTATE_STEP` (`types.ts:116`) | rendered beside the line | `annotate_step` (`definitions.ts:468`) | present |
+| A6 | Offer a replacement line | `PROPOSE_STEP` (`types.ts:117`) | learner accepts or rejects | `propose_step` (`definitions.ts:509`) | present |
+| A7 | Accept or reject a pending proposal | `RESOLVE_PROPOSAL` (`types.ts:118`) | `Scratchpad.tsx:409` | `resolve_proposal` (`definitions.ts:699`) | absent |
+| A8 | Start a fresh problem | `NEW_PROBLEM` (`types.ts:119`) | `Scratchpad.tsx:782` | `new_problem` (`definitions.ts:553`) | present |
+| A9 | Abandon the session and start over | `RESET` (`types.ts:120`) | `startOver` in `Scratchpad.tsx` | `reset_session` (`definitions.ts:724`) | absent |
 
 The round-0 `get_scratchpad` payload asserted *"You cannot write, edit, or accept
 steps. Only the learner can."* That was the previous thesis encoded in the tool
@@ -57,17 +57,17 @@ snapshot by section (`get_problem`, `get_steps`, `get_annotations` …) fails th
 reducibility test — those are one tool plus a section parameter — and are deliberately
 excluded, which is why this list is 9 and not 20.
 
-| # | Capability | Why it is not reducible | Round 0 |
-|---|---|---|---|
-| A10 | Read the current snapshot | The base read | `get_scratchpad` |
-| A11 | Read the session receipt | Derived over `history` + `tally`, not a slice of the snapshot | `get_receipt` |
-| A12 | Read what changed since a revision | Takes a revision, returns a diff; lets an agent poll without re-reading everything | **absent** |
-| A13 | Read WebMCP platform support | Probes the browser, not the session | opt-in only |
-| A14 | List available problem families | Reads the problem catalogue, not session state | **absent** |
-| A15 | Parse an expression without writing it | Validates arbitrary LaTeX and reports the parse error; no session effect | **absent** |
-| A16 | Compare two expressions for equivalence | Two-expression input, tri-state verdict incl. `could not determine` | **absent** |
-| A17 | Differentiate an expression | `(latex, variable)` → expression | **absent** |
-| A18 | Evaluate an expression at a point | `(latex, at)` → number | **absent** |
+| # | Capability | Source it reads | Why it is not reducible | Tool |
+|---|---|---|---|---|
+| A10 | Read the current snapshot | `SessionState`, `types.ts:82-107` | The base read | `get_scratchpad` (`definitions.ts:436`) |
+| A11 | Read the session receipt | `state.history` + `state.tally`, `types.ts:100,105` | Derived over completed rounds, not a slice of the snapshot | `get_receipt` (`definitions.ts:584`) |
+| A12 | Read what changed since a revision | `state.activities`, `types.ts:98` | Takes a revision, returns a diff; lets an agent poll without re-reading everything | `get_changes_since` (`definitions.ts:745`) |
+| A13 | Read WebMCP platform support | The browser, via `platform.ts:313` | Probes the platform, not the session | `get_platform` (`definitions.ts:978`) |
+| A14 | List available problem families | `FAMILY_IDS`, `problems.ts:185` | Reads the problem catalogue, not session state | `list_problem_families` (`definitions.ts:796`) |
+| A15 | Parse an expression without writing it | `parseExpression`, `expression.ts:114` | Validates arbitrary LaTeX and reports the parse error; no session effect | `validate_expression` (`definitions.ts:816`) |
+| A16 | Compare two expressions for equivalence | `compareExpressions`, `equivalence.ts:185` | Two-expression input, tri-state verdict including `could not determine` | `compare_expressions` (`definitions.ts:850`) |
+| A17 | Differentiate an expression | `computeEngine`, `expression.ts:21` | `(latex, variable)` → expression | `differentiate_expression` (`definitions.ts:881`) |
+| A18 | Evaluate an expression at a point | `computeEngine`, `expression.ts:21` | `(latex, at)` → number | `evaluate_expression` (`definitions.ts:927`) |
 
 A15–A18 expose the computer algebra layer the product already runs
 (`src/domain/math/**`). They let an agent verify its own reasoning *before* writing to
