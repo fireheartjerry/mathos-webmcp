@@ -485,13 +485,13 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       execute: (input) =>
         mutate(bridge, 'annotate_step', input, ['stepId', 'note', 'focus', 'expectedRevision', 'requestId'], (values) => {
           if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
+            return { field: 'stepId', invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
           }
           if (typeof values.note !== 'string' || !values.note.trim()) {
             return { field: 'note', invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
           }
           if (values.note.length > 400) {
-            return { invalid: 'note must be 400 characters or fewer.', recovery: 'Shorten the explanation and try again.' }
+            return { field: 'note', invalid: 'note must be 400 characters or fewer.', recovery: 'Shorten the explanation and try again.' }
           }
           if (values.focus !== undefined && typeof values.focus !== 'boolean') {
             return { invalid: 'focus must be true or false.', recovery: 'Omit focus, or send a boolean.' }
@@ -526,19 +526,19 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       execute: (input) =>
         mutate(bridge, 'propose_step', input, ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'], (values) => {
           if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
+            return { field: 'stepId', invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
           }
           if (typeof values.latex !== 'string' || !values.latex.trim()) {
-            return { invalid: 'latex must be the replacement expression.', recovery: 'Send the step you would write instead.' }
+            return { field: 'latex', invalid: 'latex must be the replacement expression.', recovery: 'Send the step you would write instead.' }
           }
           if (typeof values.rationale !== 'string' || !values.rationale.trim()) {
             return { field: 'rationale', invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
           }
           if (values.latex.length > 256) {
-            return { invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the replacement expression.' }
+            return { field: 'latex', invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the replacement expression.' }
           }
           if (values.rationale.length > 400) {
-            return { invalid: 'rationale must be 400 characters or fewer.', recovery: 'Shorten the rationale.' }
+            return { field: 'rationale', invalid: 'rationale must be 400 characters or fewer.', recovery: 'Shorten the rationale.' }
           }
           return {
             type: 'PROPOSE_STEP',

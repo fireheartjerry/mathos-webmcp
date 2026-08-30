@@ -25,7 +25,8 @@
       "tool": "annotate_step",
       "missing": "stepId",
       "refused": true,
-      "code": "invalid_input"
+      "code": "invalid_input",
+      "field": "stepId"
     },
     {
       "tool": "annotate_step",
@@ -150,13 +151,15 @@
       "tool": "propose_step",
       "missing": "stepId",
       "refused": true,
-      "code": "invalid_input"
+      "code": "invalid_input",
+      "field": "stepId"
     },
     {
       "tool": "propose_step",
       "missing": "latex",
       "refused": true,
-      "code": "invalid_input"
+      "code": "invalid_input",
+      "field": "latex"
     },
     {
       "tool": "propose_step",
@@ -259,20 +262,25 @@
       "skipped": "needs a phase built in the C2 transcript"
     }
   ],
-  "readOnlyChecked": 15,
+  "readOnlyChecked": 14,
+  "readOnlyUntested": [
+    "get_receipt"
+  ],
   "readOnlyDetail": [
     {
       "tool": "add_step",
       "readOnlyHint": false,
       "ok": true,
       "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
       "tool": "annotate_step",
       "readOnlyHint": false,
-      "ok": false,
-      "changedRevision": false,
+      "ok": true,
+      "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -280,6 +288,7 @@
       "readOnlyHint": false,
       "ok": true,
       "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -287,6 +296,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -294,6 +304,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -301,6 +312,7 @@
       "readOnlyHint": false,
       "ok": true,
       "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -308,6 +320,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -315,6 +328,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -322,13 +336,15 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
       "tool": "get_receipt",
       "readOnlyHint": true,
-      "ok": true,
+      "ok": false,
       "changedRevision": false,
+      "untested": true,
       "mismatch": false
     },
     {
@@ -336,6 +352,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -343,6 +360,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -358,6 +376,7 @@
       "readOnlyHint": false,
       "ok": true,
       "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -365,6 +384,7 @@
       "readOnlyHint": false,
       "ok": true,
       "changedRevision": true,
+      "untested": false,
       "mismatch": false
     },
     {
@@ -376,6 +396,7 @@
       "readOnlyHint": true,
       "ok": true,
       "changedRevision": false,
+      "untested": false,
       "mismatch": false
     }
   ],

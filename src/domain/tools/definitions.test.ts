@@ -798,3 +798,26 @@ describe('optional arguments are still typed', () => {
     }
   })
 })
+
+describe('every argument refusal names the argument', () => {
+  // The round-2 scorer found three refusals that described the offending field only in
+  // prose. An agent reads `error.field`, so a refusal that omits it is a refusal the
+  // agent has to parse English to act on.
+  it('names a field on every invalid_input refusal caused by an argument', async () => {
+    h.learner({ type: 'ADD_STEP', latex: 'x^2' })
+    const rev = () => h.state.revision
+    const cases: Array<[string, Record<string, unknown>, string]> = [
+      ['annotate_step', { stepId: 12, note: 'a note' }, 'stepId'],
+      ['annotate_step', { stepId: h.state.steps[0].id, note: 'x'.repeat(401) }, 'note'],
+      ['propose_step', { stepId: 12, latex: 'x', rationale: 'r' }, 'stepId'],
+      ['propose_step', { stepId: h.state.steps[0].id, latex: 12, rationale: 'r' }, 'latex'],
+      ['propose_step', { stepId: h.state.steps[0].id, latex: 'x'.repeat(257), rationale: 'r' }, 'latex'],
+      ['propose_step', { stepId: h.state.steps[0].id, latex: 'x', rationale: 'r'.repeat(401) }, 'rationale'],
+    ]
+    for (const [name, args, field] of cases) {
+      const result = await call(h.byName(name), { ...args, expectedRevision: rev(), requestId: `req-${field}-${name}` })
+      expect(result.ok, `${name} accepted ${JSON.stringify(args)}`).toBe(false)
+      if (!result.ok) expect(result.error.field, `${name} / ${field}`).toBe(field)
+    }
+  })
+})

@@ -1,0 +1,890 @@
+{
+  "toolCount": 18,
+  "callCount": 37,
+  "rejected": 0,
+  "validFailures": [],
+  "validMutatingWithoutDomChange": [],
+  "invalidAccepted": [],
+  "invalidWithoutCode": [],
+  "invalidWithoutField": [],
+  "toolsCovered": 18,
+  "soundReached": {
+    "allSound": true,
+    "checked": true,
+    "steps": 3,
+    "answerSteps": [
+      "y = 3x^2 \\cdot 4x + 3x^2",
+      "\\frac{dy}{dx} = 36x^2+6x",
+      "\\frac{dy}{dx} = 30"
+    ]
+  },
+  "transcripts": [
+    {
+      "tool": "reset_session",
+      "startedAt": "2026-08-30T17:43:53.415Z",
+      "ms": 15,
+      "args": {
+        "expectedRevision": 124,
+        "requestId": "req_mtg3m8ug_1"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "problemId": "shared-path-3851"
+        }
+      }
+    },
+    {
+      "tool": "get_scratchpad",
+      "startedAt": "2026-08-30T17:43:53.430Z",
+      "ms": 3,
+      "args": {},
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "sessionId": "st_9579a87b1841",
+          "revision": 125,
+          "round": "practice",
+          "problem": {
+            "prompt": "Find dy/dx at x = -1.",
+            "given": [
+              "a = 3x^2",
+              "b = 4x",
+              "y = a \\cdot b + a"
+            ],
+            "variable": "x"
+          },
+          "steps": [],
+          "checked": false,
+          "firstBrokenStep": null,
+          "firstUnresolvedStep": null,
+          "pendingProposal": null,
+          "availableActions": [
+            "add_step",
+            "reset_session"
+          ],
+          "note": "You can read, write, edit, delete, check and reset. Every change records whether the learner or an agent made it, and get_receipt reports the split."
+        }
+      }
+    },
+    {
+      "tool": "list_problem_families",
+      "startedAt": "2026-08-30T17:43:53.433Z",
+      "ms": 0,
+      "args": {},
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "families": [
+            "shared-path"
+          ],
+          "current": "shared-path",
+          "count": 1
+        }
+      }
+    },
+    {
+      "tool": "validate_expression",
+      "startedAt": "2026-08-30T17:43:53.433Z",
+      "ms": 1,
+      "args": {
+        "latex": "4x^3 + x^2"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "parses": true,
+          "variables": [
+            "x"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "compare_expressions",
+      "startedAt": "2026-08-30T17:43:53.434Z",
+      "ms": 2,
+      "args": {
+        "left": "2x + 2x",
+        "right": "4x"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "status": "match",
+          "routes": {
+            "symbolic": "equal",
+            "numeric": "equal",
+            "samplesCompared": 24
+          }
+        }
+      }
+    },
+    {
+      "tool": "differentiate_expression",
+      "startedAt": "2026-08-30T17:43:53.436Z",
+      "ms": 5,
+      "args": {
+        "latex": "4x^3 + x^2"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "input": "4x^3 + x^2",
+          "variable": "x",
+          "derivative": "12x^2+2x",
+          "simplified": "12x^2+2x"
+        }
+      }
+    },
+    {
+      "tool": "evaluate_expression",
+      "startedAt": "2026-08-30T17:43:53.441Z",
+      "ms": 1,
+      "args": {
+        "latex": "12x^2 + 2x",
+        "at": 2
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "input": "12x^2 + 2x",
+          "variable": "x",
+          "at": 2,
+          "value": 52
+        }
+      }
+    },
+    {
+      "tool": "get_platform",
+      "startedAt": "2026-08-30T17:43:53.442Z",
+      "ms": 632,
+      "args": {},
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 125,
+        "data": {
+          "features": [
+            {
+              "id": "exposed-to",
+              "label": "Origin scoping (exposedTo)",
+              "status": "partial",
+              "observed": "Accepted without error, but a tool scoped to https://example.invalid is still listed here, so the parameter is taken and not honoured."
+            },
+            {
+              "id": "from-origins",
+              "label": "Cross-origin read (getTools fromOrigins)",
+              "status": "partial",
+              "observed": "Accepted but not honoured: unscoped, this origin, and https://example.invalid all returned 20."
+            },
+            {
+              "id": "toolchange",
+              "label": "Live tool-list events (toolchange)",
+              "status": "supported",
+              "observed": "Registering a tool dispatched toolchange on document.modelContext within 200ms."
+            },
+            {
+              "id": "declarative",
+              "label": "Declarative tools (form toolname)",
+              "status": "supported",
+              "observed": "A form carrying a toolname attribute was registered by the browser with no imperative call, and withdrawn when the form was removed."
+            },
+            {
+              "id": "lifecycle",
+              "label": "Withdrawing a tool (AbortSignal)",
+              "status": "supported",
+              "observed": "Aborting the registration signal withdrew the tool and freed its name, which re-registering without aborting is refused for. Re-registering then carried a new description, so a tool can revise what it says about itself."
+            },
+            {
+              "id": "annotations",
+              "label": "Annotations beyond the two hints",
+              "status": "partial",
+              "observed": "Sent four, kept 2: readOnlyHint, untrustedContentHint. Dropped without error: destructiveHint, idempotentHint."
+            }
+          ],
+          "supported": 3,
+          "total": 6,
+          "note": "Each status was produced by executing the feature in this page load, not read from a table."
+        }
+      }
+    },
+    {
+      "tool": "add_step",
+      "startedAt": "2026-08-30T17:43:54.074Z",
+      "ms": 8,
+      "args": {
+        "latex": "y = 3x^2 \\cdot 4x",
+        "expectedRevision": 125,
+        "requestId": "req_mtg3m9cq_2"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 126,
+        "data": {
+          "stepId": "step-1",
+          "stepCount": 1
+        }
+      }
+    },
+    {
+      "tool": "get_changes_since",
+      "startedAt": "2026-08-30T17:43:54.081Z",
+      "ms": 0,
+      "args": {
+        "since": 0
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 126,
+        "data": {
+          "since": 0,
+          "revision": 126,
+          "upToDate": false,
+          "changes": [
+            {
+              "at": 125,
+              "source": "agent",
+              "action": "Restarted the session"
+            },
+            {
+              "at": 126,
+              "source": "agent",
+              "action": "Wrote step 1"
+            }
+          ],
+          "changeCount": 2
+        }
+      }
+    },
+    {
+      "tool": "edit_step",
+      "startedAt": "2026-08-30T17:43:54.082Z",
+      "ms": 7,
+      "args": {
+        "stepId": "step-1",
+        "latex": "y = 4x \\cdot 3x^2",
+        "expectedRevision": 126,
+        "requestId": "req_mtg3m9cz_3"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 127,
+        "data": {
+          "stepId": "step-1",
+          "attempts": 2
+        }
+      }
+    },
+    {
+      "tool": "annotate_step",
+      "startedAt": "2026-08-30T17:43:54.088Z",
+      "ms": 6,
+      "args": {
+        "stepId": "step-1",
+        "note": "Multiplication commutes, so this is the same line.",
+        "expectedRevision": 127,
+        "requestId": "req_mtg3m9d5_4"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 128,
+        "data": {
+          "annotationId": "note-128",
+          "stepId": "step-1",
+          "focus": false
+        }
+      }
+    },
+    {
+      "tool": "edit_step",
+      "startedAt": "2026-08-30T17:43:54.094Z",
+      "ms": 5,
+      "args": {
+        "stepId": "step-1",
+        "latex": "y = 3x^2 \\cdot 4x",
+        "expectedRevision": 128,
+        "requestId": "req_mtg3m9db_5"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 129,
+        "data": {
+          "stepId": "step-1",
+          "attempts": 3
+        }
+      }
+    },
+    {
+      "tool": "propose_step",
+      "startedAt": "2026-08-30T17:43:54.099Z",
+      "ms": 9,
+      "args": {
+        "stepId": "step-1",
+        "latex": "y = 3x^2 \\cdot 4x + 3x^2",
+        "rationale": "The given definition adds a as well.",
+        "expectedRevision": 129,
+        "requestId": "req_mtg3m9df_6"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 130,
+        "data": {
+          "proposalId": "proposal-130",
+          "status": "pending_learner_acceptance",
+          "stepId": "step-1"
+        }
+      }
+    },
+    {
+      "tool": "resolve_proposal",
+      "startedAt": "2026-08-30T17:43:54.108Z",
+      "ms": 5,
+      "args": {
+        "accept": true,
+        "expectedRevision": 130,
+        "requestId": "req_mtg3m9do_7"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 131,
+        "data": {
+          "accepted": true,
+          "stepId": "step-1"
+        }
+      }
+    },
+    {
+      "tool": "check_work",
+      "startedAt": "2026-08-30T17:43:54.113Z",
+      "ms": 13,
+      "args": {
+        "expectedRevision": 131,
+        "requestId": "req_mtg3m9dt_8"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 132,
+        "data": {
+          "allSound": true,
+          "reachesAnswer": false,
+          "firstBrokenStep": null,
+          "firstBrokenId": null,
+          "firstBrokenDetail": null,
+          "firstUnresolvedStep": null,
+          "firstUnresolvedId": null,
+          "firstUnresolvedDetail": null
+        }
+      }
+    },
+    {
+      "tool": "remove_step",
+      "startedAt": "2026-08-30T17:43:54.126Z",
+      "ms": 2,
+      "args": {
+        "stepId": "step-1",
+        "expectedRevision": 132,
+        "requestId": "req_mtg3m9e6_9"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 133,
+        "data": {
+          "stepId": "step-1"
+        }
+      }
+    },
+    {
+      "tool": "new_problem",
+      "startedAt": "2026-08-30T17:43:54.174Z",
+      "ms": 12,
+      "args": {
+        "expectedRevision": 137,
+        "requestId": "req_mtg3m9fi_e"
+      },
+      "settled": "resolved",
+      "domChanged": true,
+      "result": {
+        "ok": true,
+        "revision": 138,
+        "data": {
+          "problemId": "shared-path-133862",
+          "prompt": "Find dy/dx at x = 2.",
+          "round": "transfer"
+        }
+      }
+    },
+    {
+      "tool": "get_receipt",
+      "startedAt": "2026-08-30T17:43:54.186Z",
+      "ms": 1,
+      "args": {},
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": true,
+        "revision": 138,
+        "data": {
+          "sessionId": "st_9579a87b1841",
+          "rounds": [
+            {
+              "round": "practice",
+              "allStepsSound": true,
+              "linesWritten": {
+                "learner": 0,
+                "agent": 6,
+                "localInspector": 0
+              },
+              "checksRun": 2,
+              "annotations": {
+                "agent": 1,
+                "localInspector": 0,
+                "unattributed": 0
+              },
+              "proposalsOffered": {
+                "agent": 1,
+                "localInspector": 0,
+                "unattributed": 0
+              },
+              "proposalsAccepted": {
+                "agent": 1,
+                "localInspector": 0,
+                "unattributed": 0
+              }
+            }
+          ],
+          "roundsTotal": 1,
+          "roundsReturned": 1,
+          "roundsTruncated": false,
+          "unaidedTransfer": "not attempted yet",
+          "limits": [
+            "This records what happened in this browser session.",
+            "It does not establish that the learner could do this again tomorrow, or unassisted elsewhere.",
+            "Steps were checked by the page computer algebra system, not by the agent."
+          ]
+        }
+      }
+    },
+    {
+      "tool": "get_scratchpad",
+      "startedAt": "2026-08-30T17:43:54.186Z",
+      "ms": 1,
+      "args": {
+        "nope": 1
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "Unexpected argument \"nope\".",
+          "recovery": "This tool takes no arguments. Call it with {}.",
+          "field": "nope"
+        }
+      }
+    },
+    {
+      "tool": "get_changes_since",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "since": -5
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "since must be an integer of 0 or more.",
+          "recovery": "Send the revision you last read, currently 138.",
+          "field": "since"
+        }
+      }
+    },
+    {
+      "tool": "list_problem_families",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "nope": 1
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "Unexpected argument \"nope\".",
+          "recovery": "This tool takes no arguments. Call it with {}.",
+          "field": "nope"
+        }
+      }
+    },
+    {
+      "tool": "get_platform",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "nope": 1
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "Unexpected argument \"nope\".",
+          "recovery": "This tool takes no arguments. Call it with {}.",
+          "field": "nope"
+        }
+      }
+    },
+    {
+      "tool": "get_receipt",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "nope": 1
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "Unexpected argument \"nope\".",
+          "recovery": "This tool takes no arguments. Call it with {}.",
+          "field": "nope"
+        }
+      }
+    },
+    {
+      "tool": "validate_expression",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "latex": ""
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "latex must be a non-empty string.",
+          "recovery": "Send the expression to parse.",
+          "field": "latex"
+        }
+      }
+    },
+    {
+      "tool": "compare_expressions",
+      "startedAt": "2026-08-30T17:43:54.188Z",
+      "ms": 0,
+      "args": {
+        "left": "x"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "right must be a non-empty string.",
+          "recovery": "Send both expressions in LaTeX.",
+          "field": "right"
+        }
+      }
+    },
+    {
+      "tool": "differentiate_expression",
+      "startedAt": "2026-08-30T17:43:54.189Z",
+      "ms": 0,
+      "args": {
+        "latex": "x",
+        "variable": 12
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "variable must be a string of 1 to 4 characters.",
+          "recovery": "Omit it to use the problem variable, currently \"x\".",
+          "field": "variable"
+        }
+      }
+    },
+    {
+      "tool": "evaluate_expression",
+      "startedAt": "2026-08-30T17:43:54.189Z",
+      "ms": 0,
+      "args": {
+        "latex": "x",
+        "at": "two"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "at must be a finite number.",
+          "recovery": "Send the point to evaluate at, for example { at: 2 }.",
+          "field": "at"
+        }
+      }
+    },
+    {
+      "tool": "add_step",
+      "startedAt": "2026-08-30T17:43:54.189Z",
+      "ms": 0,
+      "args": {
+        "latex": "",
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fx_f"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "latex must be a non-empty string.",
+          "recovery": "Send the line of working in LaTeX.",
+          "field": "latex"
+        }
+      }
+    },
+    {
+      "tool": "edit_step",
+      "startedAt": "2026-08-30T17:43:54.189Z",
+      "ms": 0,
+      "args": {
+        "stepId": "nope",
+        "latex": "x",
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fx_g"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "not_found",
+          "message": "That step is not in the scratchpad.",
+          "recovery": "Read the scratchpad again for current step ids.",
+          "field": "stepId"
+        }
+      }
+    },
+    {
+      "tool": "remove_step",
+      "startedAt": "2026-08-30T17:43:54.190Z",
+      "ms": 0,
+      "args": {
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fy_h"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "stepId must be a string.",
+          "recovery": "Use a step id from get_scratchpad.",
+          "field": "stepId"
+        }
+      }
+    },
+    {
+      "tool": "check_work",
+      "startedAt": "2026-08-30T17:43:54.190Z",
+      "ms": 0,
+      "args": {
+        "expectedRevision": "no",
+        "requestId": "req_mtg3m9fy_i"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "expectedRevision must be an integer.",
+          "recovery": "Read the scratchpad and send its revision, currently 138.",
+          "field": "expectedRevision"
+        }
+      }
+    },
+    {
+      "tool": "annotate_step",
+      "startedAt": "2026-08-30T17:43:54.190Z",
+      "ms": 0,
+      "args": {
+        "stepId": "x",
+        "note": "",
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fy_j"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "note must be a non-empty explanation.",
+          "recovery": "Send a short explanation aimed at the broken step.",
+          "field": "note"
+        }
+      }
+    },
+    {
+      "tool": "propose_step",
+      "startedAt": "2026-08-30T17:43:54.190Z",
+      "ms": 0,
+      "args": {
+        "stepId": "x",
+        "latex": "x",
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fy_k"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "rationale must explain the replacement.",
+          "recovery": "Say why this step is right, so the learner can judge it.",
+          "field": "rationale"
+        }
+      }
+    },
+    {
+      "tool": "resolve_proposal",
+      "startedAt": "2026-08-30T17:43:54.191Z",
+      "ms": 0,
+      "args": {
+        "accept": "yes",
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fz_l"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "accept must be true or false.",
+          "recovery": "Send accept: true to apply the proposal, or accept: false to discard it.",
+          "field": "accept"
+        }
+      }
+    },
+    {
+      "tool": "new_problem",
+      "startedAt": "2026-08-30T17:43:54.191Z",
+      "ms": 0,
+      "args": {
+        "familyId": 42,
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fz_m"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "familyId must be a string.",
+          "recovery": "Omit familyId to stay in the current skill family.",
+          "field": "familyId"
+        }
+      }
+    },
+    {
+      "tool": "reset_session",
+      "startedAt": "2026-08-30T17:43:54.191Z",
+      "ms": 0,
+      "args": {
+        "nope": 1,
+        "expectedRevision": 138,
+        "requestId": "req_mtg3m9fz_n"
+      },
+      "settled": "resolved",
+      "domChanged": false,
+      "result": {
+        "ok": false,
+        "revision": 138,
+        "error": {
+          "code": "invalid_input",
+          "message": "Unexpected argument \"nope\".",
+          "recovery": "This tool accepts: expectedRevision, requestId.",
+          "field": "nope"
+        }
+      }
+    }
+  ]
+}

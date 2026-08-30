@@ -61,6 +61,13 @@ async function snapshot() {
   const raw = await mc.executeTool(by.get_scratchpad, '{}')
   return (typeof raw === 'string' ? JSON.parse(raw) : raw).data
 }
+// Start from a practice round with one line on the page. Without this the audit
+// inherited whatever round the previous run left behind, and annotate_step - which is
+// closed during transfer - returned ok:false, so its revision trivially did not change
+// and it was recorded as matching without anything having been tested.
+await call('reset_session', { expectedRevision: await rev(), requestId: rid() })
+await call('add_step', { latex: 'x^2', expectedRevision: await rev(), requestId: rid() })
+
 const SKIP = new Set(['propose_step', 'resolve_proposal', 'new_problem'])
 for (const t of tools) {
   // Three writes need a phase this audit does not build; they are exercised by the C2
@@ -77,6 +84,9 @@ for (const t of tools) {
   readOnlyResults.push({
     tool: t.name, readOnlyHint: !!t.annotations?.readOnlyHint,
     ok: envelope.ok === true, changedRevision: before !== after,
+    // A call that failed tested nothing, so it is neither a match nor a mismatch - it
+    // is untested, and reported as such rather than counted as a pass.
+    untested: envelope.ok !== true,
     mismatch: envelope.ok === true && (!!t.annotations?.readOnlyHint === (before !== after)),
   })
 }
@@ -90,7 +100,8 @@ return {
   requiredNotRefused: requiredResults.filter(r => r.missing && !r.refused),
   readOnlyMismatches: readOnlyResults.filter(r => r.mismatch),
   readOnlySkipped: readOnlyResults.filter(r => r.skipped),
-  readOnlyChecked: readOnlyResults.filter(r => !r.skipped).length,
+  readOnlyChecked: readOnlyResults.filter(r => !r.skipped && !r.untested).length,
+  readOnlyUntested: readOnlyResults.filter(r => r.untested).map(r => r.tool),
   readOnlyDetail: readOnlyResults,
   probeRun1: statuses(first),
   probeRun2: statuses(second),

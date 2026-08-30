@@ -13,7 +13,7 @@ reading the specification. `unsupported` and `partial` are results, not omission
 | Feature | Verdict | What was observed | Reproduce |
 |---|---|---|---|
 | `exposedTo` | **partial** | Accepted without error, but a tool scoped to `https://example.invalid` is still listed by `getTools()` on this origin. The parameter is taken and not honoured. | `c5-probe.js` → `exposedTo.foreignLeaked: true` |
-| `getTools({fromOrigins})` | **partial** | Unscoped, this origin, and a foreign origin all returned the same count. Accepted, not honoured. | `c5-probe.js` → `all: 2, here: 2, foreign: 2` |
+| `getTools({fromOrigins})` | **partial** | Unscoped, this origin, and a foreign origin all returned the same count. Accepted, not honoured. | `get_platform` on `/learn` → *"unscoped, this origin, and https://example.invalid all returned 20"* (18 product tools plus the probes live at that moment) |
 | `toolchange` | **supported** | `document.modelContext` is an `EventTarget`; registering dispatched `toolchange` within 200ms. | `c5-probe.js` → `fired: true` |
 | Declarative `<form toolname>` | **supported** | A hidden form carrying `toolname` appeared in `getTools()` with no imperative call, and disappeared when the form was removed. | `c5-probe.js` → `declarative.present: true` |
 | Withdrawing a tool (`AbortSignal`) | **supported** | Aborting the signal passed to `registerTool` removed the tool and freed its name; re-registering then carried a new description. | `c5-abort.js` → `abortUnregisters: true` |
