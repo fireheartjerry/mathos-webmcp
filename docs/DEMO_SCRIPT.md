@@ -16,6 +16,26 @@ rest for held verdicts. Re-count with the command in "Timing" below after any ed
 - Keep the pointer still unless it is explaining something.
 - Say nothing the page cannot be seen doing.
 
+## The picture already exists
+
+`docs/images/demo.mp4` is a real screencast of the production build being driven through
+the beats below by its own tools — nothing staged for the camera. **2:43 long**, against a
+2:37 narration and the 3:00 limit, so the voice fits with margin. Produced by:
+
+```bash
+pnpm build && npx vinext start --port 3400
+# open http://localhost:3400/learn in the flagged Chrome and make that tab active
+node scripts/record-demo.mjs            # FPS=6 HOLD_SCALE=7 for a full-length take
+```
+
+So the remaining work is a **voice track**, not a screen recording. Read the narration
+below over it, or re-record the picture with different holds if a beat needs longer.
+
+Two things that caught the first attempt out, both now handled in the script: CDP's
+screencast only emits frames when the page *paints*, and this product has no animation,
+so a first take compressed the whole demo into four seconds — frames are now captured on
+a timer. And a background tab does not paint at all, so the tab must be active.
+
 ## Capture setup
 
 Chrome 151 with `chrome://flags/#enable-webmcp-testing`, window sized so the viewport is
