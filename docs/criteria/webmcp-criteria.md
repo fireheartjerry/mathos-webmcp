@@ -190,3 +190,4 @@ in every round and in the final report.
 | Round | Score | Δ | Gate | Note |
 |---|---|---|---|---|
 | 0 | 32 | — | PASS | baseline. C1 6, C2 8, C3 0, C4 6, C5 12. Nothing BLOCKED. |
+| 1 | 76 / 98 adj | +44 | PASS | C1 16, C2 8, C3 18/18, C4 14/18, C5 20/20. BLOCKED: C3.9, C4.3. |
