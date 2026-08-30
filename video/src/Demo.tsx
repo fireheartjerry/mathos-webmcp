@@ -89,6 +89,13 @@ const RULE = '#e0e0e0'
 const MUTED = '#6f6f6f'
 const SERIF = "'STIX Two Text', Georgia, 'Times New Roman', serif"
 
+/** Layout, computed once so the picture and the caption cannot collide.
+ *  1920x1080 frame; the 1280x800 screencast is 1.6:1. */
+const VIDEO_TOP = 56
+const VIDEO_WIDTH = 1180
+const VIDEO_HEIGHT = Math.round((VIDEO_WIDTH / 1280) * 800)
+const CAPTION_TOP = VIDEO_TOP + VIDEO_HEIGHT + 36
+
 /** Eases in over `frames`, holds, then eases out — so nothing pops. */
 const fade = (local: number, total: number, frames = 10) =>
   interpolate(local, [0, frames, total - frames, total], [0, 1, 1, 0], {
@@ -101,12 +108,15 @@ function Caption({ segment }: { segment: Segment }) {
   const total = Math.round(segment.durationSeconds * FPS)
   const opacity = fade(frame, total)
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 54 }}>
+    // Pinned to a reserved band beneath the screencast. It used to sit at the bottom of
+    // the frame and overlapped the product's lower edge, covering the very thing the
+    // caption was describing.
+    <AbsoluteFill style={{ top: CAPTION_TOP, alignItems: 'center' }}>
       <div
         style={{
           opacity,
-          maxWidth: 1500,
-          padding: '26px 40px',
+          width: 1480,
+          padding: '24px 36px',
           background: PAPER,
           border: `1px solid ${RULE}`,
           borderLeft: `3px solid ${INK}`,
@@ -159,16 +169,12 @@ function Progress() {
 }
 
 export function Demo() {
-  const { width, height } = useVideoConfig()
-  // The screencast is 1280x800; it is placed large and centred, with room beneath for
-  // the caption. Nothing crops it — a verdict must never be cut off.
-  const videoWidth = Math.round(width * 0.78)
   return (
     <AbsoluteFill style={{ backgroundColor: PAPER }}>
-      <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'flex-start', paddingTop: 96 }}>
+      <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'flex-start', paddingTop: VIDEO_TOP }}>
         <div
           style={{
-            width: videoWidth,
+            width: VIDEO_WIDTH,
             border: `1px solid ${RULE}`,
             boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
             overflow: 'hidden',
