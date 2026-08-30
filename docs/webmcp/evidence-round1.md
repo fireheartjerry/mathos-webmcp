@@ -10,7 +10,7 @@ All measurements taken 2026-08-30 against Chrome 151.0.7922.174 with
 
 ## Gate W1
 
-`pnpm test` → **257 passed, 15 files** (round 0: 248). `pnpm typecheck` → clean.
+`pnpm test` → **259 passed, 15 files** (round 0: 248). `pnpm typecheck` → clean.
 
 ---
 
