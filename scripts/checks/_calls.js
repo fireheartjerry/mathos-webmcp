@@ -1,4 +1,4 @@
-window.__CALLS__ = "[{\"tool\": \"add_step\", \"args\": {\"latex\": \"y = 15x^4 + 3x^3\", \"expectedRevision\": 32, \"requestId\": \"expand-2\"}}, {\"tool\": \"add_step\", \"args\": {\"latex\": \"\\\\frac{dy}{dx} = 60x^3 + 9x^2\", \"expectedRevision\": \"__NEEDS__\", \"requestId\": \"differentiate-3\"}}, {\"tool\": \"add_step\", \"args\": {\"latex\": \"60(2)^3 + 9(2)^2 = 516\", \"expectedRevision\": \"__NEEDS__\", \"requestId\": \"evaluate-4\"}}, {\"tool\": \"check_work\", \"args\": {\"expectedRevision\": \"__NEEDS__\", \"requestId\": \"check-round1-a\"}}]";
+window.__CALLS__ = "[{\"tool\": \"edit_step\", \"args\": {\"stepId\": \"step-4\", \"latex\": \"\\\\frac{dy}{dx}\\\\bigg|_{x=2} = 516\", \"expectedRevision\": 36, \"requestId\": \"fix-final-1\"}}, {\"tool\": \"check_work\", \"args\": {\"expectedRevision\": \"__NEEDS__\", \"requestId\": \"check-round1-b\"}}]";
 const mc = document.modelContext
 const tools = await mc.getTools()
 const by = Object.fromEntries(tools.map(t => [t.name, t]))
