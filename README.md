@@ -71,12 +71,23 @@ learner writes multi-line working, not a single number.
 7. Complete it. Read the receipt. It says what this session observed and what it does not
    establish.
 
+8. Press **Try a fresh problem, unaided** again, or have an agent call
+   `new_problem` with a `familyId`. There are three families — **product rule**, **chain
+   rule**, **quotient rule** — each a parameterised derivation with its own diagnosable
+   mistakes, not a list of stored answers. The heading names the rule you are on.
+
 You do not need an agent for any of that. If your browser has no WebMCP, the **Agent
-Console** in the margin still lists all six real tools with their descriptions and read/write roles,
-states the capability result honestly, and gives each tool a **Run locally** control that
-invokes the *identical* `execute` path with safe argument templates and the current revision.
-The inspector never receives the canonical answer; the tester must supply proposal math. The
-page really mutates. Nothing is simulated and no agent is faked.
+Console** in the margin still shows the whole surface — six groups with counts, summing to
+eighteen tools, nine read and nine write — with each tool's description and read/write role
+behind its group. It states the capability result honestly, and gives each tool a **Run
+locally** control that invokes the *identical* `execute` path with safe argument templates
+and the current revision. The inspector never receives the canonical answer; the tester must
+supply proposal math. The page really mutates. Nothing is simulated and no agent is faked.
+
+If you do have WebMCP, the one control worth pressing is **Probe this browser** at the foot
+of the console. It executes seven platform features and reports what *your* browser did with
+each — including the two Chrome accepts and does not honour, and the confirmation primitive
+it does not implement at all. Nothing there is read from a table.
 
 Inspector-initiated calls are attributed to `local-inspector` in the session activity log,
 not to `agent`. Each caller identity gets its own bridge into the reducer, so the console's
