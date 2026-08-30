@@ -50,6 +50,19 @@ The script previously assumed the product-rule premise shape and broke when the 
 family arrived with two definitions rather than three — it now builds the premise from
 whatever the problem declares. That was a defect in the measurement, not the product.
 
+**Re-run against the production build** (`vinext start`, minified, the artifact Cloudflare
+serves) → `transcripts/round4-production.json`. Same result on a different generated
+instance: 37 calls, **0 rejected**, `validFailures []`, `invalidAccepted []`,
+`invalidWithoutCode []`, `invalidWithoutField []`, `toolsCovered: 18`. Of the 37, **18 are
+refusals and every one names a field** (17 `invalid_input`, 1 `not_found`); 27 calls
+report `domChanged: false`, which is the nine read-only tools plus the refusals that
+correctly changed nothing. The derivation the valid calls build reaches its answer:
+`allSound: true`, three steps, ending `\frac{dy}{dx} = -148`.
+
+This matters because the earlier run was against `pnpm dev`, whose served HTML is
+unminified — a different artifact. A build that compiles is not the same claim as a build
+that behaves.
+
 ## C4.1–C4.3 — re-run against this build
 
 Full call log: `transcripts/round4-blind-agent.md`. A fresh agent received only the
