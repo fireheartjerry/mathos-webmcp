@@ -219,6 +219,19 @@ function scratchpadData(state: SessionState): Record<string, unknown> {
 
 const RECEIPT_ROUND_LIMIT = 8
 
+/**
+ * Reports only the actors that actually did something.
+ *
+ * Four provenance objects of three zero counters each is most of a round's size, and
+ * every zero says the same nothing. Omitting them is what keeps the receipt inside
+ * Chrome's 1.5K output budget without clipping the disclosures in `limits`, which are
+ * the part a reader most needs. An empty object means nobody acted, which is the same
+ * claim the zeroes were making.
+ */
+function onlyActed(counts: Record<string, number>): Record<string, number> {
+  return Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0))
+}
+
 function receiptData(state: SessionState): Record<string, unknown> {
   const completedRounds = state.history.slice(-RECEIPT_ROUND_LIMIT)
   const rounds = completedRounds.map((round) => ({
@@ -227,11 +240,11 @@ function receiptData(state: SessionState): Record<string, unknown> {
     // Who wrote the working, not merely who intervened on it. Without this the receipt
     // could report "no annotations, no proposals" for a round an agent had written end
     // to end, which reads as unaided and is the opposite of evidence.
-    linesWritten: round.stepWrites,
+    linesWritten: onlyActed(round.stepWrites),
     checksRun: round.checks,
-    annotations: round.annotations,
-    proposalsOffered: round.proposalsOffered,
-    proposalsAccepted: round.proposalsAccepted,
+    annotations: onlyActed(round.annotations),
+    proposalsOffered: onlyActed(round.proposalsOffered),
+    proposalsAccepted: onlyActed(round.proposalsAccepted),
   }))
   const previousTransfer = [...state.history].reverse().find((round) => round.round === 'transfer')
   const currentRoundStart = state.activities.findLastIndex(
@@ -371,6 +384,72 @@ async function mutate(
     else bridge.requestCache.delete(cacheKey)
   }
   return envelope
+}
+
+/**
+ * Chrome's published budget for a single tool output.
+ *
+ * The guidance for tool authors sets 1.5K characters per individual tool output, 500
+ * per tool description, 150 per parameter description and 30 per name. Everything but
+ * the output budget is a property of source we can simply assert; the output budget is
+ * a property of runtime data, so it is enforced here rather than hoped for.
+ *
+ * `get_platform` measured 1590 characters before this existed, and `get_scratchpad`
+ * grows with the derivation.
+ */
+export const MAX_OUTPUT_CHARS = 1500
+
+/**
+ * Brings an envelope inside the output budget by shortening its longest string,
+ * repeatedly, until it fits — and says so, because silently truncating an agent's data
+ * is the same failure as silently accepting its malformed argument.
+ */
+export function withinOutputBudget(envelope: ToolEnvelope, budget = MAX_OUTPUT_CHARS): ToolEnvelope {
+  if (!envelope.ok) return envelope
+  if (JSON.stringify(envelope).length <= budget) return envelope
+
+  const data = JSON.parse(JSON.stringify(envelope.data)) as Record<string, unknown>
+  let shortened = false
+
+  // Walk to the longest string anywhere in the payload and clip it. Repeating this
+  // shrinks whatever is actually large — a long detail, a long note, a long step —
+  // without needing a per-tool rule for which field may be sacrificed.
+  const longest = (node: unknown, path: Array<string | number> = []): { path: Array<string | number>; length: number } | null => {
+    if (typeof node === 'string') return { path, length: node.length }
+    if (Array.isArray(node)) {
+      return node.reduce<{ path: Array<string | number>; length: number } | null>((best, item, i) => {
+        const found = longest(item, [...path, i])
+        return found && (!best || found.length > best.length) ? found : best
+      }, null)
+    }
+    if (node && typeof node === 'object') {
+      return Object.entries(node).reduce<{ path: Array<string | number>; length: number } | null>((best, [key, value]) => {
+        const found = longest(value, [...path, key])
+        return found && (!best || found.length > best.length) ? found : best
+      }, null)
+    }
+    return null
+  }
+
+  for (let guard = 0; guard < 200; guard++) {
+    const candidate: ToolEnvelope = {
+      ...envelope,
+      data: shortened ? { ...data, outputTruncated: true } : data,
+    }
+    if (JSON.stringify(candidate).length <= budget) return candidate
+    const target = longest(data)
+    if (!target || target.length <= 12) {
+      // Nothing left worth clipping; return what we have rather than loop forever.
+      return { ...envelope, data: { ...data, outputTruncated: true } }
+    }
+    let parent: Record<string | number, unknown> = data as Record<string | number, unknown>
+    for (const key of target.path.slice(0, -1)) parent = parent[key] as Record<string | number, unknown>
+    const leaf = target.path[target.path.length - 1]
+    const value = parent[leaf] as string
+    parent[leaf] = `${value.slice(0, Math.max(8, Math.floor(value.length * 0.7)))}…`
+    shortened = true
+  }
+  return { ...envelope, data: { ...data, outputTruncated: true } }
 }
 
 const EMPTY_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const
@@ -1018,10 +1097,19 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
             ok: true,
             revision: state.revision,
             data: {
-              features: features.map((f) => ({ id: f.id, label: f.label, status: f.status, observed: f.detail })),
+              // Six verdicts with full observations exceeded Chrome's 1.5K per-output
+              // budget (measured: 1590). `label` is dropped because `id` already
+              // carries it, and each observation is clipped at the source rather than
+              // left to the generic budget guard, which can only cut blindly. The
+              // untruncated text stays on screen in the Agent Console.
+              features: features.map((f) => ({
+                id: f.id,
+                status: f.status,
+                observed: f.detail.length > 108 ? `${f.detail.slice(0, 107)}…` : f.detail,
+              })),
               supported: features.filter((f) => f.status === 'supported').length,
               total: features.length,
-              note: 'Each status was produced by executing the feature in this page load, not read from a table.',
+              note: 'Every status was executed in this page load. Full observations are on screen.',
             },
           }
         } catch {
@@ -1036,7 +1124,7 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
     async execute(input) {
       const envelope = await tool.execute(input)
       if (envelope.ok) bridge.onToolSuccess()
-      return envelope
+      return withinOutputBudget(envelope)
     },
   }))
 }

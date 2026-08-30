@@ -594,10 +594,13 @@ describe('the receipt', () => {
         linesWritten: { learner: number; agent: number; localInspector: number }
       }>
       expect(rounds).toHaveLength(8)
-      expect(rounds[0].annotations).toEqual(counts(2, 1))
+      // Actors that did nothing are omitted rather than reported as zero: four
+      // provenance objects of three zeroes each was most of a round's size, and every
+      // zero said the same nothing. See onlyActed().
+      expect(rounds[0].annotations).toEqual({ agent: 2, localInspector: 1 })
       // Authorship, not merely intervention. Without this a round an agent wrote end
       // to end would report "no annotations, no proposals" and read as unaided.
-      expect(rounds[0].linesWritten).toEqual({ learner: 2, agent: 1, localInspector: 0 })
+      expect(rounds[0].linesWritten).toEqual({ learner: 2, agent: 1 })
       expect(result.data.roundsTotal).toBe(10)
       expect(result.data.roundsReturned).toBe(8)
       expect(result.data.roundsTruncated).toBe(true)
