@@ -134,3 +134,49 @@ which was not independently confirmed.
 Verdicts unchanged: `exposed-to: partial`, `from-origins: partial`,
 `toolchange: supported`, `declarative: supported`, `lifecycle: supported`,
 `annotations: partial`.
+
+---
+
+## C4.1–C4.3 — the blind agent test, re-run without the crutch
+
+**What changed in the method.** Round 1 let the agent write `"__NEEDS__"` for
+`expectedRevision` and the harness substituted the live value. A real agent gets no such
+helper, and the substitution meant the agent never once met a refusal — which is why
+C4.3 had zero instances and was scored BLOCKED. That substitution is removed. The agent
+now supplies every argument itself, from values it read in earlier results.
+
+**Setup.** Fresh agent, fresh context, given exactly one file: the JSON output of
+`getTools()` (`toollist2.json`, 18.5KB). Forbidden from reading any other file.
+Blindness enforced by instruction, not by sandbox — disclosed.
+
+| Batch | Calls | Outcome |
+|---|---|---|
+| 1 | `get_scratchpad`, `get_receipt`, `list_problem_families` | `get_scratchpad` ok. **`get_receipt` → `ok:false`, `invalid_phase`,** *"No round has finished yet."* Batch stopped at the failure, so `list_problem_families` never ran. |
+| 2 | `differentiate_expression`, `evaluate_expression`, `remove_step`, `get_scratchpad` | Verified `dy/dx = 12x² + 4x` and its value `40` at `x = −2` against the CAS **before writing**. Deleted a leftover line, explicitly reasoning that `remove_step` was right because the line "is not an attempt at this problem, not a line to fix" — the distinction the two descriptions draw. |
+| 3–5 | Three `add_step`, each followed by `get_scratchpad` | Wrote `4x^3 + 2x^2`, `12x^2 + 4x`, `40`. Re-read the revision between writes rather than guessing it, stating that a stale revision would be rejected. |
+| 6 | `check_work`, `get_scratchpad` | **`allSound: true, reachesAnswer: true`** on the first check. No wrong turn this run. |
+| 7 | `new_problem`, `get_receipt` | Closed the round — noting `new_problem` keeps the receipt where `reset_session` destroys it — and read the evidence. |
+
+**Measured:**
+
+- **C4.1 journey completes** — yes, reached the receipt.
+- **C4.2 dead calls** — `ok:false` envelopes not followed by a corrected call: **0**.
+  There was exactly one `ok:false` (batch 1's `get_receipt`), and it was corrected.
+- **C4.3 errors drive recovery** — **not vacuous this round, and it passes.** The single
+  refusal's `recovery` read *"There is nothing to report until a fresh problem has been
+  started."* The agent did not retry `get_receipt` blindly; it left it, completed the
+  work, called `new_problem`, and only then called `get_receipt` again — which succeeded.
+  The corrective action matches the condition the error named.
+
+**What the receipt reported afterwards:**
+
+```json
+{"round":"practice","allStepsSound":true,
+ "linesWritten":{"learner":0,"agent":4,"localInspector":0},
+ "checksRun":1,
+ "annotations":{"agent":0,...},"proposalsOffered":{"agent":0,...}}
+```
+
+Every line was agent-written and the receipt says so. Under round 1's code this same
+round would have reported all-zero provenance and read as unaided — the fix is doing the
+work the thesis claims for it.
