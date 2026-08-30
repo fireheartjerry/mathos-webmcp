@@ -928,6 +928,55 @@
   color: var(--graphite);
 }
 
+/* Six group rows fit the first viewport where eighteen tool rows do not, so what a
+   reader sees before acting is the shape of the surface and its size. The count is
+   the point of the row: it is the only number that says how large the surface is. */
+.console-groups {
+  margin: 0;
+  padding: 0;
+  border-top: var(--bw-hairline) solid var(--line);
+  list-style: none;
+}
+
+.console-groups > li {
+  border-bottom: var(--bw-hairline) solid var(--line);
+}
+
+.console-group-head {
+  display: grid;
+  width: 100%;
+  min-height: 40px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  transition: color var(--motion) linear;
+}
+
+.console-group-purpose {
+  color: var(--graphite);
+  font-size: var(--fs-meta);
+}
+
+.console-group-count {
+  color: var(--graphite);
+  font-variant-numeric: tabular-nums;
+}
+
+.console-groups > li.is-open > .console-group-head {
+  color: var(--ink);
+}
+
+/* Nested inside an open group: the outer rule already draws the boundary. */
+.console-groups .console-tools {
+  border-top: 0;
+  padding-left: var(--s-3);
+}
+
 .console-tools {
   margin: 0;
   padding: 0;

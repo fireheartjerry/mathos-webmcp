@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ToolDefinition } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import type { PlatformFeature } from '../domain/tools/platform'
+import { groupTools } from '../domain/tools/groups'
 import {
   registrationAllowsDirectCalls,
   registrationRecovery,
@@ -58,6 +59,10 @@ function StatusLine({ status }: { status: RegistrationStatus }) {
 export default function AgentConsole({ status, tools, onRun, revision, proposalSeed, platform, onProbePlatform }: Props) {
   const suggested = useMemo(() => suggestedInspectorArgs(proposalSeed), [proposalSeed])
   const [openTool, setOpenTool] = useState<string | null>(null)
+  // Groups start closed. Eighteen names cannot fit the first viewport, but six group
+  // labels and their counts can, so what a reader sees without acting is the shape of
+  // the surface and its size rather than an arbitrary first screenful of it.
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [args, setArgs] = useState<string>('')
   const [output, setOutput] = useState<{ tool: string; text: string; runId: number } | null>(null)
   // Every run is its own event, even when it returns the same bytes.
@@ -109,54 +114,79 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
         <StatusLine status={status} />
       )}
       {partialRecovery && <p className="console-hint">{partialRecovery}</p>}
-      <ul className="console-tools">
-        {tools.map((tool) => {
-          const open = openTool === tool.name
-          const bodyId = `tool-body-${tool.name}`
+      <ul className="console-groups">
+        {groupTools(tools).groups.map(({ group, tools: members }) => {
+          const groupOpen = openGroup === group.id
+          const listId = `group-body-${group.id}`
           return (
-            <li key={tool.name} className={open ? 'is-open' : undefined}>
+            <li key={group.id} className={groupOpen ? 'is-open' : undefined}>
               <button
                 type="button"
-                className="console-tool-head"
-                aria-expanded={open}
-                aria-controls={bodyId}
-                onClick={() => toggle(tool.name)}
+                className="console-group-head"
+                aria-expanded={groupOpen}
+                aria-controls={listId}
+                onClick={() => setOpenGroup(groupOpen ? null : group.id)}
               >
-                <span className="console-tool-name">{tool.name}</span>
-                {/* The heading defines the vocabulary once — "2 read · 4 write" —
-                    so each row only needs the word, not a sentence. Four rows
-                    reading "May change this session" was the longest repeated
-                    text on the page. */}
-                <span className="tool-access">
-                  {tool.annotations.readOnlyHint ? 'read' : 'write'}
-                </span>
+                <span className="console-group-label">{group.label}</span>
+                <span className="console-group-purpose">{group.purpose}</span>
+                <span className="console-group-count">{members.length}</span>
               </button>
-              {open && (
-                <div className="console-tool-body" id={bodyId}>
-                  <p className="console-tool-desc">{tool.description}</p>
-                  <label className="console-args-label" htmlFor={`args-${tool.name}`}>
-                    Arguments
-                  </label>
-                  <textarea
-                    id={`args-${tool.name}`}
-                    className="console-args"
-                    rows={3}
-                    spellCheck={false}
-                    value={args}
-                    onChange={(event) => setArgs(event.target.value)}
-                  />
-                  <button type="button" className="button button-sm" disabled={busy} onClick={() => run(tool.name)}>
-                    {busy ? 'Running' : 'Run locally'}
-                  </button>
-                  <p className="console-hint">
-                    Recorded as <code>local-inspector</code>, never as an agent.
-                  </p>
-                </div>
+              {groupOpen && (
+                <ul className="console-tools" id={listId}>
+                  {members.map((tool) => {
+                    const open = openTool === tool.name
+                    const bodyId = `tool-body-${tool.name}`
+                    return (
+                      <li key={tool.name} className={open ? 'is-open' : undefined}>
+                        <button
+                          type="button"
+                          className="console-tool-head"
+                          aria-expanded={open}
+                          aria-controls={bodyId}
+                          onClick={() => toggle(tool.name)}
+                        >
+                          <span className="console-tool-name">{tool.name}</span>
+                          <span className="tool-access">
+                            {tool.annotations.readOnlyHint ? 'read' : 'write'}
+                          </span>
+                        </button>
+                        {open && (
+                          <div className="console-tool-body" id={bodyId}>
+                            <p className="console-tool-desc">{tool.description}</p>
+                            <label className="console-args-label" htmlFor={`args-${tool.name}`}>
+                              Arguments
+                            </label>
+                            <textarea
+                              id={`args-${tool.name}`}
+                              className="console-args"
+                              rows={3}
+                              spellCheck={false}
+                              value={args}
+                              onChange={(event) => setArgs(event.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className="button button-sm"
+                              disabled={busy}
+                              onClick={() => run(tool.name)}
+                            >
+                              {busy ? 'Running' : 'Run locally'}
+                            </button>
+                            <p className="console-hint">
+                              Recorded as <code>local-inspector</code>, never as an agent.
+                            </p>
+                          </div>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
               )}
             </li>
           )
         })}
       </ul>
+
 
       {output && (
         /* Keyed on the run, not the returned text. Keying on the text looked
