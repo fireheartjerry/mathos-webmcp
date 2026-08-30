@@ -36,3 +36,20 @@ describe('the paint barrier', () => {
     expect(resolved).toHaveBeenCalledOnce()
   })
 })
+
+describe('the paint deadline', () => {
+  it('returns unconfirmed rather than waiting forever when no paint arrives', async () => {
+    const barrier = createPaintBarrier('s1', 0)
+    // No mark() is ever called, which is what an occluded tab looked like: the write
+    // had already applied, and the caller's promise simply never settled.
+    const outcome = await barrier.wait('s1', 1, 10)
+    expect(outcome).toBe('unconfirmed')
+  })
+
+  it('reports painted when the mark arrives before the deadline', async () => {
+    const barrier = createPaintBarrier('s1', 0)
+    const pending = barrier.wait('s1', 1, 1000)
+    barrier.mark('s1', 1)
+    expect(await pending).toBe('painted')
+  })
+})

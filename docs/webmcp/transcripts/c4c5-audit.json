@@ -1,0 +1,297 @@
+{
+  "requiredRefusals": [
+    {
+      "tool": "add_step",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "latex"
+    },
+    {
+      "tool": "add_step",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "add_step",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "annotate_step",
+      "missing": "stepId",
+      "refused": true,
+      "code": "invalid_input"
+    },
+    {
+      "tool": "annotate_step",
+      "missing": "note",
+      "refused": true,
+      "code": "invalid_input"
+    },
+    {
+      "tool": "annotate_step",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "annotate_step",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "check_work",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "check_work",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "compare_expressions",
+      "missing": "left",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "left"
+    },
+    {
+      "tool": "compare_expressions",
+      "missing": "right",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "right"
+    },
+    {
+      "tool": "differentiate_expression",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "latex"
+    },
+    {
+      "tool": "edit_step",
+      "missing": "stepId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "stepId"
+    },
+    {
+      "tool": "edit_step",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "latex"
+    },
+    {
+      "tool": "edit_step",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "edit_step",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "evaluate_expression",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "latex"
+    },
+    {
+      "tool": "evaluate_expression",
+      "missing": "at",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "at"
+    },
+    {
+      "tool": "get_changes_since",
+      "missing": "since",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "since"
+    },
+    {
+      "tool": "new_problem",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "new_problem",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "propose_step",
+      "missing": "stepId",
+      "refused": true,
+      "code": "invalid_input"
+    },
+    {
+      "tool": "propose_step",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input"
+    },
+    {
+      "tool": "propose_step",
+      "missing": "rationale",
+      "refused": true,
+      "code": "invalid_input"
+    },
+    {
+      "tool": "propose_step",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "propose_step",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "remove_step",
+      "missing": "stepId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "stepId"
+    },
+    {
+      "tool": "remove_step",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "remove_step",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "reset_session",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "reset_session",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "resolve_proposal",
+      "missing": "accept",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "accept"
+    },
+    {
+      "tool": "resolve_proposal",
+      "missing": "expectedRevision",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "expectedRevision"
+    },
+    {
+      "tool": "resolve_proposal",
+      "missing": "requestId",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "requestId"
+    },
+    {
+      "tool": "validate_expression",
+      "missing": "latex",
+      "refused": true,
+      "code": "invalid_input",
+      "field": "latex"
+    }
+  ],
+  "requiredNotRefused": [],
+  "readOnlyViolations": [],
+  "readOnlyChecked": 9,
+  "probeRun1": [
+    "exposed-to:partial",
+    "from-origins:partial",
+    "toolchange:supported",
+    "declarative:supported",
+    "lifecycle:supported",
+    "annotations:partial"
+  ],
+  "probeRun2": [
+    "exposed-to:partial",
+    "from-origins:partial",
+    "toolchange:supported",
+    "declarative:supported",
+    "lifecycle:supported",
+    "annotations:partial"
+  ],
+  "probesAgree": true,
+  "details": [
+    {
+      "id": "exposed-to",
+      "status": "partial",
+      "observed": "Accepted without error, but a tool scoped to https://example.invalid is still listed here, so the parameter is taken and not honoured."
+    },
+    {
+      "id": "from-origins",
+      "status": "partial",
+      "observed": "Accepted but not honoured: unscoped, this origin, and https://example.invalid all returned 20."
+    },
+    {
+      "id": "toolchange",
+      "status": "supported",
+      "observed": "Registering a tool dispatched toolchange on document.modelContext within 200ms."
+    },
+    {
+      "id": "declarative",
+      "status": "supported",
+      "observed": "A form carrying a toolname attribute was registered by the browser with no imperative call, and withdrawn when the form was removed."
+    },
+    {
+      "id": "lifecycle",
+      "status": "supported",
+      "observed": "Aborting the registration signal withdrew the tool and freed its name, which re-registering without aborting is refused for. Re-registering then carried a new description, so a tool can revise what it says about itself."
+    },
+    {
+      "id": "annotations",
+      "status": "partial",
+      "observed": "Sent four, kept 2: readOnlyHint, untrustedContentHint. Dropped without error: destructiveHint, idempotentHint."
+    }
+  ],
+  "toolsAfterProbes": 18
+}

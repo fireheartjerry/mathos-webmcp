@@ -113,7 +113,14 @@ export type FailureCode =
 
 export type ActionResult =
   | { ok: true; state: SessionState; activity: Activity; data: Record<string, unknown> }
-  | { ok: false; code: FailureCode; message: string; recovery: string }
+  | {
+      ok: false
+      code: FailureCode
+      message: string
+      recovery: string
+      /** The argument at fault, when the refusal blames one. Surfaced by the tools. */
+      field?: string
+    }
 
 /** Injected so tests are deterministic and the reducer stays pure. */
 export type SessionEnv = { now: () => number }

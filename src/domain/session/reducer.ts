@@ -9,8 +9,10 @@
  * hidden in a conditional.
  *
  * The policies:
- *   - Writing, editing, deleting and accepting are the learner's. An agent that tries
- *     is refused. It may propose; it may not type.
+ *   - Writing, editing, deleting and accepting are open to any source. They used to be
+ *     the learner's alone; what carries the claim now is that `source` is recorded on
+ *     every activity and reported by the receipt, so the evidence distinguishes what
+ *     the learner did from what was done for them. See LEARNER_ONLY below.
  *   - An agent may not propose a replacement for a step the learner has not genuinely
  *     attempted (PROPOSAL_ATTEMPT_GATE). This is the pedagogy firewall.
  *   - During the transfer round the agent may not annotate or propose at all. That
@@ -58,8 +60,8 @@ import type {
  */
 const LEARNER_ONLY: SessionAction['type'][] = []
 
-function fail(code: FailureCode, message: string, recovery: string): ActionResult {
-  return { ok: false, code, message, recovery }
+function fail(code: FailureCode, message: string, recovery: string, field?: string): ActionResult {
+  return { ok: false, code, message, recovery, ...(field ? { field } : {}) }
 }
 
 const emptyCounts = (): ProvenanceCounts => ({
@@ -174,7 +176,7 @@ export function applyAction(
 
     case 'EDIT_STEP': {
       const index = state.steps.findIndex((s) => s.id === action.stepId)
-      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.')
+      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.', 'stepId')
       const latex = action.latex?.trim() ?? ''
       if (!latex) return fail('invalid_input', 'A step cannot be empty.', 'Write an expression, or remove the step.')
       if (latex.length > MAX_STEP_CHARS) {
@@ -185,6 +187,7 @@ export function applyAction(
           'invalid_input',
           'That line is unchanged.',
           'Make a genuine revision before saving it as another attempt.',
+          'latex',
         )
       }
       const steps = state.steps.map((s, i) =>
@@ -204,7 +207,7 @@ export function applyAction(
 
     case 'REMOVE_STEP': {
       const index = state.steps.findIndex((s) => s.id === action.stepId)
-      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.')
+      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.', 'stepId')
       return commit(
         state,
         source,
@@ -271,7 +274,7 @@ export function applyAction(
         )
       }
       const index = state.steps.findIndex((s) => s.id === action.stepId)
-      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.')
+      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.', 'stepId')
       const note = action.note?.trim() ?? ''
       if (!note) return fail('invalid_input', 'An annotation needs text.', 'Send a short explanation.')
       if (note.length > MAX_NOTE_CHARS) {
@@ -317,7 +320,7 @@ export function applyAction(
         )
       }
       const index = state.steps.findIndex((s) => s.id === action.stepId)
-      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.')
+      if (index === -1) return fail('not_found', 'That step is not in the scratchpad.', 'Read the scratchpad again for current step ids.', 'stepId')
       const step = state.steps[index]
       if (step.attempts < PROPOSAL_ATTEMPT_GATE) {
         return fail(

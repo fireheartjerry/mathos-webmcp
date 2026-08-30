@@ -256,7 +256,7 @@ export default function Scratchpad() {
             setComposerError('')
             setEditingId(null)
           }
-          await awaitPaint(result.state.sessionId, result.state.revision)
+          const paint = await awaitPaint(result.state.sessionId, result.state.revision)
           if (stateRef.current.sessionId !== result.state.sessionId) {
             return {
               ok: false,
@@ -277,6 +277,11 @@ export default function Scratchpad() {
           if (action.type === 'NEW_PROBLEM') {
             focusLineOrComposer(null)
             announce('Fresh unaided problem started. Focus moved to Write your first line.')
+          }
+          // Applied, but the tab never painted within the deadline. Saying so is more
+          // useful than either silence or an unqualified success.
+          if (paint === 'unconfirmed') {
+            return { ...result, data: { ...result.data, paintedBeforeReturning: false } }
           }
         }
         return result

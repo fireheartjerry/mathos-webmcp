@@ -331,7 +331,7 @@ async function mutate(
       const result = await bridge.run(action)
       if (!result.ok) {
         const after = bridge.getState()
-        return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery)
+        return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery, result.field)
       }
       return { ok: true, revision: result.state.revision, data: result.data }
     } catch {
@@ -376,14 +376,25 @@ function onlyKeys(
   if (!values) {
     return {
       values: {},
-      bad: failure(state.revision, 'invalid_input', 'The arguments were not a JSON object.', `This tool accepts: ${allowed.join(', ')}.`),
+      bad: failure(
+        state.revision,
+        'invalid_input',
+        'The arguments were not a JSON object.',
+        allowed.length === 0 ? 'This tool takes no arguments. Call it with {}.' : `This tool accepts: ${allowed.join(', ')}.`,
+      ),
     }
   }
   for (const key of Object.keys(values)) {
     if (!allowed.includes(key)) {
       return {
         values,
-        bad: failure(state.revision, 'invalid_input', `Unexpected argument "${key}".`, `This tool accepts: ${allowed.join(', ')}.`, key),
+        bad: failure(
+        state.revision,
+        'invalid_input',
+        `Unexpected argument "${key}".`,
+        allowed.length === 0 ? 'This tool takes no arguments. Call it with {}.' : `This tool accepts: ${allowed.join(', ')}.`,
+        key,
+      ),
       }
     }
   }
@@ -403,13 +414,8 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        const values = readInput(input)
-        // The published schema says additionalProperties:false, so honour it here too.
-        // Accepting and silently dropping an argument teaches an agent that its
-        // mistake worked.
-        if (!values || Object.keys(values).length > 0) {
-          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
-        }
+        const guard = onlyKeys(state, readInput(input), [])
+        if (guard.bad) return guard.bad
         return { ok: true, revision: state.revision, data: scratchpadData(state) }
       },
     },
@@ -551,14 +557,15 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       description:
         'Read at most 8 recent completed rounds with total and truncation metadata, plus bounded transfer evidence. Do not use this for the current on-screen derivation or its verdicts — get_scratchpad reports those, and this returns nothing until a round has ended.',
       inputSchema: EMPTY_SCHEMA,
-      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      // Returns only strings this product composed - round tallies, fixed limit
+      // sentences, activity descriptions. No learner-authored text reaches a caller
+      // here, and marking it untrusted anyway would blunt the hint where it matters.
+      annotations: { readOnlyHint: true, untrustedContentHint: false },
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        const values = readInput(input)
-        if (!values || Object.keys(values).length > 0) {
-          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
-        }
+        const guard = onlyKeys(state, readInput(input), [])
+        if (guard.bad) return guard.bad
         if (state.history.length === 0) {
           return failure(state.revision, 'invalid_phase', 'No round has finished yet.', 'There is nothing to report until a fresh problem has been started.')
         }
@@ -718,7 +725,10 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
         required: ['since'],
         additionalProperties: false,
       },
-      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      // Returns only strings this product composed - round tallies, fixed limit
+      // sentences, activity descriptions. No learner-authored text reaches a caller
+      // here, and marking it untrusted anyway would blunt the hint where it matters.
+      annotations: { readOnlyHint: true, untrustedContentHint: false },
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
@@ -763,10 +773,8 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        const values = readInput(input)
-        if (!values || Object.keys(values).length > 0) {
-          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
-        }
+        const guard = onlyKeys(state, readInput(input), [])
+        if (guard.bad) return guard.bad
         return {
           ok: true,
           revision: state.revision,
@@ -939,10 +947,8 @@ export function createTools(bridge: ToolBridge): ToolDefinition[] {
       async execute(input) {
         const state = bridge.getState()
         if (!state) return NOT_MOUNTED
-        const values = readInput(input)
-        if (!values || Object.keys(values).length > 0) {
-          return failure(state.revision, 'invalid_input', 'This tool takes no arguments.', 'Call it with {}.')
-        }
+        const guard = onlyKeys(state, readInput(input), [])
+        if (guard.bad) return guard.bad
         try {
           const features = await bridge.probePlatform()
           return {

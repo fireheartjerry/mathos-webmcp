@@ -14,7 +14,10 @@ const source = readFileSync(process.argv[2], 'utf8')
 const match = process.argv[3] ?? '/learn'
 
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-const page = targets.find((t) => t.type === 'page' && t.url.includes(match))
+// TAB_ID targets one specific tab, which matters once a scenario opens a second copy
+// of the same URL and the two must be told apart.
+const pages = targets.filter((t) => t.type === 'page' && t.url.includes(match))
+const page = process.env.TAB_ID ? pages.find((t) => t.id === process.env.TAB_ID) : pages[0]
 if (!page) {
   console.error(`No page matching ${match}. Open tabs:`)
   for (const t of targets) console.error(`  ${t.type} ${t.url}`)

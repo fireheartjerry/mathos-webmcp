@@ -129,9 +129,14 @@ describe('the tool surface itself', () => {
     }
   })
 
-  it('marks tools that return learner-authored text as untrusted content', () => {
-    expect(h.byName('get_scratchpad').annotations.untrustedContentHint).toBe(true)
-    expect(h.byName('get_receipt').annotations.untrustedContentHint).toBe(true)
+  // The hint marks exactly the tools whose payload can carry text the learner wrote.
+  // get_receipt was previously marked too: it returns round tallies, fixed limit
+  // sentences and a session id, none of which the learner authored. Marking every read
+  // untrusted costs the hint its meaning, so only get_scratchpad, which echoes the
+  // learner's own LaTeX, carries it.
+  it('marks exactly the tools that return learner-authored text as untrusted', () => {
+    const marked = h.tools.filter((t) => t.annotations.untrustedContentHint).map((t) => t.name)
+    expect(marked).toEqual(['get_scratchpad'])
   })
 
   it('marks check_work as a write, because it changes what the learner sees', () => {
