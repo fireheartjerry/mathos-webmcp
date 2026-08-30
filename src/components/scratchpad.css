@@ -1572,15 +1572,6 @@
   display: inline-block;
 }
 
-.scratch-shell .step:has(.relation-sound)::before,
-.scratch-shell .step:has(.relation-broken)::before,
-.scratch-shell .step:has(.relation-uncertain)::before,
-.scratch-shell .step:has(.relation-unreadable)::before,
-.scratch-shell .step:has(.relation-downstream)::before {
-  /* Upward from the mark, so it grows back toward the line it follows from. */
-}
-
-@
 
 .console-platform { margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--bw-rule); }
 .console-platform-head { margin: 0 0 var(--s-4); color: var(--bw-ink); font-size: var(--fs-meta); }

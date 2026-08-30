@@ -60,7 +60,7 @@ learner writes multi-line working, not a single number.
    unreadable or uncertain math stays unresolved rather than being called wrong. Later lines say
    either `after the first break` or `not checked after the unresolved line`. Sound lines read
    `equals`, `differentiates`, or `evaluates`.
-5. **Click that line to rewrite it**, then check again. Only the learner can edit a line, and
+5. **Click that line to rewrite it**, then check again. A learner and an agent can both edit a line, and
    the page waits for two real attempts on a step before it will let anyone offer you a
    replacement for it — because it is counting, and the agent is not.
 6. Press **Try a fresh problem, unaided.** A new problem in the same skill family is
@@ -120,65 +120,90 @@ since the last check — so it answers with what it knows:
 ```
 
 The gate lives in the reducer, so it reads the same to the agent, to the local inspector, and
-to any future caller. The same knowledge shapes two more answers: during the unaided round
-both `annotate_step` and `propose_step` return `refused_policy` — *"This is the unaided
-attempt. Proposals are closed."* — and a non-learner source that tries to write, edit, delete
-or accept a step is told *"Only the learner can write, edit, delete, or accept work."*
+to any future caller. During the unaided round both `annotate_step` and `propose_step` return
+`refused_policy` — *"This is the unaided attempt. Proposals are closed."*
 
-None of this is the page being strict with the agent. It is the page being the only party in
-the room that knows this learner, and answering accordingly. A generic model cannot make that
-call, because a generic model does not have the history. That is what "humans and agents
-create together" has to mean if it is not going to mean "the agent does the homework."
+**This used to go further, and no longer does.** An earlier version refused every write from a
+non-learner source outright: *"Only the learner can write, edit, delete, or accept work."* The
+page's claim was that an agent could not do the learner's work because it was not permitted
+to. That claim has been withdrawn, deliberately. An agent may now take any action the learner
+can — write a line, rewrite one, delete one, accept a proposal, restart the session.
 
-And the answer is not only returned to the caller. It renders on the page, in the page's own
-voice — *"Not yet."* — because what the tutor knows about you should be legible to you.
+What replaces the refusal is **attribution**. Every action records the `ActionSource` that
+caused it, and the receipt reports the split: `linesWritten: {learner: 0, agent: 5}` when an
+agent wrote the working, without being asked to volunteer that. The new promise is weaker and
+truer. A permission check in a reducer never bound anything outside this page; an attribution
+survives into the evidence a reader actually sees.
+
+It is weaker in a specific way we would rather state than hide. **Attribution records who
+wrote a line, not who worked it out.** An agent can read the problem, compute the answer with
+the read-only tools, and tell a person what to type — that lands as learner work, and nothing
+in the record would show it. The read-only tools leave no trace. We found this by pointing an
+adversarial agent at the live page and asking it what it could get away with; the receipt now
+says so in its own `limits`, because it is a gap that can be disclosed but not measured.
+
+The page is still the only party in the room that knows this learner, and it still answers
+accordingly. It has simply stopped claiming that answering is the same as controlling.
 
 ---
 
-## The six tools
+## The eighteen tools
 
-Two read, four write. Registered statically, once. Names, titles and descriptions below are
-the ones in `src/domain/tools/definitions.ts`.
+Nine read, nine write — one per capability the reducer supports. Registered statically, once.
+The full enumeration, with the file and line each corresponds to, is in
+[`docs/webmcp/capabilities.md`](docs/webmcp/capabilities.md); a test opens every one of those
+citations and fails the build if it has drifted.
 
-| # | Tool | Mode | What it does |
-|---|---|---|---|
-| 1 | `get_scratchpad` — *Read the scratchpad* | **read** | Read the current problem, learner lines, verdicts, first broken or unresolved relation, and valid next actions. |
-| 2 | `check_work` — *Check the derivation* | **write** | Ask the page computer algebra system to check the derivation and mark the first broken or unresolved relation. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. |
-| 3 | `annotate_step` — *Explain one step* | **write** | Attach a short explanation to one step, shown with that line in the learner's own working. Use this to teach the step that broke; it is not a chat message. |
-| 4 | `propose_step` — *Offer a replacement step* | **write** | Offer a replacement after two learner attempts since the most recent check. The learner must accept or reject it; the caller cannot apply it. |
-| 5 | `new_problem` — *Start a fresh problem* | **write** | End the coaching round and hand the learner a fresh problem in the same family, its answer derived by the page engine. Irreversible: `annotate_step` and `propose_step` close for the new round. Requires checked work in which every line is sound and the requested answer is reached. |
-| 6 | `get_receipt` — *Read the session evidence* | **read** | Read up to eight recent completed rounds, actor-specific intervention counts, truncation metadata, the unaided result, and explicit limits. |
+**Why eighteen and not a thousand.** We probed the ceiling: Chrome 151 accepted **1000**
+registered tools with flat latency and no truncation, so the browser never binds
+([`docs/webmcp/ceiling.md`](docs/webmcp/ceiling.md)). The surface is bounded by the product
+instead. Two tools count as one if either can be obtained from the other by fixing a
+parameter, which is why there is one `edit_step` rather than `set_line_1 … set_line_n`, and
+why reads that merely slice the same snapshot were left out.
 
-Required arguments:
-
-| Tool | Required |
+| Group | Tools |
 |---|---|
-| `get_scratchpad` | *(none)* |
-| `check_work` | `expectedRevision`, `requestId` |
-| `annotate_step` | `stepId`, `note`, `expectedRevision`, `requestId` *(optional `focus`)* |
-| `propose_step` | `stepId`, `latex`, `rationale`, `expectedRevision`, `requestId` |
-| `new_problem` | `expectedRevision`, `requestId` *(optional `familyId`)* |
-| `get_receipt` | *(none)* |
+| **Read** | `get_scratchpad`, `get_changes_since`, `get_receipt` |
+| **Write** | `add_step`, `edit_step`, `remove_step` |
+| **Review** | `check_work`, `annotate_step`, `propose_step`, `resolve_proposal` |
+| **Session** | `new_problem`, `reset_session`, `list_problem_families` |
+| **Mathematics** | `validate_expression`, `compare_expressions`, `differentiate_expression`, `evaluate_expression` |
+| **Platform** | `get_platform` |
+
+The Agent Console shows these six groups with their counts in the first viewport, with no
+clicks and no scrolling; individual names appear when a group is opened. Eighteen rows would
+not fit, and a panel you have to scroll to understand is a panel that does not tell you how
+large the surface is.
+
+The **Mathematics** group is the one worth dwelling on. It exposes the page's computer algebra
+layer read-only, so an agent can check its own reasoning *before* writing to a learner's page:
+differentiate an expression, evaluate it at a point, or ask whether two expressions are
+equivalent — a three-valued answer, where `could not determine` is a real result and must not
+be read as either of the other two. Every agent we pointed at this page used them unprompted,
+and verified its derivative against the page before writing a single line.
 
 Notes an agent author will want:
 
-- **`check_work` sounds like a read and is a write.** It mutates the document: it stamps a
-  verdict on every step and moves the session into a checked state that the learner sees.
-  Marking it `readOnlyHint: false` is the honest call.
-- **`expectedRevision`** is not ceremony. A human is editing the same document at the same
-  time. If the learner has typed since you read the scratchpad, your write is rejected with
-  `stale_revision` and a `recovery` string naming the current revision.
-- **`requestId` is namespaced by tool.** It caches the in-flight promise, so a retried call awaits the original rather
-  than racing it. A completed success is replayed only while the document is still at that
-  revision; once the learner moves on, the caller gets `stale_revision`, never an old success
-  presented as current. Failures are evicted so a corrected retry can succeed.
-- **`get_scratchpad` and `get_receipt` carry `untrustedContentHint: true`**, because every
-  step they return is text the learner typed. That is Chrome's published guidance for
-  tool output containing user-authored content, and it applies to us literally.
-- Every `inputSchema` property carries a `description`. Agents read them.
-- No handler ever throws. Every failure is a returned envelope with a `code`, a `message` and
-  a `recovery` string — see the Chrome 151 findings below for why that distinction is not
-  stylistic.
+- **`check_work` sounds like a read and is a write.** It stamps a verdict on every step and
+  moves the session into a checked state the learner sees. `readOnlyHint: false` is the honest
+  call.
+- **`expectedRevision`** is not ceremony. A human — or another agent — is editing the same
+  document at the same time. If the document moved since you read it, the write is refused
+  with `stale_revision` and a `recovery` naming the current revision. Read the round too: a
+  stale revision can be hiding a round change that will refuse the retry for a different
+  reason.
+- **`requestId` is keyed by tool *and* revision.** A retry replays safely; a completed success
+  is replayed only while the document is still at that revision, so a caller never receives an
+  old success presented as current. Failures are evicted so a corrected retry can succeed.
+- **`untrustedContentHint` marks exactly one tool**, `get_scratchpad` — the only one whose
+  payload echoes text the learner wrote. It was previously set on `get_receipt` too, which
+  returns only tallies and fixed sentences. Marking every read untrusted costs the hint its
+  meaning.
+- Every `inputSchema` property carries a `description`, every field declares a type, and every
+  number declares both bounds. Agents read these and nothing else.
+- **Every refusal names the offending argument** in `error.field`, not only in prose.
+- No handler ever throws. Every failure is a returned envelope with `code`, `message`,
+  `recovery` — see the Chrome 151 findings below for why that is not a style preference.
 
 ---
 
@@ -187,7 +212,7 @@ Notes an agent author will want:
 Two paths work today.
 
 **ChatGPT Desktop's built-in browser** — use an account and model for which Site Tools are
-available, then open `/learn` in that browser. The six tools appear in the site-tools panel
+available, then open `/learn` in that browser. The eighteen tools appear in the site-tools panel
 with their titles. Availability is product- and account-dependent; this repository does not
 claim a public per-model support matrix.
 

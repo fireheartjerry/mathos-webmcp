@@ -76,8 +76,14 @@ Visual design beyond the Agent Console, motion, typography, the mathematics in
 
 ## Gate (binary; reported separately from the score)
 
-**W1.** `pnpm test` passes with no fewer tests than the previous round, and
-`pnpm typecheck` exits zero.
+**W1.** `pnpm test` passes with no fewer tests than the previous round, `pnpm typecheck`
+exits zero, and **`pnpm build` succeeds**.
+
+*`pnpm build` was added to this gate after round 3.* It was not here before, and a
+stray `@` left behind when a `@media` block was deleted broke CSS minification — so
+`pnpm build` failed for an unknown number of rounds while the gate reported PASS every
+time. The dev server does not minify, so nothing on the page ever looked wrong. A gate
+that cannot see a project failing to build is not measuring shippability.
 
 *Owner decision: the only gate. Capability honesty and state safety are scored in C5
 and C3 rather than blocking.*

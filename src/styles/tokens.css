@@ -142,9 +142,6 @@
   --bw-muted: #767676;
   --bw-rule: #e0e0e0;
 
-  /* Motion is the one maximalist system here. Everything static above is held
-     to the point of quietness precisely so this can be lavish — the contrast is
-     the whole design. See 23_PRIMER_REDESIGN_SPEC.md section 3.2. */
 }
 
 /* A full path, not a dimmer. Every final state is identical to the animated
