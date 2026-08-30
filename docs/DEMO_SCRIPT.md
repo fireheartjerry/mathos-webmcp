@@ -4,7 +4,8 @@
 showing a clear demo of the project functioning. Judges score WebMCP Leverage, Execution,
 Potential Impact, and Creativity & Ambition.
 
-**Target length: 2:45.** Leaves margin under the hard 3:00 limit.
+**Target length: 2:35.** Narration is ~380 words, about 2:32 at 150 wpm, leaving the
+rest for held verdicts. Re-count with the command in "Timing" below after any edit.
 
 ## Hard rules
 
@@ -31,10 +32,9 @@ the right. The agent calls `get_scratchpad`, then `check_work`. Line 3 gets its 
 **does not follow**. Lines below it read *not checked after the unresolved line*.
 
 **Narration.**
-> This is a maths scratchpad. The working is real, and half-finished — it has never been
-> submitted anywhere, so no server has ever seen it. The agent on the right just asked the
-> page to check it. The page found the first line that stopped being true, and marked that
-> line and nothing after it.
+> A maths scratchpad. The working is real and half-finished — never submitted, so no
+> server has ever seen it. The agent just asked the page to check it, and the page marked
+> the first line that stopped being true, and nothing after it.
 
 **Why this shot is first.** It is the falsifiable claim. Everything else is commentary.
 
@@ -48,13 +48,11 @@ Open **Mathematics**.
 
 **Narration.**
 > Eighteen tools, nine read and nine write. The agent never grades — it cannot. Every
-> verdict on screen is rendered from the return value of the page's computer algebra
-> system, not from anything the model said.
+> verdict comes from the page's computer algebra system, not from the model.
 >
-> These four are why. The agent can differentiate, evaluate and compare expressions
-> against the page's engine *before* writing anything to a learner's work. Every agent we
-> pointed at this page used them unprompted, and checked its own derivative before writing
-> a single line.
+> These four are why: the agent can differentiate, evaluate and compare against the page's
+> engine *before* touching a learner's work. Every agent we pointed here used them
+> unprompted.
 
 ---
 
@@ -65,11 +63,10 @@ line, not in the chat. Then the learner rewrites line 3 and presses **Check my w
 every badge turns sound.
 
 **Narration.**
-> The agent explains the step that broke — attached to that line, in the learner's own
-> working, not in a chat window the work has to be copied out of.
->
-> The learner fixes it themselves. That is the whole product: the page knows which step
-> went wrong, the agent supplies the language, and the person does the mathematics.
+> The agent explains the step that broke, beside that line, in the learner's own working
+> — not in a chat window the work has to be copied out of. The learner fixes it. The page
+> knows which step went wrong, the agent supplies the language, the person does the
+> mathematics.
 
 ---
 
@@ -79,15 +76,13 @@ every badge turns sound.
 `get_receipt`. Hold on the receipt: `linesWritten: {agent: 5}` and the `limits` list.
 
 **Narration.**
-> An agent can do anything a learner can — write lines, rewrite them, delete them, start
-> over. This page used to refuse that, and we withdrew the refusal, because a permission
-> check in our own code never bound anything outside this page.
+> An agent can do anything a learner can. This page used to refuse that; we withdrew the
+> refusal, because a permission check in our own code never bound anything outside this
+> page. What replaces it is attribution — here the agent wrote every line, and the receipt
+> says so, unprompted.
 >
-> What replaces it is attribution. Here the agent wrote every line, and the receipt says
-> so, unprompted. It also states what it cannot show: it records who typed, not who
-> reasoned. An agent could compute the answer and tell a person what to type, and this
-> record would not know. We would rather publish that than imply the number means more
-> than it does.
+> It also states what it cannot show: it records who typed, not who reasoned. We would
+> rather publish that than imply the number means more than it does.
 
 ---
 
@@ -98,18 +93,16 @@ observations. Rest on `exposedTo` — *accepted but not honoured* — and on
 `requestUserInteraction` — *absent*.
 
 **Narration.**
-> Every one of these is executed live, not read from a table. Three features work here.
-> Two — origin scoping, and cross-origin reads — Chrome accepts and silently does not
-> honour, which matters, because a page that believed origin scoping worked would be
-> shipping a security assumption the browser does not implement.
+> Each of these is executed live, not read from a table. Three work. Two — origin scoping
+> and cross-origin reads — Chrome accepts and silently does not honour. A page that
+> believed origin scoping worked would be shipping a security assumption the browser does
+> not implement.
 >
-> And the specification's own primitive for asking a person to confirm an action does not
-> exist in this browser at all. So the page carries that obligation instead: a proposed
-> replacement waits for the learner to accept or reject it.
+> And the spec's own primitive for asking a person to confirm an action is absent here, so
+> the page carries that obligation: a proposed replacement waits for the learner.
 >
-> We also probed how many tools WebMCP will take. A thousand registered with no
-> complaint. So the limit here is not the browser — it is how many genuinely distinct
-> things this product can do. Eighteen.
+> We also probed how many tools WebMCP takes. A thousand registered without complaint. The
+> limit is not the browser — it is how many distinct things this product does. Eighteen.
 
 ---
 
@@ -118,15 +111,26 @@ observations. Rest on `exposedTo` — *accepted but not honoured* — and on
 **Screen.** Back to the finished derivation with every line sound, receipt visible.
 
 **Narration.**
-> The page owns the model of the learner, and the verification. The agent supplies the
-> language. Before WebMCP you had to put the learner model inside the agent, where it is
-> vendor-locked and gone when you switch, or build a chatbot and compete on model quality.
+> The page owns the model of the learner and the verification; the agent supplies the
+> language. Before WebMCP that model had to live inside the agent, vendor-locked and gone
+> when you switch.
 >
-> This is a session, not a curriculum, and it proves three families of differentiation
-> end to end. It does not claim to know that anyone learned anything — and it says so, on
-> screen, in the same type size as everything else it claims.
+> This is a session, not a curriculum. It does not claim anyone learned anything — and it
+> says so on screen, in the same type size as everything else it claims.
 
 ---
+
+## Timing
+
+Narration length is the binding constraint, and it is easy to overrun by writing well.
+Count it rather than estimating:
+
+```bash
+python -c "import io,re; s=io.open('docs/DEMO_SCRIPT.md',encoding='utf-8').read(); n=sum(len(l.split()) for l in re.findall(r'^> (.*)$', s, flags=re.M)); print(n,'words ->', round(n/150*60),'seconds at 150 wpm')"
+```
+
+The first draft of this script ran to 516 words — 3:26 of pure speech, over the hard
+limit before a single pause. Anything above roughly 400 words will not fit.
 
 ## Shot checklist
 

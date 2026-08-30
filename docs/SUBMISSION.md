@@ -13,7 +13,7 @@ Checked against <https://webmcp.devpost.com/rules> on 2026-08-30.
 | Public code repository | **BLOCKED** — `github.com/fireheartjerry/mathos-webmcp` returns **404**. See the timing warning below. |
 | Repository contains all source | **BLOCKED** — `origin` has only `main` (docs, no product). **~165 commits on `hackathon-build` are unpushed.** |
 | Open source licence, detectable at the top of the repo page | **Ready** — MIT `LICENSE`, © 2026 MetaDigits.AI Inc.; `package.json` declares `"license": "MIT"`. |
-| Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED** — does not exist. Script in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md). |
+| Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED** — does not exist. [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) is a shot-by-shot script for the current build, narration counted at 394 words (~2:38 spoken), with a checklist of the seven shots that must be on camera. |
 | Text description | **Ready** — below. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from what this challenge added. |
 | Builds and runs | **Ready** — `pnpm build` succeeds, 343 tests pass, typecheck clean. |
