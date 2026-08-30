@@ -89,6 +89,12 @@ const migratedCounts = (value: unknown) =>
 function migrateLegacyInterventionCounts(value: unknown): unknown {
   if (!isRecord(value) || value.version !== STORAGE_VERSION) return value
   if (isRecord(value.tally)) {
+    // Sessions saved before line authorship was recorded have no stepWrites. They are
+    // migrated to zeroes rather than discarded: the counts are unknown for that round,
+    // and zero is the only honest stand-in that keeps the session loadable.
+    if (!isRecord(value.tally.stepWrites)) {
+      value.tally.stepWrites = { learner: 0, agent: 0, localInspector: 0 }
+    }
     value.tally.annotations = migratedCounts(value.tally.annotations)
     value.tally.proposalsOffered = migratedCounts(value.tally.proposalsOffered)
     value.tally.proposalsAccepted = migratedCounts(value.tally.proposalsAccepted)

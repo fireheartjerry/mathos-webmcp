@@ -40,6 +40,7 @@ import type {
   SessionAction,
   SessionEnv,
   SessionState,
+  WriteCounts,
 } from './types'
 
 /**
@@ -70,8 +71,21 @@ const emptyCounts = (): ProvenanceCounts => ({
   unattributed: 0,
 })
 
+const emptyWrites = (): WriteCounts => ({ learner: 0, agent: 0, localInspector: 0 })
+
+/**
+ * Records authorship of a line. Unlike `incrementForSource`, this has a learner column:
+ * the receipt's whole purpose is the ratio between who wrote the working and who had it
+ * written for them, and a count that omits the learner cannot express it.
+ */
+function countWrite(counts: WriteCounts, source: ActionSource): WriteCounts {
+  const key = source === 'agent' ? 'agent' : source === 'local-inspector' ? 'localInspector' : 'learner'
+  return { ...counts, [key]: counts[key] + 1 }
+}
+
 const emptyTally = (): InterventionTally => ({
   checks: 0,
+  stepWrites: emptyWrites(),
   annotations: emptyCounts(),
   proposalsOffered: emptyCounts(),
   proposalsAccepted: emptyCounts(),
@@ -168,7 +182,12 @@ export function applyAction(
         state,
         source,
         `Wrote step ${state.steps.length + 1}`,
-        { steps: [...state.steps, step], nextStepNumber: state.nextStepNumber + 1, ...clearReport },
+        {
+          steps: [...state.steps, step],
+          nextStepNumber: state.nextStepNumber + 1,
+          tally: { ...state.tally, stepWrites: countWrite(state.tally.stepWrites, source) },
+          ...clearReport,
+        },
         { stepId: step.id, stepCount: state.steps.length + 1 },
         env,
       )
@@ -199,7 +218,12 @@ export function applyAction(
         state,
         source,
         `Revised step ${index + 1}`,
-        { steps, proposal, ...clearReport },
+        {
+          steps,
+          proposal,
+          tally: { ...state.tally, stepWrites: countWrite(state.tally.stepWrites, source) },
+          ...clearReport,
+        },
         { stepId: action.stepId, attempts: steps[index].attempts },
         env,
       )
@@ -440,6 +464,7 @@ export function applyAction(
         round: state.round,
         problemId: state.problem.id,
         sound: state.report.allSound && state.report.reachesAnswer,
+        stepWrites: state.tally.stepWrites,
         checks: state.tally.checks,
         annotations: state.tally.annotations,
         proposalsAccepted: state.tally.proposalsAccepted,

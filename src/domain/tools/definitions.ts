@@ -221,6 +221,10 @@ function receiptData(state: SessionState): Record<string, unknown> {
   const rounds = completedRounds.map((round) => ({
     round: round.round,
     allStepsSound: round.sound,
+    // Who wrote the working, not merely who intervened on it. Without this the receipt
+    // could report "no annotations, no proposals" for a round an agent had written end
+    // to end, which reads as unaided and is the opposite of evidence.
+    linesWritten: round.stepWrites,
     checksRun: round.checks,
     annotations: round.annotations,
     proposalsOffered: round.proposalsOffered,

@@ -53,8 +53,21 @@ export type ProvenanceCounts = {
   unattributed: number
 }
 
+/**
+ * Who wrote the working. Distinct from ProvenanceCounts, which counts interventions
+ * *on* the learner's work and therefore has no learner column: authorship needs one,
+ * because the whole point is the ratio between the two.
+ */
+export type WriteCounts = {
+  learner: number
+  agent: number
+  localInspector: number
+}
+
 export type InterventionTally = {
   checks: number
+  /** Lines added, rewritten or deleted, by who did it. */
+  stepWrites: WriteCounts
   annotations: ProvenanceCounts
   proposalsOffered: ProvenanceCounts
   proposalsAccepted: ProvenanceCounts
@@ -62,6 +75,7 @@ export type InterventionTally = {
 
 export type RoundSummary = {
   round: Round
+  stepWrites: WriteCounts
   problemId: string
   /** Whether the derivation was fully sound when the round ended. */
   sound: boolean

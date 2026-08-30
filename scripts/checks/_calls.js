@@ -1,4 +1,4 @@
-window.__CALLS__ = "[{\"tool\": \"edit_step\", \"args\": {\"stepId\": \"step-4\", \"latex\": \"\\\\frac{dy}{dx}\\\\bigg|_{x=2} = 516\", \"expectedRevision\": 36, \"requestId\": \"fix-final-1\"}}, {\"tool\": \"check_work\", \"args\": {\"expectedRevision\": \"__NEEDS__\", \"requestId\": \"check-round1-b\"}}]";
+window.__CALLS__ = "[{\"tool\": \"reset_session\", \"args\": {\"expectedRevision\": \"__NEEDS__\", \"requestId\": \"reset-fresh-1\"}}, {\"tool\": \"add_step\", \"args\": {\"latex\": \"y = 15x^4 + 3x^3\", \"expectedRevision\": \"__NEEDS__\", \"requestId\": \"auth-1\"}}, {\"tool\": \"get_receipt\", \"args\": {}}]";
 const mc = document.modelContext
 const tools = await mc.getTools()
 const by = Object.fromEntries(tools.map(t => [t.name, t]))

@@ -62,7 +62,6 @@ describe('the tool surface itself', () => {
     // An agent reads descriptions and nothing else, so "when not to call this" has to
     // be in the description or it does not exist.
     for (const tool of h.tools) {
-      if (tool.name === 'get_scratchpad') console.log('DBG>>>', JSON.stringify(tool.description))
       expect(
         /\b(do not|don't|never|only when|not when|avoid|unless|rather than)\b/i.test(tool.description),
         `${tool.name} does not say when not to call it`,
@@ -581,6 +580,7 @@ describe('the receipt', () => {
         round: index === 0 ? 'practice' as const : 'transfer' as const,
         problemId: `problem-${index}`,
         sound: true,
+        stepWrites: { learner: 2, agent: 1, localInspector: 0 },
         checks: 1,
         annotations: counts(index, 1),
         proposalsOffered: counts(2, 3),
@@ -591,9 +591,13 @@ describe('the receipt', () => {
     if (result.ok) {
       const rounds = result.data.rounds as Array<{
         annotations: { agent: number; localInspector: number; unattributed: number }
+        linesWritten: { learner: number; agent: number; localInspector: number }
       }>
       expect(rounds).toHaveLength(8)
       expect(rounds[0].annotations).toEqual(counts(2, 1))
+      // Authorship, not merely intervention. Without this a round an agent wrote end
+      // to end would report "no annotations, no proposals" and read as unaided.
+      expect(rounds[0].linesWritten).toEqual({ learner: 2, agent: 1, localInspector: 0 })
       expect(result.data.roundsTotal).toBe(10)
       expect(result.data.roundsReturned).toBe(8)
       expect(result.data.roundsTruncated).toBe(true)

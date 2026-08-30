@@ -481,3 +481,23 @@ describe('input limits', () => {
     if (!result.ok) expect(result.code).toBe('invalid_input')
   })
 })
+
+describe('the receipt records who wrote the working', () => {
+  it('counts a line written by the learner separately from one written by an agent', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    const byAgent = applyAction(state, { type: 'ADD_STEP', latex: '2x' }, 'agent', ENV)
+    expect(byAgent.ok).toBe(true)
+    if (byAgent.ok) {
+      expect(byAgent.state.tally.stepWrites).toEqual({ learner: 1, agent: 1, localInspector: 0 })
+    }
+  })
+
+  it('counts an agent rewrite of a learner line', () => {
+    let state = start()
+    state = run(state, { type: 'ADD_STEP', latex: 'x^2' })
+    const edited = applyAction(state, { type: 'EDIT_STEP', stepId: state.steps[0].id, latex: '3x' }, 'agent', ENV)
+    expect(edited.ok).toBe(true)
+    if (edited.ok) expect(edited.state.tally.stepWrites.agent).toBe(1)
+  })
+})
