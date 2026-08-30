@@ -12,14 +12,15 @@ Last checked 2026-08-30.
 | Requirement | State |
 |---|---|
 | Public code repository | **Ready to flip.** The repository exists and is **private**; the earlier 404 was anonymous access, not absence. Making it public is one setting, and the timing warning below governs when. |
-| Repository contains all source | **DONE.** 163 commits pushed. `main` was docs-only (11 files) and has been **fast-forwarded** to the build, so it now carries all 329 files including the product. Fast-forward, so no commit was rewritten or lost. |
+| Repository contains all source | **DONE.** 190 commits pushed, 365 tracked files. `main` was docs-only (11 files) and has been **fast-forwarded** to the build, so it now carries the whole product. Fast-forward, so no commit was rewritten or lost. |
 | Open source licence, detectable at the top of the repo page | **DONE.** GitHub's own detector reports `MIT` for this repository. |
 | Repository presents itself | **DONE.** Description, homepage and six topics set; a public repo with none of these reads as unfinished. |
 | Working live project at a URL judges can test | **BLOCKED — owner only, and it is a visibility setting, not a bug.** The 401 is served by OpenAI Sites' own dispatch layer — the response body loads `/_sites/dispatch-assets/401-petbouncer-black.gif` and the OpenAI logo, which is the *not shared publicly* gate, not this application. Judges in ChatGPT's in-app browser would meet the same gate. The build artifact is correctly formed: `dist/.openai/hosting.json` is present, which the Sites plugin requires. **The deployed build is also stale**, predating the fix for a production build that did not compile, so it needs republishing rather than merely unlocking. |
 | Video demo, under 3 minutes, public on YouTube, with audio | **BUILT — needs uploading.** [`docs/video/second-try-demo.mp4`](video/second-try-demo.mp4): 1920×1080, H.264 + AAC, **2:44**, 5.7MB, audio normalised to −16 LUFS. Assembled by the Remotion composition in `video/` from a real screencast of the production build driven through its own tools, plus a beat-aligned narration. Under the 3:00 limit. What remains is the **YouTube upload**. Swapping the synthetic voice for a human one needs seven replacement WAVs and no code change. |
 | Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
-| Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
-| Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
+| Newness documentation | **DONE.** The rules require documented evidence distinguishing prior work from new work. [`PROVENANCE.md`](../PROVENANCE.md) draws the boundary explicitly: the challenge dates, the first application-source commit (`8150dc4`, 2026-08-26), what is new, what was built and then retired during the period, and what is pre-existing Mathos capability and therefore not submitted. |
+| Registered tool documented in the repository | **DONE.** The rules ask the repository to document a registered tool's name, description, `inputSchema` and `execute`. README §*One tool in full* quotes `add_step` verbatim with all four, plus the `registerTool` call itself, and `readme-example.test.ts` fails the build if the quotation drifts from the source. |
+| Builds and runs | **Ready** — `pnpm build` succeeds and 374 tests pass with a clean typecheck. |
 | Verified on the artifact that ships | **DONE.** Everything above had only been checked against the dev server. Against the **production build** (`vinext start`): 18 tools register, the judged journey passes **20/20**, the accessibility sweep finds **zero** problems, every one of the 12 network requests returns 200, and a fresh navigation logs **zero** console errors or warnings. |
 | Works without WebMCP at all | **DONE.** Simulated faithfully by removing `document.modelContext` before any page script runs. The page says `WebMCP unavailable`, never claims tools are live, names the reason (*"This browser does not expose document.modelContext"*), tells the reader both ways to get it — the Chrome flag and ChatGPT's browser — still shows all six tool groups with counts, and the learner flow still works: the problem renders, the composer accepts input, Add line is live. `scripts/no-webmcp.mjs`. |
 | Holds up at the widths judges use | **DONE.** Judges test in ChatGPT's in-app browser as well as desktop Chrome. Measured at 390, 430, 768, 1024 and 1280 px: **no horizontal scroll, zero overflowing elements, all six tool groups present, composer usable, no hit target under 32px** at any width. `scripts/responsive.mjs`. |
@@ -83,6 +84,12 @@ the code reflect genuine effort and a working, non-trivial implementation?"*
   description, 150 per parameter description, 30 per name, and 1.5K per output — the
   last measured and held at runtime.
 - Concurrency proven with three agents on one live session at once.
+- **The descriptions were tested blind.** An agent given only the `getTools()` JSON — no
+  source, no README, no sight of the page — finished a problem and reached the receipt in
+  14 calls, with no argument supplied on its behalf. It verified its own derivative
+  against the page engine before writing it, and read `availableActions` to learn the
+  round had become closable rather than retrying blindly.
+  `docs/webmcp/transcripts/round4-blind-agent.md`.
 - **Chrome's security guidance answered, not cited.** Contaminated output was a real
   hole here: a LaTeX text block parses to a symbol carrying prose, and the refusal
   message repeated it into a tool's `error.message` — a field an agent reads as the page
@@ -96,7 +103,7 @@ concept"*
 - Four problem families (product, chain, quotient, trigonometric chain), each a parameterised derivation
   with its own diagnosable error modes, so `list_problem_families` and
   `new_problem(familyId)` lead somewhere.
-- 364 tests, typecheck clean, production build green, zero console errors across the
+- 374 tests, typecheck clean, production build green, zero console errors across the
   judged journey, and no accessibility problem found by a sweep of both pages.
 - Still narrow by choice: one topic, session-scale state. Said plainly rather than hidden.
 
@@ -189,12 +196,15 @@ that ceiling would raise the number and lower the quality, so the surface is exa
 large as the set of things this product can genuinely do.
 
 **Everything reported about the platform was executed, never assumed.** `get_platform`
-probes six WebMCP features live and reports what each one did. Three are real here
+probes seven WebMCP features live and reports what each one did. Three are real here
 (`toolchange`, declarative `<form toolname>`, tool withdrawal via `AbortSignal`). Two are
 accepted but silently not honoured (`exposedTo`, `getTools({fromOrigins})`) — which
 matters, because a page that believed origin scoping worked would be shipping a security
 assumption the browser does not implement. One is partial (annotations beyond the two
-hints are dropped without error).
+hints are dropped without error). One is **absent entirely**: `requestUserInteraction()`,
+the spec's primitive for confirming an action mid-execution, is not on Chrome 151's
+`modelContext` prototype at all, so the obligation moves into the page — which is what
+`propose_step` and `resolve_proposal` are for.
 
 **Safety is in the envelope, not in refusals.** No handler throws — Chrome flattens a
 thrown error to a generic `UnknownError` and discards the message, while a returned

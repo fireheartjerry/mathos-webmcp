@@ -231,6 +231,87 @@ Notes an agent author will want:
 - No handler ever throws. Every failure is a returned envelope with `code`, `message`,
   `recovery` — see the Chrome 151 findings below for why that is not a style preference.
 
+### One tool in full
+
+The challenge rules ask that the repository document a registered tool with its **name**,
+**description**, **inputSchema** and **execute** function. Here is `add_step`, quoted from
+[`src/domain/tools/definitions.ts`](src/domain/tools/definitions.ts) — the seventeen others
+have the same shape, and the enumeration with a file and line for each is in
+[`docs/webmcp/capabilities.md`](docs/webmcp/capabilities.md).
+
+```ts
+{
+  name: 'add_step',
+  title: 'Write a new line of working',
+  description:
+    'Append a line of working to the derivation, in LaTeX, exactly as the learner would ' +
+    'type it. Do not use this to answer the whole problem in one line, and do not use it ' +
+    'during a transfer round unless the learner asked you to — the receipt records the ' +
+    'line as agent-written either way.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      latex: {
+        type: 'string', minLength: 1, maxLength: 256,
+        description: 'The line of working, in LaTeX. A leading label such as "y =" or "dy/dx =" is stripped.',
+      },
+      expectedRevision: revisionField,   // integer, 0..1e9, the revision you last read
+      requestId: requestIdField,         // string, 1..64, idempotency key
+    },
+    required: ['latex', 'expectedRevision', 'requestId'],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false, untrustedContentHint: false },
+  execute: (input) =>
+    mutate(bridge, 'add_step', input, ['latex', 'expectedRevision', 'requestId'], (values) => {
+      if (typeof values.latex !== 'string' || !values.latex.trim()) {
+        return { invalid: 'latex must be a non-empty string.',
+                 recovery: 'Send the line of working in LaTeX.', field: 'latex' }
+      }
+      if (values.latex.length > 256) {
+        return { invalid: 'latex must be 256 characters or fewer.',
+                 recovery: 'Shorten the expression, or split it across two steps.', field: 'latex' }
+      }
+      return { type: 'ADD_STEP', latex: values.latex }
+    }),
+}
+```
+
+Three things in that shape are deliberate and not obvious:
+
+- **`execute` returns; it never throws.** `mutate` parses the arguments, refuses with a
+  `code`/`message`/`recovery`/`field` envelope if anything is wrong, and otherwise hands the
+  reducer a plain action. Chrome 151 surfaces a thrown handler to the agent as an opaque
+  failure with no field to correct, so throwing would cost the agent the only information it
+  could act on.
+- **The description says what *not* to do.** Every one of the eighteen carries a
+  non-applicability clause, because a description that only lists capabilities gets a tool
+  used in situations it was never meant for.
+- **The handler is a pure function of `(state, action)`.** The reducer, not the tool, decides
+  whether the write is allowed; the tool layer only translates. That is why an agent and a
+  human editing the same document cannot diverge — they go through the same reducer, and
+  `expectedRevision` is what makes the ordering explicit.
+
+The registration itself is one `Promise.allSettled` over the eighteen, in
+[`src/domain/tools/registry.ts`](src/domain/tools/registry.ts):
+
+```ts
+document.modelContext!.registerTool({
+  name: tool.name,
+  title: tool.title,
+  description: tool.description,
+  inputSchema: tool.inputSchema,
+  annotations: tool.annotations,
+  execute: (input: unknown) => tool.execute(input),
+})
+```
+
+`allSettled` rather than `all` because registration is **not atomic** in Chrome 151: a
+rejected `Promise.all` leaves some tools registered, and an earlier version of this file
+aborted the shared `AbortSignal` on that rejection, silently unregistering the ones that had
+succeeded. The status is then read back with `getTools()` and reported as `live`, `partial`
+or `failed` — the console never claims tools are live on the strength of a resolved promise.
+
 ---
 
 ## Connecting an agent

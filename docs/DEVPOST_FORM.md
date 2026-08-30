@@ -105,6 +105,16 @@ page used the read-only maths tools *unprompted*, and verified its own derivativ
 the engine before writing a single line. Nothing in any prompt asked for that. The tool
 descriptions produced it.
 
+We tested that the hard way. An agent was given **only** the JSON that `getTools()`
+returns — no source, no README, no sight of the page — and the goal *"finish the problem
+and reach the receipt."* It ran `substitute_expression`, `differentiate_expression` and
+`evaluate_expression` to work out the answer, ran `compare_expressions` to check itself
+against the engine, wrote three lines, checked the work, closed the round and read the
+receipt: **14 calls, one refusal, no argument ever supplied on its behalf** — including
+`expectedRevision`, which it tracked itself from the read-backs. The one refusal named its
+own remedy and the agent's next call was that remedy. The whole log is in
+`docs/webmcp/transcripts/round4-blind-agent.md`.
+
 ## What people and agents can do together that was hard before *(required point 3)*
 
 **A stateless agent can teach against a stateful learner model it does not own.** The

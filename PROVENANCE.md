@@ -22,12 +22,12 @@ All application source in this repository is new challenge-period work. This wor
 
 - The mathematics core: expression parser, the dual-route equivalence oracle, the seeded problem generator, and the misconception diagnoser.
 - The session domain: one shared transition function for learners, agents, and the local inspector; monotonic revisions; idempotency; and versioned local persistence.
-- The six WebMCP tool definitions, their input schemas and annotations, and the registration bridge.
+- The eighteen WebMCP tool definitions, their input schemas and annotations, the registration bridge, and the seven live platform probes.
 - The scratchpad interface, the Agent Console, and the local inspector.
 - The evidence receipt and its stated claim boundary.
 - The landing page and the visual system built on the frozen token set.
-- The test suite (226 tests).
-- The deployment configuration and judge-facing documents.
+- The test suite (374 tests).
+- The deployment configuration, the judge-facing documents, and the Remotion composition that assembles the demo video from a real screencast of the production build.
 
 The first application-source commit is `8150dc4`, dated August 26, 2026. No application source in this repository predates the submission period.
 
