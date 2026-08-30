@@ -54,24 +54,35 @@ class ProbeScope {
   }
 }
 
-const UNTESTED = (id: string, label: string): PlatformFeature => ({
-  id,
-  label,
-  status: 'untested',
-  detail: 'No WebMCP in this browser, so nothing was probed.',
-})
+const ROWS: ReadonlyArray<readonly [string, string]> = [
+  ['exposed-to', 'Origin scoping (exposedTo)'],
+  ['from-origins', 'Cross-origin read (getTools fromOrigins)'],
+  ['toolchange', 'Live tool-list events (toolchange)'],
+  ['declarative', 'Declarative tools (form toolname)'],
+  ['lifecycle', 'Withdrawing a tool (AbortSignal)'],
+  ['annotations', 'Annotations beyond the two hints'],
+  ['user-confirmation', 'Confirming an action (requestUserInteraction)'],
+]
 
-export function untestedPlatform(): PlatformFeature[] {
-  return [
-    UNTESTED('exposed-to', 'Origin scoping (exposedTo)'),
-    UNTESTED('from-origins', 'Cross-origin read (getTools fromOrigins)'),
-    UNTESTED('toolchange', 'Live tool-list events (toolchange)'),
-    UNTESTED('declarative', 'Declarative tools (form toolname)'),
-    UNTESTED('lifecycle', 'Withdrawing a tool (AbortSignal)'),
-    UNTESTED('annotations', 'Annotations beyond the two hints'),
-    UNTESTED('user-confirmation', 'Confirming an action (requestUserInteraction)'),
-  ]
+const rows = (detail: string): PlatformFeature[] =>
+  ROWS.map(([id, label]) => ({ id, label, status: 'untested' as const, detail }))
+
+/**
+ * The resting state, before anyone has pressed the probe control.
+ *
+ * This used to reuse the no-WebMCP text, so a browser that fully supports WebMCP
+ * displayed "No WebMCP in this browser" directly beneath a header reading "18 page
+ * tools available" - two contradictory claims on one screen, both from us.
+ */
+export function unprobedPlatform(): PlatformFeature[] {
+  return rows('Not probed yet. Nothing here is claimed until it has been executed.')
 }
+
+/** The genuine absence: this browser does not expose `document.modelContext`. */
+export function untestedPlatform(): PlatformFeature[] {
+  return rows('No WebMCP in this browser, so nothing was probed.')
+}
+
 
 const tag = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
 

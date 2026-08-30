@@ -48,6 +48,29 @@ const toolLines = Object.fromEntries(
   toolNames.map((n) => [n, findLine(TOOLS, (l) => l.includes(`name: '${n}',`), n)]),
 )
 
+// The learner controls in the component move whenever the component does.
+const SCRATCHPAD = 'src/components/Scratchpad.tsx'
+const controlLines = Object.fromEntries(
+  ['ADD_STEP', 'EDIT_STEP', 'REMOVE_STEP', 'RESOLVE_PROPOSAL', 'NEW_PROBLEM'].map((a) => [
+    a,
+    findLine(SCRATCHPAD, (l) => l.includes(`type: '${a}'`), `${a} control`),
+  ]),
+)
+
+// Module-level exports the docs cite by line.
+const EXPORTS = [
+  ['src/domain/tools/platform.ts', 'export async function probePlatform'],
+  ['src/domain/math/problems.ts', 'export const FAMILY_IDS'],
+  ['src/domain/math/expression.ts', 'export function computeEngine'],
+  ['src/domain/math/expression.ts', 'export function parseExpression'],
+  ['src/domain/math/equivalence.ts', 'export function compareExpressions'],
+]
+const exportLines = EXPORTS.map(([file, prefix]) => [
+  file,
+  prefix.split(' ').pop(),
+  findLine(file, (l) => l.startsWith(prefix), prefix),
+])
+
 // Rewrite the citations in the docs.
 const DOCS = ['docs/webmcp/capabilities.md', 'docs/webmcp/ceiling.md']
 for (const doc of DOCS) {
@@ -74,6 +97,30 @@ for (const doc of DOCS) {
       `\`${name}\` (\`definitions.ts:${line}\`)`,
     )
   }
+  // Learner controls are cited as `Scratchpad.tsx:NNN`, in the same row order as the
+  // action union, so they are rewritten positionally.
+  const order = ['ADD_STEP', 'EDIT_STEP', 'REMOVE_STEP', 'RESOLVE_PROPOSAL', 'NEW_PROBLEM']
+  let seen = 0
+  text = text.replace(/Scratchpad\.tsx:\d+/g, () => {
+    const action = order[Math.min(seen, order.length - 1)]
+    seen += 1
+    return `Scratchpad.tsx:${controlLines[action]}`
+  })
+  // A cited export is recognised by its symbol appearing just before the citation, so
+  // two exports in the same file (computeEngine and parseExpression) are not confused
+  // for each other. `platform.ts` is cited as prose rather than after a symbol, so it
+  // gets a direct rewrite.
+  for (const [file, symbol, line] of exportLines) {
+    const base = file.split('/').pop()
+    const escaped = base.replace(/[.]/g, '\\$&')
+    text = text.replace(
+      new RegExp(`\`${symbol}\`, \`${escaped}:\\d+\``, 'g'),
+      `\`${symbol}\`, \`${base}:${line}\``,
+    )
+    if (symbol === 'probePlatform') {
+      text = text.replace(new RegExp(`via \`${escaped}:\\d+\``, 'g'), `via \`${base}:${line}\``)
+    }
+  }
   writeFileSync(doc, text)
 }
 
@@ -84,6 +131,9 @@ for (const [action, line] of Object.entries(actionLines)) {
   const needle = action === 'RESET' ? `"'RESET'"` : `'${action}'`
   test = test.replace(new RegExp(`\\[TYPES, \\d+, ${needle.replace(/[.*+?^$()|[\]\\]/g, '\\$&')}\\]`), `[TYPES, ${line}, ${needle}]`)
 }
+for (const [action, line] of Object.entries(controlLines)) {
+  test = test.replace(new RegExp(`\\[SCRATCHPAD, \\d+, '${action}'\\]`), `[SCRATCHPAD, ${line}, '${action}']`)
+}
 test = test.replace(/\[TYPES, \d+, \d+, 'SessionState = \{', '\}'\]/, `[TYPES, ${stateStart}, ${stateEnd}, 'SessionState = {', '}']`)
 test = test.replace(/\[TYPES, \d+, \d+, 'SessionAction =', "'RESET'"\]/, `[TYPES, ${unionStart}, ${actionLines.RESET}, 'SessionAction =', "'RESET'"]`)
 test = test.replace(/\[TYPES, \d+, 'SessionAction ='\]/, `[TYPES, ${unionStart}, 'SessionAction =']`)
@@ -92,6 +142,13 @@ test = test.replace(
   /const TOOL_LINES: Array<\[string, number\]> = \[[\s\S]*?\n\]/,
   `const TOOL_LINES: Array<[string, number]> = [\n${toolTable}\n]`,
 )
+for (const [file, symbol, line] of exportLines) {
+  const escaped = file.replace(/[.]/g, '\\$&')
+  test = test.replace(
+    new RegExp(`\\['${escaped}', \\d+, '${symbol}'\\]`),
+    `['${file}', ${line}, '${symbol}']`,
+  )
+}
 writeFileSync(TEST, test)
 
 console.log('synced:', JSON.stringify({ stateStart, stateEnd, unionStart, actions: actionLines, tools: toolLines }, null, 1))

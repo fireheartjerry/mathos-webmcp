@@ -37,17 +37,17 @@ const CITATIONS: Array<[string, number, string]> = [
   [TYPES, 103, 'history: RoundSummary[]'],
   [TYPES, 108, 'tally: InterventionTally'],
   // Learner controls.
-  [SCRATCHPAD, 397, 'ADD_STEP'],
-  [SCRATCHPAD, 582, 'EDIT_STEP'],
-  [SCRATCHPAD, 719, 'REMOVE_STEP'],
-  [SCRATCHPAD, 415, 'RESOLVE_PROPOSAL'],
-  [SCRATCHPAD, 788, 'NEW_PROBLEM'],
+  [SCRATCHPAD, 398, 'ADD_STEP'],
+  [SCRATCHPAD, 586, 'EDIT_STEP'],
+  [SCRATCHPAD, 723, 'REMOVE_STEP'],
+  [SCRATCHPAD, 416, 'RESOLVE_PROPOSAL'],
+  [SCRATCHPAD, 792, 'NEW_PROBLEM'],
   // Modules the reads table cites.
   ['src/domain/math/expression.ts', 21, 'computeEngine'],
   ['src/domain/math/expression.ts', 114, 'parseExpression'],
   ['src/domain/math/equivalence.ts', 185, 'compareExpressions'],
   ['src/domain/math/problems.ts', 357, 'FAMILY_IDS'],
-  ['src/domain/tools/platform.ts', 344, 'probePlatform'],
+  ['src/domain/tools/platform.ts', 355, 'probePlatform'],
 ]
 
 /** Every doc that may cite source. Scanned by the coverage test below. */

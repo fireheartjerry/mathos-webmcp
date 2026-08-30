@@ -34,14 +34,14 @@ Five of the nine had none at round 0.
 
 | # | Capability | Reducer action | Learner control | Tool | At round 0 |
 |---|---|---|---|---|---|
-| A1 | Write a new line of working | `ADD_STEP` (`types.ts:122`) | `Scratchpad.tsx:397` | `add_step` (`definitions.ts:703`) | absent |
-| A2 | Rewrite an existing line | `EDIT_STEP` (`types.ts:123`) | `Scratchpad.tsx:582` | `edit_step` (`definitions.ts:731`) | absent |
-| A3 | Delete a line | `REMOVE_STEP` (`types.ts:124`) | `Scratchpad.tsx:719` | `remove_step` (`definitions.ts:763`) | absent |
+| A1 | Write a new line of working | `ADD_STEP` (`types.ts:122`) | `Scratchpad.tsx:398` | `add_step` (`definitions.ts:703`) | absent |
+| A2 | Rewrite an existing line | `EDIT_STEP` (`types.ts:123`) | `Scratchpad.tsx:586` | `edit_step` (`definitions.ts:731`) | absent |
+| A3 | Delete a line | `REMOVE_STEP` (`types.ts:124`) | `Scratchpad.tsx:723` | `remove_step` (`definitions.ts:763`) | absent |
 | A4 | Check the derivation | `CHECK_WORK` (`types.ts:125`) | the Check control | `check_work` (`definitions.ts:542`) | present |
 | A5 | Attach an explanation to a line | `ANNOTATE_STEP` (`types.ts:126`) | rendered beside the line | `annotate_step` (`definitions.ts:557`) | present |
 | A6 | Offer a replacement line | `PROPOSE_STEP` (`types.ts:127`) | learner accepts or rejects | `propose_step` (`definitions.ts:598`) | present |
-| A7 | Accept or reject a pending proposal | `RESOLVE_PROPOSAL` (`types.ts:128`) | `Scratchpad.tsx:415` | `resolve_proposal` (`definitions.ts:791`) | absent |
-| A8 | Start a fresh problem | `NEW_PROBLEM` (`types.ts:129`) | `Scratchpad.tsx:788` | `new_problem` (`definitions.ts:642`) | present |
+| A7 | Accept or reject a pending proposal | `RESOLVE_PROPOSAL` (`types.ts:128`) | `Scratchpad.tsx:416` | `resolve_proposal` (`definitions.ts:791`) | absent |
+| A8 | Start a fresh problem | `NEW_PROBLEM` (`types.ts:129`) | `Scratchpad.tsx:792` | `new_problem` (`definitions.ts:642`) | present |
 | A9 | Abandon the session and start over | `RESET` (`types.ts:130`) | `startOver` in `Scratchpad.tsx` | `reset_session` (`definitions.ts:816`) | absent |
 
 The round-0 `get_scratchpad` payload asserted *"You cannot write, edit, or accept
@@ -62,7 +62,7 @@ excluded, which is why this list is 9 and not 20.
 | A10 | Read the current snapshot | `SessionState`, `types.ts:88-119` | The base read | `get_scratchpad` (`definitions.ts:525`) |
 | A11 | Read the session receipt | `state.history` + `state.tally`, `types.ts:103` and `types.ts:108` | Derived over completed rounds, not a slice of the snapshot | `get_receipt` (`definitions.ts:673`) |
 | A12 | Read what changed since a revision | `state.activities`, `types.ts:100` | Takes a revision, returns a diff; lets an agent poll without re-reading everything | `get_changes_since` (`definitions.ts:837`) |
-| A13 | Read WebMCP platform support | The browser, via `platform.ts:344` | Probes the platform, not the session | `get_platform` (`definitions.ts:1083`) |
+| A13 | Read WebMCP platform support | The browser, via `platform.ts:355` | Probes the platform, not the session | `get_platform` (`definitions.ts:1083`) |
 | A14 | List available problem families | `FAMILY_IDS`, `problems.ts:357` | Reads the problem catalogue, not session state | `list_problem_families` (`definitions.ts:901`) |
 | A15 | Parse an expression without writing it | `parseExpression`, `expression.ts:114` | Validates arbitrary LaTeX and reports the parse error; no session effect | `validate_expression` (`definitions.ts:921`) |
 | A16 | Compare two expressions for equivalence | `compareExpressions`, `equivalence.ts:185` | Two-expression input, tri-state verdict including `could not determine` | `compare_expressions` (`definitions.ts:955`) |

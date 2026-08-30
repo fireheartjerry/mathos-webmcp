@@ -357,6 +357,18 @@ const FAMILIES: Record<string, (seed: number) => Problem | null> = {
 export const FAMILY_IDS = Object.keys(FAMILIES)
 
 /**
+ * What to call each family on screen. Kept beside the families so that adding one
+ * without naming it fails the build - the heading used to be the literal string
+ * "Product rule", which stayed put when the quotient family arrived and told the
+ * learner they were looking at the wrong rule.
+ */
+export const FAMILY_LABELS: Record<string, string> = {
+  'shared-path': 'Product rule',
+  'nested-power': 'Chain rule',
+  quotient: 'Quotient rule',
+}
+
+/**
  * Generates a usable instance, resampling past any that fail the collision guard.
  * Deterministic in `seed`, so a session can be reproduced exactly.
  */

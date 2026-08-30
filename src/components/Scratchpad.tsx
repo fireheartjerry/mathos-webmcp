@@ -10,7 +10,8 @@ import type { ActionResult, ActionSource, SessionAction, SessionState, Step } fr
 import { registerTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { createTools } from '../domain/tools/definitions'
-import { probePlatform, untestedPlatform } from '../domain/tools/platform'
+import { probePlatform, unprobedPlatform } from '../domain/tools/platform'
+import { FAMILY_LABELS } from '../domain/math/problems'
 import type { PlatformFeature } from '../domain/tools/platform'
 import type { ToolBridge, ToolEnvelope } from '../domain/tools/definitions'
 import { Tex } from './Tex'
@@ -158,7 +159,7 @@ export default function Scratchpad() {
   // accepting keystrokes that would be discarded.
   const [ready, setReady] = useState(false)
   const [tabConflict, setTabConflict] = useState(false)
-  const [platform, setPlatform] = useState<PlatformFeature[]>(untestedPlatform)
+  const [platform, setPlatform] = useState<PlatformFeature[]>(unprobedPlatform)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [composerError, setComposerError] = useState('')
@@ -512,8 +513,11 @@ export default function Scratchpad() {
       <div className="scratch-grid">
         <main className="work" id="main">
           <p className="kicker">
-            {/* The header already names the round. This said it a second time. */}
-            Product rule
+            {/* Named from the problem, not written down here. This was the literal
+                string "Product rule" and did not change when the quotient family
+                arrived, so the page told the learner they were looking at a rule they
+                were not. */}
+            {FAMILY_LABELS[state.problem.familyId] ?? 'Differentiation'}
           </p>
           <hr className="rule" />
 
