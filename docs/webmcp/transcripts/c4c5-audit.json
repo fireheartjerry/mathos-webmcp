@@ -406,7 +406,8 @@
     "toolchange:supported",
     "declarative:supported",
     "lifecycle:supported",
-    "annotations:partial"
+    "annotations:partial",
+    "user-confirmation:unsupported"
   ],
   "probeRun2": [
     "exposed-to:partial",
@@ -414,14 +415,15 @@
     "toolchange:supported",
     "declarative:supported",
     "lifecycle:supported",
-    "annotations:partial"
+    "annotations:partial",
+    "user-confirmation:unsupported"
   ],
   "probesAgree": true,
   "details": [
     {
       "id": "exposed-to",
       "status": "partial",
-      "observed": "Accepted without error, but a tool scoped to https://example.invalid is still listed here, so the parameter is taken and not honoured."
+      "observed": "Accepted without error, but a tool scoped to https://example.invalid is still listed here, so the parameter…"
     },
     {
       "id": "from-origins",
@@ -436,17 +438,22 @@
     {
       "id": "declarative",
       "status": "supported",
-      "observed": "A form carrying a toolname attribute was registered by the browser with no imperative call, and withdrawn when the form was removed."
+      "observed": "A form carrying a toolname attribute was registered by the browser with no imperative call, and withdrawn w…"
     },
     {
       "id": "lifecycle",
       "status": "supported",
-      "observed": "Aborting the registration signal withdrew the tool and freed its name, which re-registering without aborting is refused for. Re-registering then carried a new description, so a tool can revise what it says about itself."
+      "observed": "Aborting the registration signal withdrew the tool and freed its name, which re-registering without abortin…"
     },
     {
       "id": "annotations",
       "status": "partial",
-      "observed": "Sent four, kept 2: readOnlyHint, untrustedContentHint. Dropped without error: destructiveHint, idempotentHint."
+      "observed": "Sent four, kept 2: readOnlyHint, untrustedContentHint. Dropped without error: destructiveHint, idempotentHi…"
+    },
+    {
+      "id": "user-confirmation",
+      "status": "unsupported",
+      "observed": "Absent. The whole modelContext surface here is: ontoolchange, executeTool, getTools, registerTool. Confirma…"
     }
   ],
   "toolsAfterProbes": 18

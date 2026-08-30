@@ -67,17 +67,32 @@ await call('evaluate_expression', { latex: '12x^2 + 2x', at: 2 })
 await call('get_platform', {})
 
 const problem = await read()
-const [d0, d1] = problem.problem.given.map(g => g.split(' = ')[1])
-await call('add_step', { latex: `y = ${d0} ${CDOT} ${d1}` })
+// The premise is built from the problem's own definitions. This used to assume the
+// product-rule shape `a \cdot b + a`, which broke the moment a family arrived with two
+// definitions instead of three - the script then reported the page broken rather than
+// itself.
+const defs = Object.fromEntries(problem.problem.given.map(g => {
+  const at = g.indexOf(' = ')
+  return [g.slice(0, at).trim(), g.slice(at + 3).trim()]
+}))
+const substitute = (body, name, latex) =>
+  body.replace(new RegExp(`(^|[^A-Za-z])${name}(?![A-Za-z])`, 'g'), `$1(${latex})`)
+const premise = Object.entries(defs).filter(([k]) => k !== 'y')
+  .reduce((b, [k, v]) => substitute(b, k, v), defs.y)
+await call('add_step', { latex: `y = ${premise}` })
 await call('get_changes_since', { since: 0 })
 
 let sid = (await read()).steps[0].id
-await call('edit_step', { stepId: sid, latex: `y = ${d1} ${CDOT} ${d0}` })
+// Two edits are needed to satisfy the proposal attempt gate, and they must differ
+// from each other and from the original. Parenthesising is the smallest change that is
+// textually different and mathematically identical, and it works whatever the family -
+// swapping `a` and `b` produced the same string on a family with only one definition.
+await call('edit_step', { stepId: sid, latex: `y = (${premise})` })
 await call('annotate_step', { stepId: sid, note: 'Multiplication commutes, so this is the same line.' })
 // propose_step needs two learner attempts since the last check; the edit above is one,
 // and this second edit is the other.
-await call('edit_step', { stepId: sid, latex: `y = ${d0} ${CDOT} ${d1}` })
-await call('propose_step', { stepId: sid, latex: `y = ${d0} ${CDOT} ${d1} + ${d0}`, rationale: 'The given definition adds a as well.' })
+await call('edit_step', { stepId: sid, latex: `y = ${premise}` })
+await call('propose_step', { stepId: sid, latex: `y = (${premise})`, rationale: 'The same premise, written with the grouping made explicit.' })
 await call('resolve_proposal', { accept: true })
 await call('check_work', {})
 await call('remove_step', { stepId: (await read()).steps.at(-1).id })
@@ -91,7 +106,7 @@ const compute = async (tool, args) => {
   if (entry.result?.ok !== true) throw new Error(`${tool} failed: ${JSON.stringify(entry.result)}`)
   return entry.result.data
 }
-const yExpr = `${d0} ${CDOT} ${d1} + ${d0}`
+const yExpr = premise
 const derivative = (await compute('differentiate_expression', { latex: yExpr })).simplified
 const at = Number(/x\s*=\s*(-?\d+)/.exec(problem.problem.prompt)?.[1] ?? 2)
 const value = (await compute('evaluate_expression', { latex: derivative, at })).value
