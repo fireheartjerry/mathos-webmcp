@@ -206,3 +206,49 @@ The scorer also recorded what it could not verify without a browser: the viewpor
 measurements, the live lifecycle scenarios, the rendered-DOM checks, and the
 blind-agent run, whose blindness is enforced by instruction rather than by sandbox.
 That limitation is real and is disclosed in every round.
+
+## Round 4 — score 100 → 94/94 adjusted, nothing failed
+**Reviewer:** independent scorer, fresh context (rubric with score log stripped)
+**Gate:** PASS — 368 tests, typecheck clean, `pnpm build` succeeds.
+
+This round was a regression check rather than a push. Since round 3 the build had gained
+a fourth problem family, a seventh platform probe, runtime enforcement of Chrome's 1.5K
+output budget, a prompt-injection fix, a favicon, a declared colour scheme and a demo
+video — none of which the 100 covered.
+
+The scorer marked **C4.1–C4.3 BLOCKED**, and it was right to: the blind-agent test last
+ran at round 3, before the fourth family, the truncation and the injection fix. That was
+the one gap still inside our control, so it was closed rather than argued with.
+
+### The blind-agent re-run
+A fresh agent got the `getTools()` JSON and the goal, nothing else — no source, no docs,
+no sight of the page. It drew `trig-chain`, the family that did not exist at round 3, and
+reached the receipt in 14 calls with **no argument supplied on its behalf**, tracking
+`expectedRevision` itself from the read-backs.
+
+- **C4.1** — reached the receipt. Pass.
+- **C4.2** — dead calls: **0**.
+- **C4.3** — one `ok: false` (`invalid_phase` on an early `get_receipt`); its recovery
+  string names the remedy and the agent's recovery was `new_problem`. Failures: **0**.
+
+It did two things the rubric does not ask for and which are the better evidence: it ran
+`compare_expressions` against the page engine before writing its derivative, and it
+re-read `availableActions` to learn the round had become closable instead of retrying
+`get_receipt` speculatively.
+
+Full log: `docs/webmcp/transcripts/round4-blind-agent.md`.
+
+### Per-criterion
+| # | Criterion | Round 3 | Round 4 | Note |
+|---|---|---|---|---|
+| C1 | Surface size | 20/20 | 20/20 | 18 tools, every citation asserted. |
+| C2 | Execution | 20/20 | 20/20 | 37 calls, 0 rejected, 0 invalid accepted. |
+| C3 | Concurrency & lifecycle | 20/20 | 20/20 | Judged journey 20/20; zero probe residue. |
+| C4 | Agent legibility | 20/20 | 20/20 | C4.1–C4.3 re-run against this build. |
+| C5 | Platform coverage | 20/20 | 20/20 | Seventh probe added; `requestUserInteraction` absent. |
+
+### Beyond the rubric, found by using the product
+A shipped prompt-injection channel through `\text{…}`, closed by `describeSymbol`; a
+production build that did not compile, invisible because the dev server does not minify
+(`pnpm build` is now in the gate); Chrome's output budget enforced at runtime rather than
+asserted, measured live at 1206–1478 characters against the 1.5K limit.

@@ -30,7 +30,8 @@ that still carries the old claim — which is the point of keeping it.
 | [`webmcp/capabilities.md`](webmcp/capabilities.md) | The eighteen capabilities, each cited to a file and line. A test checks every citation. |
 | [`webmcp/ceiling.md`](webmcp/ceiling.md) | How many tools Chrome will actually take, measured. |
 | [`webmcp/platform.md`](webmcp/platform.md) | What Chrome 151 does with seven WebMCP features, executed rather than assumed. |
-| [`webmcp/evidence-round3.md`](webmcp/evidence-round3.md) | The most recent full evidence pack. |
+| [`webmcp/evidence-round4.md`](webmcp/evidence-round4.md) | The most recent full evidence pack. |
+| [`webmcp/transcripts/round4-blind-agent.md`](webmcp/transcripts/round4-blind-agent.md) | An agent that saw only `getTools()` finishing a problem, call by call. |
 | [`criteria/webmcp-criteria.md`](criteria/webmcp-criteria.md) | The rubric this work was scored against, and the score log. |
 | [`criteria/webmcp-rounds.md`](criteria/webmcp-rounds.md) | Each scoring round, including what the scorer caught us getting wrong. |
 
@@ -41,7 +42,7 @@ that still carries the old claim — which is the point of keeping it.
 | [`overnight-audit/`](overnight-audit/) | 2026-08-26 → 27 | A hostile audit of the previous build, the research behind the rebuild, and the live Chrome 151 findings that the tool layer is written against. Contains the original six-tool surface. |
 | [`anti-slop-reaudit-2026-08-27/`](anti-slop-reaudit-2026-08-27/) | 2026-08-27 | A second pass over the visual design, with before-and-after screenshots. |
 | [`superpowers/plans/`](superpowers/plans/) | various | Implementation plans, kept so the sequence of decisions is inspectable. |
-| [`webmcp/evidence-round0.md`](webmcp/evidence-round0.md) … `round2` | 2026-08-30 | Earlier evidence packs. Round 0 records a build in which five of six tool calls failed because no tool could create a step. |
+| [`webmcp/evidence-round0.md`](webmcp/evidence-round0.md) … `round3` | 2026-08-30 | Earlier evidence packs. Round 0 records a build in which five of six tool calls failed because no tool could create a step. |
 
 ## The short version of what changed
 

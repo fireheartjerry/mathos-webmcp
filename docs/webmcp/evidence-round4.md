@@ -50,12 +50,23 @@ The script previously assumed the product-rule premise shape and broke when the 
 family arrived with two definitions rather than three — it now builds the premise from
 whatever the problem declares. That was a defect in the measurement, not the product.
 
-## C4.1–C4.3 — not re-run this round
+## C4.1–C4.3 — re-run against this build
 
-**BLOCKED, and disclosed rather than omitted.** The blind-agent test last ran at round 3.
-Since then the build gained a fourth problem family, runtime output-budget truncation and
-a prompt-injection fix — all of which a fresh agent would touch. `judge-journey.js` is a
-*scripted* journey and is not a substitute: it knows the answers.
+Full call log: `transcripts/round4-blind-agent.md`. A fresh agent received only the
+18,615-byte `getTools()` JSON and the goal; the orchestrator executed its proposed calls
+verbatim and pasted raw envelopes back. **No argument was supplied or repaired on its
+behalf**, `expectedRevision` included. It drew the `trig-chain` family — the one added
+after round 3 — and reached the receipt in 14 calls.
+
+| # | Measurement |
+|---|---|
+| C4.1 | Reached the receipt: `get_receipt` → `ok`, one round, `allStepsSound: true`, `linesWritten: {agent: 3}`. |
+| C4.2 | `ok: false` calls not followed by a corrected retry: **0** (one failure, later retried successfully). |
+| C4.3 | The single `invalid_phase` names its remedy — *"until a fresh problem has been started"* — and the recovery call was `new_problem`. Failures = **0**. |
+
+`judge-journey.js` is a *scripted* journey and is not a substitute for this: it knows the
+answers. This agent did not, and verified its own derivative against the page engine
+(`compare_expressions`) before writing it.
 
 ## C3 — concurrency and lifecycle
 
@@ -68,6 +79,7 @@ tools before, 18 after.
 
 | # | Measurement |
 |---|---|
+| C4.1–C4.3 | Re-run this round — see above. |
 | C4.4 | Fields without `type` = **0**. |
 | C4.5 | Number fields missing either bound = **0**, enforced by test. |
 | C4.6 | **35** required-field omissions, refused = 35, not refused = **0**. |
