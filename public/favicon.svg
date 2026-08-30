@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Second Try">
+  <title>Second Try</title>
+  <rect width="32" height="32" fill="#000000"/>
+  <text x="16" y="23" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif"
+        font-size="22" font-style="italic" text-anchor="middle">&#8706;</text>
+</svg>

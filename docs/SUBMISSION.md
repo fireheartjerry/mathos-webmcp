@@ -19,7 +19,8 @@ Last checked 2026-08-30.
 | Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED — owner only.** [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) is shot-by-shot for the current build, narration counted at 394 words (~2:38 spoken), with the seven shots that must be on camera. |
 | Text description | **Ready** — below. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
-| Builds and runs | **Ready** — `pnpm build` succeeds, 364 tests pass, typecheck clean, and the judged journey passes 20/20 live through the tools. |
+| Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
+| Verified on the artifact that ships | **DONE.** Everything above had only been checked against the dev server. Against the **production build** (`vinext start`): 18 tools register, the judged journey passes **20/20**, the accessibility sweep finds **zero** problems, every one of the 12 network requests returns 200, and a fresh navigation logs **zero** console errors or warnings. |
 
 ### What is left, exactly
 
