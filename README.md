@@ -471,7 +471,17 @@ node scripts/no-webmcp.mjs
 
 node scripts/console-watch.mjs
 #   console errors and warnings while the page is driven
+
+node scripts/layout-check.mjs http://localhost:3000/nope
+#   any page at 390-1280px: horizontal scroll, overflow, hit targets under 32px
 ```
+
+One caution about `a11y-sweep.js`, written at the top of the script too. Three of its
+findings in a row turned out to be the measurement rather than the page: a focus check
+that was really testing Chrome's `:focus-visible` heuristic, a contrast check that missed
+backgrounds painted on a `::before`, and a reading of the submit button that a 4x
+screenshot decoded to raw RGB put at **12.63:1** rather than the 4.17:1 it reported.
+Treat a failure there as a lead and check it against a screenshot.
 
 ![The Agent Console after pressing Probe this browser: seven WebMCP features with a status and the observation behind each, including two Chrome accepts and does not honour](docs/images/platform-probe.png)
 
