@@ -17,7 +17,7 @@ Last checked 2026-08-30.
 | Repository presents itself | **DONE.** Description, homepage and six topics set; a public repo with none of these reads as unfinished. |
 | Working live project at a URL judges can test | **BLOCKED — owner only.** `mathos-second-try.fireheartjerry.chatgpt.site` returns **401**. Publishing needs `wrangler login`, which is interactive; this environment is not authenticated. **And the deployed build is stale** — it predates today's work, including the fix for a broken production build, so it must be redeployed, not merely unlocked. |
 | Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED — owner only.** [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) is shot-by-shot for the current build, narration counted at 394 words (~2:38 spoken), with the seven shots that must be on camera. |
-| Text description | **Ready** — below. |
+| Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
 | Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
 | Verified on the artifact that ships | **DONE.** Everything above had only been checked against the dev server. Against the **production build** (`vinext start`): 18 tools register, the judged journey passes **20/20**, the accessibility sweep finds **zero** problems, every one of the 12 network requests returns 200, and a fresh navigation logs **zero** console errors or warnings. |
@@ -33,7 +33,7 @@ Last checked 2026-08-30.
    Confirm afterwards that `/` and `/learn` return 200 to a signed-out request.
 2. **Record the video** from `DEMO_SCRIPT.md` and upload it publicly to YouTube.
 3. **Flip the repository to public** — see the timing warning.
-4. Fill in the Devpost form using the text description below.
+4. Fill in the Devpost form by pasting from [`DEVPOST_FORM.md`](DEVPOST_FORM.md).
 
 ### A timing warning about making the repo public
 
