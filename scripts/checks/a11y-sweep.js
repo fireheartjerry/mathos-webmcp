@@ -5,23 +5,27 @@
  * and expensive to ship: unlabelled controls, unreachable focus, contrast below the
  * WCAG AA thresholds, and touch targets too small to hit.
  *
- * KNOWN OPEN, 2026-08-30. This reports the submit button in the composer at 4.17:1
- * against the 4.5 threshold for 14px text. The numbers behind it do not add up and the
- * discrepancy is not resolved:
+ * ONE KNOWN FALSE POSITIVE, 2026-08-30, resolved by reading pixels.
  *
- *   - `.button` is the only rule Chrome reports as matching (CSS.getMatchedStylesForNode),
- *     and it sets `color: var(--surface)`.
- *   - `--surface` resolves to #fff on that element, and the button matches neither
- *     `:disabled` nor `[aria-disabled="true"]`.
- *   - `getComputedStyle(button).color` nevertheless returns #949494, which is
- *     `--ink-disabled`, used only by the disabled branch.
+ * On some runs this reports the composer's submit button at 4.17:1 against the 4.5
+ * threshold, and on others it reports nothing at all. A check that is not reproducible
+ * is not a finding, and the reading is wrong besides. The reason is worth knowing before
+ * trusting any number here:
  *
- * The fill behind it is #333 from a full-bleed `::before`, so the ratio depends entirely
- * on which of those two readings of `color` is true. Do not "fix" the button on the
- * strength of this number until somebody has looked at a screenshot and read the
- * contrast off the pixels. Two earlier readings from this same script were instrument
- * artifacts, both fixed below.
- */
+ *   - Chrome reports `.button` as the only matching rule, and it sets
+ *     `color: var(--surface)`. `--surface` resolves to #fff on that element. The button
+ *     matches neither `:disabled` nor `[aria-disabled="true"]`.
+ *   - `getComputedStyle(button).color` nevertheless returns #949494.
+ *   - A 4x screenshot of the button, decoded to raw RGB, is 89.1% #333333 (the ::before
+ *     fill), 3.7% #ffffff (the glyphs) and 4.8% #000000 (the border). White on #333 is
+ *     **12.63:1**.
+ *
+ * The pixels are the product; the computed style is a reading of it that disagreed. Do
+ * not change the button on the strength of this line. Two earlier findings from this
+ * same script were also instrument artifacts, both fixed below, which is three in a row
+ * — treat a single failure here as a lead, not a verdict, and check it against a
+ * screenshot before acting.
+  */
 /**
  * Measure the resting state, not a loading frame.
  *

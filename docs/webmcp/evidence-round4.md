@@ -146,8 +146,12 @@ than measuring it against the rubric, and are recorded so the next scorer can se
   Two of those zeros were later found to be luck rather than evidence — the sweep's focus
   check depended on Chrome's `:focus-visible` heuristic and passed or failed by whether the
   tab had been typed in, and its contrast check missed backgrounds painted on a `::before`.
-  Both fixed. With them fixed the sweep raises one open question about the composer's
-  submit button, recorded in the script's header rather than resolved either way;
+  Both fixed. With them fixed the sweep raises one more failure, on the composer's submit
+  button, and that one is also the instrument: it reads 4.17:1, while a 4x screenshot of
+  the button decoded to raw RGB is 89.1% #333333 fill, 3.7% #ffffff glyphs and 4.8%
+  #000000 border - white on #333, **12.63:1**. Three findings from this script in a row
+  turned out to be the measurement rather than the page, which is itself the useful
+  result: a single failure here is a lead, not a verdict, and the script now says so;
   `color-scheme: light` declared so a dark-mode browser cannot repaint the palette.
 - **Four problem families**, each with its own diagnosable error modes and a shared
   collision guard.
