@@ -5,7 +5,9 @@ out.tools = tools.length
 out.header = document.body.textContent?.match(/\d+ page tools available|WebMCP unavailable/)?.[0] ?? null
 out.kicker = document.querySelector('.kicker')?.textContent?.trim()
 out.h1 = document.querySelector('h1')?.textContent?.trim().slice(0, 60)
-out.composerEnabled = !document.querySelector('.composer input, input[type="text"]')?.disabled
+const composer = document.querySelector('.composer input')
+out.composerPresent = Boolean(composer)
+out.composerEnabled = Boolean(composer) && !composer.disabled
 out.stepCount = document.querySelectorAll('.step').length
 // The first problem must be the deterministic one, so the README's instructions hold.
 const by = Object.fromEntries(tools.map(t => [t.name, t]))
