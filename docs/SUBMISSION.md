@@ -9,22 +9,77 @@ Checked against <https://webmcp.devpost.com/rules> on 2026-08-30.
 
 | Requirement | State |
 |---|---|
-| Working live project at a URL judges can test | **BLOCKED** — `mathos-second-try.fireheartjerry.chatgpt.site` returns **401**. Judges cannot open it. Either publish it, or supply credentials in the submission form (the rules allow authentication "with credentials provided on the submission form"). |
-| Public code repository | **BLOCKED** — `github.com/fireheartjerry/mathos-webmcp` returns **404**: private or absent. |
-| Repository contains all source | **BLOCKED** — `origin` has only `main` (docs, no product). **153 commits on `hackathon-build` are unpushed.** |
-| Open source licence, detectable at the top of the repo page | **Ready** — MIT `LICENSE`, © 2026 MetaDigits.AI Inc. `package.json` now declares `"license": "MIT"` so GitHub's detector shows it. |
-| Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED** — does not exist. A shot-by-shot script is in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md). |
+| Working live project at a URL judges can test | **BLOCKED** — `mathos-second-try.fireheartjerry.chatgpt.site` returns **401**. Judges test with ChatGPT's in-app browser or Chrome 149+; they cannot open a 401. Either publish it, or supply credentials on the form (the rules allow authentication "with credentials provided on the submission form"). |
+| Public code repository | **BLOCKED** — `github.com/fireheartjerry/mathos-webmcp` returns **404**. See the timing warning below. |
+| Repository contains all source | **BLOCKED** — `origin` has only `main` (docs, no product). **~165 commits on `hackathon-build` are unpushed.** |
+| Open source licence, detectable at the top of the repo page | **Ready** — MIT `LICENSE`, © 2026 MetaDigits.AI Inc.; `package.json` declares `"license": "MIT"`. |
+| Video demo, under 3 minutes, public on YouTube, with audio | **BLOCKED** — does not exist. Script in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md). |
 | Text description | **Ready** — below. |
-| Newness documentation | **Ready** — the repo's history and `docs/overnight-audit/` distinguish prior work from what was added for this challenge. |
-| Builds and runs | **Ready** — `pnpm build` succeeds, 323 tests pass, typecheck clean. *This was broken until 2026-08-30; see the commit "the production build was broken".* |
+| Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from what this challenge added. |
+| Builds and runs | **Ready** — `pnpm build` succeeds, 343 tests pass, typecheck clean. |
 
-Nothing in the four blockers is a code problem. All four are decisions only the owner can
-make: publish the repo, push the branch, unpublish-protect or credential the deployment,
-and record the video.
+### A timing warning about making the repo public
 
-**Before pushing:** the working tree was scanned for secrets — no `.env`, no keys, no
-tokens, no bare-IP hosts. The `18.216.62.146` proxy that once sat in `vercel.json` was
-removed earlier and does not appear in any tracked file.
+The rules say: **"Don't touch anything: not your Devpost submission, not your repo, not
+your live site"** after the deadline, and the submission must itself carry the URL of a
+*public* repository.
+
+So "make it public after submission" is safe only if it means **after filling in the
+form but before 2026-09-03, 1:00 PM PDT**. Flipping the repo to public *after the
+deadline* is both a change to the repo and a submission that pointed at a 404 when it
+was judged. The same applies to the 401 on the live site: judging runs 2026-09-04 to
+09-21, so it has to be reachable before the deadline and left alone afterwards.
+
+**Nothing in the four blockers is a code problem.** All four are owner actions.
+
+**Before pushing:** the tree was scanned — no `.env`, no keys, no tokens, no bare-IP
+hosts. The `18.216.62.146` proxy that once sat in `vercel.json` is gone from every
+tracked file.
+
+---
+
+## Scored against the four judging criteria
+
+**WebMCP Leverage** — *"How thoroughly and skilfully does the project use WebMCP? Does
+the code reflect genuine effort and a working, non-trivial implementation?"*
+
+- 18 tools, nine read and nine write, one per capability the reducer supports.
+- The ceiling was **probed, not guessed**: Chrome 151 accepted 1000 tools with flat
+  latency, so the surface is bounded by the product and we say which bound binds.
+- Seven platform features probed by execution, including `requestUserInteraction()`,
+  which is **absent** — the whole `modelContext` prototype is `ontoolchange`,
+  `executeTool`, `getTools`, `registerTool`.
+- **Chrome's published tool-author budgets are enforced**, not merely respected: 500 per
+  description, 150 per parameter description, 30 per name, and 1.5K per output — the
+  last measured and held at runtime.
+- Concurrency proven with three agents on one live session at once.
+
+**Execution** — *"a complete, coherent product experience — not just a technical proof of
+concept"*
+
+- Three problem families (product, chain, quotient), each a parameterised derivation
+  with its own diagnosable error modes, so `list_problem_families` and
+  `new_problem(familyId)` lead somewhere.
+- 343 tests, typecheck clean, production build green.
+- Still narrow by choice: one topic, session-scale state. Said plainly rather than hidden.
+
+**Potential Impact** — *"a credible, specific case for solving a real problem for a real
+audience"*
+
+- The problem is specific: a model cannot reliably tell which line of a derivation first
+  stopped being true, and a server never sees unsubmitted work at all.
+- The audience is specific: someone practising differentiation with an agent beside them.
+- The demonstration is falsifiable in 60 seconds — write a wrong third line and watch the
+  page mark that line and nothing after it.
+
+**Creativity & Ambition** — *"how creative and novel is the concept and does the project
+differ from existing concepts?"*
+
+- The inversion: the page owns the durable model of the learner and the verification; the
+  agent supplies only language.
+- The submission publishes its own failures — two Chrome features reported as
+  accepted-but-not-honoured, and a receipt that discloses the gap its own attribution
+  cannot close.
 
 ---
 
