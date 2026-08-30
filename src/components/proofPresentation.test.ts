@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { checkDerivation, getFirstIssue } from '../domain/math/derivation'
-import type { StepVerdict } from '../domain/math/derivation'
+import type { DerivationIssue, StepVerdict } from '../domain/math/derivation'
 import type { ActionSource } from '../domain/session/types'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import {
@@ -205,5 +206,43 @@ describe('actorLabel', () => {
     ['local-inspector', 'Local inspection'],
   ])('labels %s as %s', (source, label) => {
     expect(actorLabel(source)).toBe(label)
+  })
+})
+
+/**
+ * The README tells a judge, step by step, what to look for on screen. Step 4 named the
+ * badges — and named them wrong: it said a proven failure reads "not equivalent" when
+ * the page has always rendered "Does not follow". A judge following the instructions
+ * literally would have gone looking for a string that is not in the product.
+ *
+ * Wording is allowed to change. What is not allowed is for it to change on screen and
+ * not in the document that promises it, so the promise is now a test.
+ */
+describe('the verdict labels the README quotes', () => {
+  const README = readFileSync('README.md', 'utf8')
+
+  const LABELS: Array<[string, StepVerdict, DerivationIssue['kind'] | undefined]> = [
+    ['Does not follow', { status: 'broken', reason: 'not_equivalent' } as StepVerdict, undefined],
+    ['After the first break', { status: 'downstream' } as StepVerdict, 'broken'],
+    ['Not checked after the unresolved line', { status: 'downstream' } as StepVerdict, 'unresolved'],
+    ['Could not read', { status: 'unreadable' } as StepVerdict, undefined],
+    ['Could not determine', { status: 'uncertain' } as StepVerdict, undefined],
+    ['Starting line', { status: 'sound', relation: 'first' } as StepVerdict, undefined],
+    ['equals', { status: 'sound', relation: 'equals' } as StepVerdict, undefined],
+    ['differentiates', { status: 'sound', relation: 'differentiates' } as StepVerdict, undefined],
+    ['evaluates', { status: 'sound', relation: 'evaluates' } as StepVerdict, undefined],
+  ]
+
+  it.each(LABELS)('%s is what the page renders', (label, verdict, kind) => {
+    expect(relationLabel(verdict, kind)).toBe(label)
+  })
+
+  it.each(LABELS)('%s is what the README tells a judge to look for', (label) => {
+    expect(README).toContain(label)
+  })
+
+  it('does not leave the old wording in the README', () => {
+    // The exact string that was wrong, so this test fails if it is ever pasted back.
+    expect(README).not.toContain('reads `not equivalent`')
   })
 })

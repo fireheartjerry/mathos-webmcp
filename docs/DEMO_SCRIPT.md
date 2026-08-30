@@ -66,7 +66,9 @@ heading reads *Product rule*. Narration at ~150 words per minute.
 
 **Screen.** The scratchpad with three lines of working already written. The agent pane on
 the right. The agent calls `get_scratchpad`, then `check_work`. Line 3 gets its badge:
-**does not follow**. Lines below it read *not checked after the unresolved line*.
+**Does not follow**, with the diagnosis beneath it. Line 3 is the last line in this
+derivation, so there is nothing below it to mark; had there been, those lines would read
+**After the first break** rather than being called wrong, because they were never judged.
 
 **Narration.**
 > A maths scratchpad. The working is real and half-finished — never submitted, so no

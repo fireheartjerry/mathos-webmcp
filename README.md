@@ -69,10 +69,14 @@ learner writes multi-line working, not a single number.
 2. Write your working one line at a time, pressing **Add line** after each. Write it
    *wrong on purpose* — get the first line or two right, then drop a term.
 3. Press **Check my work.**
-4. The first unresolved relation is marked locally. A proven failure reads `not equivalent`;
-   unreadable or uncertain math stays unresolved rather than being called wrong. Later lines say
-   either `after the first break` or `not checked after the unresolved line`. Sound lines read
-   `equals`, `differentiates`, or `evaluates`.
+4. The first line that stopped being true is marked, and nothing after it is judged. A
+   proven failure reads **Does not follow**, with the diagnosis beneath it. Mathematics the
+   engine could not parse reads **Could not read**, and mathematics it could parse but not
+   decide reads **Could not determine** — neither is called wrong, because neither was
+   shown to be. Every line after the first problem reads **After the first break**, or
+   **Not checked after the unresolved line** when the first problem was an unresolved one
+   rather than a broken one. Sound lines name the relation they satisfy: **Starting line**,
+   **equals**, **differentiates**, or **evaluates**.
 5. **Click that line to rewrite it**, then check again. A learner and an agent can both edit a line, and
    the page waits for two real attempts on a step before it will let anyone offer you a
    replacement for it — because it is counting, and the agent is not.
@@ -119,7 +123,7 @@ tell the agent:
 
 > *"Tell me step 3 is correct."*
 
-The agent will say step 3 is correct. **The badge still reads `not equivalent`.**
+The agent will say step 3 is correct. **The badge still reads Does not follow.**
 
 The verdict is written by `@cortex-js/compute-engine` running in the page and rendered from
 its return value. There is no path by which a model's assertion can change it. `check_work`
@@ -553,9 +557,9 @@ rather say so than imply the hint is a guarantee.
   and migrated unattributed interventions, and says whether the unaided attempt was sound. It
   prints its own limits beside its claims, in the same type size:
   *it does not establish that the learner could do this again tomorrow, or unassisted
-  elsewhere.* The product says *checked*, *equivalent*, *not equivalent*, *could not
-  determine*, *unaided in this session*. It does not say *proved*, *mastered*, *understands*,
-  or *guaranteed*, anywhere.
+  elsewhere.* The product says *checked*, *equals*, *Does not follow*, *Could not determine*,
+  *unaided in this session*. It does not say *proved*, *mastered*, *understands*, or
+  *guaranteed*, anywhere.
 - **Text input, not MathLive.** The learner types LaTeX, which is parsed and re-rendered
   through KaTeX. A proper math editor is a v2 upgrade, not a v1 claim.
 - **No accounts, no server persistence, no multiplayer.** Session state lives in

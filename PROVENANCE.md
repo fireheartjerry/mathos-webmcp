@@ -26,7 +26,7 @@ All application source in this repository is new challenge-period work. This wor
 - The scratchpad interface, the Agent Console, and the local inspector.
 - The evidence receipt and its stated claim boundary.
 - The landing page and the visual system built on the frozen token set.
-- The test suite (380 tests).
+- The test suite (399 tests).
 - The deployment configuration, the judge-facing documents, and the Remotion composition that assembles the demo video from a real screencast of the production build.
 
 The first application-source commit is `8150dc4`, dated August 26, 2026. No application source in this repository predates the submission period.
