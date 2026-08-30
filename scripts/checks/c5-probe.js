@@ -1,3 +1,20 @@
+/**
+ * Independent verification of the seven platform verdicts (C5.1): this file re-derives
+ * each one from scratch, so it never consults `platform.ts` and cannot inherit its
+ * mistakes.
+ *
+ * READ THE `residue` FIELD CAREFULLY. It reports the residue of **this script**, not of
+ * the product. The registrations below deliberately pass no `AbortSignal` — some of the
+ * probes are about what happens when a name is not released — so a run leaves roughly
+ * five `px_*` tools behind in the tab, and `leftBehind: 5` is the expected result, not a
+ * defect.
+ *
+ * C5.8 is a claim about the product's own `get_platform`, which scopes every probe to an
+ * AbortController and aborts it in a `finally`. Verify that instead by calling the tool
+ * and diffing `getTools()` across the call; measured on the production build it is
+ * `residue: []` on the first run and on a second, with identical verdicts both times.
+ * Reload the tab before running this file if you want a clean `before`.
+ */
 const mc = document.modelContext
 const before = (await mc.getTools()).map(t => t.name)
 const tag = Date.now().toString(36)

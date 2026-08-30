@@ -92,6 +92,19 @@ tools before, 18 after.
 
 Seven probes, `probesAgree: true`, `toolsAfterProbes: 18`.
 
+**Re-verified on the production build** (`vinext start`, not the dev server): calling
+`get_platform` twice returns the seven verdicts below both times, byte-identical
+(`identicalOnRerun: true`), and `getTools()` is unchanged across each call —
+`residue: []`, `residue2: []`. That is C5.8 and C5.9 measured against the artifact that
+ships rather than the one we develop against.
+
+A caution for the next scorer: `scripts/checks/c5-probe.js` reports `leftBehind: 5`, and
+that is **the instrument's residue, not the product's**. That file re-derives the seven
+verdicts independently and deliberately registers without an `AbortSignal`, because some
+of the probes are about what happens when a name is not released. The product's own
+probes are scoped to an AbortController aborted in a `finally`, which is what the
+paragraph above measures.
+
 | Feature | Verdict |
 |---|---|
 | `exposedTo` | partial — accepted, not honoured |
