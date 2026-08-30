@@ -64,7 +64,7 @@ excluded, which is why this list is 9 and not 20.
 | A12 | Read what changed since a revision | `state.activities`, `types.ts:100` | Takes a revision, returns a diff; lets an agent poll without re-reading everything | `get_changes_since` (`definitions.ts:837`) |
 | A13 | Read WebMCP platform support | The browser, via `platform.ts:355` | Probes the platform, not the session | `get_platform` (`definitions.ts:1083`) |
 | A14 | List available problem families | `FAMILY_IDS`, `problems.ts:357` | Reads the problem catalogue, not session state | `list_problem_families` (`definitions.ts:901`) |
-| A15 | Parse an expression without writing it | `parseExpression`, `expression.ts:114` | Validates arbitrary LaTeX and reports the parse error; no session effect | `validate_expression` (`definitions.ts:921`) |
+| A15 | Parse an expression without writing it | `parseExpression`, `expression.ts:129` | Validates arbitrary LaTeX and reports the parse error; no session effect | `validate_expression` (`definitions.ts:921`) |
 | A16 | Compare two expressions for equivalence | `compareExpressions`, `equivalence.ts:185` | Two-expression input, tri-state verdict including `could not determine` | `compare_expressions` (`definitions.ts:955`) |
 | A17 | Differentiate an expression | `computeEngine`, `expression.ts:21` | `(latex, variable)` → expression | `differentiate_expression` (`definitions.ts:986`) |
 | A18 | Evaluate an expression at a point | `computeEngine`, `expression.ts:21` | `(latex, at)` → number | `evaluate_expression` (`definitions.ts:1032`) |

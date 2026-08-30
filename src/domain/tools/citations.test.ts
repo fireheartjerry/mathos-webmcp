@@ -44,7 +44,7 @@ const CITATIONS: Array<[string, number, string]> = [
   [SCRATCHPAD, 792, 'NEW_PROBLEM'],
   // Modules the reads table cites.
   ['src/domain/math/expression.ts', 21, 'computeEngine'],
-  ['src/domain/math/expression.ts', 114, 'parseExpression'],
+  ['src/domain/math/expression.ts', 129, 'parseExpression'],
   ['src/domain/math/equivalence.ts', 185, 'compareExpressions'],
   ['src/domain/math/problems.ts', 357, 'FAMILY_IDS'],
   ['src/domain/tools/platform.ts', 355, 'probePlatform'],
