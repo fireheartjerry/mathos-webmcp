@@ -36,6 +36,32 @@ https://mathos-second-try.fireheartjerry.chatgpt.site        (live app)
 https://github.com/fireheartjerry/mathos-webmcp              (source, MIT)
 ```
 
+## Image gallery
+
+Devpost uses the **first** image as the gallery thumbnail — for most judges it is the
+entire first impression, seen before any text. Upload in this order:
+
+1. [`docs/images/devpost-thumbnail.png`](images/devpost-thumbnail.png) — 1890×1260,
+   exactly **3:2**, so Devpost's card crop is deterministic rather than whatever its
+   resizer decides. It is the real product, not a mock: line 3 marked *Does not follow*
+   with the diagnosis *"Short of the line above by 3x²"*, and the whole eighteen-tool
+   console beside it. Cropped from `second-try-learn.png` to drop the browser scrollbar
+   and a sentence the viewport had cut in half; nothing was added, retouched or staged.
+2. [`docs/images/platform-probe.png`](images/platform-probe.png) — the seven platform
+   verdicts, including the two Chrome accepts and does not honour. This is the most
+   distinctive thing in the submission and it deserves to be visible without pressing
+   play.
+
+Captions, if Devpost asks for them:
+
+```
+The page's own computer algebra system has marked the first line that stopped being true — and nothing after it. The eighteen WebMCP tools are on the right, grouped so their shape and size are legible without a click.
+```
+
+```
+Seven WebMCP features, each probed by executing it in this browser. Two of them Chrome accepts and silently does not honour, and the page says so.
+```
+
 ## Themes
 
 Devpost offers three: **Machine Learning/AI**, **E-commerce/Retail**, **Web**. Tick
@@ -252,5 +278,7 @@ curriculum, and it does not claim anyone learned anything.
 - [ ] Confirm `/` and `/learn` return 200 signed-out
 - [ ] Upload the video, public, under 3:00, with audio
 - [ ] **Flip the repository to public — before the deadline, not after**
+- [ ] Upload both gallery images, thumbnail first
+- [ ] Tick Web and Machine Learning/AI, not E-commerce
 - [ ] Paste every field above
 - [ ] Do not touch the repo, site or submission after 2026-09-03, 1:00 PM PDT
