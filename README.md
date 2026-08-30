@@ -1,11 +1,18 @@
 # Second Try
 
+![Second Try: line 3 marked "Does not follow", with the diagnosis "Short of the line above by 3x²", beside an Agent Console listing 18 tools in six groups](docs/images/second-try-learn.png)
+
+*The page has marked the first line that stopped being true — and nothing after it. The
+console on the right is the whole WebMCP surface: eighteen tools, nine read and nine
+write, grouped so their shape and size are legible without a click.*
+
 A math scratchpad. The learner writes real multi-step working; the page's own computer
 algebra system finds the first step that stopped being true; a WebMCP agent reads that work,
 asks the page to check it, and teaches to that exact step.
 
-This challenge candidate deliberately proves one generated product-rule family end to end.
-It is a narrow, falsifiable wedge—not a claim to be a general-purpose mathematics tutor.
+It proves three generated families end to end — product rule, chain rule, quotient rule —
+each a parameterised derivation rather than a stored answer bank. That is a narrow,
+falsifiable wedge, not a claim to be a general-purpose mathematics tutor.
 
 > **The agent is the voice. The page is the tutor.**
 
