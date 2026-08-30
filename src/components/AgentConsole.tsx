@@ -114,6 +114,24 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
         <StatusLine status={status} />
       )}
       {partialRecovery && <p className="console-hint">{partialRecovery}</p>}
+      {/* When the browser cannot run the tools, the remedy belongs beside the
+          problem. The header states "WebMCP unavailable" at the top of the page,
+          and this block used to sit below the entire tool list - so a reader in an
+          unflagged browser met the diagnosis and had to go looking for the fix. */}
+      {!connected && !checking && (
+        <div className="console-connect">
+          <p className="console-connect-head">Test with a real agent</p>
+          {status.state === 'unsupported' && (
+            <p className="console-hint">Detected: {status.detail}</p>
+          )}
+          <ul>
+            <li>ChatGPT Desktop&rsquo;s built-in browser with a supported account and model.</li>
+            <li>
+              Chrome 149 or later with <code>chrome://flags/#enable-webmcp-testing</code> enabled.
+            </li>
+          </ul>
+        </div>
+      )}
       <ul className="console-groups">
         {groupTools(tools).groups.map(({ group, tools: members }) => {
           const groupOpen = openGroup === group.id
@@ -216,21 +234,6 @@ export default function AgentConsole({ status, tools, onRun, revision, proposalS
                 <span className="platform-detail">{feature.detail}</span>
               </li>
             ))}
-          </ul>
-        </div>
-      )}
-
-      {!connected && !checking && (
-        <div className="console-connect">
-          <p className="console-connect-head">Test with a real agent</p>
-          {status.state === 'unsupported' && (
-            <p className="console-hint">Detected: {status.detail}</p>
-          )}
-          <ul>
-            <li>ChatGPT Desktop&rsquo;s built-in browser with a supported account and model.</li>
-            <li>
-              Chrome 149 or later with <code>chrome://flags/#enable-webmcp-testing</code> enabled.
-            </li>
           </ul>
         </div>
       )}
