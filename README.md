@@ -406,6 +406,11 @@ Full transcript with the probe code and exact return values:
 
 ## Run it locally
 
+Node **≥ 22.13** and **pnpm 11.10** — both are declared in `package.json` (`engines`,
+`packageManager`), so a mismatched toolchain fails loudly rather than halfway through a
+build. No API keys, no `.env`, no service to sign up for: the computer algebra engine runs
+in the page, and nothing this project does requires a server.
+
 ```bash
 pnpm install
 pnpm dev        # local Sites-compatible development server
@@ -430,7 +435,7 @@ executable in tests rather than only in a browser.
 src/domain/
   math/       parser, equivalence oracle, problem generator, diagnoser
   session/    the one shared reducer, persistence
-  tools/      the six tool definitions + the registration bridge
+  tools/      the eighteen tool definitions, the registration bridge, the platform probes
 ```
 
 Learner actions, agent tool calls and the local inspector all enter through the same
@@ -527,7 +532,7 @@ rather say so than imply the hint is a guarantee.
 
 ## Limitations, stated plainly
 
-- **`new_problem` has the weakest page-native claim of the six.** Generating a problem does
+- **`new_problem` has the weakest page-native claim of the eighteen.** Generating a problem does
   not intrinsically need to happen in the page — a server could do it. It earns its place
   because the generated problem must land in *this* document, in the same revision stream the
   learner is editing, and because it is what closes the loop from "the agent helped" to "the

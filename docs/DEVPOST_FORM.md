@@ -36,10 +36,51 @@ https://mathos-second-try.fireheartjerry.chatgpt.site        (live app)
 https://github.com/fireheartjerry/mathos-webmcp              (source, MIT)
 ```
 
+## Themes
+
+Devpost offers three: **Machine Learning/AI**, **E-commerce/Retail**, **Web**. Tick
+**Web** and **Machine Learning/AI**. Not E-commerce — ticking a theme the project has
+nothing to do with reads as a hedge and gives a judge a reason to discount the other two.
+
 ## Video demo
 
 Upload [`docs/video/second-try-demo.mp4`](video/second-try-demo.mp4) — 2:44, 1920×1080, with
 narration — to YouTube as **public**, then paste the URL here.
+
+The rules ask that the video cover *"what you built and how you used WebMCP"*, and both
+are in the narration: the marked line, the eighteen-tool surface, the read-only maths
+tools, the agent repairing a line through `executeTool`, the receipt, and the platform
+probe reporting what Chrome does not honour.
+
+YouTube title and description, so the upload does not sit there as `second-try-demo.mp4`:
+
+```
+Second Try — a calculus scratchpad with 18 WebMCP tools (OpenAI WebMCP Challenge)
+```
+
+```
+A mathematics scratchpad whose own computer algebra system finds the first line of a
+derivation that stopped being true — and hands 18 WebMCP tools to any agent, so it can
+verify against the page's engine before it teaches.
+
+Everything in this recording is the production build driven through its own WebMCP
+tools. No state change was staged; every one went through document.modelContext
+.executeTool.
+
+0:00  A half-finished derivation, and the line the page marked
+0:27  The verdict comes from a computer algebra system, not a language model
+0:39  The whole WebMCP surface: 18 tools, nine read and nine write, in six groups
+1:01  The read-only mathematics tools an agent can check itself with
+1:19  An agent repairs the line it broke, and finishes the answer
+1:44  The receipt: who did what, and what it does not establish
+2:15  Seven WebMCP features probed live — including the two Chrome accepts and
+      silently does not honour
+
+Source, MIT licensed: https://github.com/fireheartjerry/mathos-webmcp
+Built for the OpenAI WebMCP Challenge.
+```
+
+Do not add music. The rules forbid copyrighted material, and the track is narration only.
 
 ---
 
