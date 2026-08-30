@@ -3,8 +3,14 @@ const tools = await mc.getTools()
 const by = Object.fromEntries(tools.map(t => [t.name, t]))
 const calls = JSON.parse(window.__CALLS__ || '[]')
 const out = []
+const currentRevision = async () => {
+  const raw = await mc.executeTool(by.get_scratchpad, '{}')
+  return (typeof raw === 'string' ? JSON.parse(raw) : raw).data.revision
+}
 for (const c of calls) {
   if (!by[c.tool]) { out.push({ tool: c.tool, error: 'no such tool' }); break }
+  // The caller asked for the live revision rather than guessing one.
+  if (c.args && c.args.expectedRevision === '__NEEDS__') c.args.expectedRevision = await currentRevision()
   let res
   try {
     const raw = await mc.executeTool(by[c.tool], JSON.stringify(c.args ?? {}))
