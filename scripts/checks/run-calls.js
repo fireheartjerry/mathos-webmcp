@@ -9,8 +9,9 @@ const currentRevision = async () => {
 }
 for (const c of calls) {
   if (!by[c.tool]) { out.push({ tool: c.tool, error: 'no such tool' }); break }
-  // The caller asked for the live revision rather than guessing one.
-  if (c.args && c.args.expectedRevision === '__NEEDS__') c.args.expectedRevision = await currentRevision()
+  // No revision substitution. A real agent gets no helper filling this in, and the
+  // round-1 run's `__NEEDS__` crutch meant the agent never once met a refusal - which
+  // left the error-recovery check with no instances to measure.
   let res
   try {
     const raw = await mc.executeTool(by[c.tool], JSON.stringify(c.args ?? {}))
