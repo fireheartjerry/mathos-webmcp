@@ -11,6 +11,11 @@ import { readFileSync } from 'node:fs'
  * a false claim in a document nobody re-reads.
  */
 
+const NEWLINE = String.fromCharCode(10)
+const D = String.fromCharCode(92) + 'd'
+const W = String.fromCharCode(92) + 'w'
+const DOT = String.fromCharCode(92) + '.'
+
 const line = (file: string, n: number) => readFileSync(file, 'utf8').split(/\r?\n/)[n - 1] ?? ''
 
 const TYPES = 'src/domain/session/types.ts'
@@ -99,18 +104,39 @@ describe('the file:line citations in docs/webmcp', () => {
   })
 
   it('every citation the docs make is one this test covers', () => {
-    const docs = ['docs/webmcp/capabilities.md', 'docs/webmcp/ceiling.md']
-      .map((p) => readFileSync(p, 'utf8'))
-      .join('\n')
-    const cited = new Set<string>()
-    for (const m of docs.matchAll(/`?([A-Za-z/.]+\.(?:ts|tsx)):(\d+)/g)) {
-      cited.add(`${m[1].split('/').pop()}:${m[2]}`)
+    // Scans every file in DOCS. An earlier version hardcoded two of the three, so a
+    // citation added to platform.md went unchecked - and matched only a range's start,
+    // which let `types.ts:121-129` pass while the union actually ends at 130.
+    const docs = DOCS.map((d) => readFileSync(d, 'utf8')).join(NEWLINE)
+
+    // Keyed on the file's base name. That is only safe while base names are unique, so
+    // that is asserted rather than assumed.
+    const base = (full: string) => full.split('/').pop() as string
+    const owners = new Map<string, string>()
+    for (const file of [...CITATIONS.map(([f]) => f), TOOLS, ...RANGES.map(([f]) => f)]) {
+      const existing = owners.get(base(file))
+      expect(existing ?? file, `two different files share the base name ${base(file)}`).toBe(file)
+      owners.set(base(file), file)
     }
-    const covered = new Set([
-      ...CITATIONS.map(([f, n]) => `${f.split('/').pop()}:${n}`),
-      ...TOOL_LINES.map(([, n]) => `definitions.ts:${n}`),
+
+    const RANGE = new RegExp(`([${W}./-]+${DOT}(?:ts|tsx)):(${D}+)-(${D}+)`, 'g')
+    const SINGLE = new RegExp(`([${W}./-]+${DOT}(?:ts|tsx)):(${D}+)(?![${D}-])`, 'g')
+
+    const citedRanges = new Set<string>()
+    for (const m of docs.matchAll(RANGE)) citedRanges.add(`${base(m[1])}:${m[2]}-${m[3]}`)
+    const citedLines = new Set<string>()
+    for (const m of docs.matchAll(SINGLE)) citedLines.add(`${base(m[1])}:${m[2]}`)
+
+    const coveredLines = new Set([
+      ...CITATIONS.map(([f, n]) => `${base(f)}:${n}`),
+      ...TOOL_LINES.map(([, n]) => `${base(TOOLS)}:${n}`),
     ])
-    const uncovered = [...cited].filter((c) => !covered.has(c))
-    expect(uncovered, `citations in the docs that no test checks: ${uncovered.join(', ')}`).toEqual([])
+    const coveredRanges = new Set(RANGES.map(([f, a, b]) => `${base(f)}:${a}-${b}`))
+
+    const stray = [
+      ...[...citedLines].filter((c) => !coveredLines.has(c)),
+      ...[...citedRanges].filter((c) => !coveredRanges.has(c)),
+    ]
+    expect(stray, `citations no test checks: ${stray.join(', ')}`).toEqual([])
   })
 })
