@@ -30,6 +30,8 @@
 }
 
 :root {
+  /* The only duration in the product. Colour and opacity only; nothing moves. */
+  --motion: 80ms;
   /* Proof Margin surfaces */
   --canvas: #f4f6f8;
   --surface: #ffffff;
@@ -145,29 +147,10 @@
   /* Motion is the one maximalist system here. Everything static above is held
      to the point of quietness precisely so this can be lavish — the contrast is
      the whole design. See 23_PRIMER_REDESIGN_SPEC.md section 3.2. */
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-draw: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-sweep: cubic-bezier(0.4, 0, 0.2, 1);
-  --d-instant: 120ms;
-  --d-signature: 200ms;
-  --d-sweep: 350ms;
-  --d-rise: 700ms;
-  --d-story: 12000ms;
-  --stagger: 80ms;
 }
 
 /* A full path, not a dimmer. Every final state is identical to the animated
    one, so nothing is reachable only by watching it move. */
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --d-instant: 0ms;
-    --d-signature: 0ms;
-    --d-sweep: 0ms;
-    --d-rise: 0ms;
-    --d-story: 0ms;
-    --stagger: 0ms;
-  }
-}
 
 *,
 *::before,
@@ -238,11 +221,6 @@ button {
   border-radius: var(--r-focus);
 }
 
-.container {
-  width: var(--container);
-  margin-inline: auto;
-}
-
 .headline {
   max-width: var(--measure-headline);
   font-size: var(--fs-section);
@@ -267,37 +245,20 @@ button {
   font-size: var(--btn-fs-md);
   font-weight: var(--fw-ui);
   line-height: 1.25;
-  transition:
-    background-color var(--d-instant) var(--ease-out),
-    border-color var(--d-instant) var(--ease-out),
-    color var(--d-instant) var(--ease-out);
+  transition: background-color var(--motion) linear, border-color var(--motion) linear, color var(--motion) linear;
 }
 
-/* Ink sweeps in from the left rather than the fill simply changing colour.
-   The pseudo-element is transform-only, so nothing reflows.
-
-   `isolation: isolate` on the button is load-bearing: it makes the button its
-   own stacking context, so the z-index:-1 sweep paints above the button's own
-   background but below its label. Lifting the label instead would not work —
-   button text is a bare text node, not an element, so no selector can reach it
-   and it would be painted under the sweep. */
 .button::before {
   position: absolute;
   z-index: -1;
   inset: 0;
   background: var(--blue-hover);
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--d-sweep) var(--ease-sweep);
+  
 }
 
 .button:hover {
   border-color: var(--blue-hover);
-}
-
-.button:hover::before {
-  transform: scaleX(1);
 }
 
 .button:disabled::before,
@@ -342,12 +303,6 @@ button {
   font-size: var(--btn-fs-sm);
 }
 
-.button-lg {
-  min-height: 48px;
-  padding: var(--btn-pad-lg);
-  font-size: var(--btn-fs-lg);
-}
-
 .button-text {
   display: inline-flex;
   min-height: 44px;
@@ -364,9 +319,7 @@ button {
   text-decoration-color: var(--blue-line);
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
-  transition:
-    color var(--d-instant) var(--ease-out),
-    text-decoration-color var(--d-instant) var(--ease-out);
+  transition: color var(--motion) linear;
 }
 
 .button-text:hover {
@@ -401,7 +354,7 @@ button {
   background: var(--bw-ink);
   color: var(--bw-paper);
   font-weight: var(--fw-ui);
-  transition: top var(--d-instant) var(--ease-out);
+  
 }
 
 .skip-link:focus {
@@ -436,13 +389,3 @@ button {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 1ms !important;
-  }
-}

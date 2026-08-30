@@ -23,7 +23,7 @@
 .site-header,
 .landing-shell,
 .site-footer {
-  width: min(44rem, calc(100vw - 48px));
+  width: min(34rem, calc(100vw - 48px));
   margin-inline: auto;
 }
 
@@ -61,23 +61,12 @@
   height: 2px;
   background: var(--bw-ink);
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--d-sweep) var(--ease-sweep);
-}
-
-.wordmark:hover::after,
-.wordmark:focus-visible::after {
-  transform: scaleX(1);
+  
 }
 
 .wordmark:focus-visible {
   outline: 2px solid var(--bw-ink);
   outline-offset: 6px;
-}
-
-.wordmark:active {
-  transform: translateY(1px);
 }
 
 .landing-shell {
@@ -168,48 +157,12 @@
   height: 2px;
   background: var(--bw-ink);
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--d-sweep) var(--ease-sweep);
-}
-
-.cta:hover .cta-label::after,
-.cta:focus-visible .cta-label::after {
-  transform: scaleX(1);
+  
 }
 
 .cta:focus-visible {
   outline: 2px solid var(--bw-ink);
   outline-offset: 6px;
-}
-
-/* Pressed. The arrow does not run ahead of the label on press the way it does
-   on hover — the whole control commits together.
-
-   The transition is on the control itself and not only on its parts. Without
-   it the underline retracted over 350ms and the arrow slid over 200ms while
-   the press underneath them snapped in a single frame — the page's one primary
-   action had the least motion of its three pieces. --d-instant is short enough
-   to still read as a direct response to the finger, and it makes the release
-   travel back rather than teleport. */
-.cta {
-  transition: transform var(--d-instant) var(--ease-out);
-}
-
-.cta:active {
-  transform: translateY(1px);
-}
-
-.cta:active .cta-arrow {
-  transform: none;
-}
-
-.cta-arrow {
-  transition: transform var(--d-signature) var(--ease-out);
-}
-
-.cta:hover .cta-arrow {
-  transform: translateX(4px);
 }
 
 /* ---- The reading -------------------------------------------------------
@@ -228,7 +181,7 @@
 .reading-step {
   position: relative;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: baseline;
   gap: var(--s-4);
   padding: var(--s-4) 0 var(--s-4) var(--s-4);
@@ -247,16 +200,8 @@
   height: 1px;
   background: var(--bw-rule);
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
   /* One beat ahead of the row it separates, which rises at (--i + 6.5). The
      rule lands, then the line lands on it. */
-  animation-delay: calc(var(--stagger) * (var(--i, 0) + 5.5));
-}
-
-@keyframes draw-rule {
-  to { transform: scaleX(1); }
 }
 
 /* No hover state. These rows are plain li — not focusable, not inside a link,
@@ -265,10 +210,6 @@
    The motion on this page belongs to what the page is doing, not to decorating
    things that do not respond. */
 
-/* Held back at 0.42 so it reads as grey, and brought to full black as the read
-   crosses this row — the line acknowledging that it is being read. Opacity
-   only, on an element with no other animation, so nothing conflicts with the
-   row's own entrance or hover transform. */
 /* Set in the body serif, not the mono. These are three numerals; asking for a
    36KB code face to draw them put a third typographic voice on a page that
    otherwise holds two, and the tabular figures the alignment depends on are
@@ -278,23 +219,7 @@
   opacity: 0.42;
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
-  animation: read-pulse var(--d-story) linear infinite both;
-  animation-delay: var(--pulse-delay, 0ms);
 }
-
-@keyframes read-pulse {
-  0%     { opacity: 0.42; }
-  0.9%   { opacity: 1; }
-  3.2%   { opacity: 0.42; }
-  100%   { opacity: 0.42; }
-}
-
-/* Each row brightens at its own moment, so the read still travels down the
-   derivation without a line drawing itself across the page. animation-delay
-   shifts an infinite animation's phase permanently, so one keyframe set with a
-   per-row delay is enough. The delay is set in the markup, not by
-   nth-of-type. The gaps are uneven (888 / 1167 / 1536ms) because the read
-   slows over the step that broke. */
 
 .reading-tex {
   min-width: 0;
@@ -311,6 +236,7 @@
 }
 
 .reading-tex .katex { font-size: 1em; }
+.reading-note .math { display: inline; }
 
 /* Drawn like the rules between the steps, and last, so the figure finishes
    ruling itself before it says anything. Absolute rather than a border,
@@ -318,7 +244,7 @@
    the cell the two verdicts share. */
 .reading-note {
   position: relative;
-  display: grid;
+  display: block;
   padding-top: var(--s-5);
   color: var(--bw-soft);
   font-size: var(--fs-sm);
@@ -332,24 +258,6 @@
   height: 1px;
   background: var(--bw-rule);
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  animation: draw-rule var(--d-sweep) var(--ease-sweep) both;
-  animation-delay: calc(var(--stagger) * 9);
-}
-
-.reading-note > .try-first,
-.reading-note > .try-second {
-  grid-area: 1 / 1;
-}
-
-/* The point where the step stopped being true is mathematics, so it is set as
-   mathematics. In the mono it read as a code literal — an italic variable and
-   an upright numeral is what the sentence actually means, and KaTeX is the
-   only thing on the page that gets that distinction right. */
-.reading-point {
-  color: var(--bw-ink);
-  white-space: nowrap;
 }
 
 .site-footer {
@@ -362,183 +270,11 @@
   font-size: var(--fs-meta);
 }
 
-/* ---- Motion ------------------------------------------------------------
-   The static page is stripped to nothing so this can be lavish. */
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: none; }
-}
-
-.hero-copy > p,
-.cta {
-  animation: rise var(--d-rise) var(--ease-draw) both;
-}
-
-/* Each word carries its own entrance. inline-block is required — transforms do
-   not apply to inline boxes, so without it the stagger would silently do
-   nothing. */
-.hero-word {
-  display: inline-block;
-  animation: rise var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * var(--w, 0) * 0.5);
-}
-
-.hero-copy > p:nth-of-type(1) { animation-delay: calc(var(--stagger) * 3.5); }
-.hero-copy > p:nth-of-type(2) { animation-delay: calc(var(--stagger) * 4.5); }
-.cta { animation-delay: calc(var(--stagger) * 5.5); }
-
-/* The figure itself does not rise. Its rows and rules do, in order, and that
-   is the whole arrival.
-
-   Animating the container as well nested one rise inside another and both
-   properties compounded. Measured before removing it: at 200ms the first row
-   sat 20.39px down rather than the 14px the motion scale specifies, because
-   the container contributed 6.39px underneath it, and the amount changed every
-   frame as the two curves overlapped — so no row ever travelled the designed
-   distance. Opacity multiplied the same way: at 400ms a row with its own
-   opacity at 0.543 painted at 0.511.
-
-   This is the rule section 3.4 already records for the verdict words — the
-   parts carry the animation, never the wrapper, so the two never multiply.
-   It had not been applied here.
-
-   Removing it also fixes the order. The container started at 120ms, so the
-   largest object on the page began arriving while the headline was still
-   assembling and landed ahead of both paragraphs and the call to action. The
-   figure now follows the copy that introduces it. */
-.reading-step {
-  animation: rise var(--d-rise) var(--ease-draw) both;
-  /* + 6.5 puts the first row after the call to action at 5.5. At + 4 the rows
-     interleaved with the copy: row one landed at 320ms, ahead of the second
-     paragraph at 360 and the call to action at 440, so the page painted
-     content below before the content above it had arrived. The cascade now
-     runs straight down the page in the order it is read. */
-  animation-delay: calc(var(--stagger) * (var(--i, 0) + 6.5));
-}
-
-/* ---- Second try --------------------------------------------------------
-   One shared 18s cycle: the page reads the working, marks the third step, the
-   learner rewrites it, and the verdict clears.
-
-   The two attempts never overlap. A symmetric crossfade puts both at 0.5 for
-   an instant, and two legible expressions stacked on each other read as
-   corruption rather than as a transition. The outgoing text is fully gone
-   before the incoming one starts. */
-
-/* Returns at 94%, not 92%, for the same reason try-second starts at 49%: the
-   outgoing attempt's words carry delays of up to 220ms, so a return that began
-   the moment the hold ended overlapped the tail of the clear. */
-/* The loop seam is a new attempt, not a regression.
-
-   This used to leave upward and then return from that same position, so the
-   corrected line appeared to sink back into the wrong one — the page showing
-   its own learning being undone, once every cycle. It now exits upward as
-   before, is repositioned below while still at zero opacity, and rises into
-   place the way a freshly written line does. The opacity envelope is
-   unchanged, so the no-overlap guarantee holds. */
-@keyframes try-first {
-  0%, 44%    { opacity: 1; transform: none; }
-  47%, 94%   { opacity: 0; transform: translateY(-5px); }
-  94.5%      { opacity: 0; transform: translateY(7px); }
-  97%, 100%  { opacity: 1; transform: none; }
-}
-
-/* Starts at 49%, not 47%, so the per-word stagger fits inside the gap. The
-   verdict's words carry delays up to 330ms; with both attempts starting their
-   transition at the same percentage, the last outgoing word was still fading
-   while the first incoming one appeared. 49% clears 47% + 330ms. */
-/* The largest travel on the page. Everything else rises 5 to 7px; the
-   corrected line comes 14px, because the second try is the thing the product
-   is named after and it should be the biggest movement on the page. */
-@keyframes try-second {
-  0%, 49%    { opacity: 0; transform: translateY(14px); }
-  52%, 89%   { opacity: 1; transform: none; }
-  92%, 100%  { opacity: 0; transform: translateY(-5px); }
-}
-
-.reading-swap {
-  display: grid;
-  min-width: 0;
-}
-
-.reading-swap > .reading-tex {
-  grid-area: 1 / 1;
-}
-
-.reading-swap > .try-first {
-  animation: try-first var(--d-story) var(--ease-out) infinite both;
-}
-
-.reading-swap > .try-second {
-  animation: try-second var(--d-story) var(--ease-out) infinite both;
-}
-
-/* The verdict composes rather than appearing. Each word carries the animation
-   with a 55ms offset, so the sentence assembles left to right and clears the
-   same way. inline-block is required — transforms do not apply to inline
-   boxes — and the space lives between the spans, never inside one, because an
-   inline-block swallows its own trailing whitespace. */
-.note-word {
-  display: inline-block;
-}
-
-/* The verdict follows the reading rather than preceding it. try-first puts the
-   wrong step on the page from 0%, which is right — the learner wrote it before
-   the page ever looked. But the note is the page's conclusion about that step,
-   and it was also showing from 0%, so the page announced a break it had not
-   yet found. It now arrives once the mark is drawn, and it does not return
-   after the rewrite until the next cycle has read the work again. */
-@keyframes verdict-first {
-  0%, 18%     { opacity: 0; transform: translateY(4px); }
-  20%, 44%    { opacity: 1; transform: none; }
-  47%, 100%   { opacity: 0; transform: translateY(-5px); }
-}
-
-@keyframes verdict-second {
-  0%, 52%     { opacity: 0; transform: translateY(7px); }
-  55%, 89%    { opacity: 1; transform: none; }
-  92%, 100%   { opacity: 0; transform: translateY(-5px); }
-}
-
-.reading-note > .try-first > .note-word {
-  animation: verdict-first var(--d-story) var(--ease-out) infinite both;
-  animation-delay: calc(var(--nw, 0) * 55ms);
-}
-
-.reading-note > .try-second > .note-word {
-  animation: verdict-second var(--d-story) var(--ease-out) infinite both;
-  animation-delay: calc(var(--nw, 0) * 55ms);
-}
-
-/* The break mark: a black bar in the margin of the line. Its absence is the
-   verdict, which is what "sound" looks like with no colour to say it.
-
-   One keyframe set for the whole life of the mark, so it is drawn afresh by
-   every read rather than drawn once on load and merely crossfaded on each
-   later cycle. It starts at zero height, is drawn downward just after the
-   first read passes the row at 5.8%, holds while the first attempt stands, and
-   goes when the rewrite is confirmed. */
-/* Drawn at 15%, after row three has been read.
-
-   These percentages and the read-pulse delays are coupled and easy to break
-   apart. The read is timed in absolute milliseconds — it peaks on row three at
-   1698ms regardless of cycle length — while everything here is a fraction of
-   the cycle. Shortening the cycle therefore drags the mark earlier while the
-   read stays put, and at 12s the old 9.7% would have drawn the mark at 1164ms,
-   marking the break 500ms before the page looked at the line. Any future change
-   to --d-story has to move these with it. */
 /* Drawn downward when the break is found, retracted upward when it is fixed.
    It used to fade out, which reads as the mark being forgotten; retracting on
    the same axis and origin it was drawn on reads as the mark being withdrawn,
    which is what a corrected line earns. Opacity stays at 1 throughout — the
    height is doing the work. */
-@keyframes mark-life {
-  0%, 15%    { opacity: 1; transform: scaleY(0); }
-  18%        { opacity: 1; transform: scaleY(1); }
-  44%        { opacity: 1; transform: scaleY(1); }
-  47%, 100%  { opacity: 1; transform: scaleY(0); }
-}
 
 .reading-step.is-broken::before {
   position: absolute;
@@ -547,8 +283,6 @@
   width: 2px;
   background: var(--bw-ink);
   content: '';
-  transform-origin: top center;
-  animation: mark-life var(--d-story) var(--ease-draw) infinite both;
 }
 
 @media (max-width: 900px) {
@@ -570,62 +304,14 @@
   .site-footer { min-height: 64px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /* The first attempt and its verdict are the still frame, which is what
-     assistive tech reads anyway. */
-  .reading-swap > .try-second,
-  .reading-note > .try-second {
-    display: none;
-  }
 
-
-  /* tokens.css forces `animation-iteration-count: 1 !important` on everything
-     under this query, which parks each infinite animation on its own 100%
-     keyframe. For try-first that frame happens to be opacity 1, so the first
-     attempt survives by luck rather than by intent — and would vanish the
-     moment those keyframes were re-timed. Every element that must remain
-     visible states so here instead of inheriting a final frame. */
-  .reading-swap > .try-first,
-  .reading-note > .try-first,
-  .reading-note > .try-first > .note-word,
-  .reading-step.is-broken::before {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .reading-step.is-broken::before {
-    transform: scaleY(1);
-  }
-
-  .hero-word {
-    animation: none;
-  }
-
-  /* These start at scaleX(0). Without the explicit restore, removing the
-     animation removes the rules themselves and the figure loses its ruling. */
-  .reading-step + .reading-step::after,
-  .reading-note::before {
-    animation: none;
-    transform: scaleX(1);
-  }
-
-  /* The link states stay — they are feedback, not decoration. Only their
-     travel is removed. */
-  .wordmark::after,
-  .cta-label::after,
-  .cta {
-    transition: none;
-  }
-
-  .wordmark:active,
-  .cta:active {
-    transform: none;
-    opacity: 0.6;
-  }
-
-  .reading-index {
-    animation: none;
-    opacity: 1;
-  }
+/* The row carries the verdict at its end, the same grammar the scratchpad uses.
+   Without it the rule spanned a width nothing occupied: the equation clumped
+   left and 400px of the row was empty. */
+.reading-verdict {
+  justify-self: end;
+  color: var(--bw-soft);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
 }
+.reading-verdict.is-broken-verdict { color: var(--bw-ink); }

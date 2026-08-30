@@ -1,4 +1,3 @@
-import { Fragment } from 'react'
 import { Tex } from '../src/components/Tex'
 
 export default function HomePage() {
@@ -13,38 +12,7 @@ export default function HomePage() {
       <main id="main" className="landing-shell">
         <section className="hero" aria-labelledby="page-title">
           <div className="hero-copy">
-            {/* Split per word so the line assembles rather than arriving whole
-                (Sarsa section 8: staggered 80ms). The words are spans inside a
-                single h1, so the accessible name is unchanged. */}
-            <h1 id="page-title">
-              {'A second mind, shaped by yours.'.split(' ').map((word, i) => (
-                <Fragment key={word + i}>
-                  {/* The space lives between the spans, never inside one. An
-                      inline-block collapses its own trailing whitespace, so a
-                      space inside the span disappears and the words run
-                      together — while textContent still reads correctly. */}
-                  {i > 0 ? ' ' : null}
-                  <span className="hero-word" style={{ ["--w" as string]: i }}>
-                    {word}
-                  </span>
-                </Fragment>
-              ))}
-            </h1>
-            {/* The page never named the product, so a visitor had nothing to
-                remember it by.
-
-                Three constraints on this copy. It names the thing and says
-                plainly what it does. It explains the Primer, because "a second
-                mind" means nothing without it. And it stays honest about
-                scale: this holds one session, the Primer is a years-scale
-                artifact, so Second Try is the step toward it rather than the
-                thing itself. PROVENANCE records one failure of advertising a
-                capability the build did not have.
-
-                The learner also stays the subject throughout. An earlier draft
-                read "what it learns about how you think", which makes an
-                unnamed thing the actor and a person's mind its object — the
-                grammar of surveillance, not of a prosthesis. */}
+            <h1 id="page-title">A second mind, shaped by yours.</h1>
             <p>
               <strong>Second Try</strong> is a calculus scratchpad. You write
               the working; the page checks every line and marks the first one
@@ -63,12 +31,18 @@ export default function HomePage() {
             </a>
           </div>
 
+          {/* One frame, not a loop. This previously held two attempts stacked
+              on each other and crossfaded on a 12-second timer, plus a caption
+              that composed itself word by word. Nothing on the page had
+              changed, so none of that motion carried state. The figure now
+              shows the single thing the product claims: the first line that
+              stopped being true, and why. */}
           <figure
             className="reading"
-            aria-label="A derivation whose third step stopped being equivalent, and the corrected second attempt"
+            aria-label="A derivation whose third step stopped being equivalent"
           >
             <ol className="reading-steps">
-              <li className="reading-step" style={{ ["--i" as string]: 0, ["--pulse-delay" as string]: "888ms" }}>
+              <li className="reading-step">
                 <span className="reading-index">1</span>
                 <span className="reading-tex">
                   <Tex
@@ -76,8 +50,9 @@ export default function HomePage() {
                     ariaLabel="y equals twelve x cubed plus four x squared"
                   />
                 </span>
+                <span className="reading-verdict">equals</span>
               </li>
-              <li className="reading-step" style={{ ["--i" as string]: 1, ["--pulse-delay" as string]: "1167ms" }}>
+              <li className="reading-step">
                 <span className="reading-index">2</span>
                 <span className="reading-tex">
                   <Tex
@@ -85,57 +60,22 @@ export default function HomePage() {
                     ariaLabel="d y by d x equals thirty-six x squared plus eight x"
                   />
                 </span>
+                <span className="reading-verdict">differentiates</span>
               </li>
-              {/* The product is called Second Try, so the hero shows both. The
-                  first attempt drops the 8x; the second evaluates the real
-                  derivative at the requested point. 36(4) + 8(2) = 160.
-                  Only the first attempt is exposed to assistive tech — the
-                  swapped-in second is decorative narrative, and the figure's
-                  label carries the whole story. */}
-              <li className="reading-step is-broken" style={{ ["--i" as string]: 2, ["--pulse-delay" as string]: "1536ms" }}>
+              <li className="reading-step is-broken">
                 <span className="reading-index">3</span>
-                <span className="reading-swap">
-                  <span className="reading-tex try-first">
-                    <Tex
-                      latex={'\\frac{dy}{dx} = 36x^2'}
-                      ariaLabel="d y by d x equals thirty-six x squared"
-                    />
-                  </span>
-                  <span className="reading-tex try-second" aria-hidden="true">
-                    <Tex latex={'\\frac{dy}{dx}\\bigg|_{x=2} = 160'} />
-                  </span>
+                <span className="reading-tex">
+                  <Tex
+                    latex={'\\frac{dy}{dx} = 36x^2'}
+                    ariaLabel="d y by d x equals thirty-six x squared"
+                  />
                 </span>
+                <span className="reading-verdict is-broken-verdict">not equivalent</span>
               </li>
             </ol>
 
-            {/* The verdict is composed word by word rather than swapped as a
-                block. The words carry the animation, not the wrapper, so the
-                two never multiply their opacities. */}
             <figcaption className="reading-note">
-              <span className="try-first">
-                {['Step', '3', 'stopped', 'being', 'equivalent', 'at'].map((w, i) => (
-                  <Fragment key={w + i}>
-                    {i > 0 ? ' ' : null}
-                    <span className="note-word" style={{ ["--nw" as string]: i }}>
-                      {w}
-                    </span>
-                  </Fragment>
-                ))}{' '}
-                <span className="note-word reading-point" style={{ ["--nw" as string]: 6 }}>
-                  <Tex latex={'x = -1.4'} ariaLabel="x equals negative 1.4" />
-                </span>
-                <span className="note-word" style={{ ["--nw" as string]: 6 }}>.</span>
-              </span>
-              <span className="try-second" aria-hidden="true">
-                {['Checked.', 'Sound', 'through', 'step', '3.'].map((w, i) => (
-                  <Fragment key={w + i}>
-                    {i > 0 ? ' ' : null}
-                    <span className="note-word" style={{ ["--nw" as string]: i }}>
-                      {w}
-                    </span>
-                  </Fragment>
-                ))}
-              </span>
+              Step 3 stopped being equivalent at <Tex latex={'x = -1.4'} ariaLabel="x equals negative 1.4" />.
             </figcaption>
           </figure>
         </section>

@@ -48,7 +48,7 @@ function conflictFailure(): ActionResult {
     ok: false,
     code: 'invalid_phase',
     message: 'Another tab changed this session, so this copy is paused.',
-    recovery: 'Close one tab, then choose Start over here to continue safely.',
+    recovery: 'Start a fresh session in this tab, or close the other tab and reload.',
   }
 }
 
@@ -284,6 +284,26 @@ export default function Scratchpad() {
     }),
     [announce, awaitPaint, cacheFor, focusLineOrComposer],
   )
+
+  // One reset, reachable from two places. It used to live only inside the
+  // "Start over" control, which is rendered under `steps.length > 0` — so a
+  // second tab that opened fresh was told to press a button that did not exist.
+  const startOver = useCallback(() => {
+    tabConflictRef.current = false
+    setTabConflict(false)
+    clearSession()
+    // Starting over gives a different problem on purpose; only the very first
+    // problem of a session is fixed.
+    const fresh = createSession(Date.now() % 100000, newSessionId())
+    stateRef.current = fresh
+    setState(fresh)
+    setDraft('')
+    setComposerError('')
+    setEditingId(null)
+    setFeedback(EMPTY_ACTION_FEEDBACK)
+    focusLineOrComposer(null)
+    announce('A new session started. Focus moved to Write your first line.')
+  }, [announce, focusLineOrComposer])
 
   const bridge = useMemo(() => makeBridge('agent'), [makeBridge])
   const inspectorTools = useMemo(() => createTools(makeBridge('local-inspector')), [makeBridge])
@@ -766,20 +786,7 @@ export default function Scratchpad() {
               type="button"
               className="button-text"
               onClick={() => {
-                tabConflictRef.current = false
-                setTabConflict(false)
-                clearSession()
-                // Starting over gives a different problem on purpose; only the very
-                // first problem of a session is fixed.
-                const fresh = createSession(Date.now() % 100000, newSessionId())
-                stateRef.current = fresh
-                setState(fresh)
-                setDraft('')
-                setComposerError('')
-                setEditingId(null)
-                setFeedback(EMPTY_ACTION_FEEDBACK)
-                focusLineOrComposer(null)
-                announce('A new session started. Focus moved to Write your first line.')
+                startOver()
               }}
             >
               Start over
@@ -840,10 +847,15 @@ export default function Scratchpad() {
           )}
 
           {tabConflict && (
-            <p className="is-error" role="alert">
-              Another tab changed this session, so work here is paused to prevent an overwrite.
-              Close one tab, then choose Start over here to continue safely.
-            </p>
+            <div className="is-error" role="alert">
+              <p>
+                Another tab changed this session, so work here is paused rather than
+                overwriting it.
+              </p>
+              <button type="button" className="button-text" onClick={startOver}>
+                Start a fresh session in this tab
+              </button>
+            </div>
           )}
 
           <p className="live-status" role="status" aria-live="polite">

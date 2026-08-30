@@ -29,7 +29,7 @@
   font-weight: 750;
   letter-spacing: -0.025em;
   text-decoration: none;
-  transition: color var(--d-instant) var(--ease-out);
+  transition: color var(--motion) linear;
 }
 
 .wordmark:hover {
@@ -223,11 +223,6 @@
   color: var(--blue);
 }
 
-
-
-
-
-
 .how {
   max-width: var(--measure-prose);
   color: var(--ink-soft);
@@ -359,16 +354,6 @@
 
 .step-focused {
   border-inline-start: var(--bw-track) solid var(--blue);
-  animation: proof-margin-focus var(--d-signature) var(--ease-out) both;
-}
-
-@keyframes proof-margin-focus {
-  from {
-    background-color: var(--blue-tint);
-  }
-  to {
-    background-color: transparent;
-  }
 }
 
 .step-latex {
@@ -385,9 +370,7 @@
   color: inherit;
   font: inherit;
   text-align: left;
-  transition:
-    background-color var(--d-instant) var(--ease-out),
-    border-color var(--d-instant) var(--ease-out);
+  transition: background-color var(--motion) linear, border-color var(--motion) linear;
 }
 
 .step-latex:hover {
@@ -418,9 +401,7 @@
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  transition:
-    border-color var(--d-instant) var(--ease-out),
-    background-color var(--d-instant) var(--ease-out);
+  transition: border-color var(--motion) linear, background-color var(--motion) linear;
 }
 
 .step-edit input:hover {
@@ -453,10 +434,7 @@
   color: var(--graphite);
   font-size: 24px;
   line-height: 1;
-  transition:
-    background-color var(--d-instant) var(--ease-out),
-    border-color var(--d-instant) var(--ease-out),
-    color var(--d-instant) var(--ease-out);
+  transition: background-color var(--motion) linear, border-color var(--motion) linear, color var(--motion) linear;
 }
 
 .step-remove:hover {
@@ -695,9 +673,7 @@
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  transition:
-    border-color var(--d-instant) var(--ease-out),
-    background-color var(--d-instant) var(--ease-out);
+  transition: border-color var(--motion) linear, background-color var(--motion) linear;
 }
 
 .composer-row input::placeholder {
@@ -924,7 +900,7 @@
   color: var(--ink-soft);
   font-size: var(--fs-meta);
   font-weight: var(--fw-ui);
-  transition: color var(--d-instant) var(--ease-out);
+  transition: color var(--motion) linear;
 }
 
 .session-details > summary::-webkit-details-marker {
@@ -1023,23 +999,9 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
-  transition:
-    background-color var(--d-instant) var(--ease-out),
-    color var(--d-instant) var(--ease-out);
+  transition: background-color var(--motion) linear, color var(--motion) linear;
 }
 
-/* The disclosure marker is two bars rather than a "+" character, because
-   content: '+' swapping to content: '−' cannot be transitioned — the one part
-   of this control that states which way it is about to go was the only part
-   that snapped, while the body it opens rises over --d-rise.
-
-   Both are placed in the same cell explicitly, so ::before appearing first in
-   source order does not take the row's opening column. The vertical bar lies
-   down onto the horizontal one on open: the plus becomes a minus by rotating,
-   and the same gesture reversed reopens it.
-
-   currentColor, so the marker follows the head through hover and active
-   instead of holding a colour of its own. */
 .console-tool-head::before,
 .console-tool-head::after {
   grid-column: 3;
@@ -1050,11 +1012,7 @@
   height: 1px;
   background: currentColor;
   content: '';
-  transition: transform var(--d-signature) var(--ease-out);
-}
-
-.console-tool-head::after {
-  transform: rotate(90deg);
+  
 }
 
 .console-tool-head:hover {
@@ -1064,10 +1022,6 @@
 .console-tool-head:active {
   background: var(--blue-tint);
   color: var(--blue-active);
-}
-
-.is-open > .console-tool-head::after {
-  transform: rotate(0deg);
 }
 
 .console-tool-name {
@@ -1119,9 +1073,7 @@
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
-  transition:
-    border-color var(--d-instant) var(--ease-out),
-    background-color var(--d-instant) var(--ease-out);
+  transition: border-color var(--motion) linear, background-color var(--motion) linear;
 }
 
 .console-args:hover {
@@ -1431,7 +1383,6 @@
     background: transparent;
     color: currentColor;
     font-size: 13px;
-    transform: none;
   }
 
   .relation-idle .relation-mark::before {
@@ -1645,77 +1596,9 @@
   font-size: var(--fs-meta);
 }
 
-/* ---- Motion -------------------------------------------------------------
-
-   The scratchpad had none. Only colour transitions, and once the palette went
-   greyscale those became changes between two near-identical greys — motion in
-   name only.
-
-   It does not get the home page's vocabulary wholesale. That page runs a 12s
-   story on a loop because it is arguing something to a visitor; this one is an
-   instrument someone is using, so every movement here is tied to an event the
-   learner caused. Nothing loops, nothing plays on a timer.
-
-   Two moments earn it. A line arriving, because the learner just wrote it. And
-   a verdict landing, because that is the page changing its mind about the work
-   — 23_PRIMER_REDESIGN_SPEC.md section 3.1. */
-
-@keyframes step-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* Settles rather than pops: down 5px and slightly contracted, because a
-   verdict arriving should read as the page concluding, not as a notification. */
-@keyframes verdict-land {
-  from { opacity: 0; transform: translateY(-5px); }
-  to   { opacity: 1; transform: none; }
-}
-
-.scratch-shell .step {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-}
-
-/* Each verdict state is its own rule, so switching between them changes the
-   animation-name and the keyframes re-fire. relation-idle is excluded: it is
-   the state a line is born in, and the row is already arriving under step-in. */
-.scratch-shell .relation-sound,
-.scratch-shell .relation-broken,
-.scratch-shell .relation-uncertain,
-.scratch-shell .relation-unreadable,
-.scratch-shell .relation-downstream {
-  animation: verdict-land var(--d-signature) var(--ease-draw) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .step,
-  .scratch-shell .relation-sound,
-  .scratch-shell .relation-broken,
-  .scratch-shell .relation-uncertain,
-  .scratch-shell .relation-unreadable,
-  .scratch-shell .relation-downstream {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ---- Hover states the greyscale remap flattened --------------------------
-
-   Collapsing the palette turned two interactive selectors into no-ops. Both
-   signalled hover by moving `color` to --blue, and --blue now resolves to the
-   same ink they already were: measured delta 0 on colour and 0 on background,
-   across the six tool rows and the activity disclosure. They are real buttons
-   on the surface the WebMCP criterion is judged on, and they had no pointer or
-   keyboard feedback at all.
-
-   05 #32 requires every interactive selector to define hover, focus-visible
-   and active. With no colour left to change, the feedback is a ground tint and
-   a drawn underline — the same idiom as the home page. */
-
 .scratch-shell .console-tool-head,
 .scratch-shell .session-details > summary {
-  transition: background-color var(--d-instant) var(--ease-out);
+  transition: background-color var(--motion) linear;
 }
 
 .scratch-shell .console-tool-head:hover,
@@ -1742,84 +1625,7 @@
   height: 1px;
   background: currentColor;
   content: '';
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--d-sweep) var(--ease-sweep);
-}
-
-.scratch-shell .console-tool-head:hover .console-tool-name::after,
-.scratch-shell .console-tool-head:focus-visible .console-tool-name::after {
-  transform: scaleX(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* The states remain; only their travel goes. */
-  .scratch-shell .console-tool-name::after {
-    transition: none;
-  }
-}
-
-/* ---- The remaining surfaces arrive --------------------------------------
-
-   Everything the page says back was still appearing instantly: the policy
-   notice, an agent's annotation, a proposed replacement, the round banner, and
-   the receipt. Each of these is the page responding to something the learner
-   or an agent just did, so each should arrive rather than be found already
-   there.
-
-   All of them are inserted into the DOM on a state change, so a mount
-   animation is the whole mechanism — no JavaScript, and nothing to keep in
-   sync with React. */
-
-/* The policy notice concludes something about the learner, so it settles the
-   way a verdict does. */
-.scratch-shell .refusal {
-  animation: verdict-land var(--d-signature) var(--ease-draw) both;
-}
-
-/* An annotation and a proposal are both text arriving beside a line, so they
-   rise the way a written line does. */
-.scratch-shell .step-note,
-.scratch-shell .proposal,
-.scratch-shell .round-banner {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-}
-
-/* The receipt is the thesis object, and it is a list of claims rather than one
-   statement — so the claims arrive in sequence, the way the derivation rows do
-   on the home page. nth-child is safe here: receipt-claims contains only li,
-   all of them claims. */
-.scratch-shell .receipt {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-}
-
-.scratch-shell .receipt-claims > li {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-}
-
-.scratch-shell .receipt-claims > li:nth-child(1) { animation-delay: calc(var(--stagger) * 1); }
-.scratch-shell .receipt-claims > li:nth-child(2) { animation-delay: calc(var(--stagger) * 2); }
-.scratch-shell .receipt-claims > li:nth-child(3) { animation-delay: calc(var(--stagger) * 3); }
-.scratch-shell .receipt-claims > li:nth-child(4) { animation-delay: calc(var(--stagger) * 4); }
-
-/* The limits line arrives last, after the claims it qualifies. */
-.scratch-shell .receipt-limits {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-  animation-delay: calc(var(--stagger) * 5);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .refusal,
-  .scratch-shell .step-note,
-  .scratch-shell .proposal,
-  .scratch-shell .round-banner,
-  .scratch-shell .receipt,
-  .scratch-shell .receipt-claims > li,
-  .scratch-shell .receipt-limits {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
+  
 }
 
 /* A line that has just been rewritten.
@@ -1832,42 +1638,9 @@
    The Tex node is keyed on the expression, so React remounts it on any change
    and this fires. It rises further than a first arrival, because a rewrite is
    a larger event than a line being added. */
-@keyframes rewrite-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: none; }
-}
 
 .scratch-shell .step-latex > * {
   display: inline-block;
-  animation: rewrite-in var(--d-rise) var(--ease-draw) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .step-latex > * {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ---- The relation track draws ------------------------------------------
-
-   The home page draws its mark and later retracts it. Here the equivalent —
-   the vertical track linking one checked line to the next — simply appeared
-   the instant a verdict landed. It is the chain of reasoning, and it was the
-   only part of the verdict that did not arrive.
-
-   The two segments meet at the relation mark: ::before runs from the row above
-   down to it, ::after from it down to the row below. So they draw outward from
-   the mark, which is where the conclusion is — the connection forming from the
-   judgement rather than sweeping past it.
-
-   Each verdict state is its own selector, so switching from relation-idle
-   changes the animation-name and this fires. */
-
-@keyframes track-down {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
 }
 
 .scratch-shell .step:has(.relation-sound)::before,
@@ -1876,77 +1649,7 @@
 .scratch-shell .step:has(.relation-unreadable)::before,
 .scratch-shell .step:has(.relation-downstream)::before {
   /* Upward from the mark, so it grows back toward the line it follows from. */
-  transform-origin: bottom center;
-  animation: track-down var(--d-signature) var(--ease-draw) both;
 }
 
-.scratch-shell .step:has(.relation-sound)::after,
-.scratch-shell .step:has(.relation-broken)::after,
-.scratch-shell .step:has(.relation-uncertain)::after,
-.scratch-shell .step:has(.relation-unreadable)::after,
-.scratch-shell .step:has(.relation-downstream)::after {
-  transform-origin: top center;
-  animation: track-down var(--d-signature) var(--ease-draw) both;
-}
+@
 
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .step::before,
-  .scratch-shell .step::after {
-    animation: none;
-    transform: none;
-  }
-}
-
-/* The reason follows the verdict.
-
-   Everything else in a landed verdict moves — the row, the expression, the
-   label, the track — but the detail line, which carries the counterexample or
-   the difference, simply appeared. So the page stated its conclusion with
-   motion and then produced the evidence for it without any.
-
-   It settles like the verdict does, one beat later: the conclusion first, then
-   why. The delay is what makes it read as support rather than as a second,
-   competing announcement. */
-.scratch-shell .step-detail {
-  animation: verdict-land var(--d-signature) var(--ease-draw) both;
-  animation-delay: 120ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .step-detail {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ---- The console answers ------------------------------------------------
-
-   Two changes in the margin are direct responses to a click and had no motion
-   at all: the body of a tool row when it is expanded, and the envelope that
-   comes back from running one.
-
-   The second matters more. A returned envelope is a verdict from a tool — the
-   same kind of event as a verdict on a line — so it settles the same way. The
-   expanded body is disclosed content, so it rises like anything else being
-   revealed.
-
-   The persistent labels around them stay still. They are not answers to
-   anything. */
-
-.scratch-shell .console-tool-body {
-  animation: step-in var(--d-rise) var(--ease-draw) both;
-}
-
-.scratch-shell .console-output {
-  animation: verdict-land var(--d-signature) var(--ease-draw) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scratch-shell .console-tool-body,
-  .scratch-shell .console-output {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}

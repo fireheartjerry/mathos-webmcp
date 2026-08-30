@@ -77,6 +77,40 @@ function collectSymbols(json: unknown, found = new Set<string>()): Set<string> {
  *                          typo or an attempt to smuggle in a free symbol, and both
  *                          should be reported rather than silently evaluated.
  */
+/**
+ * Strips a leading line label such as `y =`, `dy/dx =` or `\frac{dy}{dx} =`.
+ *
+ * The scratchpad tells the learner to "write y in terms of x" and that a line may
+ * be "its derivative", so the first two things anyone types are `y = ...` and
+ * `dy/dx = ...`. Both used to be rejected with "This problem only uses x. Found
+ * y"' - the interface refusing its own instruction.
+ *
+ * A label is a name for the line, not part of the expression. It is only stripped
+ * when the name is NOT one of the problem's variables, so a genuine constraint like
+ * `x = 2` is left alone and still judged on its merits.
+ */
+export function stripLineLabel(input: string, allowedVariables: readonly string[]): string {
+  const patterns: RegExp[] = [
+    // \frac{dy}{dx} =   and  \dfrac{d y}{d x} =
+    /^\s*\\d?frac\s*\{\s*d\s*([A-Za-z])\s*\}\s*\{\s*d\s*([A-Za-z])\s*\}\s*=(?!=)/,
+    // dy/dx =
+    /^\s*d\s*([A-Za-z])\s*\/\s*d\s*([A-Za-z])\s*=(?!=)/,
+    // y =   /  f'(x) =   /  y'' =
+    /^\s*([A-Za-z])\s*(?:'{1,2})?\s*(?:\(\s*[A-Za-z]\s*\))?\s*=(?!=)/,
+  ]
+  for (const re of patterns) {
+    const m = re.exec(input)
+    if (!m) continue
+    const name = m[1]
+    // Never strip when the name is a variable of the problem: `x = 2` is a claim,
+    // not a label, and silently deleting it would hide the learner's real input.
+    if (allowedVariables.includes(name)) continue
+    const rest = input.slice(m[0].length).trim()
+    if (rest) return rest
+  }
+  return input
+}
+
 export function parseExpression(latex: unknown, allowedVariables: readonly string[]): ParseResult {
   if (typeof latex !== 'string') {
     return { ok: false, code: 'empty', message: 'Enter an expression.' }
@@ -89,9 +123,11 @@ export function parseExpression(latex: unknown, allowedVariables: readonly strin
     return { ok: false, code: 'too_long', message: `Keep this under ${MAX_INPUT_CHARS} characters.` }
   }
 
+  const body = stripLineLabel(trimmed, allowedVariables)
+
   let expr: BoxedExpression
   try {
-    expr = computeEngine().parse(trimmed)
+    expr = computeEngine().parse(body)
   } catch {
     return { ok: false, code: 'parse_error', message: 'That expression could not be read.' }
   }
