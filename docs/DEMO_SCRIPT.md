@@ -16,25 +16,42 @@ rest for held verdicts. Re-count with the command in "Timing" below after any ed
 - Keep the pointer still unless it is explaining something.
 - Say nothing the page cannot be seen doing.
 
-## The picture already exists
+## The video is assembled, not filmed
 
-`docs/images/demo.mp4` is a real screencast of the production build being driven through
-the beats below by its own tools — nothing staged for the camera. **2:43 long**, against a
-2:37 narration and the 3:00 limit, so the voice fits with margin. Produced by:
+The submission video is built by a **Remotion** composition in [`video/`](../video/) from
+three things, none of them staged:
+
+1. **The picture** — `scripts/record-demo.mjs` drives the *production build* through its
+   own WebMCP tools and captures the screen. Every state change in it went through
+   `executeTool`; nothing is mocked for the camera.
+2. **The voice** — `scripts/build-narration.ps1` synthesises `docs/narration.json` offline,
+   one file per beat, each measured against its own time budget.
+3. **The composition** — `video/src/Demo.tsx` keeps the screencast as the subject and adds
+   a caption carrying the sentence being spoken plus a quiet marker naming the beat. Black
+   and white, one serif, because the product is.
 
 ```bash
-pnpm build && npx vinext start --port 3400
-# open http://localhost:3400/learn in the flagged Chrome and make that tab active
-node scripts/record-demo.mjs            # FPS=6 HOLD_SCALE=7 for a full-length take
+FPS=6 HOLD_SCALE=8.5 node scripts/record-demo.mjs     # picture
+pwsh -File scripts/build-narration.ps1                # voice
+cd video && npx remotion render src/index.ts Demo out/demo.mp4 --concurrency=4   --browser-executable="C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
 
-So the remaining work is a **voice track**, not a screen recording. Read the narration
-below over it, or re-record the picture with different holds if a beat needs longer.
+See [`video/README.md`](../video/README.md) for the full rebuild, and for how to swap the
+synthetic voice for a human one without touching any code.
 
-Two things that caught the first attempt out, both now handled in the script: CDP's
-screencast only emits frames when the page *paints*, and this product has no animation,
-so a first take compressed the whole demo into four seconds — frames are now captured on
-a timer. And a background tab does not paint at all, so the tab must be active.
+Three things caught earlier attempts out, all now handled:
+
+- CDP's screencast only emits frames when the page **paints**, and this product has no
+  animation — a first take compressed the whole demo into four seconds. Frames are now
+  captured on a timer.
+- A background tab does not paint at all. The tab must be active.
+- A first full-length take ran 2:15 against a 2:37 narration, which would have run the
+  voice off the end of the picture. `HOLD_SCALE` stretches the beats; 8.5 gives 2:43.
+
+The narration below is the older, longer script, kept because it is the better piece of
+writing and worth reading if the video is ever re-cut with more beats. What is actually
+spoken in the current video is `docs/narration.json`, which is aligned to the beats that
+were filmed.
 
 ## Capture setup
 

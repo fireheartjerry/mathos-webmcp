@@ -16,7 +16,7 @@ Last checked 2026-08-30.
 | Open source licence, detectable at the top of the repo page | **DONE.** GitHub's own detector reports `MIT` for this repository. |
 | Repository presents itself | **DONE.** Description, homepage and six topics set; a public repo with none of these reads as unfinished. |
 | Working live project at a URL judges can test | **BLOCKED — owner only, and it is a visibility setting, not a bug.** The 401 is served by OpenAI Sites' own dispatch layer — the response body loads `/_sites/dispatch-assets/401-petbouncer-black.gif` and the OpenAI logo, which is the *not shared publicly* gate, not this application. Judges in ChatGPT's in-app browser would meet the same gate. The build artifact is correctly formed: `dist/.openai/hosting.json` is present, which the Sites plugin requires. **The deployed build is also stale**, predating the fix for a production build that did not compile, so it needs republishing rather than merely unlocking. |
-| Video demo, under 3 minutes, public on YouTube, with audio | **HALF DONE — the picture exists.** `docs/images/demo.mp4` is a real screencast of the production build driven through the demo beats by its own tools, reproducible with `node scripts/record-demo.mjs`. What remains is a **voice track and the upload**, not a screen recording. Narration is in [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md), counted at 394 words (~2:38). |
+| Video demo, under 3 minutes, public on YouTube, with audio | **BUILT — needs uploading.** A complete 2:43 video with narration, assembled by a Remotion composition in `video/` from a real screencast of the production build driven through its own tools, plus a synthesised, beat-aligned voice track. Under the 3:00 limit. What remains is the **YouTube upload**, and optionally re-recording the voice in a human one — which needs no code change, only seven replacement WAVs. |
 | Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
 | Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
@@ -42,7 +42,7 @@ Last checked 2026-08-30.
 " https://mathos-second-try.fireheartjerry.chatgpt.site/learn
    ```
    It must print `200`. Anything else is what a judge will see.
-2. **Record narration** over `docs/images/demo.mp4` using the script in `DEMO_SCRIPT.md`, then upload publicly to YouTube. The picture is already captured; re-run `scripts/record-demo.mjs` if a beat needs a different length.
+2. **Upload `video/out/demo.mp4` to YouTube**, public. It already has narration. If you would rather use your own voice, record seven files at the lengths in `docs/narration.json`, drop them into `video/public/` as `seg00.wav`…`seg06.wav`, and re-render.
 3. **Flip the repository to public** — see the timing warning.
 4. Fill in the Devpost form by pasting from [`DEVPOST_FORM.md`](DEVPOST_FORM.md).
 

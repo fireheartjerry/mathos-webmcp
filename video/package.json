@@ -1,0 +1,17 @@
+{
+  "name": "second-try-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Remotion composition for the Second Try demo video. Kept out of the app's package.json so `pnpm install` at the root stays fast for anyone reviewing the source.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Demo out/demo.mp4 --concurrency=2"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.400",
+    "remotion": "4.0.400",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  }
+}
