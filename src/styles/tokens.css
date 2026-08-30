@@ -30,6 +30,13 @@
 }
 
 :root {
+  /* Opt out of browser-forced dark inversion.
+     The palette here is black and white by design and its contrast is measured -
+     5.02:1 on the muted grey. A browser that force-inverts an undeclared page would
+     throw those measurements away and repaint a design that took real work to make
+     quiet. Declaring the scheme is how a page says it has already decided. */
+  color-scheme: light;
+
   /* The only duration in the product. Colour and opacity only; nothing moves. */
   --motion: 80ms;
   /* Proof Margin surfaces */
