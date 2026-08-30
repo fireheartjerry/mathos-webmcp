@@ -38,7 +38,8 @@ https://github.com/fireheartjerry/mathos-webmcp              (source, MIT)
 
 ## Video demo
 
-YouTube URL, public, under three minutes, with audio. Script: `docs/DEMO_SCRIPT.md`.
+Upload [`docs/video/second-try-demo.mp4`](video/second-try-demo.mp4) — 2:44, 1920×1080, with
+narration — to YouTube as **public**, then paste the URL here.
 
 ---
 

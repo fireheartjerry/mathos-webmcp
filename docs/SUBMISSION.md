@@ -16,7 +16,7 @@ Last checked 2026-08-30.
 | Open source licence, detectable at the top of the repo page | **DONE.** GitHub's own detector reports `MIT` for this repository. |
 | Repository presents itself | **DONE.** Description, homepage and six topics set; a public repo with none of these reads as unfinished. |
 | Working live project at a URL judges can test | **BLOCKED — owner only, and it is a visibility setting, not a bug.** The 401 is served by OpenAI Sites' own dispatch layer — the response body loads `/_sites/dispatch-assets/401-petbouncer-black.gif` and the OpenAI logo, which is the *not shared publicly* gate, not this application. Judges in ChatGPT's in-app browser would meet the same gate. The build artifact is correctly formed: `dist/.openai/hosting.json` is present, which the Sites plugin requires. **The deployed build is also stale**, predating the fix for a production build that did not compile, so it needs republishing rather than merely unlocking. |
-| Video demo, under 3 minutes, public on YouTube, with audio | **BUILT — needs uploading.** A complete 2:43 video with narration, assembled by a Remotion composition in `video/` from a real screencast of the production build driven through its own tools, plus a synthesised, beat-aligned voice track. Under the 3:00 limit. What remains is the **YouTube upload**, and optionally re-recording the voice in a human one — which needs no code change, only seven replacement WAVs. |
+| Video demo, under 3 minutes, public on YouTube, with audio | **BUILT — needs uploading.** [`docs/video/second-try-demo.mp4`](video/second-try-demo.mp4): 1920×1080, H.264 + AAC, **2:44**, 5.7MB, audio normalised to −16 LUFS. Assembled by the Remotion composition in `video/` from a real screencast of the production build driven through its own tools, plus a beat-aligned narration. Under the 3:00 limit. What remains is the **YouTube upload**. Swapping the synthetic voice for a human one needs seven replacement WAVs and no code change. |
 | Text description | **DONE.** [`DEVPOST_FORM.md`](DEVPOST_FORM.md) holds every field paste-ready: name, elevator pitch (169 of 200 characters, counted), Built With, links, and the full description covering all four points the rules require. |
 | Newness documentation | **Ready** — history plus `docs/overnight-audit/` distinguish prior work from this challenge's additions. |
 | Builds and runs | **Ready** — `pnpm build` succeeds and 364 tests pass with a clean typecheck. |
@@ -42,7 +42,7 @@ Last checked 2026-08-30.
 " https://mathos-second-try.fireheartjerry.chatgpt.site/learn
    ```
    It must print `200`. Anything else is what a judge will see.
-2. **Upload `video/out/demo.mp4` to YouTube**, public. It already has narration. If you would rather use your own voice, record seven files at the lengths in `docs/narration.json`, drop them into `video/public/` as `seg00.wav`…`seg06.wav`, and re-render.
+2. **Upload `docs/video/second-try-demo.mp4` to YouTube**, public. It already has narration and normalised audio. If you would rather use your own voice, record seven files at the lengths in `docs/narration.json`, drop them into `video/public/` as `seg00.wav`…`seg06.wav`, and re-render.
 3. **Flip the repository to public** — see the timing warning.
 4. Fill in the Devpost form by pasting from [`DEVPOST_FORM.md`](DEVPOST_FORM.md).
 
