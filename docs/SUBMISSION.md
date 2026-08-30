@@ -82,7 +82,8 @@ concept"*
 - Three problem families (product, chain, quotient), each a parameterised derivation
   with its own diagnosable error modes, so `list_problem_families` and
   `new_problem(familyId)` lead somewhere.
-- 343 tests, typecheck clean, production build green.
+- 364 tests, typecheck clean, production build green, zero console errors across the
+  judged journey, and no accessibility problem found by a sweep of both pages.
 - Still narrow by choice: one topic, session-scale state. Said plainly rather than hidden.
 
 **Potential Impact** — *"a credible, specific case for solving a real problem for a real

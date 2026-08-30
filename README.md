@@ -313,7 +313,7 @@ Full transcript with the probe code and exact return values:
 ```bash
 pnpm install
 pnpm dev        # local Sites-compatible development server
-pnpm test       # 226 tests
+pnpm test       # the full suite
 pnpm typecheck  # TypeScript diagnostics
 pnpm build      # Sites-compatible Cloudflare Worker build
 
