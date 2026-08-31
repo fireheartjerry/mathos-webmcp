@@ -210,16 +210,60 @@ maintenance manuals use. The rules that bite here:
 segments, so a rewrite that no longer fits is a number rather than a surprise at render
 time.
 
+## The camera
+
+The film is not a deck with a screenshot in the middle. The product fills the frame and a
+camera moves over it.
+
+The camera is not hand-placed. `record-demo.mjs` measures the bounding box of the region
+each beat is about, at capture time, and writes it to `video/public/beats.json`.
+`Demo.tsx` turns those rectangles into a zoom and a centre. Measuring rather than
+hard-coding means the camera cannot drift off the subject when the layout changes, and a
+selector that stops matching is reported at capture time rather than discovered in the
+finished film.
+
+Two rules decide the framing:
+
+- **Width drives the zoom, not height.** Several regions are taller than the viewport
+  (the console is 894 CSS pixels in an 800-pixel one), so fitting their height would
+  demand a zoom below 1 and pull back to show background around the picture. An earlier
+  cut took `min(byWidth, byHeight)` floored at 1.06, and could pan only 115 of the 1920
+  pixels the console beat needed.
+- **The ceiling is 1.5.** Past that the source is being upscaled rather than framed.
+
+Moves are springs, so a move interrupted by the next beat continues from where it was
+instead of snapping back.
+
+## Resolution
+
+The page is captured at **2560x1600**: a 1280x800 CSS viewport at `deviceScaleFactor: 2`.
+Everything downscales into a 1920x1080 or 2560x1440 frame, so the picture is sharp even
+when the camera is at its 1.5x limit.
+
+Two traps, both now checked rather than remembered:
+
+- **Emulation overrides belong to the CDP session that set them.** A prep script that set
+  the pixel ratio and then closed its socket left the tab at 1x, and the take was captured
+  at 1280x800. `record-demo.mjs` sets the viewport itself.
+- **Chrome clamps a screenshot to the browser window.** A 1400px window silently produced
+  1.5x instead of 2x. The recorder now takes one probe frame, compares it to what was
+  asked for, and refuses to record a take at the wrong resolution, naming the window size
+  to relaunch with.
+
 ## The voice
 
-`en-US-AndrewMultilingualNeural`, through Microsoft Edge's neural voices. Free, and it
-needs no API key and no account. The earlier track used Windows SAPI (`Microsoft Zira
-Desktop`), a concatenative voice that sounded like one.
+**Kokoro-82M**, voice `am_michael`, running locally on CPU. Open weights, no API key, no
+account, and nothing leaves the machine.
+
+Three voices were tried in order. Windows SAPI (`Microsoft Zira Desktop`) is a
+concatenative voice and sounded like one. Microsoft Edge's neural voices through
+`edge-tts` are much better but still read as a screen reader. Kokoro is the first of the
+three that sounds like a person reading a script.
 
 ```bash
-pip install edge-tts
-node scripts/narrate.mjs --measure   # spoken vs beat length, writes nothing
-node scripts/narrate.mjs             # writes video/public/seg00.wav ... seg06.wav
+pip install kokoro soundfile
+python scripts/narrate.py --measure   # spoken vs beat length, writes nothing
+python scripts/narrate.py             # writes video/public/seg00.wav ... seg06.wav
 ```
 
 Each segment is rendered at its natural rate and then padded to its beat length. Padding

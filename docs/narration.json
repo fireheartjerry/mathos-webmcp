@@ -1,7 +1,9 @@
 {
-  "note": "Narration for the beats in scripts/record-demo.mjs. Built by scripts/narrate.mjs with edge-tts, which needs no API key. Each segment starts when its beat starts and is padded to the beat length, so speech never runs into the next beat. Written to ASD-STE100 rules: no sentence over 25 words, no em-dash, no semicolon, active voice, one new fact per sentence.",
-  "voice": "en-US-AndrewMultilingualNeural",
-  "rate": "-4%",
+  "engine": "kokoro-82M (open weights, local, no API key)",
+  "voice": "am_michael",
+  "langCode": "a",
+  "speed": 0.95,
+  "note": "Narration for the beats in scripts/record-demo.mjs. Built by scripts/narrate.py with Kokoro-82M running locally. Each segment starts when its beat starts and is padded to the beat length, so speech never runs into the next beat. Written to ASD-STE100 rules: no sentence over 25 words, no em-dash, no semicolon, active voice, one new fact per sentence.",
   "segments": [
     {
       "beat": "setup",
@@ -45,6 +47,5 @@
       "durationSeconds": 28.1,
       "text": "The page also tests this browser. It ran seven WebMCP features here, just now. Three of them work. Chrome accepts two of them and then ignores them. One is missing from Chrome completely. The page reports what the browser does, not what the specification promises. Origin scoping is one of the two. A page that trusted it would ship a security promise the browser does not keep."
     }
-  ],
-  "pitch": "+0Hz"
+  ]
 }

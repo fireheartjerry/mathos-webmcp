@@ -30,6 +30,10 @@ const FRAMES = process.env.FRAMES ?? '.demo-frames'
 // docs/DEMO_SCRIPT.md (394 words, about 2:38 spoken) rather than the ~20s a bare take
 // produces.
 const HOLD = Number(process.env.HOLD_SCALE ?? 1)
+const VIEWPORT_W = Number(process.env.VIEWPORT_W ?? 1280)
+const VIEWPORT_H = Number(process.env.VIEWPORT_H ?? 800)
+/** Device pixel ratio. 2 gives a 2560x1600 source for a 1280x800 page. */
+const DPR = Number(process.env.DPR ?? 2)
 
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
 const page = targets.find((t) => t.type === 'page' && t.url.includes(URL_.replace(/^https?:\/\//, '').split('/')[0] + '/learn'))
@@ -80,6 +84,12 @@ await send('Runtime.enable')
 // Focus emulation and an explicit lifecycle state say the same thing to the renderer, and
 // they are properties of this CDP session rather than of the desktop.
 for (const [method, params] of [
+  // Set the viewport and the pixel ratio here, not in a helper script. Emulation
+  // overrides belong to the CDP session that set them, so a prep script that closed its
+  // socket left the tab back at 1x and the take was captured at 1280x800 instead of
+  // 2560x1600. The window must be large enough to hold the result: Chrome clamps the
+  // screenshot to the window, which is why a 1400px window silently produced 1.5x.
+  ['Emulation.setDeviceMetricsOverride', { width: VIEWPORT_W, height: VIEWPORT_H, deviceScaleFactor: DPR, mobile: false }],
   ['Emulation.setFocusEmulationEnabled', { enabled: true }],
   ['Page.setWebLifecycleState', { state: 'active' }],
   ['Page.bringToFront', {}],
@@ -92,16 +102,76 @@ if (visibility !== 'visible') {
   process.exit(1)
 }
 
-// The beats. Each returns quickly; the pauses are what make it watchable.
+{
+  const probe = Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64')
+  const got = { w: probe.readUInt32BE(16), h: probe.readUInt32BE(20) }
+  const want = { w: VIEWPORT_W * DPR, h: VIEWPORT_H * DPR }
+  console.log(`capturing at ${got.w}x${got.h} (asked for ${want.w}x${want.h})`)
+  if (got.w < want.w) {
+    console.error('The browser window is too small to hold the requested capture. Relaunch Chrome')
+    console.error(`with --window-size=${Math.ceil(want.w / 2) + 240},${Math.ceil(want.h / 2) + 240} or larger.`)
+    process.exit(1)
+  }
+}
+
+/**
+ * The beats. Each returns quickly; the pauses are what make it watchable.
+ *
+ * `focus` names the region of the page this beat is about, as CSS selectors tried in
+ * order. The recorder measures whichever one matches and writes the rectangle to
+ * beats.json, so the composition can move a camera over the real interface instead of
+ * showing a fixed wide shot for three minutes. Measuring at capture time rather than
+ * hard-coding coordinates means the camera cannot drift when the layout changes.
+ */
 const BEATS = [
-  ['open on a derivation with a wrong line, checked', 'return await window.__demo.setup()', 3200],
-  ['let the marked line sit', 'return 1', 1400],
-  ['show the whole tool surface', 'return await window.__demo.showConsole()', 2600],
-  ['open the mathematics group', 'return await window.__demo.openGroup("Mathematics")', 2100],
-  ['the agent repairs the line and reaches the answer', 'return await window.__demo.repair()', 3000],
-  ['close the round; the receipt appears', 'return await window.__demo.receipt()', 3600],
-  ['probe what this browser really does', 'return await window.__demo.probe()', 3300],
+  {
+    name: 'setup', label: 'open on a derivation with a wrong line, checked',
+    run: 'return await window.__demo.setup()', hold: 3200,
+    focus: ['.step.is-broken', '.work .step:last-child', '.work'],
+  },
+  {
+    name: 'hold', label: 'let the marked line sit',
+    run: 'return 1', hold: 1400,
+    focus: ['.step.is-broken', '.work .step:last-child', '.work'],
+  },
+  {
+    name: 'console', label: 'show the whole tool surface',
+    run: 'return await window.__demo.showConsole()', hold: 2600,
+    focus: ['.agent-console'],
+  },
+  {
+    name: 'mathematics', label: 'open the mathematics group',
+    run: 'return await window.__demo.openGroup("Mathematics")', hold: 2100,
+    focus: ['.console-group.is-open', '.agent-console'],
+  },
+  {
+    name: 'repair', label: 'the agent repairs the line and reaches the answer',
+    run: 'return await window.__demo.repair()', hold: 3000,
+    focus: ['.work'],
+  },
+  {
+    name: 'receipt', label: 'close the round; the receipt appears',
+    run: 'return await window.__demo.receipt()', hold: 3600,
+    focus: ['.receipt', '.work'],
+  },
+  {
+    name: 'probe', label: 'probe what this browser really does',
+    run: 'return await window.__demo.probe()', hold: 3300,
+    focus: ['.console-platform', '.agent-console'],
+  },
 ]
+
+/** Reads the first selector that matches, in CSS pixels relative to the document. */
+const measure = (selectors) => evaluate(`
+  for (const sel of ${JSON.stringify(selectors)}) {
+    const el = document.querySelector(sel)
+    if (!el) continue
+    const r = el.getBoundingClientRect()
+    if (r.width < 40 || r.height < 24) continue
+    return { sel, x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) }
+  }
+  return null
+`)
 
 console.log('injecting the driver…')
 await evaluate(await (await import('node:fs/promises')).readFile('scripts/demo-driver.js', 'utf8'))
@@ -124,11 +194,24 @@ const capture = (async () => {
   }
 })()
 
-for (const [label, expr, hold] of BEATS) {
-  process.stdout.write(`  ${label}… `)
-  const result = await evaluate(expr)
-  await wait(Math.round(hold * HOLD))
-  console.log(typeof result === 'object' ? JSON.stringify(result).slice(0, 60) : 'ok')
+const timeline = []
+for (const beat of BEATS) {
+  process.stdout.write(`  ${beat.label}… `)
+  const startedFrame = frames.length
+  const startedMs = Date.now() - startedAt
+  const result = await evaluate(beat.run)
+  await wait(Math.round(beat.hold * HOLD))
+  // Measure after the hold, when the beat's own scrolling and opening have settled.
+  const focus = await measure(beat.focus)
+  timeline.push({
+    beat: beat.name,
+    startSeconds: startedMs / 1000,
+    endSeconds: (Date.now() - startedAt) / 1000,
+    startFrame: startedFrame,
+    endFrame: frames.length,
+    focus,
+  })
+  console.log(focus ? `${focus.sel} ${focus.width}x${focus.height}` : 'no focus region found')
 }
 recording = false
 await capture
@@ -164,10 +247,18 @@ mkdirSync('docs/images', { recursive: true })
 // through the render. Duration is unchanged; frames are duplicated to reach 30.
 execFileSync('ffmpeg', [
   '-y', '-framerate', effectiveFps.toFixed(4), '-i', `${FRAMES}/f%05d.png`,
-  '-vf', 'scale=1280:-2:flags=lanczos,format=yuv420p',
+  // No downscale. Frames arrive at the device pixel ratio the tab was given, so a 1280
+  // CSS-pixel viewport at deviceScaleFactor 2 yields a 2560-wide source. The previous
+  // take was captured at 1x and then displayed larger than life in the composition,
+  // which is the whole reason the picture looked soft.
+  '-vf', 'format=yuv420p',
   '-r', '30', '-fps_mode', 'cfr',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-movflags', '+faststart',
   OUT,
 ], { stdio: 'inherit' })
 rmSync(FRAMES, { recursive: true, force: true })
+if (process.env.BEATS_OUT) {
+  writeFileSync(process.env.BEATS_OUT, JSON.stringify({ fps: effectiveFps, encodedFps: 30, beats: timeline }, null, 2))
+  console.log('wrote', process.env.BEATS_OUT)
+}
 console.log('wrote', OUT)

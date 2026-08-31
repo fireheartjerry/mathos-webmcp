@@ -24,6 +24,7 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@babel/parser": "^8.0.4",
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
     "@openai/sites-vite-plugin": "0.2.0",
