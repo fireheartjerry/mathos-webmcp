@@ -415,6 +415,15 @@ Node **≥ 22.13** and **pnpm 11.10** — both are declared in `package.json` (`
 build. No API keys, no `.env`, no service to sign up for: the computer algebra engine runs
 in the page, and nothing this project does requires a server.
 
+These four commands were run against a **fresh clone of this repository**, not a working
+copy, because that is the only way to find out whether the instructions are complete.
+Doing that turned up one thing: `video/` is a separate package with its own
+`package.json`, deliberately outside the root install so reviewing the source does not
+pull down Remotion — and the root `tsconfig.json` was still trying to typecheck it, so
+`pnpm typecheck` failed on any machine that had not built the video. `video` is now
+excluded at the root and has its own `tsconfig.json`. If you want to render the video,
+`cd video && pnpm install`.
+
 ```bash
 pnpm install
 pnpm dev        # local Sites-compatible development server

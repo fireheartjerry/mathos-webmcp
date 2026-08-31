@@ -25,5 +25,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "dist", "experiments", ".sites-scaffold-temp"]
+  "exclude": ["node_modules", "dist", "experiments", "video", ".sites-scaffold-temp"]
 }
