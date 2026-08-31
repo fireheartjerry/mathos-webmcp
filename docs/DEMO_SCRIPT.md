@@ -195,6 +195,15 @@ limit before a single pause. Anything above roughly 400 words will not fit.
 `docs/video/second-try-demo.mp4` — 1920×1080, H.264, AAC 48 kHz stereo, **2:44.1**
 (164.1 s against the rules' 180 s limit), 4920 frames, `faststart`.
 
+**Three bands, and they cannot collide.** The composition is a marker band, the
+screencast, and a caption band, with every offset derived from `MARKER_TOP`,
+`MARKER_BAND` and `VIDEO_HEIGHT`. The marker used to be placed independently, 44px from
+the top of the frame while the video began at 56px, which was invisible until a label was
+long enough to reach the video's left edge at x=370 - and one was: *"Agents may write. We
+withdrew the refusal."* ran straight across the product, on the beat that carries the
+whole argument. Found by extracting frames from the finished file rather than by watching
+it, which is the only way anyone was going to see it.
+
 Loudness was measured rather than assumed:
 
 ```bash

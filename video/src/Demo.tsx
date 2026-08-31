@@ -89,12 +89,21 @@ const RULE = '#e0e0e0'
 const MUTED = '#6f6f6f'
 const SERIF = "'STIX Two Text', Georgia, 'Times New Roman', serif"
 
-/** Layout, computed once so the picture and the caption cannot collide.
- *  1920x1080 frame; the 1280x800 screencast is 1.6:1. */
-const VIDEO_TOP = 56
+/** Layout, computed once so nothing can collide with the picture.
+ *  1920x1080 frame; the 1280x800 screencast is 1.6:1.
+ *
+ *  Three bands, top to bottom: the beat marker, the screencast, the caption. The marker
+ *  used to be positioned independently, at 44px from the top of the frame while the video
+ *  began at 56px - so on any beat whose label was long enough to reach the video's left
+ *  edge at x=370, the text ran across the product. "Agents may write. We withdrew the
+ *  refusal." did exactly that, over the beat carrying the whole thesis. The marker now has
+ *  a band of its own and the video starts below it. */
+const MARKER_TOP = 34
+const MARKER_BAND = 62
+const VIDEO_TOP = MARKER_TOP + MARKER_BAND
 const VIDEO_WIDTH = 1180
 const VIDEO_HEIGHT = Math.round((VIDEO_WIDTH / 1280) * 800)
-const CAPTION_TOP = VIDEO_TOP + VIDEO_HEIGHT + 36
+const CAPTION_TOP = VIDEO_TOP + VIDEO_HEIGHT + 30
 
 /** Eases in over `frames`, holds, then eases out — so nothing pops. */
 const fade = (local: number, total: number, frames = 10) =>
@@ -137,7 +146,16 @@ function Marker({ segment }: { segment: Segment }) {
   const frame = useCurrentFrame()
   const total = Math.round(segment.durationSeconds * FPS)
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'flex-start', padding: 44 }}>
+    <AbsoluteFill
+      style={{
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        paddingTop: MARKER_TOP,
+        paddingLeft: 44,
+        paddingRight: 44,
+        height: MARKER_TOP + MARKER_BAND,
+      }}
+    >
       <div
         style={{
           opacity: fade(frame, total, 8),
