@@ -15,6 +15,7 @@ test-results/
 .openai/
 .vercel/
 .sites-scaffold-temp/
+.superpowers/
 
 # The Remotion workspace builds and renders its own artifacts. The composition source
 # is tracked; its dependencies, staged assets and renders are not - a 6MB screencast
