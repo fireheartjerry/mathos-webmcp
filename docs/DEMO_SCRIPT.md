@@ -195,6 +195,37 @@ limit before a single pause. Anything above roughly 400 words will not fit.
 `docs/video/second-try-demo.mp4` — 1920×1080, H.264, AAC 48 kHz stereo, **2:44.1**
 (164.1 s against the rules' 180 s limit), 4920 frames, `faststart`.
 
+## The script is written to a standard
+
+Every line of narration follows ASD-STE100, the controlled English that aerospace
+maintenance manuals use. The rules that bite here:
+
+- No sentence over 25 words.
+- No em-dash and no semicolon.
+- Active voice, simple tenses, one new fact per sentence.
+- No hedging modals. `can`, `will` and `must` only.
+- One word for one thing, through the whole script.
+
+`scripts/narrate.mjs --measure` prints spoken length against beat length for all seven
+segments, so a rewrite that no longer fits is a number rather than a surprise at render
+time.
+
+## The voice
+
+`en-US-AndrewMultilingualNeural`, through Microsoft Edge's neural voices. Free, and it
+needs no API key and no account. The earlier track used Windows SAPI (`Microsoft Zira
+Desktop`), a concatenative voice that sounded like one.
+
+```bash
+pip install edge-tts
+node scripts/narrate.mjs --measure   # spoken vs beat length, writes nothing
+node scripts/narrate.mjs             # writes video/public/seg00.wav ... seg06.wav
+```
+
+Each segment is rendered at its natural rate and then padded to its beat length. Padding
+rather than time-stretching keeps the speech unhurried, and the silence lands at the end
+of a beat where a viewer is reading the held line anyway.
+
 **The picture is the current build.** The screencast is re-recorded whenever the product
 changes; an earlier cut still showed the platform list repeating one sentence under all
 seven rows, which the console had stopped doing. `record-demo.mjs` now encodes at the rate

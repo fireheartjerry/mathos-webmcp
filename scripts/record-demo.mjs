@@ -158,9 +158,14 @@ mkdirSync(FRAMES, { recursive: true })
 frames.forEach((b64, i) => writeFileSync(`${FRAMES}/f${String(i).padStart(5, '0')}.png`, Buffer.from(b64, 'base64')))
 
 mkdirSync('docs/images', { recursive: true })
+// Read the frames at the rate they were captured, then write a constant 30fps file.
+// Remotion's compositor seeks by frame position and fails on a variable or fractional
+// rate: a take written at 10.7788fps produced "No frame found at position ..." partway
+// through the render. Duration is unchanged; frames are duplicated to reach 30.
 execFileSync('ffmpeg', [
   '-y', '-framerate', effectiveFps.toFixed(4), '-i', `${FRAMES}/f%05d.png`,
   '-vf', 'scale=1280:-2:flags=lanczos,format=yuv420p',
+  '-r', '30', '-fps_mode', 'cfr',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-movflags', '+faststart',
   OUT,
 ], { stdio: 'inherit' })

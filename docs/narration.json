@@ -1,49 +1,50 @@
 {
-  "note": "Narration aligned to the beats in scripts/record-demo.mjs at HOLD_SCALE=8.5. Each segment starts when its beat starts, and must fit inside its own duration at roughly 150 words per minute or the track drifts away from the picture. Nothing here describes something the video does not show.",
-  "voice": "Microsoft Zira Desktop",
-  "rate": -1,
+  "note": "Narration for the beats in scripts/record-demo.mjs. Built by scripts/narrate.mjs with edge-tts, which needs no API key. Each segment starts when its beat starts and is padded to the beat length, so speech never runs into the next beat. Written to ASD-STE100 rules: no sentence over 25 words, no em-dash, no semicolon, active voice, one new fact per sentence.",
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "-4%",
   "segments": [
     {
       "beat": "setup",
       "startSeconds": 0,
       "durationSeconds": 27.2,
-      "text": "This is a mathematics scratchpad. The working on screen is real, and half finished. It has never been submitted anywhere, so no server has ever seen it. An agent has just asked the page to check it, and the page has marked the first line that stopped being true. Line three. Nothing after it is marked, because everything after it follows from a mistake."
+      "text": "This is a calculus scratchpad. A learner writes the working line by line. This work is half finished. No server has ever seen it, because nobody has submitted it. An agent asked the page to check the work. The page marked line three. It marked nothing after line three, because every later line follows from a mistake."
     },
     {
       "beat": "hold",
       "startSeconds": 27.2,
       "durationSeconds": 11.9,
-      "text": "That verdict did not come from a language model. It came from a computer algebra system running inside the page."
+      "text": "A language model did not write that verdict. A computer algebra system inside the page wrote it. The page owns the answer."
     },
     {
       "beat": "console",
       "startSeconds": 39.1,
       "durationSeconds": 22.1,
-      "text": "This is the whole WebMCP surface. Eighteen tools, nine that read and nine that write, grouped so that an agent, or a person, can see its shape and its size without clicking anything."
+      "text": "This is the whole WebMCP surface. It has eighteen tools. Nine tools read the page. Nine tools change it. The console groups them, so you can see the size of the surface without a click. Every group shows its own count. Each tool also says what it must not be used for."
     },
     {
       "beat": "mathematics",
       "startSeconds": 61.2,
       "durationSeconds": 17.9,
-      "text": "These four matter most. An agent can differentiate, evaluate and compare against the page's own engine before it writes anything to a learner's work."
+      "text": "These four tools do mathematics. An agent can differentiate an expression, evaluate it, and compare two expressions. It uses the same engine as the page. It can test its own answer before it writes to a learner's work."
     },
     {
       "beat": "repair",
       "startSeconds": 79.1,
       "durationSeconds": 25.5,
-      "text": "Now the agent repairs the line it broke, and finishes the answer. It is allowed to. This page used to refuse every agent write, and we withdrew the refusal, because a permission check in our own code never bound anything outside this page."
+      "text": "Now the agent repairs the line it broke. It then writes the final answer. The page allows this. Earlier, this page refused every agent write. We removed that refusal, because a permission check in our own code cannot bind an agent outside the page. The page records who wrote each line instead."
     },
     {
       "beat": "receipt",
       "startSeconds": 104.6,
       "durationSeconds": 30.6,
-      "text": "What replaces the refusal is on screen now. The round is closed, the unaided attempt is complete, and the page reports what it observed and who caused it. It also states what it does not establish. It does not claim anyone learned anything, and it says so in the same type size as everything else it claims."
+      "text": "The round is closed. The learner finished a second problem without help. The receipt reports what happened. It names who wrote each line, and how many checks ran. It also states what it does not prove. It does not prove that the learner understands the topic. It says so in the same size text as every other claim. It records how many times this session restarted, because a restart erases the rounds before it."
     },
     {
       "beat": "probe",
       "startSeconds": 135.2,
       "durationSeconds": 28.1,
-      "text": "And this is the part we are proudest of. Each of these seven verdicts was produced by executing the feature in this browser, just now. Three work. Two, origin scoping and cross origin reads, Chrome accepts and silently does not honour. We publish what the platform does not do."
+      "text": "The page also tests this browser. It ran seven WebMCP features here, just now. Three of them work. Chrome accepts two of them and then ignores them. One is missing from Chrome completely. The page reports what the browser does, not what the specification promises. Origin scoping is one of the two. A page that trusted it would ship a security promise the browser does not keep."
     }
-  ]
+  ],
+  "pitch": "+0Hz"
 }
