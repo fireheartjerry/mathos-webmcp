@@ -10,6 +10,12 @@ alongside the reasoning for changing it. These are *deliberately not updated*. A
 that gets quietly rewritten every time its findings are addressed is not an audit, and a
 changelog that only ever describes the present is not a changelog.
 
+Two redactions were made to those records before this repository went public, and neither
+touches a finding. One row of a workspace map named two sibling checkouts of Mathos' own
+private monorepo and said they hold live credentials — true, unrelated to this submission,
+and not something to publish the location of. And several reproduction commands hard-coded
+a local Windows user profile path, now `%TEMP%`. Both are marked where they occur.
+
 So several older documents here say the surface has **six tools**, or quote the page
 telling an agent *"Only the learner can write, edit, delete, or accept work."* Both were
 true when written. Neither is true now: the surface is eighteen tools, and that refusal

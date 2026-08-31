@@ -11,7 +11,7 @@ inference.
 ```
 "C:\Program Files\Google\Chrome\Application\chrome.exe" \
   --remote-debugging-port=9377 \
-  --user-data-dir="C:\Users\fireh\AppData\Local\Temp\claude\webmcp-probe-profile" \
+  --user-data-dir="%TEMP%\webmcp-probe-profile" \
   --enable-features=WebMCPTesting \
   --no-first-run --no-default-browser-check \
   http://localhost:3000/learn

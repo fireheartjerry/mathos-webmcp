@@ -19,7 +19,7 @@ Chrome 151 process on this machine on 2026-08-26 and reading the actual return v
 ```
 "C:\Program Files\Google\Chrome\Application\chrome.exe" \
   --remote-debugging-port=9333 \
-  --user-data-dir="C:\Users\fireh\AppData\Local\Temp\claude\webmcp-profile" \
+  --user-data-dir="%TEMP%\webmcp-profile" \
   --enable-features=WebMCPTesting \
   --no-first-run --no-default-browser-check \
   http://localhost:4322/learn
@@ -355,7 +355,7 @@ Every call below used `mc.executeTool(tool, JSON.stringify(args))`. Responses ve
   sidebar now reading "STAGE 01 PROVEN — The next nine are within reach."
 
 Screenshots saved at
-`C:\Users\fireh\AppData\Local\Temp\claude\C--Jerry-Important-Coding-Mathos\c2215034-5fbc-4409-bcfd-affbefcf9e1c\scratchpad\shots\`.
+a scratch directory outside the repository.
 
 Every mutation went through the React state machine and repainted. The shared-workspace claim holds
 in reality, not just on paper.
