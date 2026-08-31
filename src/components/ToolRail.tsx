@@ -10,6 +10,9 @@ export type ToolMode =
   | 'shape'
   | 'arrow'
   | 'frame'
+  | 'graph'
+  | 'geometry'
+  | 'matrix'
 
 type ToolRailProps = {
   mode: ToolMode
@@ -29,6 +32,9 @@ const creationTools: Array<{ mode: ToolMode; label: string; glyph: string; short
   { mode: 'eraser', label: 'Eraser', glyph: '◇', shortcut: 'E' },
   { mode: 'text', label: 'Text', glyph: 'T', shortcut: 'T' },
   { mode: 'equation', label: 'Math', glyph: '∫', shortcut: 'M' },
+  { mode: 'graph', label: 'Graph', glyph: 'ƒ', shortcut: 'G' },
+  { mode: 'geometry', label: 'Construct', glyph: '△', shortcut: 'C' },
+  { mode: 'matrix', label: 'Matrix', glyph: '▦', shortcut: 'X' },
   { mode: 'image', label: 'Image', glyph: '▧' },
   { mode: 'shape', label: 'Shape', glyph: '○', shortcut: 'S' },
   { mode: 'arrow', label: 'Arrow', glyph: '↗', shortcut: 'A' },

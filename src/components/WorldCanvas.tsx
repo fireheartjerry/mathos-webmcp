@@ -55,6 +55,84 @@ export default function WorldCanvas({
     const base = { id, rotation: 0, author: 'human' as const, opacity: 1 }
     let object: WorldObject | null = null
 
+    if (mode === 'graph') {
+      const equationId = crypto.randomUUID()
+      const graphId = crypto.randomUUID()
+      const equation: WorldObject = {
+        ...base,
+        id: equationId,
+        kind: 'equation',
+        latex: 'a(x^2-4x+3)',
+        color: '#171713',
+        bounds: { x: point.x, y: point.y - 60, width: 330, height: 48 },
+      }
+      const graph: WorldObject = {
+        ...base,
+        id: graphId,
+        kind: 'graph',
+        equationId,
+        xDomain: [-1, 5],
+        yDomain: [-2, 8],
+        color: '#7c5cff',
+        parameters: { a: 1 },
+        showTangentAt: 2,
+        shadeIntegral: [1, 3],
+        bounds: { x: point.x, y: point.y, width: 480, height: 330 },
+      }
+      run(makeAction('Created a live linked graph', [
+        { type: 'put', object: equation },
+        { type: 'put', object: graph },
+        { type: 'select', ids: [graphId] },
+      ]))
+      return
+    }
+
+    if (mode === 'geometry') {
+      object = {
+        ...base,
+        kind: 'geometry',
+        accent: '#7c5cff',
+        bounds: { x: point.x, y: point.y, width: 430, height: 330 },
+        primitives: [
+          { kind: 'point', id: 'A', at: { x: 66, y: 264 }, label: 'A', draggable: true },
+          { kind: 'point', id: 'B', at: { x: 360, y: 258 }, label: 'B', draggable: true },
+          { kind: 'point', id: 'C', at: { x: 208, y: 62 }, label: 'C', draggable: true },
+          { kind: 'polygon', id: 'triangle', points: ['A', 'B', 'C'] },
+          { kind: 'segment', id: 'base-segment', from: 'A', to: 'B' },
+          { kind: 'line', id: 'base-line', through: ['A', 'B'] },
+          { kind: 'midpoint', id: 'M', of: ['A', 'B'], label: 'M' },
+          { kind: 'circle', id: 'mid-circle', center: 'M', through: 'A' },
+          { kind: 'perpendicular', id: 'altitude', through: 'C', to: 'base-line' },
+          { kind: 'intersection', id: 'D', lines: ['base-line', 'altitude'], label: 'D' },
+          { kind: 'segment', id: 'altitude-segment', from: 'C', to: 'D' },
+          { kind: 'angle', id: 'angle-A', a: 'B', vertex: 'A', b: 'C' },
+          { kind: 'homothety', id: 'C2', center: 'M', source: 'C', factor: 0.55, label: 'C′' },
+        ],
+      }
+    }
+
+    if (mode === 'matrix') {
+      const vectors: WorldObject[] = [
+        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: 2, y: 1 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
+        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: -1, y: 2 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
+        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: 2.5, y: -1.4 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
+      ]
+      const matrix: WorldObject = {
+        ...base,
+        kind: 'matrix',
+        values: [[1, 0.8], [0, 1]],
+        sourceIds: vectors.map((vector) => vector.id),
+        accent: '#7c5cff',
+        bounds: { x: point.x, y: point.y, width: 500, height: 330 },
+      }
+      run(makeAction('Created a live matrix transformation', [
+        ...vectors.map((vector) => ({ type: 'put' as const, object: vector })),
+        { type: 'put', object: matrix },
+        { type: 'select', ids: [matrix.id] },
+      ]))
+      return
+    }
+
     if (mode === 'text') {
       object = { ...base, kind: 'text', text: 'Double-click to write', color: '#171713', fontSize: 24, bounds: { x: point.x, y: point.y, width: 230, height: 72 } }
     } else if (mode === 'equation') {
@@ -281,6 +359,8 @@ export default function WorldCanvas({
               object={object}
               selected={world.selection.includes(id)}
               previewOffset={offset}
+              world={world}
+              run={run}
               onPointerDown={handleObjectPointerDown}
               onDoubleClick={onEditObject}
             />

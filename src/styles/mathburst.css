@@ -310,6 +310,345 @@ button {
   font-size: 22px;
 }
 
+.math-equation-object {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.kind-graph,
+.kind-geometry,
+.kind-matrix {
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid rgba(23, 23, 19, 0.24);
+  box-shadow: 9px 11px 0 rgba(23, 23, 19, 0.08);
+}
+
+.live-graph,
+.live-geometry,
+.matrix-plane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.live-graph > svg,
+.live-geometry > svg,
+.matrix-plane > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.graph-paper,
+.geometry-paper,
+.matrix-paper {
+  fill: var(--paper);
+}
+
+.graph-grid {
+  stroke: rgba(23, 23, 19, 0.09);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-axis {
+  stroke: rgba(23, 23, 19, 0.58);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-curve {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-area {
+  fill: rgba(124, 92, 255, 0.16);
+  stroke: rgba(124, 92, 255, 0.42);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-tangent {
+  stroke: #f05f44;
+  stroke-width: 1.7;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-focus {
+  fill: var(--paper);
+  stroke: #f05f44;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-kicker,
+.graph-tick,
+.graph-area-label,
+.graph-value-label,
+.geometry-kicker,
+.matrix-kicker,
+.matrix-vector-label {
+  font-family: 'Fira Code', monospace;
+}
+
+.graph-kicker,
+.geometry-kicker,
+.matrix-kicker {
+  fill: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.11em;
+}
+
+.graph-tick {
+  fill: var(--muted);
+  font-size: 9px;
+}
+
+.graph-area-label {
+  fill: var(--agent);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.graph-value-label {
+  fill: var(--ink);
+  font: 9px/1 'Fira Code', monospace;
+  font-weight: 700;
+}
+
+.graph-formula {
+  position: absolute;
+  left: 136px;
+  top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 270px);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.graph-formula > span:first-child {
+  padding: 3px 5px;
+  color: var(--paper);
+  background: var(--ink);
+  font: 8px/1 'Fira Code', monospace;
+}
+
+.graph-formula .math {
+  white-space: nowrap;
+}
+
+.graph-parameter {
+  position: absolute;
+  left: 42px;
+  right: 18px;
+  bottom: 10px;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  align-items: center;
+  gap: 10px;
+  font: 9px/1 'Fira Code', monospace;
+  cursor: ew-resize;
+}
+
+.graph-parameter span {
+  color: var(--muted);
+}
+
+.graph-parameter b {
+  color: var(--agent);
+}
+
+.graph-parameter input {
+  width: 100%;
+  accent-color: var(--agent);
+  cursor: ew-resize;
+}
+
+.geometry-polygon {
+  fill: rgba(124, 92, 255, 0.08);
+  stroke: var(--ink);
+  stroke-width: 1.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-circle {
+  fill: none;
+  stroke: rgba(124, 92, 255, 0.62);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-line {
+  stroke: rgba(23, 23, 19, 0.22);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-segment {
+  stroke: var(--ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-angle {
+  fill: none;
+  stroke: #f05f44;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-point {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-point.is-draggable {
+  fill: var(--agent);
+  cursor: grab;
+  touch-action: none;
+}
+
+.geometry-point.is-draggable:active { cursor: grabbing; }
+.geometry-point.is-derived { fill: #f05f44; }
+
+.geometry-label,
+.geometry-angle-label {
+  fill: var(--ink);
+  font: 12px/1 'STIX Two Text', serif;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.geometry-angle-label {
+  fill: #f05f44;
+  font: 9px/1 'Fira Code', monospace;
+}
+
+.geometry-legend {
+  position: absolute;
+  left: 17px;
+  right: 17px;
+  bottom: 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.geometry-legend i {
+  width: 7px;
+  height: 7px;
+  background: var(--agent);
+  border-radius: 50%;
+}
+
+.geometry-legend b {
+  margin-left: auto;
+  color: var(--ink);
+}
+
+.matrix-lattice line {
+  stroke: rgba(124, 92, 255, 0.16);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.matrix-axis {
+  stroke: rgba(23, 23, 19, 0.42);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.matrix-source-vector {
+  stroke: var(--ink);
+  stroke-width: 1.7;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.matrix-result-vector {
+  stroke: var(--agent);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.matrix-source-head { fill: var(--ink); }
+.matrix-result-head { fill: var(--agent); }
+
+.matrix-vector-label {
+  fill: var(--agent);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.matrix-readout {
+  position: absolute;
+  right: 15px;
+  top: 40px;
+  width: 118px;
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Fira Code', monospace;
+}
+
+.matrix-name {
+  color: #aaa79d;
+  font-size: 9px;
+}
+
+.matrix-bracket {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding: 5px 8px;
+  border-left: 1px solid var(--paper);
+  border-right: 1px solid var(--paper);
+  text-align: center;
+  font-size: 15px;
+}
+
+.matrix-readout small {
+  color: var(--agent-soft);
+  font-size: 9px;
+}
+
+.matrix-readout em {
+  color: #8c8980;
+  font-size: 7px;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.matrix-key {
+  position: absolute;
+  right: 16px;
+  bottom: 13px;
+  display: grid;
+  gap: 4px;
+  font: 8px/1 'Fira Code', monospace;
+}
+
+.matrix-key span { color: var(--muted); }
+.matrix-key b { color: var(--agent); }
+
 .kind-frame {
   z-index: 0;
   border: 1px solid rgba(23, 23, 19, 0.44);
@@ -554,6 +893,27 @@ button {
 }
 
 .object-editor input:focus { border-color: var(--agent); }
+
+.object-editor.is-matrix-editor {
+  grid-template-columns: auto auto auto auto;
+}
+
+.matrix-editor-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px 72px;
+  gap: 5px;
+  padding: 3px 12px;
+  border-left: 1px solid #7b786f;
+  border-right: 1px solid #7b786f;
+}
+
+.matrix-editor-grid input {
+  width: 72px;
+  min-width: 0;
+  height: 32px;
+  text-align: center;
+}
 
 .object-editor button {
   height: 36px;

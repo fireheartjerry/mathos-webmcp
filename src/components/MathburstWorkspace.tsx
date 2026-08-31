@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld } from '../domain/world/seed'
+import { findDependentIds } from '../domain/world/dependencies'
 import {
   buildDeleteOperations,
   buildDuplicateOperations,
@@ -29,6 +30,7 @@ export default function MathburstWorkspace() {
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
+  const [editorMatrix, setEditorMatrix] = useState<[[number, number], [number, number]] | null>(null)
 
   useEffect(() => {
     const stored = loadWorld()
@@ -112,9 +114,14 @@ export default function MathburstWorkspace() {
   const openEditor = useCallback((id: string) => {
     const object = world.objects[id]
     if (!object) return
+    setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
     else if (object.kind === 'equation') setEditorValue(object.latex)
     else if (object.kind === 'frame') setEditorValue(object.title)
+    else if (object.kind === 'matrix') setEditorMatrix([
+      [...object.values[0]],
+      [...object.values[1]],
+    ])
     else return
     setEditorId(id)
   }, [world.objects])
@@ -127,8 +134,23 @@ export default function MathburstWorkspace() {
     if (object.kind === 'text') updated = { ...object, text: editorValue }
     if (object.kind === 'equation') updated = { ...object, latex: editorValue }
     if (object.kind === 'frame') updated = { ...object, title: editorValue }
-    run(humanAction(`Edited ${object.kind}`, [{ type: 'put', object: updated }]))
+    if (object.kind === 'matrix' && editorMatrix) updated = { ...object, values: editorMatrix }
+    const dependents = object.kind === 'equation' ? findDependentIds(world, [object.id]) : []
+    run(humanAction(`Edited ${object.kind}`, [
+      { type: 'put', object: updated },
+      ...(dependents.length ? [{ type: 'select' as const, ids: [object.id, ...dependents] }] : []),
+    ]))
     setEditorId(null)
+    setEditorMatrix(null)
+  }
+
+  const updateMatrixCell = (row: 0 | 1, column: 0 | 1, value: number) => {
+    setEditorMatrix((current) => {
+      if (!current) return current
+      const next: [[number, number], [number, number]] = [[...current[0]], [...current[1]]]
+      next[row][column] = Number.isFinite(value) ? value : 0
+      return next
+    })
   }
 
   useEffect(() => {
@@ -149,7 +171,7 @@ export default function MathburstWorkspace() {
         event.preventDefault()
         deleteSelection()
       } else {
-        const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', s: 'shape', a: 'arrow', f: 'frame' }
+        const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', g: 'graph', c: 'geometry', x: 'matrix', s: 'shape', a: 'arrow', f: 'frame' }
         const next = shortcuts[event.key.toLowerCase()]
         if (next) setMode(next)
       }
@@ -207,17 +229,26 @@ export default function MathburstWorkspace() {
       </div>
 
       {editorId && (
-        <div className="object-editor" role="dialog" aria-label="Edit object">
+        <div className={`object-editor${editorMatrix ? ' is-matrix-editor' : ''}`} role="dialog" aria-label="Edit object">
           <label htmlFor="object-editor-input">Edit live object</label>
-          <input
-            id="object-editor-input"
-            autoFocus
-            value={editorValue}
-            onChange={(event) => setEditorValue(event.target.value)}
-            onKeyDown={(event) => { if (event.key === 'Enter') saveEditor(); if (event.key === 'Escape') setEditorId(null) }}
-          />
+          {editorMatrix ? (
+            <div className="matrix-editor-grid" id="object-editor-input">
+              <input autoFocus type="number" step="0.1" value={editorMatrix[0][0]} onChange={(event) => updateMatrixCell(0, 0, Number(event.target.value))} />
+              <input type="number" step="0.1" value={editorMatrix[0][1]} onChange={(event) => updateMatrixCell(0, 1, Number(event.target.value))} />
+              <input type="number" step="0.1" value={editorMatrix[1][0]} onChange={(event) => updateMatrixCell(1, 0, Number(event.target.value))} />
+              <input type="number" step="0.1" value={editorMatrix[1][1]} onChange={(event) => updateMatrixCell(1, 1, Number(event.target.value))} />
+            </div>
+          ) : (
+            <input
+              id="object-editor-input"
+              autoFocus
+              value={editorValue}
+              onChange={(event) => setEditorValue(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') saveEditor(); if (event.key === 'Escape') setEditorId(null) }}
+            />
+          )}
           <button type="button" onClick={saveEditor}>Commit</button>
-          <button type="button" onClick={() => setEditorId(null)}>Cancel</button>
+          <button type="button" onClick={() => { setEditorId(null); setEditorMatrix(null) }}>Cancel</button>
         </div>
       )}
     </main>

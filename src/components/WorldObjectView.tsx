@@ -1,8 +1,8 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
-import { Tex } from './Tex'
-import type { WorldObject } from '../domain/world/types'
+import type { WorldAction, WorldObject, WorldState } from '../domain/world/types'
+import MathObjectView from './MathObjectView'
 
-function objectContents(object: WorldObject): ReactNode {
+function objectContents(object: WorldObject, world: WorldState, run: (action: WorldAction) => void): ReactNode {
   const width = Math.max(1, object.bounds.width)
   const height = Math.max(1, object.bounds.height)
 
@@ -47,33 +47,10 @@ function objectContents(object: WorldObject): ReactNode {
       )
     }
     case 'equation':
-      return <Tex latex={object.latex} display ariaLabel={object.latex} />
     case 'graph':
-      return (
-        <div className="math-placeholder graph-placeholder">
-          <svg viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 35H100M50 0V70" />
-            <path className="placeholder-curve" d="M3 61 C 25 59, 32 38, 48 37 S 72 47, 97 8" />
-          </svg>
-          <span>linked graph</span>
-        </div>
-      )
     case 'geometry':
-      return (
-        <div className="math-placeholder geometry-placeholder">
-          <svg viewBox="0 0 100 70" aria-hidden="true"><path d="M18 56 L50 12 L84 58 Z M50 12 L51 57" /><circle cx="50" cy="12" r="3" /><circle cx="18" cy="56" r="3" /><circle cx="84" cy="58" r="3" /></svg>
-          <span>live construction</span>
-        </div>
-      )
     case 'matrix':
-      return (
-        <div className="matrix-placeholder">
-          <span>[</span>
-          <b>{object.values[0][0]}</b><b>{object.values[0][1]}</b>
-          <b>{object.values[1][0]}</b><b>{object.values[1][1]}</b>
-          <span>]</span>
-        </div>
-      )
+      return <MathObjectView object={object} world={world} run={run} />
     case 'frame':
       return <div className="frame-label"><span>{object.title}</span><small>{object.childIds.length} objects</small></div>
     case 'group':
@@ -85,12 +62,16 @@ export default function WorldObjectView({
   object,
   selected,
   previewOffset,
+  world,
+  run,
   onPointerDown,
   onDoubleClick,
 }: {
   object: WorldObject
   selected: boolean
   previewOffset?: { x: number; y: number }
+  world: WorldState
+  run: (action: WorldAction) => void
   onPointerDown: (event: ReactPointerEvent, id: string) => void
   onDoubleClick: (id: string) => void
 }) {
@@ -114,7 +95,7 @@ export default function WorldObjectView({
       onPointerDown={(event) => onPointerDown(event, object.id)}
       onDoubleClick={() => onDoubleClick(object.id)}
     >
-      {objectContents(object)}
+      {objectContents(object, world, run)}
       {object.author === 'agent' && <span className="author-pip" aria-label="Created by tutor">AI</span>}
     </div>
   )
