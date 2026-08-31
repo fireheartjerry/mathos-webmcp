@@ -195,6 +195,15 @@ limit before a single pause. Anything above roughly 400 words will not fit.
 `docs/video/second-try-demo.mp4` — 1920×1080, H.264, AAC 48 kHz stereo, **2:44.1**
 (164.1 s against the rules' 180 s limit), 4920 frames, `faststart`.
 
+**The picture is the current build.** The screencast is re-recorded whenever the product
+changes; an earlier cut still showed the platform list repeating one sentence under all
+seven rows, which the console had stopped doing. `record-demo.mjs` now encodes at the rate
+frames were actually captured rather than the rate it asked for - `Page.captureScreenshot`
+does not always return within the period, and a take that ran 163 real seconds produced
+1700 frames, which at a nominal 12fps is 141 seconds of picture running visibly fast under
+a narration timed in real seconds. It also puts the tab into a painting state itself via
+focus emulation, instead of requiring that its window be the one in front.
+
 **Three bands, and they cannot collide.** The composition is a marker band, the
 screencast, and a caption band, with every offset derived from `MARKER_TOP`,
 `MARKER_BAND` and `VIDEO_HEIGHT`. The marker used to be placed independently, 44px from

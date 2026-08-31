@@ -10,7 +10,8 @@
  * so a first attempt produced 49 frames for the whole run and collapsed two minutes of
  * demo into four seconds. Polling `Page.captureScreenshot` keeps time real.
  *
- * The tab must be the active one; a background tab does not paint.
+ * The tab is made to paint via focus emulation, so it does not have to be the window
+ * in front. A hidden tab returns stale frames rather than failing, which is worse.
  *
  *   node scripts/record-demo.mjs
  *
@@ -73,6 +74,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 await send('Page.enable')
 await send('Runtime.enable')
 
+// Make the tab paint without depending on which window happens to be in front.
+// `Page.captureScreenshot` on a hidden tab returns stale frames, which is why this file
+// used to say "the tab must be the ACTIVE one" and fail with 49 frames if it was not.
+// Focus emulation and an explicit lifecycle state say the same thing to the renderer, and
+// they are properties of this CDP session rather than of the desktop.
+for (const [method, params] of [
+  ['Emulation.setFocusEmulationEnabled', { enabled: true }],
+  ['Page.setWebLifecycleState', { state: 'active' }],
+  ['Page.bringToFront', {}],
+]) {
+  try { await send(method, params) } catch { /* older builds lack one of these */ }
+}
+const visibility = await evaluate('return document.visibilityState')
+if (visibility !== 'visible') {
+  console.error(`Page reports visibilityState="${visibility}"; frames will be stale.`)
+  process.exit(1)
+}
+
 // The beats. Each returns quickly; the pauses are what make it watchable.
 const BEATS = [
   ['open on a derivation with a wrong line, checked', 'return await window.__demo.setup()', 3200],
@@ -88,6 +107,7 @@ console.log('injecting the driver…')
 await evaluate(await (await import('node:fs/promises')).readFile('scripts/demo-driver.js', 'utf8'))
 
 // Capture on a timer while the beats run, so a still page still yields real seconds.
+const startedAt = Date.now()
 let recording = true
 const capture = (async () => {
   const period = Math.round(1000 / FPS)
@@ -112,9 +132,22 @@ for (const [label, expr, hold] of BEATS) {
 }
 recording = false
 await capture
+const elapsedSeconds = (Date.now() - startedAt) / 1000
 ws.close()
 
-console.log(`captured ${frames.length} frames`)
+/**
+ * Encode at the rate the frames were actually captured at, not the rate we asked for.
+ *
+ * `Page.captureScreenshot` does not always come back within the period, so a take that
+ * ran for 163 real seconds produced 1700 frames rather than 1956 - and encoding those at
+ * a nominal 12fps yields 141 seconds of picture. The demo then runs visibly faster than
+ * it did, and the narration, which is timed against real seconds, drifts away from it.
+ * Dividing by the measured elapsed time makes the output real-time whatever the capture
+ * jitter was.
+ */
+const effectiveFps = frames.length / elapsedSeconds
+
+console.log(`captured ${frames.length} frames over ${elapsedSeconds.toFixed(1)}s -> ${effectiveFps.toFixed(2)} fps`)
 if (frames.length < 10) {
   console.error('Too few frames. The tab must be the ACTIVE one — a background tab does not paint.')
   process.exit(1)
@@ -126,7 +159,7 @@ frames.forEach((b64, i) => writeFileSync(`${FRAMES}/f${String(i).padStart(5, '0'
 
 mkdirSync('docs/images', { recursive: true })
 execFileSync('ffmpeg', [
-  '-y', '-framerate', String(FPS), '-i', `${FRAMES}/f%05d.png`,
+  '-y', '-framerate', effectiveFps.toFixed(4), '-i', `${FRAMES}/f%05d.png`,
   '-vf', 'scale=1280:-2:flags=lanczos,format=yuv420p',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-movflags', '+faststart',
   OUT,
