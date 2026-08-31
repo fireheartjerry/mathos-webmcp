@@ -16,6 +16,13 @@ private monorepo and said they hold live credentials — true, unrelated to this
 and not something to publish the location of. And several reproduction commands hard-coded
 a local Windows user profile path, now `%TEMP%`. Both are marked where they occur.
 
+**These are redactions in the working tree, not in the history.** `git log -p` still
+shows the earlier text, and no commit has been rewritten. That is a deliberate choice:
+nothing redacted is a credential — the secrets in question were never in this repository
+— so the disclosure is a directory name, and rewriting published history to hide a
+directory name would cost more than it buys. Saying which of the two it is matters more
+than the redaction itself.
+
 So several older documents here say the surface has **six tools**, or quote the page
 telling an agent *"Only the learner can write, edit, delete, or accept work."* Both were
 true when written. Neither is true now: the surface is eighteen tools, and that refusal

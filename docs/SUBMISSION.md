@@ -64,9 +64,18 @@ was judged. The same applies to the 401 on the live site: judging runs 2026-09-0
 
 **Nothing in the four blockers is a code problem.** All four are owner actions.
 
-**Before pushing:** the tree was scanned — no `.env`, no keys, no tokens, no bare-IP
-hosts. The `18.216.62.146` proxy that once sat in `vercel.json` is gone from every
-tracked file.
+**Before making the repository public**, the tree was scanned again on 2026-08-30: no
+`.env`, no key or credential files, no API tokens, no private-key blocks, no bare-IP
+hosts. The `18.216.62.146` proxy that once sat in `vercel.json` is gone from every tracked
+file and survives only as a note here saying it was removed.
+
+Two things were redacted, neither of them a secret. A round-0 workspace map named two
+sibling checkouts of Mathos' own private monorepo and said they hold live credentials —
+true, unrelated to this submission, and not a location to publish. And several
+reproduction commands hard-coded a local Windows user profile path, now `%TEMP%`. Both
+redactions are in the working tree only; `git log -p` still shows the earlier text and no
+commit was rewritten, which `docs/README.md` states plainly rather than implying more
+protection than exists.
 
 ---
 
