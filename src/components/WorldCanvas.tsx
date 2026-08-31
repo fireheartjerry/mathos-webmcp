@@ -1,0 +1,316 @@
+'use client'
+
+import { useRef, useState } from 'react'
+import type { ChangeEvent, PointerEvent as ReactPointerEvent, WheelEvent } from 'react'
+import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
+import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
+import type { ToolMode } from './ToolRail'
+import WorldObjectView from './WorldObjectView'
+
+type Gesture =
+  | { kind: 'pan'; pointerId: number; client: Point; viewport: Viewport }
+  | { kind: 'drag'; pointerId: number; start: Point; ids: string[] }
+  | { kind: 'ink'; pointerId: number; points: Point[]; highlighter: boolean }
+
+const makeAction = (summary: string, operations: WorldAction['operations']): WorldAction => ({
+  id: crypto.randomUUID(),
+  source: 'human',
+  summary,
+  operations,
+})
+
+export default function WorldCanvas({
+  world,
+  mode,
+  run,
+  onEditObject,
+}: {
+  world: WorldState
+  mode: ToolMode
+  run: (action: WorldAction) => void
+  onEditObject: (id: string) => void
+}) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageAnchorRef = useRef<Point>({ x: 260, y: 180 })
+  const gestureRef = useRef<Gesture | null>(null)
+  const [dragPreview, setDragPreview] = useState<{ ids: string[]; delta: Point } | null>(null)
+  const [inkPreview, setInkPreview] = useState<{ points: Point[]; highlighter: boolean } | null>(null)
+  const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
+
+  const screenToWorld = (clientX: number, clientY: number) => {
+    const rect = canvasRef.current!.getBoundingClientRect()
+    return {
+      x: (clientX - rect.left - world.viewport.x) / world.viewport.zoom,
+      y: (clientY - rect.top - world.viewport.y) / world.viewport.zoom,
+    }
+  }
+
+  const capture = (pointerId: number) => {
+    try { canvasRef.current?.setPointerCapture(pointerId) } catch { /* pointer already ended */ }
+  }
+
+  const createAt = (point: Point) => {
+    const id = crypto.randomUUID()
+    const base = { id, rotation: 0, author: 'human' as const, opacity: 1 }
+    let object: WorldObject | null = null
+
+    if (mode === 'text') {
+      object = { ...base, kind: 'text', text: 'Double-click to write', color: '#171713', fontSize: 24, bounds: { x: point.x, y: point.y, width: 230, height: 72 } }
+    } else if (mode === 'equation') {
+      object = { ...base, kind: 'equation', latex: 'x^2+y^2=1', color: '#171713', bounds: { x: point.x, y: point.y, width: 230, height: 78 } }
+    } else if (mode === 'shape') {
+      object = { ...base, kind: 'shape', shape: 'rectangle', fill: '#f4f0e6', stroke: '#171713', bounds: { x: point.x, y: point.y, width: 170, height: 110 } }
+    } else if (mode === 'arrow') {
+      object = { ...base, kind: 'arrow', from: { x: 8, y: 102 }, to: { x: 172, y: 8 }, color: '#171713', bounds: { x: point.x, y: point.y, width: 180, height: 110 } }
+    } else if (mode === 'frame') {
+      object = { ...base, kind: 'frame', title: 'New frame', childIds: [], bounds: { x: point.x, y: point.y, width: 520, height: 360 } }
+    }
+
+    if (!object) return
+    run(makeAction(`Created ${object.kind}`, [{ type: 'put', object }, { type: 'select', ids: [id] }]))
+    if (object.kind === 'text' || object.kind === 'equation') {
+      requestAnimationFrame(() => onEditObject(id))
+    }
+  }
+
+  const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    const point = screenToWorld(event.clientX, event.clientY)
+
+    if (mode === 'hand') {
+      gestureRef.current = {
+        kind: 'pan',
+        pointerId: event.pointerId,
+        client: { x: event.clientX, y: event.clientY },
+        viewport: world.viewport,
+      }
+      capture(event.pointerId)
+      return
+    }
+
+    if (mode === 'pen' || mode === 'highlighter') {
+      const highlighter = mode === 'highlighter'
+      gestureRef.current = { kind: 'ink', pointerId: event.pointerId, points: [point], highlighter }
+      setInkPreview({ points: [point], highlighter })
+      capture(event.pointerId)
+      return
+    }
+
+    if (mode === 'image') {
+      imageAnchorRef.current = point
+      fileInputRef.current?.click()
+      return
+    }
+
+    if (mode === 'select') {
+      if (world.selection.length) run(makeAction('Cleared selection', [{ type: 'select', ids: [] }]))
+      return
+    }
+
+    createAt(point)
+  }
+
+  const handleObjectPointerDown = (event: ReactPointerEvent, id: string) => {
+    const object = world.objects[id]
+    if (!object) return
+
+    if (mode !== 'select' && mode !== 'eraser') return
+    event.stopPropagation()
+
+    if (mode === 'eraser' && object.kind === 'ink') {
+      run(makeAction('Erased ink', [{ type: 'remove', id }]))
+      return
+    }
+    if (mode !== 'select' || object.locked) return
+
+    const wasSelected = world.selection.includes(id)
+    const selected = event.shiftKey
+      ? (wasSelected ? world.selection.filter((selectedId) => selectedId !== id) : [...world.selection, id])
+      : (wasSelected ? world.selection : [id])
+    if (event.shiftKey || !wasSelected) {
+      run(makeAction(event.shiftKey ? 'Changed multi-selection' : 'Selected object', [{ type: 'select', ids: selected }]))
+    }
+    if (!selected.includes(id)) return
+    const ids = expandTargetIds(world, selected)
+    gestureRef.current = {
+      kind: 'drag',
+      pointerId: event.pointerId,
+      start: screenToWorld(event.clientX, event.clientY),
+      ids,
+    }
+    setDragPreview({ ids, delta: { x: 0, y: 0 } })
+    capture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+
+    if (gesture.kind === 'pan') {
+      setViewportPreview({
+        ...gesture.viewport,
+        x: gesture.viewport.x + event.clientX - gesture.client.x,
+        y: gesture.viewport.y + event.clientY - gesture.client.y,
+      })
+      return
+    }
+
+    const point = screenToWorld(event.clientX, event.clientY)
+    if (gesture.kind === 'drag') {
+      setDragPreview({ ids: gesture.ids, delta: { x: point.x - gesture.start.x, y: point.y - gesture.start.y } })
+      return
+    }
+
+    const previous = gesture.points.at(-1)!
+    if (Math.hypot(point.x - previous.x, point.y - previous.y) < 1.5) return
+    gesture.points.push(point)
+    setInkPreview({ points: [...gesture.points], highlighter: gesture.highlighter })
+  }
+
+  const finishGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+    gestureRef.current = null
+
+    if (gesture.kind === 'pan') {
+      if (viewportPreview) run(makeAction('Panned the world', [{ type: 'viewport', viewport: viewportPreview }]))
+      setViewportPreview(null)
+    } else if (gesture.kind === 'drag') {
+      const delta = dragPreview?.delta ?? { x: 0, y: 0 }
+      if (Math.hypot(delta.x, delta.y) > 0.5) {
+        run(makeAction('Moved objects', buildTransformOperations(world, gesture.ids, { translate: delta })))
+      }
+      setDragPreview(null)
+    } else {
+      const points = gesture.points
+      if (points.length > 1) {
+        const padding = gesture.highlighter ? 12 : 4
+        const left = Math.min(...points.map((point) => point.x)) - padding
+        const top = Math.min(...points.map((point) => point.y)) - padding
+        const right = Math.max(...points.map((point) => point.x)) + padding
+        const bottom = Math.max(...points.map((point) => point.y)) + padding
+        const object: WorldObject = {
+          id: crypto.randomUUID(),
+          kind: 'ink',
+          points: points.map((point) => ({ x: point.x - left, y: point.y - top })),
+          color: gesture.highlighter ? '#7c5cff' : '#171713',
+          width: gesture.highlighter ? 18 : 3,
+          bounds: { x: left, y: top, width: Math.max(8, right - left), height: Math.max(8, bottom - top) },
+          rotation: 0,
+          author: 'human',
+          opacity: gesture.highlighter ? 0.34 : 1,
+        }
+        run(makeAction(gesture.highlighter ? 'Highlighted' : 'Drew ink', [{ type: 'put', object }]))
+      }
+      setInkPreview(null)
+    }
+
+    try { canvasRef.current?.releasePointerCapture(event.pointerId) } catch { /* already released */ }
+  }
+
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const rect = canvasRef.current!.getBoundingClientRect()
+    const zoom = Math.min(2.5, Math.max(0.25, world.viewport.zoom * Math.exp(-event.deltaY * 0.0012)))
+    const worldPoint = screenToWorld(event.clientX, event.clientY)
+    run(makeAction('Zoomed the world', [{
+      type: 'viewport',
+      viewport: {
+        x: event.clientX - rect.left - worldPoint.x * zoom,
+        y: event.clientY - rect.top - worldPoint.y * zoom,
+        zoom,
+      },
+    }]))
+  }
+
+  const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const object: WorldObject = {
+        id: crypto.randomUUID(),
+        kind: 'image',
+        src: String(reader.result),
+        alt: file.name,
+        bounds: { x: imageAnchorRef.current.x, y: imageAnchorRef.current.y, width: 320, height: 220 },
+        rotation: 0,
+        author: 'human',
+        opacity: 1,
+      }
+      run(makeAction('Imported image', [{ type: 'put', object }, { type: 'select', ids: [object.id] }]))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const viewport = viewportPreview ?? world.viewport
+  const previewBounds = inkPreview && inkPreview.points.length > 0
+    ? {
+        left: Math.min(...inkPreview.points.map((point) => point.x)),
+        top: Math.min(...inkPreview.points.map((point) => point.y)),
+        right: Math.max(...inkPreview.points.map((point) => point.x)),
+        bottom: Math.max(...inkPreview.points.map((point) => point.y)),
+      }
+    : null
+
+  return (
+    <section
+      ref={canvasRef}
+      className={`world-canvas mode-${mode}`}
+      data-tool={mode}
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishGesture}
+      onPointerCancel={finishGesture}
+      onWheel={handleWheel}
+    >
+      <div className="problem-breadcrumb"><span>01</span> Integration by parts <i>live world</i></div>
+      <div
+        className="world-stage"
+        style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})` }}
+      >
+        {world.order.map((id) => {
+          const object = world.objects[id]
+          if (!object) return null
+          const offset = dragPreview?.ids.includes(id) ? dragPreview.delta : undefined
+          return (
+            <WorldObjectView
+              key={id}
+              object={object}
+              selected={world.selection.includes(id)}
+              previewOffset={offset}
+              onPointerDown={handleObjectPointerDown}
+              onDoubleClick={onEditObject}
+            />
+          )
+        })}
+        {inkPreview && previewBounds && (
+          <svg
+            className="ink-preview"
+            style={{
+              left: previewBounds.left - 12,
+              top: previewBounds.top - 12,
+              width: Math.max(24, previewBounds.right - previewBounds.left + 24),
+              height: Math.max(24, previewBounds.bottom - previewBounds.top + 24),
+            }}
+            viewBox={`0 0 ${Math.max(24, previewBounds.right - previewBounds.left + 24)} ${Math.max(24, previewBounds.bottom - previewBounds.top + 24)}`}
+          >
+            <polyline
+              points={inkPreview.points.map((point) => `${point.x - previewBounds.left + 12},${point.y - previewBounds.top + 12}`).join(' ')}
+              fill="none"
+              stroke={inkPreview.highlighter ? '#7c5cff' : '#171713'}
+              strokeOpacity={inkPreview.highlighter ? 0.34 : 1}
+              strokeWidth={inkPreview.highlighter ? 18 : 3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </div>
+      <div className="canvas-mode"><b>{mode}</b><span>click the world</span></div>
+      <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
+    </section>
+  )
+}

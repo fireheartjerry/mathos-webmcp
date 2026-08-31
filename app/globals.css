@@ -1,4 +1,5 @@
 @import '../src/styles/katex-font-display.css';
+@import '../src/styles/mathburst.css';
 
 * {
   box-sizing: border-box;
@@ -10,27 +11,5 @@ body {
   margin: 0;
 }
 
-body {
-  background: #f4f0e6;
-  color: #171713;
-  font-family: 'STIX Two Text', Georgia, serif;
-}
-
-button,
-input,
-textarea {
-  font: inherit;
-}
-
-.mathburst {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  gap: 0.75rem;
-  text-align: center;
-}
-
-.mathburst h1,
-.mathburst p {
-  margin: 0;
-}
+body { font-family: 'STIX Two Text', Georgia, serif; }
+button, input, textarea { font: inherit; }
