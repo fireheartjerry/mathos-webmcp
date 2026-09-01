@@ -160,6 +160,7 @@ export default function MathburstWorkspace() {
   const [directorSelection, setDirectorSelection] = useState<string[]>([])
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
+  const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: Viewport } | null>(null)
 
   const updateLibraryProjects = useCallback((update: (projects: LibraryProject[]) => LibraryProject[]) => {
     setLibraryProjects((current) => {
@@ -580,13 +581,21 @@ export default function MathburstWorkspace() {
     }]))
   }
 
+  const isDirectorShotAllowed = (shot: { scene: CatalogSceneId }) => {
+    const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+    if (!project?.templateId || shot.scene === 'overview') return false
+    return getScenesForProject(project.templateId).some((scene) => scene.id === shot.scene)
+  }
+
   const directorDefaultViewport = (scene: CatalogSceneId): Viewport => cameraViewport(
     scene,
     Math.max(1, window.innerWidth - 58),
     Math.max(1, window.innerHeight - 54),
   )
 
-  const activeDirectorShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId) ?? DIRECTOR_SHOTS[0]
+  const activeDirectorShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId && isDirectorShotAllowed(shot))
+    ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
+    ?? DIRECTOR_SHOTS[0]
   const activeDirectorEdit = directorState.shots[activeDirectorShot.id]
   const directorViewport = activeDirectorEdit?.viewport ?? world.viewport
   const directorOverrides = useMemo(() => {
@@ -599,7 +608,9 @@ export default function MathburstWorkspace() {
 
   const updateDirectorEdit = (update: (edit: DirectorShotEdit) => DirectorShotEdit) => {
     setDirectorState((current) => {
-      const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === current.activeShotId) ?? DIRECTOR_SHOTS[0]
+      const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === current.activeShotId && isDirectorShotAllowed(candidate))
+        ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
+        ?? DIRECTOR_SHOTS[0]
       const existing = current.shots[shot.id] ?? {
         viewport: directorDefaultViewport(shot.scene),
         overrides: {},
@@ -615,7 +626,7 @@ export default function MathburstWorkspace() {
 
   const selectDirectorShot = (id: string) => {
     const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === id)
-    if (!shot) return
+    if (!shot || !isDirectorShotAllowed(shot)) return
     setDirectorState((current) => ({
       ...current,
       activeShotId: shot.id,
@@ -637,15 +648,30 @@ export default function MathburstWorkspace() {
   }
 
   const openDirectorReview = () => {
+    const allowedShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId && isDirectorShotAllowed(shot))
+      ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
+    if (!allowedShot) return
+    directorSceneSnapshotRef.current = {
+      scene: activeSceneRef.current,
+      viewport: { ...worldRef.current.viewport },
+    }
     setDirectorControlsHidden(false)
     setDirectorOpen(true)
-    selectDirectorShot(activeDirectorShot.id)
+    selectDirectorShot(allowedShot.id)
   }
 
   const closeDirectorReview = () => {
     setDirectorControlsHidden(false)
     setDirectorOpen(false)
     setDirectorSelection([])
+    const snapshot = directorSceneSnapshotRef.current
+    directorSceneSnapshotRef.current = null
+    if (snapshot) {
+      const restored = { ...worldRef.current, viewport: { ...snapshot.viewport } }
+      worldRef.current = restored
+      setWorld(restored)
+      changeActiveScene(snapshot.scene)
+    }
   }
 
   const setDirectorViewport = (viewport: Viewport) => updateDirectorEdit((edit) => ({
@@ -712,8 +738,10 @@ export default function MathburstWorkspace() {
   }))
 
   const previewNextDirectorShot = () => {
-    const index = DIRECTOR_SHOTS.findIndex((shot) => shot.id === activeDirectorShot.id)
-    const next = DIRECTOR_SHOTS[(index + 1) % DIRECTOR_SHOTS.length]
+    const availableShots = DIRECTOR_SHOTS.filter(isDirectorShotAllowed)
+    if (!availableShots.length) return
+    const index = availableShots.findIndex((shot) => shot.id === activeDirectorShot.id)
+    const next = availableShots[(index + 1) % availableShots.length]
     setDirectorCameraPreviewing(true)
     window.requestAnimationFrame(() => selectDirectorShot(next.id))
     window.setTimeout(() => setDirectorCameraPreviewing(false), 920)
