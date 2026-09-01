@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { gammaBinMasses, gammaCDF, gammaDensity, gammaFunction, logMasses, softmax } from '../domain/math/probability'
+import { gammaBinMasses, gammaCDF, gammaDensity, gammaFunction } from '../domain/math/probability'
 import type { GraphObject, WorldAction } from '../domain/world/types'
 import { Tex } from './Tex'
 
@@ -13,6 +13,7 @@ const humanPut = (summary: string, object: GraphObject): WorldAction => ({
 })
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 const fmt = (value: number, digits = 3) => Number(value.toFixed(digits)).toString()
+const edgeLabel = (value: number) => Number.isFinite(value) ? fmt(value, 2) : '∞'
 
 export default function GammaProbabilityView({ object, run }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -28,8 +29,6 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const bound = clamp(object.parameters?.b ?? object.shadeIntegral?.[1] ?? shape + 1, xMin, xMax)
   const edges = object.binEdges ?? [0, shape * 0.7, shape * 1.35, Number.POSITIVE_INFINITY]
   const masses = useMemo(() => gammaBinMasses(shape, edges), [shape, edges[0], edges[1], edges[2], edges[3]])
-  const logs = useMemo(() => logMasses(masses), [masses])
-  const bridged = useMemo(() => softmax(logs), [logs])
   const cdf = gammaCDF(bound, shape)
   const peakX = Math.max(0, (shape - 1))
   const samples = useMemo(() => Array.from({ length: 100 }, (_, index) => {
@@ -61,6 +60,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
     return clamp(xMin + ((event.clientX - rect.left) / Math.max(1, rect.width)) * (xMax - xMin), xMin, xMax)
   }
   const beginBoundDrag = (event: ReactPointerEvent<SVGCircleElement>) => {
+    if (event.button !== 0) return
     event.preventDefault(); event.stopPropagation(); svgRef.current?.setPointerCapture(event.pointerId)
     setDraggingBound(true)
   }
@@ -77,7 +77,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const clipId = `gamma-clip-${object.id}`
 
   return (
-    <section className="gamma-probability-view" onPointerDown={(event) => event.stopPropagation()}>
+    <section className="gamma-probability-view" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
       <svg ref={svgRef} className="gamma-probability-canvas" viewBox={`0 0 ${width} ${height - 96}`} aria-label="Normalized Gamma density and CDF" onPointerMove={moveBound} onPointerUp={endBound} onPointerCancel={endBound}>
         <defs><clipPath id={clipId}><rect x={plot.left} y={plot.top} width={plot.right - plot.left} height={plot.bottom - plot.top} /></clipPath></defs>
         <rect className="gamma-paper" width={width} height={height - 96} rx="8" />
@@ -101,15 +101,15 @@ export default function GammaProbabilityView({ object, run }: Props) {
         <text className="gamma-mode-label" x={mapX(peakX) + 8} y={mapY(gammaDensity(peakX, shape)) - 8}>mode {fmt(peakX, 2)}</text>
       </svg>
       <div className="gamma-probability-formula"><Tex latex={`g_a(x)=\\frac{x^{a-1}e^{-x}}{\\Gamma(a)}`} /><span>Γ({fmt(shape, 1)}) = {fmt(gammaFunction(shape), 4)}</span></div>
-      <div className="gamma-probability-controls" onPointerDown={(event) => event.stopPropagation()}>
+      <div className="gamma-probability-controls" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
         <label><span>shape a <b>{fmt(shape, 2)}</b></span><input type="range" min="0.5" max="10" step="0.1" value={shape} aria-label="Gamma shape" onChange={(event) => updateParameter('a', Number(event.target.value))} /></label>
         <label><span>bound b <b>{fmt(bound, 2)}</b></span><input type="range" min={xMin} max={xMax} step="0.05" value={bound} aria-label="Gamma CDF bound" onChange={(event) => updateParameter('b', Number(event.target.value))} /></label>
       </div>
       <div className="gamma-bin-strip" aria-label="Gamma probability bins">
-        {masses.map((mass, index) => <div className={`gamma-bin gamma-bin-${index + 1}`} key={index}><small>w{index + 1}</small><b>{fmt(mass)}</b><em>log {fmt(logs[index])}</em><span>softmax {fmt(bridged[index])}</span></div>)}
+        {masses.map((mass, index) => <div className={`gamma-bin gamma-bin-${index + 1}`} key={index}><small>w{index + 1}</small><b>{fmt(mass)}</b><em>[{edgeLabel(edges[index])}, {edgeLabel(edges[index + 1])}]</em><span>{fmt(mass * 100, 1)}% of total area</span></div>)}
         <strong>Σ w = {fmt(masses.reduce((sum, mass) => sum + mass, 0))}</strong>
       </div>
-      <div className="gamma-bridge-note"><span>log mass</span><b>→</b><span>softmax</span><em>initialization bridge · not an equivalence of mechanisms</em></div>
+      <div className="gamma-bridge-note"><span>partitioned area</span><b>Σ</b><span>total mass = 1</span><em>each bin is an exact definite integral</em></div>
     </section>
   )
 }

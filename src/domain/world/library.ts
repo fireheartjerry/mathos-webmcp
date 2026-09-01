@@ -1,8 +1,8 @@
 import { createSeedWorld } from './seed'
 import { PROJECTS, getScenesForProject, type CatalogSceneId, type ProjectId } from './projects'
-import type { WorldState } from './types'
+import type { Bounds, WorldObject, WorldState } from './types'
 
-export const PROJECT_LIBRARY_STORAGE_KEY = 'mathburst.project-library.v1'
+export const PROJECT_LIBRARY_STORAGE_KEY = 'mathburst.project-library.v2'
 
 export type LibraryProject = {
   id: string
@@ -14,9 +14,54 @@ export type LibraryProject = {
   createdAt: number
   updatedAt: number
   deletedAt: number | null
-  world?: WorldState
+  world: WorldState
 }
 
+const containsCenter = (bounds: Bounds, object: WorldObject) => {
+  const centerX = object.bounds.x + object.bounds.width / 2
+  const centerY = object.bounds.y + object.bounds.height / 2
+  return centerX >= bounds.x
+    && centerX <= bounds.x + bounds.width
+    && centerY >= bounds.y
+    && centerY <= bounds.y + bounds.height
+}
+
+/** Build the actual product boundary: one project can never reveal another project by panning. */
+export function createProjectWorld(source: WorldState, projectId: ProjectId, title?: string): WorldState {
+  const sceneFrames = getScenesForProject(projectId).map((scene) => source.objects[scene.frameId]).filter(Boolean)
+  const frameBounds = sceneFrames.map((frame) => frame.bounds)
+  const ids = new Set<string>()
+
+  const visit = (id: string) => {
+    const object = source.objects[id]
+    if (!object || ids.has(id)) return
+    ids.add(id)
+    if (object.kind === 'frame' || object.kind === 'group') object.childIds.forEach(visit)
+    if (object.kind === 'graph') visit(object.equationId)
+    if (object.kind === 'matrix') object.sourceIds.forEach(visit)
+  }
+
+  sceneFrames.forEach((frame) => visit(frame.id))
+  for (const object of Object.values(source.objects)) {
+    if (frameBounds.some((bounds) => containsCenter(bounds, object))) visit(object.id)
+  }
+
+  const order = source.order.filter((id) => ids.has(id))
+  const objects = Object.fromEntries(order.map((id) => [id, structuredClone(source.objects[id])]))
+  return {
+    ...structuredClone(source),
+    title: title ?? PROJECTS.find((project) => project.id === projectId)?.title ?? source.title,
+    objects,
+    order,
+    selection: [],
+    history: [],
+    future: [],
+    activity: [],
+    reconstruction: null,
+  }
+}
+
+const canonicalSeed = createSeedWorld()
 const BUILT_IN_PROJECTS: LibraryProject[] = PROJECTS.map((project, index) => ({
   id: project.id,
   title: project.title,
@@ -27,6 +72,7 @@ const BUILT_IN_PROJECTS: LibraryProject[] = PROJECTS.map((project, index) => ({
   createdAt: index + 1,
   updatedAt: index + 1,
   deletedAt: null,
+  world: createProjectWorld(canonicalSeed, project.id, project.title),
 }))
 
 const isWorld = (value: unknown): value is WorldState => Boolean(
@@ -44,11 +90,11 @@ const isProject = (value: unknown): value is LibraryProject => {
     && typeof project.createdAt === 'number'
     && typeof project.updatedAt === 'number'
     && (project.deletedAt === null || typeof project.deletedAt === 'number')
-    && (project.kind === 'built-in' || isWorld(project.world))
+    && isWorld(project.world)
 }
 
 export function createDefaultProjectLibrary(): LibraryProject[] {
-  return BUILT_IN_PROJECTS.map((project) => ({ ...project }))
+  return BUILT_IN_PROJECTS.map((project) => ({ ...project, world: cloneWorld(project.world, project.title) }))
 }
 
 /** Merge stored state with the four canonical projects so app updates never orphan them. */
@@ -59,7 +105,9 @@ export function loadProjectLibrary(): LibraryProject[] {
     const storedById = new Map(stored.map((project) => [project.id, project]))
     const builtIns = BUILT_IN_PROJECTS.map((project) => {
       const saved = storedById.get(project.id)
-      return saved ? { ...project, deletedAt: saved.deletedAt } : { ...project }
+      return saved
+        ? { ...project, deletedAt: saved.deletedAt, updatedAt: saved.updatedAt, world: cloneWorld(saved.world, project.title) }
+        : { ...project, world: cloneWorld(project.world, project.title) }
     })
     const userProjects = stored.filter((project) => project.kind === 'user')
     return [...builtIns, ...userProjects]

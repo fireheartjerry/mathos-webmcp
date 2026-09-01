@@ -90,7 +90,7 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
     intent: 'Matrix, vectors, logits, and ribbons read as one mechanism.', scene: 'attention-geometry',
     editable: [
       { id: 'attention_mechanism', label: 'Attention mechanism' },
-      { id: 'attention_bridge_label', label: 'Gamma bridge' },
+      { id: 'attention_bridge_label', label: 'Live model note' },
     ],
     transition: 'Bins → logits', status: 'live',
   },
@@ -99,7 +99,7 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
     intent: 'Probability rises and loss falls without implying frontier-model training.', scene: 'train-from-scratch',
     editable: [
       { id: 'training_panel', label: 'Training state' },
-      { id: 'training_truth_label', label: 'Truth boundary' },
+      { id: 'training_truth_label', label: 'Gradient note' },
     ],
     transition: 'Ribbons → triangle', status: 'live',
   },

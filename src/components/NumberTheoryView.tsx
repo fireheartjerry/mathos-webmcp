@@ -53,7 +53,7 @@ export default function NumberTheoryView({ object, run }: NumberTheoryViewProps)
   const lanes = useMemo(() => fiveResidueLanes(cutoff), [cutoff])
   const verification = useMemo(() => verifyRamanujanFive(cutoff), [cutoff])
   const selectedCoefficient = coefficients[selectedN] ?? partitionNumber(selectedN)
-  const stopPointer = (event: React.PointerEvent) => event.stopPropagation()
+  const stopPointer = (event: React.PointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
     <section className="number-theory-view" aria-label="Partition observatory" onPointerDown={stopPointer}>

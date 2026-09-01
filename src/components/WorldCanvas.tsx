@@ -38,7 +38,7 @@ const sceneBreadcrumbs: Record<CatalogSceneId, { number: string; title: string; 
   'gamma-probability': { number: '02', title: 'Area Becomes Probability', state: 'normalized mass' },
   'attention-geometry': { number: '03', title: 'Attention Geometry', state: 'live softmax' },
   'train-from-scratch': { number: '04', title: 'Train From Scratch', state: 'real optimization' },
-  'attention-barycentrics': { number: '05', title: 'Attention Becomes Barycentrics', state: 'affine weights' },
+  'attention-barycentrics': { number: '05', title: 'Barycentric Coordinates', state: 'affine weights' },
   'spiral-similarity': { number: '06', title: 'Homothety & Spiral Similarity', state: 'preserved invariant' },
   'tetrahedral-probability': { number: '07', title: 'Tetrahedral Probability', state: 'projected 3-simplex' },
   'partition-observatory': { number: '08', title: 'Partition Observatory', state: 'finite verification' },
@@ -110,6 +110,16 @@ export default function WorldCanvas({
 
   const capture = (pointerId: number) => {
     try { canvasRef.current?.setPointerCapture(pointerId) } catch { /* pointer already ended */ }
+  }
+
+  const startPan = (event: ReactPointerEvent) => {
+    gestureRef.current = {
+      kind: 'pan',
+      pointerId: event.pointerId,
+      client: { x: event.clientX, y: event.clientY },
+      viewport: effectiveViewport,
+    }
+    capture(event.pointerId)
   }
 
   const createAt = (point: Point) => {
@@ -215,19 +225,13 @@ export default function WorldCanvas({
   }
 
   const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return
-    const point = screenToWorld(event.clientX, event.clientY)
-
-    if (mode === 'hand') {
-      gestureRef.current = {
-        kind: 'pan',
-        pointerId: event.pointerId,
-        client: { x: event.clientX, y: event.clientY },
-        viewport: effectiveViewport,
-      }
-      capture(event.pointerId)
+    if (event.button === 2 || (event.button === 0 && mode === 'hand')) {
+      event.preventDefault()
+      startPan(event)
       return
     }
+    if (event.button !== 0) return
+    const point = screenToWorld(event.clientX, event.clientY)
 
     if (mode === 'pen' || mode === 'highlighter') {
       const highlighter = mode === 'highlighter'
@@ -255,6 +259,13 @@ export default function WorldCanvas({
   }
 
   const handleObjectPointerDown = (event: ReactPointerEvent, id: string) => {
+    if (event.button === 2) {
+      event.preventDefault()
+      event.stopPropagation()
+      startPan(event)
+      return
+    }
+    if (event.button !== 0) return
     const original = world.objects[id]
     const object = original ? withDirectorOverride(original) : undefined
     if (!object) return
@@ -418,6 +429,7 @@ export default function WorldCanvas({
       onPointerUp={finishGesture}
       onPointerCancel={finishGesture}
       onWheel={handleWheel}
+      onContextMenu={(event) => event.preventDefault()}
     >
       <div className="problem-breadcrumb"><span>{breadcrumb.number}</span> {breadcrumb.title} <i>{breadcrumb.state}</i></div>
       <div
@@ -444,7 +456,7 @@ export default function WorldCanvas({
             />
           )
         })}
-        {tutorOverlay && <div className="tutor-overlay" onPointerDown={(event) => event.stopPropagation()}>{tutorOverlay}</div>}
+        {tutorOverlay && <div className="tutor-overlay" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>{tutorOverlay}</div>}
         {inkPreview && previewBounds && (
           <svg
             className="ink-preview"
@@ -469,7 +481,7 @@ export default function WorldCanvas({
         )}
       </div>
       {directorMode && <div className="director-safe-frame" aria-hidden="true"><span>title safe · 7%</span></div>}
-      <div className="canvas-mode"><b>{mode}</b><span>click the world</span></div>
+      <div className="canvas-mode"><b>{mode}</b><span>right-drag to pan</span></div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
     </section>
   )

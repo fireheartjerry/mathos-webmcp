@@ -1,3 +1,28 @@
+'use client'
+
+import {
+  ArrowUpRight,
+  Copy,
+  DraftingCompass,
+  Eraser,
+  Frame,
+  Grid2X2,
+  Group,
+  Hand,
+  Highlighter,
+  Image as ImageIcon,
+  LineChart,
+  MousePointer2,
+  Pencil,
+  Redo2,
+  Sigma,
+  Square,
+  Trash2,
+  Type,
+  Undo2,
+  type LucideIcon,
+} from 'lucide-react'
+
 export type ToolMode =
   | 'select'
   | 'hand'
@@ -24,32 +49,32 @@ type ToolRailProps = {
   onDelete: () => void
 }
 
-const creationTools: Array<{ mode: ToolMode; label: string; glyph: string; shortcut?: string }> = [
-  { mode: 'select', label: 'Select', glyph: '↖', shortcut: 'V' },
-  { mode: 'hand', label: 'Hand', glyph: '✦', shortcut: 'H' },
-  { mode: 'pen', label: 'Pen', glyph: '╱', shortcut: 'P' },
-  { mode: 'highlighter', label: 'Highlight', glyph: '▰' },
-  { mode: 'eraser', label: 'Eraser', glyph: '◇', shortcut: 'E' },
-  { mode: 'text', label: 'Text', glyph: 'T', shortcut: 'T' },
-  { mode: 'equation', label: 'Math', glyph: '∫', shortcut: 'M' },
-  { mode: 'graph', label: 'Graph', glyph: 'ƒ', shortcut: 'G' },
-  { mode: 'geometry', label: 'Construct', glyph: '△', shortcut: 'C' },
-  { mode: 'matrix', label: 'Matrix', glyph: '▦', shortcut: 'X' },
-  { mode: 'image', label: 'Image', glyph: '▧' },
-  { mode: 'shape', label: 'Shape', glyph: '○', shortcut: 'S' },
-  { mode: 'arrow', label: 'Arrow', glyph: '↗', shortcut: 'A' },
-  { mode: 'frame', label: 'Frame', glyph: '⌗', shortcut: 'F' },
+const creationTools: Array<{ mode: ToolMode; label: string; icon: LucideIcon; shortcut?: string }> = [
+  { mode: 'select', label: 'Select', icon: MousePointer2, shortcut: 'V' },
+  { mode: 'hand', label: 'Pan', icon: Hand, shortcut: 'H' },
+  { mode: 'pen', label: 'Pen', icon: Pencil, shortcut: 'P' },
+  { mode: 'highlighter', label: 'Highlighter', icon: Highlighter },
+  { mode: 'eraser', label: 'Eraser', icon: Eraser, shortcut: 'E' },
+  { mode: 'text', label: 'Text', icon: Type, shortcut: 'T' },
+  { mode: 'equation', label: 'Equation', icon: Sigma, shortcut: 'M' },
+  { mode: 'graph', label: 'Graph', icon: LineChart, shortcut: 'G' },
+  { mode: 'geometry', label: 'Geometry', icon: DraftingCompass, shortcut: 'C' },
+  { mode: 'matrix', label: 'Matrix', icon: Grid2X2, shortcut: 'X' },
+  { mode: 'image', label: 'Image', icon: ImageIcon },
+  { mode: 'shape', label: 'Shape', icon: Square, shortcut: 'S' },
+  { mode: 'arrow', label: 'Arrow', icon: ArrowUpRight, shortcut: 'A' },
+  { mode: 'frame', label: 'Frame', icon: Frame, shortcut: 'F' },
 ]
 
 function RailButton({
   label,
-  glyph,
+  icon: Icon,
   active,
   shortcut,
   onClick,
 }: {
   label: string
-  glyph: string
+  icon: LucideIcon
   active?: boolean
   shortcut?: string
   onClick: () => void
@@ -63,8 +88,8 @@ function RailButton({
       title={`${label}${shortcut ? ` (${shortcut})` : ''}`}
       onClick={onClick}
     >
-      <span className="rail-glyph" aria-hidden="true">{glyph}</span>
-      <span className="rail-tooltip">{label}</span>
+      <Icon className="rail-glyph" aria-hidden="true" strokeWidth={1.75} />
+      <span className="rail-tooltip">{label}{shortcut ? <kbd>{shortcut}</kbd> : null}</span>
     </button>
   )
 }
@@ -80,13 +105,12 @@ export default function ToolRail({
 }: ToolRailProps) {
   return (
     <aside className="tool-rail" aria-label="Whiteboard tools">
-      <div className="rail-mark" aria-hidden="true">M</div>
       <div className="rail-tools">
         {creationTools.map((tool) => (
           <RailButton
             key={tool.mode}
             label={tool.label}
-            glyph={tool.glyph}
+            icon={tool.icon}
             shortcut={tool.shortcut}
             active={mode === tool.mode}
             onClick={() => onMode(tool.mode)}
@@ -95,11 +119,11 @@ export default function ToolRail({
       </div>
       <div className="rail-divider" />
       <div className="rail-tools rail-actions">
-        <RailButton label="Undo" glyph="↶" shortcut="Ctrl Z" onClick={onUndo} />
-        <RailButton label="Redo" glyph="↷" shortcut="Ctrl Shift Z" onClick={onRedo} />
-        <RailButton label="Group" glyph="⌘" shortcut="Ctrl G" onClick={onGroup} />
-        <RailButton label="Duplicate" glyph="⧉" shortcut="Ctrl D" onClick={onDuplicate} />
-        <RailButton label="Delete" glyph="×" shortcut="Del" onClick={onDelete} />
+        <RailButton label="Undo" icon={Undo2} shortcut="Ctrl Z" onClick={onUndo} />
+        <RailButton label="Redo" icon={Redo2} shortcut="Ctrl Shift Z" onClick={onRedo} />
+        <RailButton label="Group" icon={Group} shortcut="Ctrl G" onClick={onGroup} />
+        <RailButton label="Duplicate" icon={Copy} shortcut="Ctrl D" onClick={onDuplicate} />
+        <RailButton label="Delete" icon={Trash2} shortcut="Del" onClick={onDelete} />
       </div>
     </aside>
   )

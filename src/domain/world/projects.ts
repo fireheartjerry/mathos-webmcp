@@ -65,7 +65,7 @@ export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
   'attention-geometry': scene({
     id: 'attention-geometry', projectId: 'tiny-transformer',
     title: 'Attention Geometry', subtitle: 'Scores become a direction',
-    center: { x: 1750, y: 340 }, zoom: 0.95, frameId: 'attention_geometry_frame', keyboard: 3,
+    center: { x: 1750, y: 340 }, zoom: 1.05, frameId: 'attention_geometry_frame', keyboard: 3,
     transition: 'The weighted value vector is an exact point inside a triangle.',
   }),
   'train-from-scratch': scene({
@@ -76,7 +76,7 @@ export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
   }),
   'attention-barycentrics': scene({
     id: 'attention-barycentrics', projectId: 'olympiad-geometry',
-    title: 'Attention Becomes Barycentrics', subtitle: 'Weights locate a point',
+    title: 'Barycentric Coordinates', subtitle: 'Weights locate a point',
     center: { x: -450, y: 1030 }, zoom: 0.95, frameId: 'attention_barycentrics_frame', keyboard: 5,
     transition: 'Similarity preserves the normalized combination while the figure moves.',
   }),
@@ -108,7 +108,7 @@ export const PROJECTS: readonly SavedProject[] = [
   },
   {
     id: 'tiny-transformer', title: 'Tiny Transformer', eyebrow: '02 / LEARNING',
-    description: 'Watch probability become attention, then train one visible step.', accent: '#e38b57',
+    description: 'Inspect one-head attention, then train one visible gradient step.', accent: '#e38b57',
     sceneIds: ['attention-geometry', 'train-from-scratch'],
   },
   {

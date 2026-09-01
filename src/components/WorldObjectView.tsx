@@ -107,7 +107,7 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
     case 'matrix':
       return <MathObjectView object={object} world={world} run={run} />
     case 'attention':
-      return <AttentionView object={object} run={run} />
+      return <AttentionView object={object} world={world} run={run} />
     case 'training':
       return <TrainingView object={object} world={world} run={run} />
     case 'barycentric':

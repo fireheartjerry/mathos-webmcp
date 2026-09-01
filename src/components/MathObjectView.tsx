@@ -108,7 +108,7 @@ function LiveGraph({
       </svg>
       <div className="graph-formula"><span>f(x)</span><Tex latex={latex} /></div>
       {parameter && (
-        <label className="graph-parameter" onPointerDown={(event) => event.stopPropagation()}>
+        <label className="graph-parameter" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
           <span>{parameter[0]} = <b>{parameter[1].toFixed(1)}</b></span>
           <input
             aria-label={`Parameter ${parameter[0]}`}
@@ -170,6 +170,7 @@ function LiveGeometry({
   }
 
   const beginDrag = (event: ReactPointerEvent<SVGCircleElement>, id: string) => {
+    if (event.button !== 0) return
     event.preventDefault()
     event.stopPropagation()
     svgRef.current?.setPointerCapture(event.pointerId)

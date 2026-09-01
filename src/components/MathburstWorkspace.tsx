@@ -5,11 +5,12 @@ import { createWorldTools } from '../domain/tools/definitions'
 import type { ToolResult, WorldBridge, WorldTraceEvent } from '../domain/tools/definitions'
 import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
-import { loadWorld, saveWorld } from '../domain/world/persistence'
+import { saveWorld } from '../domain/world/persistence'
 import {
   cloneWorld,
   createBlankWorld,
   createDefaultProjectLibrary,
+  createProjectWorld,
   createUserProject,
   loadProjectLibrary,
   saveProjectLibrary,
@@ -25,7 +26,6 @@ import {
   SCENES,
   type CatalogSceneId,
   type ProjectId,
-  type SceneId,
 } from '../domain/world/projects'
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
 import type { DirectorShotEdit } from '../domain/world/director'
@@ -47,9 +47,9 @@ import {
 import type { AgentPresenceState, Point, Viewport, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
+import BrandMark from './BrandMark'
 import PersonalProjectNavigator from './PersonalProjectNavigator'
 import ProjectGallery from './ProjectGallery'
-import ProjectNavigator from './ProjectNavigator'
 import DirectorReviewPanel from './DirectorReviewPanel'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
@@ -132,7 +132,6 @@ export default function MathburstWorkspace() {
   const activeDocumentIdRef = useRef<'main' | string>('main')
   const [hydrated, setHydrated] = useState(false)
   const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
-  const [activeProject, setActiveProject] = useState<ProjectId>('gamma-lab')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -169,26 +168,16 @@ export default function MathburstWorkspace() {
   useEffect(() => {
     const samples = loadHandwritingSamples()
     handwritingSamplesRef.current = samples
-    const storedLibrary = loadProjectLibrary()
+    const storedLibrary = loadProjectLibrary().map((project) => ({
+      ...project,
+      world: applyCapturedOpeningAttempt(project.world, samples),
+    }))
     libraryProjectsRef.current = storedLibrary
     setLibraryProjects(storedLibrary)
-    const stored = loadWorld()
-    if (stored) {
-      const captured = applyCapturedOpeningAttempt(stored, samples)
-      worldRef.current = captured
-      mainWorldRef.current = captured
-      setWorld(captured)
-      const restoredScene = nearestSceneForViewport(captured.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
-      setActiveScene(restoredScene)
-      if (restoredScene !== 'overview') setActiveProject(getProjectForScene(restoredScene).id)
-    } else {
-      const seeded = createSeedWorld()
-      const captured = applyCapturedOpeningAttempt(seeded, samples)
-      const centered = { ...captured, viewport: cameraViewport('gamma-clinic', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
-      worldRef.current = centered
-      mainWorldRef.current = centered
-      setWorld(centered)
-    }
+    const galleryWorld = createBlankWorld('Projects')
+    worldRef.current = galleryWorld
+    mainWorldRef.current = galleryWorld
+    setWorld(galleryWorld)
     activeDocumentIdRef.current = 'main'
     setActiveDocumentId('main')
     setGalleryOpen(true)
@@ -203,7 +192,7 @@ export default function MathburstWorkspace() {
       saveWorld(world)
       return
     }
-    updateLibraryProjects((projects) => projects.map((project) => project.id === activeDocumentId && project.kind === 'user'
+    updateLibraryProjects((projects) => projects.map((project) => project.id === activeDocumentId
       ? { ...project, world, updatedAt: Date.now() }
       : project))
   }, [activeDocumentId, hydrated, updateLibraryProjects, world])
@@ -217,14 +206,12 @@ export default function MathburstWorkspace() {
   }, [directorState, hydrated])
 
   useEffect(() => {
-    if (!hydrated || directorOpen || galleryOpen || blankPersonalProject) return
+    if (!hydrated || directorOpen || galleryOpen || blankPersonalProject || !activeLibraryProject?.templateId) return
     const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
-    setActiveScene((current) => current === nearest ? current : nearest)
-    if (nearest !== 'overview') setActiveProject((current) => {
-      const next = getProjectForScene(nearest).id
-      return current === next ? current : next
-    })
-  }, [blankPersonalProject, directorOpen, galleryOpen, hydrated, world.viewport])
+    const belongsToOpenProject = nearest !== 'overview'
+      && getScenesForProject(activeLibraryProject.templateId).some((scene) => scene.id === nearest)
+    if (belongsToOpenProject) setActiveScene((current) => current === nearest ? current : nearest)
+  }, [activeLibraryProject?.templateId, blankPersonalProject, directorOpen, galleryOpen, hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
     const next = dispatchWorldAction(worldRef.current, action)
@@ -367,7 +354,6 @@ export default function MathburstWorkspace() {
     setWorld(next)
     setActiveScene(scene)
     setGalleryOpen(false)
-    if (scene !== 'overview') setActiveProject(getProjectForScene(scene).id)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -380,23 +366,21 @@ export default function MathburstWorkspace() {
       saveWorld(worldRef.current)
       return
     }
-    updateLibraryProjects((projects) => projects.map((project) => project.id === documentId && project.kind === 'user'
+    updateLibraryProjects((projects) => projects.map((project) => project.id === documentId
       ? { ...project, world: worldRef.current, updatedAt: Date.now() }
       : project))
   }, [updateLibraryProjects])
 
   const openLibraryProject = useCallback((project: LibraryProject, requestedScene: CatalogSceneId = project.startScene) => {
     stashActiveProject()
-    const targetWorld = project.kind === 'built-in'
-      ? mainWorldRef.current
-      : project.world ?? createBlankWorld(project.title)
+    const targetWorld = project.world
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
     const viewport = project.templateId
       ? cameraViewport(requestedScene, canvasWidth, canvasHeight)
       : { x: canvasWidth / 2, y: canvasHeight / 2, zoom: 1 }
     const nextWorld = { ...targetWorld, title: project.title, viewport, selection: [] }
-    const documentId = project.kind === 'built-in' ? 'main' : project.id
+    const documentId = project.id
     activeDocumentIdRef.current = documentId
     setActiveDocumentId(documentId)
     worldRef.current = nextWorld
@@ -405,7 +389,6 @@ export default function MathburstWorkspace() {
     setDirectorOpen(false)
     setDirectorSelection([])
     setActiveScene(requestedScene)
-    setActiveProject(project.templateId ?? 'gamma-lab')
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -422,17 +405,19 @@ export default function MathburstWorkspace() {
   }, [stashActiveProject])
 
   const createLibraryProject = useCallback((title: string, templateId: ProjectId | null) => {
-    const sourceWorld = templateId ? mainWorldRef.current : createBlankWorld(title)
+    const template = templateId
+      ? libraryProjectsRef.current.find((project) => project.id === templateId)?.world
+      : null
+    const sourceWorld = templateId
+      ? template ?? createProjectWorld(createSeedWorld(), templateId)
+      : createBlankWorld(title)
     const project = createUserProject(title, templateId, sourceWorld)
     updateLibraryProjects((projects) => [...projects, project])
     openLibraryProject(project)
   }, [openLibraryProject, updateLibraryProjects])
 
   const duplicateLibraryProject = useCallback((project: LibraryProject) => {
-    const sourceWorld = project.kind === 'built-in'
-      ? mainWorldRef.current
-      : project.world ?? createBlankWorld(project.title)
-    const duplicate = createUserProject(`${project.title} copy`, project.templateId, cloneWorld(sourceWorld))
+    const duplicate = createUserProject(`${project.title} copy`, project.templateId, cloneWorld(project.world))
     updateLibraryProjects((projects) => [...projects, duplicate])
   }, [updateLibraryProjects])
 
@@ -796,7 +781,9 @@ export default function MathburstWorkspace() {
       : libraryProjectsRef.current.find((project) => project.id === activeDocumentIdRef.current) ?? null
     const seed = personalProject?.templateId === null
       ? createBlankWorld(personalProject.title)
-      : createSeedWorld()
+      : personalProject?.templateId
+        ? createProjectWorld(createSeedWorld(), personalProject.templateId, personalProject.title)
+        : createSeedWorld()
     const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
     handwritingSamplesRef.current = samples
     const captured = personalProject?.templateId === null ? seed : applyCapturedOpeningAttempt(seed, samples)
@@ -818,7 +805,6 @@ export default function MathburstWorkspace() {
       mainWorldRef.current = centered
     }
     setActiveScene(directorOpen ? activeDirectorShot.scene : resetScene)
-    setActiveProject(personalProject?.templateId ?? (directorOpen && activeDirectorShot.scene !== 'overview' ? getProjectForScene(activeDirectorShot.scene).id : 'gamma-lab'))
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
@@ -960,8 +946,9 @@ export default function MathburstWorkspace() {
             const projectId = getProjectForScene(scene).id
             const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId)
             if (project && project.deletedAt === null) openLibraryProject(project, scene)
-          } else {
-            navigateToScene(scene)
+          } else if (activeLibraryProject?.templateId) {
+            const allowed = getScenesForProject(activeLibraryProject.templateId).find((candidate) => candidate.id === scene)
+            if (allowed) navigateToScene(allowed.id)
           }
         }
       } else {
@@ -972,7 +959,7 @@ export default function MathburstWorkspace() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [deleteSelection, duplicateSelection, galleryOpen, groupSelection, history, navigateToScene, openLibraryProject, openProjectGallery])
+  }, [activeLibraryProject?.templateId, deleteSelection, duplicateSelection, galleryOpen, groupSelection, history, navigateToScene, openLibraryProject, openProjectGallery])
 
   const selectedObjects = useMemo(
     () => world.selection.map((id) => world.objects[id]).filter(Boolean),
@@ -983,11 +970,21 @@ export default function MathburstWorkspace() {
     run(humanAction('Changed zoom', [{ type: 'viewport', viewport: { ...world.viewport, zoom: Math.min(2.5, Math.max(0.25, zoom)) } }]))
   }
 
+  const projectBreadcrumb = activeLibraryProject?.templateId && activeScene !== 'overview'
+    ? {
+        number: String(Math.max(0, getScenesForProject(activeLibraryProject.templateId).findIndex((scene) => scene.id === activeScene)) + 1).padStart(2, '0'),
+        title: SCENES[activeScene].title,
+        state: activeLibraryProject.templateId === 'tiny-transformer' ? 'live model' : 'interactive',
+      }
+    : activeLibraryProject
+      ? { number: '01', title: activeLibraryProject.title, state: 'blank canvas' }
+      : undefined
+
   return (
     <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen}>
       <header className="world-header">
-        <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><span>∫</span> Mathburst</button>
-        <div className="world-title"><b>{galleryOpen ? 'Project gallery' : activeLibraryProject?.title ?? (activeScene === 'overview' ? 'One mathematical world' : SCENES[activeScene].title)}</b><span>/</span><em>shared mathematical world</em></div>
+        <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><BrandMark className="brand-mark" /><span>Mathburst</span></button>
+        <div className="world-title"><b>{galleryOpen ? 'Projects' : activeLibraryProject?.title ?? 'Mathburst'}</b>{!galleryOpen && <><span>/</span><em>{activeLibraryProject?.templateId && activeScene !== 'overview' ? SCENES[activeScene].title : 'Blank canvas'}</em></>}</div>
         <div className="header-actions">
           {galleryOpen ? (
             <span className="gallery-header-count"><b>{libraryProjects.filter((project) => project.deletedAt === null).length}</b> projects</span>
@@ -1001,7 +998,7 @@ export default function MathburstWorkspace() {
               >
                 {directorOpen ? 'Close review' : 'Director review'}
               </button>}
-              {!blankPersonalProject && <button
+              {activeLibraryProject?.templateId === 'gamma-lab' && <button
                 type="button"
                 className="reconstruct-trigger"
                 disabled={agentBusy || Boolean(world.reconstruction) || world.session.reconstructionStatus === 'approved'}
@@ -1053,7 +1050,7 @@ export default function MathburstWorkspace() {
         onDirectorViewportChange={setDirectorViewport}
         onDirectorTransform={transformDirectorObjects}
         onDirectorSelection={setDirectorSelection}
-        customBreadcrumb={blankPersonalProject && activeLibraryProject ? { number: '01', title: activeLibraryProject.title, state: 'blank canvas' } : undefined}
+        customBreadcrumb={projectBreadcrumb}
         tutorOverlay={!galleryOpen && !blankPersonalProject && activeScene === 'gamma-clinic' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
           <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
             <header><span>01 · Reasoning check</span><b>human attempt</b></header>
@@ -1116,20 +1113,12 @@ export default function MathburstWorkspace() {
           title={activeLibraryProject.title}
           templateId={activeLibraryProject.templateId}
           activeScene={activeScene}
+          kind={activeLibraryProject.kind}
           onHome={openProjectGallery}
           onSceneChange={(sceneId) => navigateToScene(sceneId)}
         />
       ) : (
-        <ProjectNavigator
-          activeProject={activeProject}
-          activeScene={activeScene}
-          onProjectChange={(projectId) => {
-            setActiveProject(projectId)
-            navigateToScene(getScenesForProject(projectId)[0].id)
-          }}
-          onSceneChange={(sceneId: SceneId) => navigateToScene(sceneId)}
-          onOverview={openProjectGallery}
-        />
+        null
       )}
 
       {world.reconstruction && (

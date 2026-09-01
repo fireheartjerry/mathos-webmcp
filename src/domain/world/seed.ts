@@ -227,7 +227,7 @@ export function createSeedWorld(): WorldState {
     {
       id: 'gamma_bridge_equation',
       kind: 'equation',
-      latex: '\\ell_j=\\log w_j\\;\\Longrightarrow\\;\\operatorname{softmax}(\\ell)=w',
+      latex: 'w_j=\\int_{b_{j-1}}^{b_j}g_a(x)\\,dx,\\qquad \\sum_jw_j=1',
       color: '#7c5cff',
       bounds: { x: 490, y: 550, width: 430, height: 48 },
       rotation: 0,
@@ -241,7 +241,7 @@ export function createSeedWorld(): WorldState {
     {
       id: 'attention_bridge_label',
       kind: 'text',
-      text: 'Gamma masses are initialization logits—not the same mechanism.',
+      text: 'Edit any input or weight. Every downstream value recomputes immediately.',
       color: '#7c5cff',
       fontSize: 16,
       bounds: { x: 1380, y: 570, width: 700, height: 32 },
@@ -267,7 +267,7 @@ export function createSeedWorld(): WorldState {
     },
     training,
 
-    frame('attention_barycentrics_frame', 'Olympiad Geometry · Attention Becomes Barycentrics', [
+    frame('attention_barycentrics_frame', 'Olympiad Geometry · Barycentric Coordinates', [
       barycentric.id, 'barycentric_equation',
     ], -860, 750, 820, 550),
     {

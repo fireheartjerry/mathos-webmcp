@@ -1,12 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mathburst">
-  <title>Mathburst</title>
-  <rect width="64" height="64" fill="#171713"/>
-  <g fill="#7c5cff">
-    <circle cx="17" cy="17" r="2.75"/>
-    <circle cx="47" cy="17" r="2.75"/>
-    <circle cx="17" cy="47" r="2.75"/>
-    <circle cx="47" cy="47" r="2.75"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#f8f7f3"/>
+  <g fill="none" stroke="#16150f" stroke-linecap="round" stroke-width="2.2">
+    <path d="M16 5v7M16 20v7M5 16h7M20 16h7"/>
+    <path d="m8.2 8.2 5 5M18.8 18.8l5 5M23.8 8.2l-5 5M13.2 18.8l-5 5"/>
   </g>
-  <path d="M42 8C30 8 27 16 26 25L23 43C22 51 18 56 10 56" fill="none" stroke="#fbf9f3" stroke-width="6" stroke-linecap="square"/>
-  <path d="M17 31H39" fill="none" stroke="#fbf9f3" stroke-width="3"/>
+  <circle cx="16" cy="16" r="2.3" fill="#16150f"/>
 </svg>

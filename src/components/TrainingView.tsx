@@ -47,7 +47,7 @@ export default function TrainingView({ object, world, run }: Props) {
     run(humanAction('Reset tiny model to step zero', operations))
   }
   return (
-    <section className="training-view" onPointerDown={(event) => event.stopPropagation()}>
+    <section className="training-view" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
       <header className="training-header"><div><span className="math-object-kicker">OPTIMIZATION / NUMERICAL GRADIENT</span><h3>Train a tiny language model from scratch</h3></div><div className="training-actions"><button type="button" onClick={reset}>reset</button><button type="button" className="training-primary" onClick={train}>train 1 step</button></div></header>
       <div className="training-metrics"><div><small>STEP</small><strong>{object.step}</strong></div><div><small>TARGET TOKEN</small><strong>{object.model.tokens[object.model.targetIndex]}</strong></div><div><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss)}</strong><span className="training-delta">loss ↓ by gradient</span></div><div><small>TARGET PROBABILITY</small><strong>{fmt(pass.targetProbability)}</strong><span className="training-delta">probability ↑</span></div></div>
       <div className="training-probabilities"><div className="training-card-heading"><span>OUTPUT DISTRIBUTION</span><b>Σ p = {fmt(pass.probabilities.reduce((sum, value) => sum + value, 0))}</b></div>{pass.probabilities.map((probability, index) => <div className={`training-probability ${index === object.model.targetIndex ? 'is-target' : ''}`} key={index}><span>{object.model.tokens[index]}</span><i><em style={{ width: `${probability * 100}%` }} /></i><b>{fmt(probability)}</b></div>)}</div>

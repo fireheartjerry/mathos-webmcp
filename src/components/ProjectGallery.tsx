@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { ArchiveRestore, Copy, Plus, RotateCcw, Trash2, X as CloseIcon } from 'lucide-react'
 import { PROJECTS, getScenesForProject, type ProjectId } from '../domain/world/projects'
 import type { LibraryProject } from '../domain/world/library'
 import type { CSSProperties, FormEvent } from 'react'
@@ -77,13 +78,13 @@ function ProjectCard({
       <footer>
         {deleted ? (
           <>
-            <button type="button" className="library-restore" onClick={onRestore}>Restore</button>
-            {project.kind === 'user' && <button type="button" className="library-delete-forever" onClick={onDeleteForever}>Delete forever</button>}
+            <button type="button" className="library-restore" onClick={onRestore}><RotateCcw aria-hidden="true" /> Restore</button>
+            {project.kind === 'user' && <button type="button" className="library-delete-forever" onClick={onDeleteForever}><Trash2 aria-hidden="true" /> Delete forever</button>}
           </>
         ) : (
           <>
-            <button type="button" onClick={onDuplicate} aria-label={`Duplicate ${project.title}`}>Duplicate</button>
-            <button type="button" onClick={onTrash} aria-label={`Move ${project.title} to deleted projects`}>Move to deleted</button>
+            <button type="button" onClick={onDuplicate} aria-label={`Duplicate ${project.title}`}><Copy aria-hidden="true" /> Duplicate</button>
+            <button type="button" onClick={onTrash} aria-label={`Move ${project.title} to deleted projects`}><Trash2 aria-hidden="true" /> Delete</button>
           </>
         )}
       </footer>
@@ -117,11 +118,11 @@ export default function ProjectGallery({ projects, onOpen, onCreate, onDuplicate
       <div className="project-gallery-shell">
         <header className="project-gallery-hero">
           <div>
-            <span className="project-gallery-eyebrow">LOCAL PROJECT LIBRARY / {String(active.length).padStart(2, '0')}</span>
-            <h1 id="project-gallery-title">Your mathematical worlds.</h1>
-            <p>Open a project, make a private copy, or begin with a completely blank canvas.</p>
+            <span className="project-gallery-eyebrow">MATHBURST / {String(active.length).padStart(2, '0')}</span>
+            <h1 id="project-gallery-title">Projects.</h1>
+            <p>Four independent mathematical canvases. Open one, duplicate it, or start from nothing.</p>
           </div>
-          <button className="new-project-button" type="button" onClick={() => setCreating(true)}><span>+</span> New project</button>
+          <button className="new-project-button" type="button" onClick={() => setCreating(true)}><Plus aria-hidden="true" /> New project</button>
         </header>
 
         <div className="project-gallery-toolbar">
@@ -129,7 +130,7 @@ export default function ProjectGallery({ projects, onOpen, onCreate, onDuplicate
             <button type="button" role="tab" aria-selected={view === 'projects'} onClick={() => setView('projects')}>Projects <b>{active.length}</b></button>
             <button type="button" role="tab" aria-selected={view === 'deleted'} onClick={() => setView('deleted')}>Deleted projects <b>{deleted.length}</b></button>
           </div>
-          <span>{view === 'projects' ? 'Select a title to enter its whiteboard' : 'Restore a project whenever you need it again'}</span>
+          <span>{view === 'projects' ? 'Select a project' : 'Restore a project'}</span>
         </div>
 
         {shown.length ? (
@@ -149,15 +150,15 @@ export default function ProjectGallery({ projects, onOpen, onCreate, onDuplicate
             ))}
             {view === 'projects' && (
               <button type="button" className="library-add-card" onClick={() => setCreating(true)}>
-                <span>+</span><strong>Create another project</strong><small>Blank canvas or one of four templates</small>
+                <Plus aria-hidden="true" /><strong>Create another project</strong><small>Blank canvas or one of four templates</small>
               </button>
             )}
           </div>
         ) : (
           <div className="project-gallery-empty">
-            <span>{view === 'deleted' ? '♲' : '+'}</span>
+            {view === 'deleted' ? <ArchiveRestore aria-hidden="true" /> : <Plus aria-hidden="true" />}
             <h2>{view === 'deleted' ? 'Nothing deleted.' : 'No projects yet.'}</h2>
-            <p>{view === 'deleted' ? 'Projects moved here can be restored later.' : 'Create a project to start a mathematical world.'}</p>
+            <p>{view === 'deleted' ? 'Projects moved here can be restored later.' : 'Create a project to start drawing.'}</p>
             {view === 'projects' && <button type="button" onClick={() => setCreating(true)}>New project</button>}
           </div>
         )}
@@ -166,7 +167,7 @@ export default function ProjectGallery({ projects, onOpen, onCreate, onDuplicate
       {creating && (
         <div className="project-creator-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) closeCreator() }}>
           <form className="project-creator" role="dialog" aria-modal="true" aria-labelledby="project-creator-title" onSubmit={create}>
-            <header><div><span>NEW MATHEMATICAL WORLD</span><h2 id="project-creator-title">Create a project</h2></div><button type="button" aria-label="Close new project dialog" onClick={closeCreator}>×</button></header>
+            <header><div><span>NEW PROJECT</span><h2 id="project-creator-title">Create a project</h2></div><button type="button" aria-label="Close new project dialog" onClick={closeCreator}><CloseIcon aria-hidden="true" /></button></header>
             <label htmlFor="new-project-title">Project title</label>
             <input id="new-project-title" autoFocus value={title} maxLength={54} onChange={(event) => setTitle(event.target.value)} />
             <fieldset>

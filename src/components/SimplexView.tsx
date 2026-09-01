@@ -56,7 +56,7 @@ export default function SimplexView({ object, run }: Props) {
   const update = (summary: string, patch: Partial<SimplexObject>) => run(humanPut(summary, { ...object, ...patch }))
 
   return (
-    <div className="simplex-view" onPointerDown={(event) => event.stopPropagation()}>
+    <div className="simplex-view" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
       <svg className="simplex-canvas" viewBox={`0 0 ${width} ${plotHeight}`} aria-label="Rotatable tetrahedral probability simplex">
         <defs><linearGradient id={`simplex-fill-${object.id}`} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#7c5cff" stopOpacity=".24" /><stop offset="1" stopColor="#4c9f9a" stopOpacity=".12" /></linearGradient></defs>
         <rect className="simplex-paper" width={width} height={plotHeight} rx="8" />
@@ -79,7 +79,7 @@ export default function SimplexView({ object, run }: Props) {
         <div className="simplex-count-row"><b>{object.showLattice ? lattice.length : recurrence.total}</b> lattice points · <code>L₃({Math.round(object.denominator)}) = C({Math.round(object.denominator) + 3}, 3)</code></div>
         <div className="simplex-pascal-row">Pascal: {recurrence.previous} + {recurrence.lowerDimension} = {recurrence.sum} <span>{recurrence.verified ? '✓ verified' : '—'}</span></div>
       </div>
-      <div className="simplex-controls" onPointerDown={(event) => event.stopPropagation()}>
+      <div className="simplex-controls" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
         {object.weights.map((weight, index) => <label key={LABELS[index]}><span>{LABELS[index]} <b>{fmt(weight)}</b></span><input type="range" min="0" max="1" step="0.01" value={weight} aria-label={`${LABELS[index]} simplex weight`} onChange={(event) => { const next = [...object.weights] as [number, number, number, number]; next[index] = Number(event.target.value); const total = next.reduce((sum, item) => sum + item, 0) || 1; update(`Adjusted simplex weight ${LABELS[index]}`, { weights: next.map((item) => item / total) as [number, number, number, number] }) }} /></label>)}
         <label><span>rotate X <b>{fmt(object.rotationX)}</b></span><input type="range" min={-Math.PI} max={Math.PI} step="0.02" value={object.rotationX} aria-label="Rotate simplex X" onChange={(event) => update('Rotated simplex around X', { rotationX: Number(event.target.value) })} /></label>
         <label><span>rotate Y <b>{fmt(object.rotationY)}</b></span><input type="range" min={-Math.PI} max={Math.PI} step="0.02" value={object.rotationY} aria-label="Rotate simplex Y" onChange={(event) => update('Rotated simplex around Y', { rotationY: Number(event.target.value) })} /></label>

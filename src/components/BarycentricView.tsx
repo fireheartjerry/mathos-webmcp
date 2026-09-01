@@ -64,6 +64,7 @@ export default function BarycentricView({ object, run }: Props) {
   }
 
   const beginDrag = (event: ReactPointerEvent<SVGCircleElement>) => {
+    if (event.button !== 0) return
     event.preventDefault()
     event.stopPropagation()
     svgRef.current?.setPointerCapture(event.pointerId)
@@ -99,7 +100,7 @@ export default function BarycentricView({ object, run }: Props) {
   const setCentroid = () => run(humanPut('Set barycentric point to centroid', { ...object, weights: [1 / 3, 1 / 3, 1 / 3] }))
 
   return (
-    <div className="barycentric-view" onPointerDown={(event) => event.stopPropagation()}>
+    <div className="barycentric-view" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
       <svg
         ref={svgRef}
         className="barycentric-canvas"
@@ -113,7 +114,7 @@ export default function BarycentricView({ object, run }: Props) {
           <clipPath id={clipId}><rect width={width} height={canvasHeight} /></clipPath>
         </defs>
         <rect className="barycentric-paper" width={width} height={canvasHeight} rx="8" />
-        <text className="barycentric-kicker" x="16" y="21">ATTENTION → BARYCENTRICS</text>
+        <text className="barycentric-kicker" x="16" y="21">BARYCENTRIC COORDINATES</text>
         <g clipPath={`url(#${clipId})`}>
           <polygon className="barycentric-triangle" points={polygonPoints(vertices)} />
           <polygon className="barycentric-subarea barycentric-subarea-a" points={polygonPoints([livePoint, vertices[1], vertices[2]])} />
@@ -149,7 +150,7 @@ export default function BarycentricView({ object, run }: Props) {
         </div>
         <div className="barycentric-invariant">P = αA + βB + γC · similarity keeps the weights invariant</div>
       </div>
-      <div className="barycentric-controls" onPointerDown={(event) => event.stopPropagation()}>
+      <div className="barycentric-controls" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
         {object.weights.map((weight, index) => <label key={object.labels[index]}>
           <span>{object.labels[index]} <b>{fmt(liveWeights[index])}</b></span>
           <input
