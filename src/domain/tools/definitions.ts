@@ -1,1130 +1,384 @@
-/**
- * The WebMCP tool surface: 18 tools, one per capability in docs/webmcp/capabilities.md.
- *
- * Written against what Chrome 151 actually does, which differs from the published
- * IDL in ways that matter (see docs/overnight-audit/02b). The two that bite:
- *
- *   1. `execute` receives EXACTLY ONE argument. There is no `{ signal }` second
- *      parameter. The previous implementation opened every handler with
- *      `context.signal?.aborted`, which threw a TypeError on every call - so all five
- *      tools failed in shipped Chrome while the page displayed "5 agent tools live".
- *      Handlers here take `(input)` and nothing else.
- *
- *   2. A THROWN error is flattened by the browser to a generic `UnknownError` and our
- *      message is discarded. A RETURNED envelope survives verbatim, `recovery` string
- *      and all. So nothing here throws; every failure is a value.
- *
- * These definitions are deliberately free of any browser dependency so the whole
- * surface can be executed in tests.
- */
+import { resolveGeometry } from '../math/geometry'
+import { evaluateLatexAt } from '../math/graph'
+import { transformVectors } from '../math/matrix'
+import { buildDeleteOperations, buildTransformOperations } from '../world/operations'
+import { auditReconstruction, proposeReconstruction } from '../world/reconstruction'
+import type {
+  Bounds,
+  GeometryPrimitive,
+  Point,
+  Viewport,
+  WorldAction,
+  WorldObject,
+  WorldOperation,
+  WorldState,
+} from '../world/types'
 
-import type { ActionResult, SessionAction, SessionState } from '../session/types'
-import { getFirstIssue } from '../math/derivation'
-import { computeEngine, parseExpression } from '../math/expression'
-import { compareExpressions } from '../math/equivalence'
-import { FAMILY_IDS } from '../math/problems'
-import type { PlatformFeature } from './platform'
-
-export type ToolErrorCode =
-  | 'stale_revision'
-  | 'invalid_phase'
-  | 'invalid_input'
-  | 'refused_policy'
-  | 'not_found'
-  | 'not_ready'
-  | 'internal_error'
-
-export type ToolEnvelope =
-  | { ok: true; revision: number; data: Record<string, unknown> }
-  | {
-      ok: false
-      revision: number
-      error: {
-        code: ToolErrorCode
-        message: string
-        recovery: string
-        /**
-         * The argument at fault, when exactly one is. An agent should not have to
-         * parse prose to learn which field to change, so the name is carried in a
-         * property of its own; `message` remains the human sentence.
-         */
-        field?: string
-      }
-    }
-
-export type ToolAnnotations = {
-  // Chrome 151 silently drops every other annotation key. Only these two survive.
-  readOnlyHint: boolean
-  untrustedContentHint: boolean
+export type ToolResult = {
+  ok: boolean
+  summary: string
+  changedIds?: string[]
+  data?: Record<string, unknown>
+  error?: string
 }
 
-export type ToolDefinition = {
+export type WorldBridge = {
+  getWorld: () => WorldState
+  runAgentAction: (action: WorldAction, targetIds?: string[]) => Promise<ToolResult>
+  runHistory: (direction: 'undo' | 'redo') => Promise<ToolResult>
+}
+
+export type WorldTool = {
   name: string
   title: string
   description: string
   inputSchema: Record<string, unknown>
-  annotations: ToolAnnotations
-  execute: (input: unknown) => Promise<ToolEnvelope>
+  annotations: { readOnlyHint: boolean; untrustedContentHint: boolean }
+  execute: (input: unknown) => Promise<ToolResult>
 }
 
-export type ToolBridge = {
-  /** Never throws. Returns null when the scratchpad is not mounted. */
-  getState: () => SessionState | null
-  /** Runs an action through the one shared reducer and awaits the repaint. */
-  run: (action: SessionAction) => Promise<ActionResult>
-  requestCache: Map<string, ToolEnvelope | Promise<ToolEnvelope>>
-  /** Called for every successful envelope, including reads and cached retries. */
-  onToolSuccess: () => void
-  /**
-   * Runs the WebMCP platform probes. Injected rather than imported so this module
-   * stays free of browser dependencies and the whole surface remains testable.
-   */
-  probePlatform: () => Promise<PlatformFeature[]>
-}
+type Values = Record<string, unknown>
+type ToolExecutor = (input: unknown) => Promise<ToolResult> | ToolResult
 
-const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/
+const KINDS: WorldObject['kind'][] = [
+  'ink', 'text', 'image', 'shape', 'arrow', 'equation', 'graph', 'geometry', 'matrix', 'frame', 'group',
+]
+const OPERATION_TYPES: WorldOperation['type'][] = ['put', 'remove', 'select', 'viewport', 'order', 'session', 'reconstruction']
+const finite = (...numbers: number[]) => numbers.every(Number.isFinite)
+const isRecord = (value: unknown): value is Values => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+const isPoint = (value: unknown): value is Point => isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number' && finite(value.x, value.y)
+const isBounds = (value: unknown): value is Bounds => isRecord(value)
+  && typeof value.x === 'number' && typeof value.y === 'number'
+  && typeof value.width === 'number' && typeof value.height === 'number'
+  && finite(value.x, value.y, value.width, value.height) && value.width > 0 && value.height > 0
+const isPair = (value: unknown): value is [number, number] => Array.isArray(value)
+  && value.length === 2 && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
+const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((entry) => typeof entry === 'string')
 
-const NOT_MOUNTED: ToolEnvelope = {
-  ok: false,
-  revision: -1,
-  error: {
-    code: 'not_ready',
-    message: 'The scratchpad is not open.',
-    recovery: 'Ask the learner to open the Second Try scratchpad, then read it again.',
-  },
-}
-
-function failure(
-  revision: number,
-  code: ToolErrorCode,
-  message: string,
-  recovery: string,
-  field?: string,
-): ToolEnvelope {
-  return { ok: false, revision, error: { code, message, recovery, ...(field ? { field } : {}) } }
-}
-
-/**
- * Chrome hands the handler one argument. In Chrome 151 that is the parsed object,
- * but the caller supplies a JSON *string* to `executeTool`, and the local inspector
- * may pass either. Accept both rather than depending on which side did the parsing.
- */
-function readInput(input: unknown): Record<string, unknown> | null {
+function readInput(input: unknown): Values {
   if (typeof input === 'string') {
     if (!input.trim()) return {}
-    try {
-      const parsed: unknown = JSON.parse(input)
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : null
-    } catch {
-      return null
-    }
+    const parsed: unknown = JSON.parse(input)
+    if (!isRecord(parsed)) throw new Error('Arguments must be a JSON object.')
+    return parsed
   }
   if (input === undefined || input === null) return {}
-  if (typeof input === 'object' && !Array.isArray(input)) return input as Record<string, unknown>
-  return null
+  if (!isRecord(input)) throw new Error('Arguments must be a JSON object.')
+  return input
 }
 
-const revisionField = {
-  type: 'integer',
-  minimum: 0,
-  // Bounded above as well as below. A schema declaring no upper limit tells an agent
-  // that any integer is acceptable, and a revision is a small counter.
-  maximum: 1_000_000,
-  description:
-    'The revision you read from get_scratchpad. If the learner has edited since, the call is rejected as stale.',
-} as const
+function values(input: unknown, allowed: string[]): Values {
+  const result = readInput(input)
+  const unexpected = Object.keys(result).find((key) => !allowed.includes(key))
+  if (unexpected) throw new Error(`Unexpected argument “${unexpected}”.`)
+  return result
+}
 
-const requestIdField = {
-  type: 'string',
-  minLength: 6,
-  maxLength: 64,
-  pattern: '^[A-Za-z0-9_-]+$',
-  description:
-    'Unique per intent. The same id and revision replay safely; use a new id for a deliberate re-check. This cache resets on page reload.',
-} as const
+const failure = (error: unknown): ToolResult => ({
+  ok: false,
+  summary: 'No changes made',
+  error: error instanceof Error ? error.message : 'The page could not complete that tool call.',
+})
 
-/** Keeps tool output small. Context is the scarce resource, not the transport. */
-function summariseSteps(state: SessionState) {
-  const limit = 8
-  const firstIssueIndex = state.report?.firstBrokenIndex ?? -1
-  const shown = state.steps.slice(0, limit).map((step, index) => ({ step, index }))
-  if (firstIssueIndex >= limit && state.steps[firstIssueIndex]) {
-    shown[limit - 1] = { step: state.steps[firstIssueIndex], index: firstIssueIndex }
+function safe(execute: ToolExecutor): (input: unknown) => Promise<ToolResult> {
+  return async (input) => {
+    try { return await execute(input) } catch (error) { return failure(error) }
   }
-  const steps = shown.map(({ step, index }) => {
-    const verdict = state.report?.verdicts[step.id]
-    return {
-      id: step.id,
-      n: index + 1,
-      latex: step.latex.length > 80 ? step.latex.slice(0, 77) + '...' : step.latex,
-      attempts: step.attempts,
-      verdict: verdict ? verdict.status : 'unchecked',
+}
+
+const emptySchema = { type: 'object', properties: {}, additionalProperties: false }
+const pointSchema = { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'], additionalProperties: false }
+const boundsSchema = {
+  type: 'object',
+  properties: { x: { type: 'number' }, y: { type: 'number' }, width: { type: 'number', exclusiveMinimum: 0 }, height: { type: 'number', exclusiveMinimum: 0 } },
+  required: ['x', 'y', 'width', 'height'], additionalProperties: false,
+}
+const objectSchema = {
+  type: 'object',
+  description: 'A typed Mathburst scene object. Kind-specific fields are required.',
+  properties: {
+    id: { type: 'string', minLength: 1 }, kind: { type: 'string', enum: KINDS }, bounds: boundsSchema,
+    rotation: { type: 'number' }, author: { type: 'string', enum: ['human', 'agent'] }, opacity: { type: 'number', minimum: 0, maximum: 1 },
+  },
+  required: ['id', 'kind', 'bounds', 'rotation', 'author', 'opacity'], additionalProperties: true,
+}
+const operationSchema = { type: 'object', properties: { type: { type: 'string', enum: OPERATION_TYPES } }, required: ['type'], additionalProperties: true }
+const primitivesSchema = {
+  type: 'array', minItems: 1,
+  items: { type: 'object', properties: { kind: { type: 'string' }, id: { type: 'string' } }, required: ['kind', 'id'], additionalProperties: true },
+}
+const schema = (properties: Values, required: string[] = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false })
+
+function tool(name: string, title: string, description: string, inputSchema: Record<string, unknown>, readOnly: boolean, execute: ToolExecutor): WorldTool {
+  return { name, title, description, inputSchema, annotations: { readOnlyHint: readOnly, untrustedContentHint: false }, execute: safe(execute) }
+}
+
+function geometryPrimitiveError(value: unknown): string | null {
+  if (!isRecord(value) || typeof value.kind !== 'string' || typeof value.id !== 'string') return 'Every geometry primitive needs a kind and id.'
+  const string = (key: string) => typeof value[key] === 'string'
+  if (value.kind === 'point') return isPoint(value.at) ? null : `Point ${value.id} needs finite coordinates.`
+  if (value.kind === 'segment') return string('from') && string('to') ? null : `Segment ${value.id} needs from and to ids.`
+  if (value.kind === 'line') return isStringArray(value.through) && value.through.length === 2 ? null : `Line ${value.id} needs two point ids.`
+  if (value.kind === 'circle') return string('center') && string('through') ? null : `Circle ${value.id} needs center and through ids.`
+  if (value.kind === 'polygon') return isStringArray(value.points) && value.points.length >= 3 ? null : `Polygon ${value.id} needs at least three point ids.`
+  if (value.kind === 'midpoint') return isStringArray(value.of) && value.of.length === 2 ? null : `Midpoint ${value.id} needs two point ids.`
+  if (value.kind === 'perpendicular' || value.kind === 'parallel') return string('through') && string('to') ? null : `${value.kind} ${value.id} needs through and to ids.`
+  if (value.kind === 'intersection') return isStringArray(value.lines) && value.lines.length === 2 ? null : `Intersection ${value.id} needs two line ids.`
+  if (value.kind === 'angle') return string('a') && string('vertex') && string('b') ? null : `Angle ${value.id} needs a, vertex and b ids.`
+  if (value.kind === 'homothety') return string('center') && string('source') && typeof value.factor === 'number' ? null : `Homothety ${value.id} needs center, source and factor.`
+  return `Geometry primitive ${value.id} has an unknown kind.`
+}
+
+function objectError(value: unknown): string | null {
+  if (!isRecord(value)) return 'Each object must be a JSON object.'
+  if (typeof value.id !== 'string' || !value.id) return 'Every object needs a non-empty id.'
+  if (!KINDS.includes(value.kind as WorldObject['kind'])) return `Object ${value.id} has an unknown kind.`
+  if (!isBounds(value.bounds)) return `Object ${value.id} needs finite positive bounds.`
+  if (typeof value.rotation !== 'number' || !Number.isFinite(value.rotation)) return `Object ${value.id} needs a finite rotation.`
+  if (typeof value.opacity !== 'number' || !Number.isFinite(value.opacity)) return `Object ${value.id} needs a finite opacity.`
+  const id = value.id
+  switch (value.kind) {
+    case 'ink': return Array.isArray(value.points) && value.points.every(isPoint) && typeof value.color === 'string' && typeof value.width === 'number' ? null : `Ink ${id} is incomplete.`
+    case 'text': return typeof value.text === 'string' && typeof value.color === 'string' && typeof value.fontSize === 'number' ? null : `Text ${id} is incomplete.`
+    case 'image': return typeof value.src === 'string' && typeof value.alt === 'string' ? null : `Image ${id} is incomplete.`
+    case 'shape': return ['rectangle', 'ellipse', 'triangle'].includes(String(value.shape)) && typeof value.fill === 'string' && typeof value.stroke === 'string' ? null : `Shape ${id} is incomplete.`
+    case 'arrow': return isPoint(value.from) && isPoint(value.to) && typeof value.color === 'string' ? null : `Arrow ${id} is incomplete.`
+    case 'equation': return typeof value.latex === 'string' && typeof value.color === 'string' ? null : `Equation ${id} needs LaTeX and color.`
+    case 'graph': return typeof value.equationId === 'string' && isPair(value.xDomain) && isPair(value.yDomain) && typeof value.color === 'string' ? null : `Graph ${id} needs equationId and domains.`
+    case 'geometry': {
+      if (!Array.isArray(value.primitives) || typeof value.accent !== 'string') return `Geometry ${id} is incomplete.`
+      return value.primitives.map(geometryPrimitiveError).find(Boolean) ?? null
     }
+    case 'matrix': return Array.isArray(value.values) && value.values.length === 2 && value.values.every(isPair) && isStringArray(value.sourceIds) && typeof value.accent === 'string' ? null : `Matrix ${id} needs a 2×2 array and sourceIds.`
+    case 'frame': return typeof value.title === 'string' && isStringArray(value.childIds) ? null : `Frame ${id} is incomplete.`
+    case 'group': return isStringArray(value.childIds) ? null : `Group ${id} needs childIds.`
+    default: return `Object ${id} has an unknown kind.`
+  }
+}
+
+function agentObject(value: unknown): WorldObject {
+  const error = objectError(value)
+  if (error) throw new Error(error)
+  return { ...(value as WorldObject), author: 'agent' } as WorldObject
+}
+
+function objectList(value: unknown): WorldObject[] {
+  if (!Array.isArray(value) || !value.length) throw new Error('objects must be a non-empty array.')
+  const objects = value.map(agentObject)
+  if (new Set(objects.map((object) => object.id)).size !== objects.length) throw new Error('Object ids must be unique inside one call.')
+  return objects
+}
+
+function primitives(value: unknown): GeometryPrimitive[] {
+  if (!Array.isArray(value) || !value.length) throw new Error('primitives must be a non-empty array.')
+  const error = value.map(geometryPrimitiveError).find(Boolean)
+  if (error) throw new Error(error)
+  return value as GeometryPrimitive[]
+}
+
+const action = (summary: string, operations: WorldOperation[]): WorldAction => ({ id: crypto.randomUUID(), source: 'agent', summary, operations })
+function changedIds(operations: WorldOperation[]): string[] {
+  const ids = new Set<string>()
+  for (const operation of operations) {
+    if (operation.type === 'put') ids.add(operation.object.id)
+    if (operation.type === 'remove') ids.add(operation.id)
+  }
+  return [...ids]
+}
+function limit(value: unknown, fallback: number) {
+  if (value === undefined) return fallback
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('limit must be a number.')
+  return Math.max(1, Math.min(100, Math.floor(value)))
+}
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`${field} must be a non-empty string.`)
+  return value
+}
+
+const COMMON_PATCH_FIELDS = ['bounds', 'rotation', 'opacity', 'locked']
+const KIND_PATCH_FIELDS: Record<WorldObject['kind'], string[]> = {
+  ink: ['points', 'color', 'width'], text: ['text', 'color', 'fontSize'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
+  arrow: ['from', 'to', 'color'], equation: ['latex', 'color'], graph: ['equationId', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral'],
+  geometry: ['primitives', 'accent'], matrix: ['values', 'sourceIds', 'accent'], frame: ['title', 'childIds'], group: ['childIds'],
+}
+
+function validateOperations(world: WorldState, raw: unknown): WorldOperation[] {
+  if (!Array.isArray(raw) || !raw.length) throw new Error('operations must be a non-empty array.')
+  const available = new Set(Object.keys(world.objects))
+  const operations: WorldOperation[] = []
+  for (const entry of raw) {
+    if (!isRecord(entry) || !OPERATION_TYPES.includes(entry.type as WorldOperation['type'])) throw new Error('Every operation needs a supported type.')
+    if (entry.type === 'put') {
+      const object = agentObject(entry.object); available.add(object.id); operations.push({ type: 'put', object })
+    } else if (entry.type === 'remove') {
+      const id = requiredString(entry.id, 'remove.id'); if (!available.has(id)) throw new Error(`Object ${id} does not exist.`); available.delete(id); operations.push({ type: 'remove', id })
+    } else if (entry.type === 'select' || entry.type === 'order') {
+      if (!isStringArray(entry.ids) || entry.ids.some((id) => !available.has(id))) throw new Error(`${entry.type}.ids must reference existing objects.`)
+      operations.push({ type: entry.type, ids: entry.ids } as WorldOperation)
+    } else if (entry.type === 'viewport') {
+      if (!isRecord(entry.viewport) || typeof entry.viewport.x !== 'number' || typeof entry.viewport.y !== 'number' || typeof entry.viewport.zoom !== 'number' || !finite(entry.viewport.x, entry.viewport.y, entry.viewport.zoom) || entry.viewport.zoom <= 0) throw new Error('viewport must contain finite x, y and positive zoom.')
+      operations.push({ type: 'viewport', viewport: entry.viewport as Viewport })
+    } else if (entry.type === 'session') {
+      if (!isRecord(entry.patch)) throw new Error('session.patch must be an object.')
+      operations.push(entry as WorldOperation)
+    } else {
+      if (entry.draft !== null && !isRecord(entry.draft)) throw new Error('reconstruction.draft must be an object or null.')
+      operations.push(entry as WorldOperation)
+    }
+  }
+  return operations
+}
+
+export function createWorldTools(bridge: WorldBridge): WorldTool[] {
+  const getWorld = tool('get_world', 'Read the mathematical world', 'Read canvas, viewport, selection and tutoring state. Include objects only when needed.', schema({ includeObjects: { type: 'boolean' } }), true, (input) => {
+    const args = values(input, ['includeObjects'])
+    if (args.includeObjects !== undefined && typeof args.includeObjects !== 'boolean') throw new Error('includeObjects must be boolean.')
+    const world = bridge.getWorld(); const all = world.order.map((id) => world.objects[id]).filter(Boolean)
+    return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
   })
-  return { steps, truncated: state.steps.length > limit }
-}
 
-function scratchpadData(state: SessionState): Record<string, unknown> {
-  const { steps, truncated } = summariseSteps(state)
-  const firstIssue = state.report ? getFirstIssue(state.report) : null
-  const firstBroken = firstIssue?.kind === 'broken'
-    ? { position: firstIssue.index + 1, stepId: firstIssue.id }
-    : null
-  const firstUnresolved = firstIssue?.kind === 'unresolved'
-    ? {
-        position: firstIssue.index + 1,
-        stepId: firstIssue.id,
-        status: firstIssue.verdict.status,
-      }
-    : null
+  const getObjects = tool('get_objects', 'Read world objects', 'Read objects by id or kind. Results are bounded to one hundred objects.', schema({ ids: { type: 'array', items: { type: 'string' } }, kinds: { type: 'array', items: { type: 'string', enum: KINDS } }, limit: { type: 'integer', minimum: 1, maximum: 100 } }), true, (input) => {
+    const args = values(input, ['ids', 'kinds', 'limit'])
+    if (args.ids !== undefined && !isStringArray(args.ids)) throw new Error('ids must be a string array.')
+    if (args.kinds !== undefined && (!isStringArray(args.kinds) || args.kinds.some((kind) => !KINDS.includes(kind as WorldObject['kind'])))) throw new Error('kinds contains an unknown kind.')
+    const world = bridge.getWorld(); const maximum = limit(args.limit, 50)
+    const matches = world.order.map((id) => world.objects[id]).filter((object) => object && (!args.ids || (args.ids as string[]).includes(object.id)) && (!args.kinds || (args.kinds as string[]).includes(object.kind)))
+    return { ok: true, summary: `Read ${Math.min(matches.length, maximum)} objects`, data: { objects: matches.slice(0, maximum), ...(matches.length > maximum ? { truncated: true } : {}) } }
+  })
 
-  // Writing is always open to an agent. The product no longer withholds actions to
-  // keep the learner in charge; it records who took each one instead, and the receipt
-  // reports the split. `availableActions` therefore lists what would succeed right
-  // now, which is a statement about state rather than about permission.
-  const available: string[] = ['add_step', 'reset_session']
-  if (state.steps.length > 0) available.push('check_work', 'edit_step', 'remove_step')
-  if (state.round === 'practice' && state.steps.length > 0) {
-    available.push('annotate_step')
-    if (state.steps.some((s) => s.attempts >= 2)) available.push('propose_step')
-  }
-  if (state.proposal) available.push('resolve_proposal')
-  if (state.report?.allSound && state.report.reachesAnswer) available.push('new_problem')
-  if (state.history.length > 0) available.push('get_receipt')
+  const getSelection = tool('get_selection', 'Read the current selection', 'Read which objects the learner currently has selected.', emptySchema, true, (input) => {
+    values(input, []); const world = bridge.getWorld()
+    return { ok: true, summary: `${world.selection.length} objects selected`, data: { ids: world.selection, objects: world.selection.map((id) => world.objects[id]).filter(Boolean) } }
+  })
 
-  return {
-    sessionId: state.sessionId,
-    revision: state.revision,
-    round: state.round,
-    problem: {
-      prompt: state.problem.prompt,
-      given: state.problem.definitions.map((d) => `${d.name} = ${d.latex}`),
-      variable: state.problem.variable,
-    },
-    steps,
-    ...(truncated ? { truncated: true } : {}),
-    checked: state.report !== null,
-    firstBrokenStep: firstBroken,
-    firstUnresolvedStep: firstUnresolved,
-    pendingProposal: state.proposal ? { stepId: state.proposal.stepId } : null,
-    availableActions: available,
-    note:
-      state.round === 'transfer'
-        ? 'Unaided attempt. annotate_step and propose_step are closed until it ends; every other tool is open, and anything you do here is recorded as agent work in the receipt.'
-        : 'You can read, write, edit, delete, check and reset. Every change records whether the learner or an agent made it, and get_receipt reports the split.',
-  }
-}
+  const getSessionContext = tool('get_session_context', 'Read tutoring context', 'Read attempts, misconception, shown help and reconstruction state.', emptySchema, true, (input) => {
+    values(input, []); const world = bridge.getWorld()
+    return { ok: true, summary: `Read context after ${world.session.attempts} attempts`, data: { session: world.session, reconstruction: world.reconstruction ? { sourceImageId: world.reconstruction.sourceImageId, proposedObjectCount: world.reconstruction.proposedObjects.length, uncertainObjectIds: world.reconstruction.uncertainObjectIds, auditSummary: world.reconstruction.auditSummary } : null } }
+  })
 
-const RECEIPT_ROUND_LIMIT = 8
+  const getHistory = tool('get_history', 'Read world history', 'Read recent atomic actions with authorship and affected object ids.', schema({ limit: { type: 'integer', minimum: 1, maximum: 100 } }), true, (input) => {
+    const args = values(input, ['limit']); const world = bridge.getWorld(); const maximum = limit(args.limit, 20)
+    const commits = world.history.slice(-maximum).reverse().map((commit) => ({ id: commit.action.id, source: commit.action.source, summary: commit.action.summary, at: commit.at, changedIds: changedIds(commit.action.operations) }))
+    return { ok: true, summary: `Read ${commits.length} history commits`, data: { commits, ...(world.history.length > maximum ? { truncated: true } : {}) } }
+  })
 
-/**
- * Reports only the actors that actually did something.
- *
- * Four provenance objects of three zero counters each is most of a round's size, and
- * every zero says the same nothing. Omitting them is what keeps the receipt inside
- * Chrome's 1.5K output budget without clipping the disclosures in `limits`, which are
- * the part a reader most needs. An empty object means nobody acted, which is the same
- * claim the zeroes were making.
- */
-function onlyActed(counts: Record<string, number>): Record<string, number> {
-  return Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0))
-}
-
-function receiptData(state: SessionState): Record<string, unknown> {
-  const completedRounds = state.history.slice(-RECEIPT_ROUND_LIMIT)
-  const rounds = completedRounds.map((round) => ({
-    round: round.round,
-    allStepsSound: round.sound,
-    // Who wrote the working, not merely who intervened on it. Without this the receipt
-    // could report "no annotations, no proposals" for a round an agent had written end
-    // to end, which reads as unaided and is the opposite of evidence.
-    linesWritten: onlyActed(round.stepWrites),
-    checksRun: round.checks,
-    annotations: onlyActed(round.annotations),
-    proposalsOffered: onlyActed(round.proposalsOffered),
-    proposalsAccepted: onlyActed(round.proposalsAccepted),
-  }))
-  const previousTransfer = [...state.history].reverse().find((round) => round.round === 'transfer')
-  const currentRoundStart = state.activities.findLastIndex(
-    (activity) =>
-      activity.action === 'Started the unaided transfer problem' ||
-      activity.action === 'Started a fresh problem',
-  )
-  const currentRoundActivities = state.activities.slice(Math.max(0, currentRoundStart))
-  const observedSoundBeforeEdit =
-    state.round === 'transfer' &&
-    !state.report &&
-    currentRoundActivities.some(
-      (activity) => activity.action === 'Checked the derivation · sound, and it reaches the answer',
-    )
-  const transfer =
-    state.round === 'transfer' && state.report
-      ? state.report.allSound && state.report.reachesAnswer
-      : previousTransfer?.sound ?? null
-  return {
-    sessionId: state.sessionId,
-    rounds,
-    roundsTotal: state.history.length,
-    roundsReturned: rounds.length,
-    roundsTruncated: state.history.length > RECEIPT_ROUND_LIMIT,
-    unaidedTransfer:
-      observedSoundBeforeEdit && transfer === null
-        ? 'previously checked sound; current work changed afterward'
-        : transfer === null
-        ? 'not attempted yet'
-        : transfer
-          ? 'every step sound, with no external annotations or proposals'
-          : 'attempted, not yet sound',
-    // Restarts are reported because a restart destroys everything else. An auditor
-    // driving this page found that a reset leaves a pristine-looking receipt with no
-    // trace of the wipe, which made the artifact meant for a third party the one
-    // artifact unable to disclose its own erasure.
-    sessionRestarts: state.resets,
-    limits: [
-      'This records what happened in this browser session.',
-      'It does not establish that the learner could do this again tomorrow, or unassisted elsewhere.',
-      'Steps were checked by the page computer algebra system, not by the agent.',
-      state.resets > 0
-        ? `This session was restarted ${state.resets} time${state.resets === 1 ? '' : 's'}. Rounds completed before a restart are not in this record.`
-        : 'This session has not been restarted, so no earlier rounds are missing from it.',
-      'Attribution records who wrote a line, not who worked it out. An agent can read the problem, compute the answer with the read-only tools, and tell a person what to type; that lands here as learner work, and nothing in this record would show it.',
-      'The read-only tools leave no trace. Nothing here counts how much an agent read or computed, only what it wrote.',
-    ],
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-
-/**
- * Wraps a mutating tool: validates the envelope fields every write shares, enforces
- * idempotency, and rejects stale revisions.
- */
-async function mutate(
-  bridge: ToolBridge,
-  toolName: string,
-  input: unknown,
-  allowedKeys: readonly string[],
-  build: (values: Record<string, unknown>) => SessionAction | { invalid: string; recovery: string; field?: string },
-): Promise<ToolEnvelope> {
-  const state = bridge.getState()
-  if (!state) return NOT_MOUNTED
-
-  const values = readInput(input)
-  if (!values) {
-    return failure(state.revision, 'invalid_input', 'The arguments were not a JSON object.', 'Send the arguments described by the input schema.')
-  }
-  for (const key of Object.keys(values)) {
-    if (!allowedKeys.includes(key)) {
-      return failure(state.revision, 'invalid_input', `Unexpected argument "${key}".`, `This tool accepts: ${allowedKeys.join(', ')}.`, key)
+  const inspectMath = tool('inspect_math', 'Inspect a mathematical object', 'Inspect live equation source, graph linkage, construction primitives or matrix vectors.', schema({ objectId: { type: 'string', minLength: 1 } }, ['objectId']), true, (input) => {
+    const args = values(input, ['objectId']); const id = requiredString(args.objectId, 'objectId'); const world = bridge.getWorld(); const object = world.objects[id]
+    if (!object) throw new Error(`Object ${id} does not exist.`)
+    if (object.kind === 'equation') {
+      const dependents = world.order.filter((candidate) => { const item = world.objects[candidate]; return item?.kind === 'graph' && item.equationId === id })
+      return { ok: true, summary: `Inspected equation ${id}`, data: { kind: object.kind, latex: object.latex, dependentGraphIds: dependents } }
     }
-  }
-  const { expectedRevision, requestId } = values
-  if (typeof requestId !== 'string' || !REQUEST_ID_PATTERN.test(requestId)) {
-    return failure(state.revision, 'invalid_input', 'requestId must be 6-64 characters of letters, digits, hyphen or underscore.', 'Invent a unique requestId for this call and try again.', 'requestId')
-  }
-
-  // Keyed by requestId AND revision, not requestId alone.
-  //
-  // A genuine retry repeats both, so it is served from the cache and cannot apply
-  // twice. But an agent asked to "check it again" after the learner edited something
-  // often reuses its id; keyed on the id alone it would receive the previous verdict,
-  // presented as a fresh one. Including the revision makes that a different operation,
-  // which is what it actually is.
-  const cacheKey = `${toolName}:${requestId}@${String(expectedRevision)}`
-  const cached = bridge.requestCache.get(cacheKey)
-  if (cached) {
-    // An in-flight duplicate must await the original. A completed duplicate is safe
-    // only while the document is still at the revision produced by that operation;
-    // once the learner moves on, replaying the old success would lie about current
-    // state and must become a stale write instead.
-    if ('then' in cached) return cached
-    if (cached.ok && cached.revision === state.revision) return cached
-    bridge.requestCache.delete(cacheKey)
-  }
-
-  if (!Number.isInteger(expectedRevision)) {
-    return failure(state.revision, 'invalid_input', 'expectedRevision must be an integer.', `Read the scratchpad and send its revision, currently ${state.revision}.`, 'expectedRevision')
-  }
-  if (expectedRevision !== state.revision) {
-    return failure(state.revision, 'stale_revision', `The scratchpad has changed since revision ${expectedRevision}.`, `Call get_scratchpad again and retry with revision ${state.revision}. Read its round and availableActions too: a stale revision can be hiding a round change, which will refuse the retry for a different reason.`, 'expectedRevision')
-  }
-
-  const action = build(values)
-  if ('invalid' in action) {
-    return failure(state.revision, 'invalid_input', action.invalid, action.recovery, action.field)
-  }
-
-  const pending = (async (): Promise<ToolEnvelope> => {
-    try {
-      const result = await bridge.run(action)
-      if (!result.ok) {
-        const after = bridge.getState()
-        return failure(after?.revision ?? state.revision, result.code, result.message, result.recovery, result.field)
-      }
-      return { ok: true, revision: result.state.revision, data: result.data }
-    } catch {
-      const after = bridge.getState()
-      return failure(
-        after?.revision ?? state.revision,
-        'internal_error',
-        'The page could not complete that action.',
-        'Read the scratchpad again. If the state is intact, retry once with a new requestId.',
-      )
+    if (object.kind === 'graph') {
+      const equation = world.objects[object.equationId]; const latex = equation?.kind === 'equation' ? equation.latex : null
+      return { ok: true, summary: `Inspected graph ${id}`, data: { kind: object.kind, equationId: object.equationId, latex, xDomain: object.xDomain, yDomain: object.yDomain, parameters: object.parameters ?? {}, tangentAt: object.showTangentAt ?? null, integralDomain: object.shadeIntegral ?? null, liveValue: latex ? evaluateLatexAt(latex, object.showTangentAt ?? 0, object.parameters) : null } }
     }
-  })()
-
-  bridge.requestCache.set(cacheKey, pending)
-  const envelope = await pending
-  // Keep successes cached so a retry is a no-op; evict failures so a corrected retry
-  // can succeed.
-  if (bridge.requestCache.get(cacheKey) === pending) {
-    if (envelope.ok) bridge.requestCache.set(cacheKey, envelope)
-    else bridge.requestCache.delete(cacheKey)
-  }
-  return envelope
-}
-
-/**
- * Chrome's published budget for a single tool output.
- *
- * The guidance for tool authors sets 1.5K characters per individual tool output, 500
- * per tool description, 150 per parameter description and 30 per name. Everything but
- * the output budget is a property of source we can simply assert; the output budget is
- * a property of runtime data, so it is enforced here rather than hoped for.
- *
- * `get_platform` measured 1590 characters before this existed, and `get_scratchpad`
- * grows with the derivation.
- */
-export const MAX_OUTPUT_CHARS = 1500
-
-/**
- * Brings an envelope inside the output budget by shortening its longest string,
- * repeatedly, until it fits — and says so, because silently truncating an agent's data
- * is the same failure as silently accepting its malformed argument.
- */
-export function withinOutputBudget(envelope: ToolEnvelope, budget = MAX_OUTPUT_CHARS): ToolEnvelope {
-  if (!envelope.ok) return envelope
-  if (JSON.stringify(envelope).length <= budget) return envelope
-
-  const data = JSON.parse(JSON.stringify(envelope.data)) as Record<string, unknown>
-  let shortened = false
-
-  // Walk to the longest string anywhere in the payload and clip it. Repeating this
-  // shrinks whatever is actually large — a long detail, a long note, a long step —
-  // without needing a per-tool rule for which field may be sacrificed.
-  const longest = (node: unknown, path: Array<string | number> = []): { path: Array<string | number>; length: number } | null => {
-    if (typeof node === 'string') return { path, length: node.length }
-    if (Array.isArray(node)) {
-      return node.reduce<{ path: Array<string | number>; length: number } | null>((best, item, i) => {
-        const found = longest(item, [...path, i])
-        return found && (!best || found.length > best.length) ? found : best
-      }, null)
+    if (object.kind === 'geometry') {
+      const resolved = resolveGeometry(object.primitives)
+      return { ok: true, summary: `Inspected construction ${id}`, data: { kind: object.kind, primitives: object.primitives, resolvedCounts: { points: resolved.points.length, lines: resolved.lines.length, segments: resolved.segments.length, circles: resolved.circles.length, polygons: resolved.polygons.length, angles: resolved.angles.length } } }
     }
-    if (node && typeof node === 'object') {
-      return Object.entries(node).reduce<{ path: Array<string | number>; length: number } | null>((best, [key, value]) => {
-        const found = longest(value, [...path, key])
-        return found && (!best || found.length > best.length) ? found : best
-      }, null)
+    if (object.kind === 'matrix') return { ok: true, summary: `Inspected matrix ${id}`, data: { kind: object.kind, values: object.values, sourceIds: object.sourceIds, vectors: transformVectors(object, world) } }
+    throw new Error(`Object ${id} is not a mathematical object.`)
+  })
+
+  const createObjects = tool('create_objects', 'Create world objects', 'Create typed objects in one attributed, undoable commit.', schema({ summary: { type: 'string' }, objects: { type: 'array', minItems: 1, items: objectSchema } }, ['objects']), false, async (input) => {
+    const args = values(input, ['summary', 'objects']); const objects = objectList(args.objects); const operations: WorldOperation[] = objects.map((object) => ({ type: 'put', object }))
+    return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Created ${objects.length} objects`, operations), objects.map((object) => object.id))
+  })
+
+  const updateObjects = tool('update_objects', 'Update world objects', 'Patch kind-valid fields while preserving id, kind and author.', schema({ summary: { type: 'string' }, updates: { type: 'array', minItems: 1, items: schema({ id: { type: 'string' }, patch: { type: 'object', additionalProperties: true } }, ['id', 'patch']) } }, ['updates']), false, async (input) => {
+    const args = values(input, ['summary', 'updates']); if (!Array.isArray(args.updates) || !args.updates.length) throw new Error('updates must be a non-empty array.'); const world = bridge.getWorld()
+    const operations: WorldOperation[] = args.updates.map((entry) => {
+      if (!isRecord(entry) || typeof entry.id !== 'string' || !isRecord(entry.patch)) throw new Error('Each update needs an id and patch.')
+      const existing = world.objects[entry.id]; if (!existing) throw new Error(`Object ${entry.id} does not exist.`)
+      const allowed = new Set([...COMMON_PATCH_FIELDS, ...KIND_PATCH_FIELDS[existing.kind]]); const invalid = Object.keys(entry.patch).find((key) => !allowed.has(key)); if (invalid) throw new Error(`${invalid} cannot be patched on ${existing.kind} objects.`)
+      const object = { ...existing, ...entry.patch, id: existing.id, kind: existing.kind, author: existing.author } as WorldObject; const error = objectError(object); if (error) throw new Error(error)
+      return { type: 'put', object }
+    })
+    return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Updated ${operations.length} objects`, operations), changedIds(operations))
+  })
+
+  const deleteObjects = tool('delete_objects', 'Delete world objects', 'Delete objects or groups with the same expansion rules as the whiteboard.', schema({ summary: { type: 'string' }, ids: { type: 'array', minItems: 1, items: { type: 'string' } } }, ['ids']), false, async (input) => {
+    const args = values(input, ['summary', 'ids']); if (!isStringArray(args.ids) || !args.ids.length) throw new Error('ids must be a non-empty string array.'); const world = bridge.getWorld(); const missing = args.ids.find((id) => !world.objects[id]); if (missing) throw new Error(`Object ${missing} does not exist.`)
+    const operations = buildDeleteOperations(world, args.ids)
+    return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Deleted ${operations.length} objects`, operations), changedIds(operations))
+  })
+
+  const transformObjects = tool('transform_objects', 'Transform world objects', 'Translate, scale or rotate objects with human-identical group behavior.', schema({ summary: { type: 'string' }, ids: { type: 'array', minItems: 1, items: { type: 'string' } }, translate: pointSchema, scale: { type: 'number', exclusiveMinimum: 0 }, rotate: { type: 'number' } }, ['ids']), false, async (input) => {
+    const args = values(input, ['summary', 'ids', 'translate', 'scale', 'rotate']); if (!isStringArray(args.ids) || !args.ids.length) throw new Error('ids must be a non-empty string array.')
+    if (args.translate !== undefined && !isPoint(args.translate)) throw new Error('translate must contain finite x and y.'); if (args.scale !== undefined && (typeof args.scale !== 'number' || !Number.isFinite(args.scale) || args.scale <= 0)) throw new Error('scale must be positive.'); if (args.rotate !== undefined && (typeof args.rotate !== 'number' || !Number.isFinite(args.rotate))) throw new Error('rotate must be finite.'); if (args.translate === undefined && args.scale === undefined && args.rotate === undefined) throw new Error('Provide translate, scale or rotate.')
+    const world = bridge.getWorld(); const missing = args.ids.find((id) => !world.objects[id]); if (missing) throw new Error(`Object ${missing} does not exist.`)
+    const operations = buildTransformOperations(world, args.ids, { translate: args.translate as Point | undefined, scale: args.scale as number | undefined, rotate: args.rotate as number | undefined })
+    return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Transformed ${operations.length} objects`, operations), changedIds(operations))
+  })
+
+  const applyActions = tool('apply_actions', 'Apply an atomic action batch', 'Apply typed operations atomically through the shared reducer.', schema({ summary: { type: 'string', minLength: 1 }, operations: { type: 'array', minItems: 1, items: operationSchema } }, ['summary', 'operations']), false, async (input) => {
+    const args = values(input, ['summary', 'operations']); const operations = validateOperations(bridge.getWorld(), args.operations)
+    return bridge.runAgentAction(action(requiredString(args.summary, 'summary'), operations), changedIds(operations))
+  })
+
+  const stepHistory = tool('step_history', 'Undo or redo the world', 'Step the same global history used by the learner.', schema({ direction: { type: 'string', enum: ['undo', 'redo'] } }, ['direction']), false, (input) => {
+    const args = values(input, ['direction']); if (args.direction !== 'undo' && args.direction !== 'redo') throw new Error('direction must be undo or redo.'); return bridge.runHistory(args.direction)
+  })
+
+  const setViewport = tool('set_viewport', 'Set the world viewport', 'Pan and zoom the learner to a world region.', schema({ viewport: schema({ x: { type: 'number' }, y: { type: 'number' }, zoom: { type: 'number', exclusiveMinimum: 0 } }, ['x', 'y', 'zoom']) }, ['viewport']), false, async (input) => {
+    const args = values(input, ['viewport']); if (!isRecord(args.viewport) || typeof args.viewport.x !== 'number' || typeof args.viewport.y !== 'number' || typeof args.viewport.zoom !== 'number' || !finite(args.viewport.x, args.viewport.y, args.viewport.zoom) || args.viewport.zoom <= 0) throw new Error('viewport must contain finite x, y and positive zoom.')
+    return bridge.runAgentAction(action('Changed the viewport', [{ type: 'viewport', viewport: args.viewport as Viewport }]))
+  })
+
+  const reconstructProblem = tool('reconstruct_problem', 'Reconstruct an image into live math', 'Propose semantic objects from an image. This is the only approval flow.', schema({ sourceImageId: { type: 'string' }, proposedObjects: { type: 'array', minItems: 1, items: objectSchema }, uncertainObjectIds: { type: 'array', items: { type: 'string' } } }, ['sourceImageId', 'proposedObjects']), false, async (input) => {
+    const args = values(input, ['sourceImageId', 'proposedObjects', 'uncertainObjectIds']); const sourceImageId = requiredString(args.sourceImageId, 'sourceImageId'); const world = bridge.getWorld(); if (world.objects[sourceImageId]?.kind !== 'image') throw new Error(`${sourceImageId} is not an image object.`)
+    const proposed = objectList(args.proposedObjects); const uncertain = args.uncertainObjectIds === undefined ? [] : args.uncertainObjectIds; if (!isStringArray(uncertain) || uncertain.some((id) => !proposed.some((object) => object.id === id))) throw new Error('uncertainObjectIds must reference proposed objects.')
+    return bridge.runAgentAction(proposeReconstruction(sourceImageId, proposed, uncertain), [sourceImageId])
+  })
+
+  const auditReconstructionTool = tool('audit_reconstruction', 'Audit the reconstruction', 'Compare the semantic draft with its source before approval.', schema({ auditSummary: { type: 'string' }, proposedObjects: { type: 'array', minItems: 1, items: objectSchema }, uncertainObjectIds: { type: 'array', items: { type: 'string' } } }, ['auditSummary']), false, async (input) => {
+    const args = values(input, ['auditSummary', 'proposedObjects', 'uncertainObjectIds']); const world = bridge.getWorld(); if (!world.reconstruction) throw new Error('There is no reconstruction draft to audit.')
+    const proposed = args.proposedObjects === undefined ? world.reconstruction.proposedObjects : objectList(args.proposedObjects); const uncertain = args.uncertainObjectIds === undefined ? world.reconstruction.uncertainObjectIds : args.uncertainObjectIds; if (!isStringArray(uncertain) || uncertain.some((id) => !proposed.some((object) => object.id === id))) throw new Error('uncertainObjectIds must reference proposed objects.')
+    return bridge.runAgentAction(auditReconstruction(world.reconstruction, requiredString(args.auditSummary, 'auditSummary'), proposed, uncertain), [world.reconstruction.sourceImageId])
+  })
+
+  const graphExpression = tool('graph_expression', 'Graph a live expression', 'Create a reactive graph from new LaTeX or one existing equation.', schema({ latex: { type: 'string' }, equationId: { type: 'string' }, bounds: boundsSchema, parameters: { type: 'object', additionalProperties: { type: 'number' } }, showTangentAt: { type: 'number' }, shadeIntegral: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } } }), false, async (input) => {
+    const args = values(input, ['latex', 'equationId', 'bounds', 'parameters', 'showTangentAt', 'shadeIntegral']); const hasLatex = typeof args.latex === 'string' && Boolean(args.latex.trim()); const hasEquation = typeof args.equationId === 'string' && Boolean(args.equationId.trim()); if (hasLatex === hasEquation) throw new Error('Provide exactly one of latex or equationId.')
+    const world = bridge.getWorld(); const graphBounds = args.bounds === undefined ? { x: 730, y: 150, width: 460, height: 330 } : args.bounds; if (!isBounds(graphBounds)) throw new Error('bounds are invalid.'); if (args.parameters !== undefined && (!isRecord(args.parameters) || Object.values(args.parameters).some((value) => typeof value !== 'number' || !Number.isFinite(value)))) throw new Error('parameters must map names to numbers.'); if (args.showTangentAt !== undefined && (typeof args.showTangentAt !== 'number' || !Number.isFinite(args.showTangentAt))) throw new Error('showTangentAt must be finite.'); if (args.shadeIntegral !== undefined && !isPair(args.shadeIntegral)) throw new Error('shadeIntegral must contain two numbers.')
+    const operations: WorldOperation[] = []; let equationId = String(args.equationId ?? '')
+    if (hasLatex) { equationId = crypto.randomUUID(); operations.push({ type: 'put', object: { id: equationId, kind: 'equation', latex: String(args.latex), color: '#171713', bounds: { x: graphBounds.x + 30, y: graphBounds.y - 62, width: 300, height: 50 }, rotation: 0, author: 'agent', opacity: 1 } }) } else if (world.objects[equationId]?.kind !== 'equation') throw new Error(`${equationId} is not an equation object.`)
+    const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId, xDomain: [-4, 4], yDomain: [-5, 10], color: '#7c5cff', parameters: args.parameters as Record<string, number> | undefined, showTangentAt: args.showTangentAt as number | undefined, shadeIntegral: args.shadeIntegral as [number, number] | undefined, bounds: graphBounds, rotation: 0, author: 'agent', opacity: 1 }
+    operations.push({ type: 'put', object: graph }, { type: 'select', ids: [graph.id] }); return bridge.runAgentAction(action('Graphed a live expression', operations), changedIds(operations))
+  })
+
+  const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Create a declarative live construction.', schema({ primitives: primitivesSchema, bounds: boundsSchema, accent: { type: 'string' } }, ['primitives']), false, async (input) => {
+    const args = values(input, ['primitives', 'bounds', 'accent']); const bounds = args.bounds === undefined ? { x: 400, y: 170, width: 430, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.')
+    const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', primitives: primitives(args.primitives), accent: typeof args.accent === 'string' ? args.accent : '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }
+    return bridge.runAgentAction(action('Constructed dynamic geometry', [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id])
+  })
+
+  const visualizeConcept = tool('visualize_concept', 'Visualize a mathematical concept', 'Create a curated integral, tangent, homothety or matrix scene.', schema({ concept: { type: 'string', enum: ['integral', 'tangent', 'homothety', 'matrix-transform'] }, sourceIds: { type: 'array', items: { type: 'string' } }, bounds: boundsSchema }, ['concept']), false, async (input) => {
+    const args = values(input, ['concept', 'sourceIds', 'bounds']); if (!['integral', 'tangent', 'homothety', 'matrix-transform'].includes(String(args.concept))) throw new Error('concept is not supported.'); if (args.sourceIds !== undefined && !isStringArray(args.sourceIds)) throw new Error('sourceIds must be a string array.'); const bounds = args.bounds === undefined ? { x: 720, y: 160, width: 470, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.'); const world = bridge.getWorld(); const operations: WorldOperation[] = []
+    if (args.concept === 'integral' || args.concept === 'tangent') {
+      const equation: WorldObject = { id: crypto.randomUUID(), kind: 'equation', latex: args.concept === 'integral' ? 'a x e^x' : 'x^2-2x-1', color: '#171713', bounds: { x: bounds.x + 30, y: bounds.y - 62, width: 280, height: 50 }, rotation: 0, author: 'agent', opacity: 1 }
+      const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId: equation.id, xDomain: [-3, 3], yDomain: [-4, 10], color: '#7c5cff', parameters: args.concept === 'integral' ? { a: 1 } : undefined, shadeIntegral: args.concept === 'integral' ? [0, 1] : undefined, showTangentAt: args.concept === 'tangent' ? 1.5 : undefined, bounds, rotation: 0, author: 'agent', opacity: 1 }
+      operations.push({ type: 'put', object: equation }, { type: 'put', object: graph }, { type: 'select', ids: [graph.id] })
+    } else if (args.concept === 'homothety') {
+      const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', accent: '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1, primitives: [
+        { kind: 'point', id: 'O', at: { x: 100, y: 170 }, label: 'O', draggable: true }, { kind: 'point', id: 'A', at: { x: 235, y: 85 }, label: 'A', draggable: true }, { kind: 'point', id: 'B', at: { x: 245, y: 250 }, label: 'B', draggable: true },
+        { kind: 'segment', id: 'OA', from: 'O', to: 'A' }, { kind: 'segment', id: 'OB', from: 'O', to: 'B' }, { kind: 'homothety', id: 'A2', center: 'O', source: 'A', factor: 1.65, label: 'A′' }, { kind: 'homothety', id: 'B2', center: 'O', source: 'B', factor: 1.65, label: 'B′' }, { kind: 'segment', id: 'A2B2', from: 'A2', to: 'B2' },
+      ] }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else {
+      let sourceIds = args.sourceIds as string[] | undefined; if (sourceIds?.some((id) => world.objects[id]?.kind !== 'arrow')) throw new Error('Every matrix sourceId must reference an arrow.')
+      if (!sourceIds?.length) { const sources: WorldObject[] = [
+        { id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: 2, y: 1 }, color: '#171713', bounds: { x: bounds.x, y: bounds.y, width: 1, height: 1 }, rotation: 0, author: 'agent', opacity: 0 },
+        { id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: -1, y: 2 }, color: '#171713', bounds: { x: bounds.x, y: bounds.y, width: 1, height: 1 }, rotation: 0, author: 'agent', opacity: 0 },
+      ]; sourceIds = sources.map((source) => source.id); operations.push(...sources.map((object) => ({ type: 'put' as const, object }))) }
+      const matrix: WorldObject = { id: crypto.randomUUID(), kind: 'matrix', values: [[1, 0.8], [0, 1]], sourceIds, accent: '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }; operations.push({ type: 'put', object: matrix }, { type: 'select', ids: [matrix.id] })
     }
-    return null
-  }
+    return bridge.runAgentAction(action(`Visualized ${String(args.concept)}`, operations), changedIds(operations))
+  })
 
-  for (let guard = 0; guard < 200; guard++) {
-    const candidate: ToolEnvelope = {
-      ...envelope,
-      data: shortened ? { ...data, outputTruncated: true } : data,
-    }
-    if (JSON.stringify(candidate).length <= budget) return candidate
-    const target = longest(data)
-    if (!target || target.length <= 12) {
-      // Nothing left worth clipping; return what we have rather than loop forever.
-      return { ...envelope, data: { ...data, outputTruncated: true } }
-    }
-    let parent: Record<string | number, unknown> = data as Record<string | number, unknown>
-    for (const key of target.path.slice(0, -1)) parent = parent[key] as Record<string | number, unknown>
-    const leaf = target.path[target.path.length - 1]
-    const value = parent[leaf] as string
-    parent[leaf] = `${value.slice(0, Math.max(8, Math.floor(value.length * 0.7)))}…`
-    shortened = true
-  }
-  return { ...envelope, data: { ...data, outputTruncated: true } }
-}
-
-const EMPTY_SCHEMA = { type: 'object', properties: {}, additionalProperties: false } as const
-
-/**
- * Reads the optional `variable` argument. Returns the resolved name, or a refusal
- * envelope when the argument is present but not a string of the declared length.
- */
-function optionalVariable(
-  state: SessionState,
-  values: Record<string, unknown>,
-): string | ToolEnvelope {
-  if (!('variable' in values) || values.variable === undefined) return state.problem.variable
-  const given = values.variable
-  if (typeof given !== 'string' || given.length < 1 || given.length > 4) {
-    return failure(
-      state.revision,
-      'invalid_input',
-      'variable must be a string of 1 to 4 characters.',
-      `Omit it to use the problem variable, currently "${state.problem.variable}".`,
-      'variable',
-    )
-  }
-  return given
-}
-
-/** Every symbol a learner may legitimately mention: the variable, plus the givens. */
-function allowedVariables(state: SessionState): string[] {
-  return [state.problem.variable, ...state.problem.definitions.map((d) => d.name)]
-}
-
-/**
- * Argument guard for the read-only tools, which have no revision to check and so do
- * not pass through `mutate`. Rejecting an unknown key rather than ignoring it matters:
- * silently dropping an argument teaches an agent that its mistake worked.
- */
-function onlyKeys(
-  state: SessionState,
-  values: Record<string, unknown> | null,
-  allowed: readonly string[],
-): { values: Record<string, unknown>; bad?: ToolEnvelope } {
-  if (!values) {
-    return {
-      values: {},
-      bad: failure(
-        state.revision,
-        'invalid_input',
-        'The arguments were not a JSON object.',
-        allowed.length === 0 ? 'This tool takes no arguments. Call it with {}.' : `This tool accepts: ${allowed.join(', ')}.`,
-      ),
-    }
-  }
-  for (const key of Object.keys(values)) {
-    if (!allowed.includes(key)) {
-      return {
-        values,
-        bad: failure(
-        state.revision,
-        'invalid_input',
-        `Unexpected argument "${key}".`,
-        allowed.length === 0 ? 'This tool takes no arguments. Call it with {}.' : `This tool accepts: ${allowed.join(', ')}.`,
-        key,
-      ),
-      }
-    }
-  }
-  return { values }
-}
-
-export function createTools(bridge: ToolBridge): ToolDefinition[] {
-  const tools: ToolDefinition[] = [
-    {
-      name: 'get_scratchpad',
-      title: 'Read the scratchpad',
-      description:
-        "Read the learner's current problem, every step they have written, each step's verdict, the first broken or unresolved line, and what you may do next. Call this before any write, so you hold a current revision. Do not use it to read completed rounds — get_receipt reports those.",
-      inputSchema: EMPTY_SCHEMA,
-      // Every step is learner-authored text. Chrome's guidance is to mark that.
-      annotations: { readOnlyHint: true, untrustedContentHint: true },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), [])
-        if (guard.bad) return guard.bad
-        return { ok: true, revision: state.revision, data: scratchpadData(state) }
-      },
-    },
-
-    {
-      name: 'check_work',
-      title: 'Check the derivation',
-      description:
-        'Ask the page computer algebra system to check the whole derivation and mark the first broken or unresolved relation. Call it again with a NEW requestId whenever the work has changed. The verdict belongs to the engine, not to you. Do not call it when no line has been written, and do not use it to test a single candidate expression — compare_expressions does that without touching the page.',
-      inputSchema: {
-        type: 'object',
-        properties: { expectedRevision: revisionField, requestId: requestIdField },
-        required: ['expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) => mutate(bridge, 'check_work', input, ['expectedRevision', 'requestId'], () => ({ type: 'CHECK_WORK' })),
-    },
-
-    {
-      name: 'annotate_step',
-      title: 'Explain one step',
-      description:
-        "During guided practice, attach a short explanation beside one learner-written line. Use this to teach without solving. Do not use it to state the corrected line — propose_step carries a replacement — and it is unavailable during the unaided transfer round.",
-      inputSchema: {
-        type: 'object',
-        properties: {
-          stepId: { type: 'string', maxLength: 64, description: 'The id of the step to annotate, from get_scratchpad.' },
-          note: { type: 'string', minLength: 1, maxLength: 400, description: 'The explanation the learner will read. Address the mistake, not the answer.' },
-          focus: { type: 'boolean', description: 'Scroll the step into view and select it.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['stepId', 'note', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'annotate_step', input, ['stepId', 'note', 'focus', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { field: 'stepId', invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
-          }
-          if (typeof values.note !== 'string' || !values.note.trim()) {
-            return { field: 'note', invalid: 'note must be a non-empty explanation.', recovery: 'Send a short explanation aimed at the broken step.' }
-          }
-          if (values.note.length > 400) {
-            return { field: 'note', invalid: 'note must be 400 characters or fewer.', recovery: 'Shorten the explanation and try again.' }
-          }
-          if (values.focus !== undefined && typeof values.focus !== 'boolean') {
-            return { invalid: 'focus must be true or false.', recovery: 'Omit focus, or send a boolean.' }
-          }
-          return {
-            type: 'ANNOTATE_STEP',
-            stepId: values.stepId,
-            note: values.note,
-            focus: values.focus === true,
-          }
-        }),
-    },
-
-    {
-      name: 'propose_step',
-      title: 'Offer a replacement step',
-      description:
-        'During guided practice, offer a replacement after two learner attempts since the most recent check, with the reasoning the learner reads before deciding. Do not use it before those two attempts, and do not use it when a plain explanation would do — annotate_step teaches without supplying the answer.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          stepId: { type: 'string', maxLength: 64, description: 'The id of the step you are offering to replace.' },
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The replacement expression, in LaTeX.' },
-          rationale: { type: 'string', minLength: 1, maxLength: 400, description: 'Why this replacement is right. The learner reads this before deciding.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'propose_step', input, ['stepId', 'latex', 'rationale', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { field: 'stepId', invalid: 'stepId must be a step id from get_scratchpad.', recovery: 'Read the scratchpad for current step ids.' }
-          }
-          if (typeof values.latex !== 'string' || !values.latex.trim()) {
-            return { field: 'latex', invalid: 'latex must be the replacement expression.', recovery: 'Send the step you would write instead.' }
-          }
-          if (typeof values.rationale !== 'string' || !values.rationale.trim()) {
-            return { field: 'rationale', invalid: 'rationale must explain the replacement.', recovery: 'Say why this step is right, so the learner can judge it.' }
-          }
-          if (values.latex.length > 256) {
-            return { field: 'latex', invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the replacement expression.' }
-          }
-          if (values.rationale.length > 400) {
-            return { field: 'rationale', invalid: 'rationale must be 400 characters or fewer.', recovery: 'Shorten the rationale.' }
-          }
-          return {
-            type: 'PROPOSE_STEP',
-            stepId: values.stepId,
-            latex: values.latex,
-            rationale: values.rationale,
-          }
-        }),
-    },
-
-    {
-      name: 'new_problem',
-      title: 'Start a fresh problem',
-      description:
-        'Clear this round only after checked lines are sound and reach the requested answer, and start a fresh unaided problem; annotation and proposal tools then close. Do not use it to abandon work in progress — that is refused — and do not use it to clear the session history, which is reset_session.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          familyId: { type: 'string', maxLength: 64, description: 'Optional. Omit to stay in the current skill family.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'new_problem', input, ['familyId', 'expectedRevision', 'requestId'], (values) => {
-          if (values.familyId !== undefined && typeof values.familyId !== 'string') {
-            return { field: 'familyId', invalid: 'familyId must be a string.', recovery: 'Omit familyId to stay in the current skill family.' }
-          }
-          if (typeof values.familyId === 'string' && values.familyId.length > 64) {
-            return { field: 'familyId', invalid: 'familyId must be 64 characters or fewer.', recovery: 'Use a current family id from get_scratchpad.' }
-          }
-          return {
-            type: 'NEW_PROBLEM',
-            ...(typeof values.familyId === 'string' ? { familyId: values.familyId } : {}),
-          }
-        }),
-    },
-
-    {
-      name: 'get_receipt',
-      title: 'Read the session evidence',
-      description:
-        'Read at most 8 recent completed rounds with total and truncation metadata, plus bounded transfer evidence. Do not use this for the current on-screen derivation or its verdicts — get_scratchpad reports those, and this returns nothing until a round has ended.',
-      inputSchema: EMPTY_SCHEMA,
-      // Returns only strings this product composed - round tallies, fixed limit
-      // sentences, activity descriptions. No learner-authored text reaches a caller
-      // here, and marking it untrusted anyway would blunt the hint where it matters.
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), [])
-        if (guard.bad) return guard.bad
-        if (state.history.length === 0) {
-          return failure(state.revision, 'invalid_phase', 'No round has finished yet.', 'There is nothing to report until a fresh problem has been started.')
-        }
-        return { ok: true, revision: state.revision, data: receiptData(state) }
-      },
-    },
-
-    /* ---------------------------------------------------------------------- */
-    /* Writing. Previously the scratchpad told agents "you cannot write, edit,  */
-    /* or accept steps". The reducer always supported all three; only the tool  */
-    /* surface withheld them. What keeps the product honest is not the refusal  */
-    /* but `ActionSource`, which records who did each thing and is what the     */
-    /* receipt reports.                                                         */
-    /* ---------------------------------------------------------------------- */
-
-    {
-      name: 'add_step',
-      title: 'Write a new line of working',
-      description:
-        'Append a line of working to the derivation, in LaTeX, exactly as the learner would type it. Do not use this to answer the whole problem in one line, and do not use it during a transfer round unless the learner asked you to — the receipt records the line as agent-written either way.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The line of working, in LaTeX. A leading label such as "y =" or "dy/dx =" is stripped.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['latex', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'add_step', input, ['latex', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.latex !== 'string' || !values.latex.trim()) {
-            return { invalid: 'latex must be a non-empty string.', recovery: 'Send the line of working in LaTeX.', field: 'latex' }
-          }
-          if (values.latex.length > 256) {
-            return { invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the expression, or split it across two steps.', field: 'latex' }
-          }
-          return { type: 'ADD_STEP', latex: values.latex }
-        }),
-    },
-
-    {
-      name: 'edit_step',
-      title: 'Rewrite an existing line',
-      description:
-        'Replace the text of one existing line, leaving its position and the rest of the derivation alone. Do not use this to delete a line — use remove_step — and do not use it when the line is already sound.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          stepId: { type: 'string', maxLength: 64, description: 'The id of the line to rewrite, from get_scratchpad.' },
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The replacement text, in LaTeX.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['stepId', 'latex', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'edit_step', input, ['stepId', 'latex', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { invalid: 'stepId must be a string.', recovery: 'Use a step id from get_scratchpad.', field: 'stepId' }
-          }
-          if (typeof values.latex !== 'string' || !values.latex.trim()) {
-            return { invalid: 'latex must be a non-empty string.', recovery: 'Send the replacement line in LaTeX.', field: 'latex' }
-          }
-          if (values.latex.length > 256) {
-            return { invalid: 'latex must be 256 characters or fewer.', recovery: 'Shorten the expression.', field: 'latex' }
-          }
-          return { type: 'EDIT_STEP', stepId: values.stepId, latex: values.latex }
-        }),
-    },
-
-    {
-      name: 'remove_step',
-      title: 'Delete a line',
-      description:
-        // "edit_step preserves the attempt count" was wrong, and an agent driving the
-        // page reported being misled by it: EDIT_STEP increments `attempts`, exactly as
-        // a learner's own rewrite would.
-        'Delete one line of working. Every later line stays where it is. Do not use this to correct a line: edit_step keeps the line and counts another attempt against it, while this discards the line and its history entirely.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          stepId: { type: 'string', maxLength: 64, description: 'The id of the line to delete, from get_scratchpad.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['stepId', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'remove_step', input, ['stepId', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.stepId !== 'string' || !values.stepId) {
-            return { invalid: 'stepId must be a string.', recovery: 'Use a step id from get_scratchpad.', field: 'stepId' }
-          }
-          return { type: 'REMOVE_STEP', stepId: values.stepId }
-        }),
-    },
-
-    {
-      name: 'resolve_proposal',
-      title: 'Accept or reject the pending proposal',
-      description:
-        'Settle the one pending replacement proposal, accepting it into the derivation or discarding it. Do not call this when pendingProposal is null in get_scratchpad; there is nothing to settle and the call is refused.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          accept: { type: 'boolean', description: 'True to apply the proposed line, false to discard it.' },
-          expectedRevision: revisionField,
-          requestId: requestIdField,
-        },
-        required: ['accept', 'expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'resolve_proposal', input, ['accept', 'expectedRevision', 'requestId'], (values) => {
-          if (typeof values.accept !== 'boolean') {
-            return { invalid: 'accept must be true or false.', recovery: 'Send accept: true to apply the proposal, or accept: false to discard it.', field: 'accept' }
-          }
-          return { type: 'RESOLVE_PROPOSAL', accept: values.accept }
-        }),
-    },
-
-    {
-      name: 'reset_session',
-      title: 'Abandon the session and start over',
-      description:
-        'Discard the whole session — every step, verdict, annotation and completed round — and begin again from a fresh practice problem. Do not use this to move on after finishing a problem; new_problem keeps the receipt, and this destroys it.',
-      inputSchema: {
-        type: 'object',
-        properties: { expectedRevision: revisionField, requestId: requestIdField },
-        required: ['expectedRevision', 'requestId'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute: (input) =>
-        mutate(bridge, 'reset_session', input, ['expectedRevision', 'requestId'], () => ({ type: 'RESET' })),
-    },
-
-    /* ---------------------------------------------------------------------- */
-    /* Reads that compute something. Slicing the same snapshot by section would */
-    /* be one tool plus a parameter, so those are deliberately absent.          */
-    /* ---------------------------------------------------------------------- */
-
-    {
-      name: 'get_changes_since',
-      title: 'Read what changed since a revision',
-      description:
-        'List the activities recorded after a revision you already hold, with who caused each. Use this to catch up cheaply while working. Do not use it to read the derivation itself — it returns the log, not the steps.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          since: { type: 'integer', minimum: 0, maximum: 1_000_000, description: 'A revision you previously read. Activities at or before it are omitted.' },
-        },
-        required: ['since'],
-        additionalProperties: false,
-      },
-      // Returns only strings this product composed - round tallies, fixed limit
-      // sentences, activity descriptions. No learner-authored text reaches a caller
-      // here, and marking it untrusted anyway would blunt the hint where it matters.
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const values = readInput(input)
-        if (!values) {
-          return failure(state.revision, 'invalid_input', 'The arguments were not a JSON object.', 'Send { since: <revision> }.')
-        }
-        for (const key of Object.keys(values)) {
-          if (key !== 'since') {
-            return failure(state.revision, 'invalid_input', `Unexpected argument "${key}".`, 'This tool accepts: since.', key)
-          }
-        }
-        if (!Number.isInteger(values.since) || (values.since as number) < 0) {
-          return failure(state.revision, 'invalid_input', 'since must be an integer of 0 or more.', `Send the revision you last read, currently ${state.revision}.`, 'since')
-        }
-        const since = values.since as number
-        // Being ahead of the log is not the same as being behind it. This used to
-        // answer `upToDate: false` with an empty change list for a revision that does
-        // not exist yet — the one shape of wrong answer the rest of this surface
-        // refuses to give, found by an auditor agent driving the live page.
-        if (since > state.revision) {
-          return failure(
-            state.revision,
-            'invalid_input',
-            `There is no revision ${since}; the scratchpad is at ${state.revision}.`,
-            'Send a revision you actually read from get_scratchpad.',
-            'since',
-          )
-        }
-        const changes = state.activities
-          .filter((activity) => activity.revision > since)
-          .slice(-20)
-          .map((activity) => ({ at: activity.revision, source: activity.source, action: activity.action }))
-        return {
-          ok: true,
-          revision: state.revision,
-          data: {
-            since,
-            revision: state.revision,
-            upToDate: state.revision === since,
-            changes,
-            changeCount: changes.length,
-          },
-        }
-      },
-    },
-
-    {
-      name: 'list_problem_families',
-      title: 'List the problem families',
-      description:
-        'List the skill families a fresh problem can be drawn from, for use as new_problem\'s familyId. Do not expect this to describe the current problem — get_scratchpad reports that.',
-      inputSchema: EMPTY_SCHEMA,
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), [])
-        if (guard.bad) return guard.bad
-        return {
-          ok: true,
-          revision: state.revision,
-          data: { families: FAMILY_IDS, current: state.problem.familyId ?? FAMILY_IDS[0], count: FAMILY_IDS.length },
-        }
-      },
-    },
-
-    {
-      name: 'validate_expression',
-      title: 'Parse an expression without writing it',
-      description:
-        'Check whether a LaTeX expression parses under this problem\'s variables, and read the parse error if it does not. Nothing is written to the page. Do not use this to check mathematical correctness — it only reports whether the text is well formed.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The expression to parse, in LaTeX.' },
-        },
-        required: ['latex'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), ['latex'])
-        if (guard.bad) return guard.bad
-        const latex = guard.values.latex
-        if (typeof latex !== 'string' || !latex.trim()) {
-          return failure(state.revision, 'invalid_input', 'latex must be a non-empty string.', 'Send the expression to parse.', 'latex')
-        }
-        const parsed = parseExpression(latex, allowedVariables(state))
-        return {
-          ok: true,
-          revision: state.revision,
-          data: parsed.ok
-            ? { parses: true, variables: parsed.variables }
-            : { parses: false, code: parsed.code, message: parsed.message },
-        }
-      },
-    },
-
-    {
-      name: 'compare_expressions',
-      title: 'Compare two expressions for equivalence',
-      description:
-        'Ask the page computer algebra system whether two expressions are equivalent. The answer is three-valued: equivalent, not equivalent, or could not determine — the last is a real answer and must not be read as either of the others. Do not use this to check a whole derivation; check_work does that line by line.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          left: { type: 'string', minLength: 1, maxLength: 256, description: 'The first expression, in LaTeX.' },
-          right: { type: 'string', minLength: 1, maxLength: 256, description: 'The second expression, in LaTeX.' },
-        },
-        required: ['left', 'right'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), ['left', 'right'])
-        if (guard.bad) return guard.bad
-        for (const key of ['left', 'right'] as const) {
-          const v = guard.values[key]
-          if (typeof v !== 'string' || !v.trim()) {
-            return failure(state.revision, 'invalid_input', `${key} must be a non-empty string.`, 'Send both expressions in LaTeX.', key)
-          }
-        }
-        const result = compareExpressions(guard.values.left as string, guard.values.right as string, allowedVariables(state))
-        return { ok: true, revision: state.revision, data: { ...result } }
-      },
-    },
-
-    {
-      name: 'differentiate_expression',
-      title: 'Differentiate an expression',
-      description:
-        'Differentiate a LaTeX expression with respect to one variable and read the result, without writing anything to the page. Use it to verify your own reasoning before proposing a line. Do not treat the result as the learner\'s answer.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The expression to differentiate, in LaTeX.' },
-          variable: { type: 'string', minLength: 1, maxLength: 4, description: 'The variable to differentiate with respect to. Defaults to the problem variable.' },
-        },
-        required: ['latex'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), ['latex', 'variable'])
-        if (guard.bad) return guard.bad
-        const latex = guard.values.latex
-        if (typeof latex !== 'string' || !latex.trim()) {
-          return failure(state.revision, 'invalid_input', 'latex must be a non-empty string.', 'Send the expression in LaTeX.', 'latex')
-        }
-        // An optional argument still has a declared type. Treating a wrong-typed one as
-        // absent silently accepts a malformed call, which teaches an agent that its
-        // mistake worked - the same failure this surface refuses for required fields.
-        const variable = optionalVariable(state, guard.values)
-        if (typeof variable !== 'string') return variable
-        const parsed = parseExpression(latex, allowedVariables(state))
-        if (!parsed.ok) {
-          return failure(state.revision, 'invalid_input', parsed.message, 'Fix the expression and call again.', 'latex')
-        }
-        try {
-          const derivative = computeEngine().box(['D', parsed.expr, variable]).evaluate()
-          return {
-            ok: true,
-            revision: state.revision,
-            data: { input: latex, variable, derivative: derivative.latex, simplified: derivative.simplify().latex },
-          }
-        } catch {
-          return failure(state.revision, 'internal_error', 'The computer algebra system could not differentiate that.', 'Try a simpler expression.', 'latex')
-        }
-      },
-    },
-
-    {
-      name: 'evaluate_expression',
-      title: 'Evaluate an expression at a point',
-      description:
-        'Substitute a number for the variable and read the numeric value. Use it to test a candidate line against the problem\'s answer before writing it. Do not use it to establish equivalence — one agreeing point is not equivalence, and compare_expressions exists for that.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          latex: { type: 'string', minLength: 1, maxLength: 256, description: 'The expression to evaluate, in LaTeX.' },
-          at: { type: 'number', minimum: -1e6, maximum: 1e6, description: 'The value substituted for the variable.' },
-          variable: { type: 'string', minLength: 1, maxLength: 4, description: 'The variable to substitute. Defaults to the problem variable.' },
-        },
-        required: ['latex', 'at'],
-        additionalProperties: false,
-      },
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), ['latex', 'at', 'variable'])
-        if (guard.bad) return guard.bad
-        const latex = guard.values.latex
-        if (typeof latex !== 'string' || !latex.trim()) {
-          return failure(state.revision, 'invalid_input', 'latex must be a non-empty string.', 'Send the expression in LaTeX.', 'latex')
-        }
-        const at = guard.values.at
-        if (typeof at !== 'number' || !Number.isFinite(at)) {
-          return failure(state.revision, 'invalid_input', 'at must be a finite number.', 'Send the point to evaluate at, for example { at: 2 }.', 'at')
-        }
-        // An optional argument still has a declared type. Treating a wrong-typed one as
-        // absent silently accepts a malformed call, which teaches an agent that its
-        // mistake worked - the same failure this surface refuses for required fields.
-        const variable = optionalVariable(state, guard.values)
-        if (typeof variable !== 'string') return variable
-        const parsed = parseExpression(latex, allowedVariables(state))
-        if (!parsed.ok) {
-          return failure(state.revision, 'invalid_input', parsed.message, 'Fix the expression and call again.', 'latex')
-        }
-        try {
-          const engine = computeEngine()
-          const substituted = parsed.expr.subs({ [variable]: engine.box(at) }).N()
-          const value = substituted.re
-          if (typeof value !== 'number' || !Number.isFinite(value)) {
-            return failure(state.revision, 'not_ready', 'That expression did not reduce to a real number at this point.', 'Check that every symbol has a value here, then try another point.', 'at')
-          }
-          return { ok: true, revision: state.revision, data: { input: latex, variable, at, value } }
-        } catch {
-          return failure(state.revision, 'internal_error', 'The computer algebra system could not evaluate that.', 'Try a simpler expression or another point.', 'latex')
-        }
-      },
-    },
-    {
-      name: 'get_platform',
-      title: 'Read WebMCP platform support',
-      description:
-        'Probe this browser for the WebMCP features beyond plain tool registration — origin scoping, cross-origin reads, toolchange events, declarative form tools, withdrawing a tool, and annotations — and read what each one actually did. Every verdict comes from executing the feature, and "unsupported" is a real answer. Do not use this to read the tool list; that is getTools on the model context.',
-      inputSchema: EMPTY_SCHEMA,
-      annotations: { readOnlyHint: true, untrustedContentHint: false },
-      async execute(input) {
-        const state = bridge.getState()
-        if (!state) return NOT_MOUNTED
-        const guard = onlyKeys(state, readInput(input), [])
-        if (guard.bad) return guard.bad
-        try {
-          const features = await bridge.probePlatform()
-          return {
-            ok: true,
-            revision: state.revision,
-            data: {
-              // Six verdicts with full observations exceeded Chrome's 1.5K per-output
-              // budget (measured: 1590). `label` is dropped because `id` already
-              // carries it, and each observation is clipped at the source rather than
-              // left to the generic budget guard, which can only cut blindly. The
-              // untruncated text stays on screen in the Agent Console.
-              features: features.map((f) => ({
-                id: f.id,
-                status: f.status,
-                observed: f.detail.length > 108 ? `${f.detail.slice(0, 107)}…` : f.detail,
-              })),
-              supported: features.filter((f) => f.status === 'supported').length,
-              total: features.length,
-              note: 'Every status was executed in this page load. Full observations are on screen.',
-            },
-          }
-        } catch {
-          return failure(state.revision, 'internal_error', 'The platform probes could not complete.', 'Reload the page and try once more.')
-        }
-      },
-    },
+  return [
+    getWorld, getObjects, getSelection, getSessionContext, getHistory, inspectMath,
+    createObjects, updateObjects, deleteObjects, transformObjects, applyActions, stepHistory, setViewport,
+    reconstructProblem, auditReconstructionTool, graphExpression, constructGeometry, visualizeConcept,
   ]
-
-  return tools.map((tool) => ({
-    ...tool,
-    async execute(input) {
-      const envelope = await tool.execute(input)
-      if (envelope.ok) bridge.onToolSuccess()
-      return withinOutputBudget(envelope)
-    },
-  }))
 }

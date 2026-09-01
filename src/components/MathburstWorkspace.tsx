@@ -1,6 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createWorldTools } from '../domain/tools/definitions'
+import type { ToolResult, WorldBridge } from '../domain/tools/definitions'
+import { registerWorldTools } from '../domain/tools/registry'
+import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
@@ -24,6 +28,7 @@ import AgentPresence from './AgentPresence'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
+import WebMCPInspector from './WebMCPInspector'
 import WorldCanvas from './WorldCanvas'
 
 const humanAction = (summary: string, operations: WorldOperation[]): WorldAction => ({
@@ -73,6 +78,7 @@ function demoReconstruction(audited: boolean): WorldObject[] {
 
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
+  const worldRef = useRef(world)
   const [hydrated, setHydrated] = useState(false)
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
@@ -81,12 +87,17 @@ export default function MathburstWorkspace() {
   const [presence, setPresence] = useState<AgentPresenceState>(quietPresence)
   const [agentCommitIds, setAgentCommitIds] = useState<string[]>([])
   const [agentBusy, setAgentBusy] = useState(false)
+  const agentBusyRef = useRef(false)
+  const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus | null>(null)
   const [nextStep, setNextStep] = useState('')
   const [attemptFeedback, setAttemptFeedback] = useState('')
 
   useEffect(() => {
     const stored = loadWorld()
-    if (stored) setWorld(stored)
+    if (stored) {
+      worldRef.current = stored
+      setWorld(stored)
+    }
     setHydrated(true)
   }, [])
 
@@ -95,46 +106,150 @@ export default function MathburstWorkspace() {
   }, [hydrated, world])
 
   const run = useCallback((action: WorldAction) => {
-    setWorld((current) => dispatchWorldAction(current, action))
+    const next = dispatchWorldAction(worldRef.current, action)
+    worldRef.current = next
+    setWorld(next)
   }, [])
 
-  const runAgent = useCallback((action: WorldAction, targetIds: string[] = []) => {
-    if (agentBusy) return
-    const target = targetIds.map((id) => world.objects[id]).find(Boolean)
+  const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
+    if (agentBusyRef.current) {
+      resolve({ ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' })
+      return
+    }
+
+    const current = worldRef.current
+    const target = targetIds.map((id) => current.objects[id]).find(Boolean)
     const x = target
-      ? 58 + world.viewport.x + (target.bounds.x + target.bounds.width / 2) * world.viewport.zoom
+      ? 58 + current.viewport.x + (target.bounds.x + target.bounds.width / 2) * current.viewport.zoom
       : Math.min(window.innerWidth - 260, 920)
     const y = target
-      ? 54 + world.viewport.y + (target.bounds.y + target.bounds.height / 2) * world.viewport.zoom
+      ? 54 + current.viewport.y + (target.bounds.y + target.bounds.height / 2) * current.viewport.zoom
       : 240
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const changedIds = Array.from(new Set([
+      ...targetIds,
+      ...action.operations.flatMap((operation) => {
+        if (operation.type === 'put') return [operation.object.id]
+        if (operation.type === 'remove') return [operation.id]
+        return []
+      }),
+    ]))
 
+    const finish = (delay: number) => {
+      window.setTimeout(() => {
+        setPresence(quietPresence)
+        setAgentCommitIds([])
+        agentBusyRef.current = false
+        setAgentBusy(false)
+      }, delay)
+    }
+
+    const commit = () => {
+      try {
+        const next = dispatchWorldAction(worldRef.current, action)
+        worldRef.current = next
+        setWorld(next)
+        setAgentCommitIds(changedIds)
+        window.requestAnimationFrame(() => resolve({
+          ok: true,
+          summary: action.summary,
+          changedIds,
+          data: { source: 'agent' },
+        }))
+        finish(reduceMotion ? 120 : 320)
+      } catch (error) {
+        agentBusyRef.current = false
+        setAgentBusy(false)
+        setPresence(quietPresence)
+        resolve({
+          ok: false,
+          summary: 'No changes made',
+          error: error instanceof Error ? error.message : 'The action could not be applied.',
+        })
+      }
+    }
+
+    agentBusyRef.current = true
     setAgentBusy(true)
     if (reduceMotion) {
-      run(action)
-      setAgentCommitIds(targetIds)
-      window.setTimeout(() => {
-        setAgentCommitIds([])
-        setAgentBusy(false)
-      }, 120)
+      commit()
       return
     }
 
     setPresence({ visible: true, x, y, label: 'Tutor', action: action.summary })
-    window.setTimeout(() => {
-      run(action)
-      setAgentCommitIds(targetIds)
+    window.setTimeout(commit, 180)
+  }), [])
+
+  const runHistoryBridge = useCallback((direction: 'undo' | 'redo'): Promise<ToolResult> => new Promise((resolve) => {
+    if (agentBusyRef.current) {
+      resolve({ ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' })
+      return
+    }
+    const current = worldRef.current
+    const commit = (direction === 'undo' ? current.history : current.future).at(-1)
+    if (!commit) {
+      resolve({ ok: false, summary: 'No changes made', error: `Nothing to ${direction}.` })
+      return
+    }
+    const changedIds = Array.from(new Set(commit.action.operations.flatMap((operation) => {
+      if (operation.type === 'put') return [operation.object.id]
+      if (operation.type === 'remove') return [operation.id]
+      return []
+    })))
+    const target = changedIds.map((id) => current.objects[id]).find(Boolean)
+    const x = target
+      ? 58 + current.viewport.x + (target.bounds.x + target.bounds.width / 2) * current.viewport.zoom
+      : Math.min(window.innerWidth - 260, 920)
+    const y = target
+      ? 54 + current.viewport.y + (target.bounds.y + target.bounds.height / 2) * current.viewport.zoom
+      : 240
+    const summary = `${direction === 'undo' ? 'Undid' : 'Redid'} ${commit.action.summary.toLowerCase()}`
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const applyHistory = () => {
+      const next = stepWorldHistory(worldRef.current, direction, 'agent')
+      worldRef.current = next
+      setWorld(next)
+      setAgentCommitIds(changedIds)
+      window.requestAnimationFrame(() => resolve({ ok: true, summary, changedIds, data: { source: 'agent' } }))
       window.setTimeout(() => {
         setPresence(quietPresence)
         setAgentCommitIds([])
+        agentBusyRef.current = false
         setAgentBusy(false)
-      }, 320)
-    }, 180)
-  }, [agentBusy, run, world.objects, world.viewport])
+      }, reduceMotion ? 120 : 320)
+    }
+
+    agentBusyRef.current = true
+    setAgentBusy(true)
+    if (reduceMotion) applyHistory()
+    else {
+      setPresence({ visible: true, x, y, label: 'Tutor', action: summary })
+      window.setTimeout(applyHistory, 180)
+    }
+  }), [])
 
   const history = useCallback((direction: 'undo' | 'redo') => {
-    setWorld((current) => stepWorldHistory(current, direction, 'human'))
+    const next = stepWorldHistory(worldRef.current, direction, 'human')
+    worldRef.current = next
+    setWorld(next)
   }, [])
+
+  const bridge = useMemo<WorldBridge>(() => ({
+    getWorld: () => worldRef.current,
+    runAgentAction: runAgent,
+    runHistory: runHistoryBridge,
+  }), [runAgent, runHistoryBridge])
+  const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
+
+  useEffect(() => {
+    if (!hydrated) return
+    let active = true
+    void registerWorldTools(bridge).then((registration) => {
+      if (active) setRegistrationStatus(registration.status)
+    })
+    return () => { active = false }
+  }, [bridge, hydrated])
 
   const startReconstruction = () => {
     runAgent(
@@ -207,12 +322,15 @@ export default function MathburstWorkspace() {
   }
 
   const resetDemo = () => {
-    setWorld(createSeedWorld())
+    const seed = createSeedWorld()
+    worldRef.current = seed
+    setWorld(seed)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
     setPresence(quietPresence)
     setAgentCommitIds([])
+    agentBusyRef.current = false
     setAgentBusy(false)
     setNextStep('')
     setAttemptFeedback('')
@@ -435,6 +553,7 @@ export default function MathburstWorkspace() {
         compact={world.session.helpShown.includes('linked-integrand-graph')}
       />
       <AgentPresence presence={presence} />
+      <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />
 
       {selectedObjects.length > 0 && (
         <div className="object-context" aria-label="Selected object actions">
