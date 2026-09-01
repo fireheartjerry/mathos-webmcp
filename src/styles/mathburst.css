@@ -541,6 +541,11 @@ button {
   box-shadow: 6px 8px 0 rgba(23, 23, 19, 0.09);
 }
 
+.world-object > .handwriting-source-preview {
+  border: 1px solid rgba(23, 23, 19, 0.28);
+  box-shadow: 6px 8px 0 rgba(23, 23, 19, 0.09);
+}
+
 .world-object.is-selected::after {
   content: '';
   position: absolute;

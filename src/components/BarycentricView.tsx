@@ -47,6 +47,7 @@ export default function BarycentricView({ object, run }: Props) {
   const [preview, setPreview] = useState<Point | null>(null)
   const width = Math.max(280, object.bounds.width)
   const height = Math.max(210, object.bounds.height)
+  const canvasHeight = height - 78
   const vertices = triangleFor(object)
   const livePoint = preview ?? pointFromWeights(vertices, object.weights)
   const liveWeights = preview ? triangleAreas(preview, vertices).weights : normalizeWeights3(object.weights)
@@ -58,7 +59,7 @@ export default function BarycentricView({ object, run }: Props) {
     if (!rect) return livePoint
     return {
       x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * width,
-      y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * height,
+      y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvasHeight,
     }
   }
 
@@ -102,16 +103,16 @@ export default function BarycentricView({ object, run }: Props) {
       <svg
         ref={svgRef}
         className="barycentric-canvas"
-        viewBox={`0 0 ${width} ${height - 78}`}
+        viewBox={`0 0 ${width} ${canvasHeight}`}
         aria-label="Interactive barycentric triangle"
         onPointerMove={moveDrag}
         onPointerUp={finishDrag}
         onPointerCancel={finishDrag}
       >
         <defs>
-          <clipPath id={clipId}><rect width={width} height={height - 78} /></clipPath>
+          <clipPath id={clipId}><rect width={width} height={canvasHeight} /></clipPath>
         </defs>
-        <rect className="barycentric-paper" width={width} height={height - 78} rx="8" />
+        <rect className="barycentric-paper" width={width} height={canvasHeight} rx="8" />
         <text className="barycentric-kicker" x="16" y="21">ATTENTION → BARYCENTRICS</text>
         <g clipPath={`url(#${clipId})`}>
           <polygon className="barycentric-triangle" points={polygonPoints(vertices)} />

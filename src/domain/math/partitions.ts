@@ -145,7 +145,7 @@ export function verifyRamanujanFive(cutoff: number): RamanujanVerification {
   }
   return {
     cutoff: limit,
-    verified: counterexamples.length === 0,
+    verified: checked.length > 0 && counterexamples.length === 0,
     checked,
     counterexamples,
     lanes: fiveResidueLanes(limit),

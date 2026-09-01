@@ -176,8 +176,8 @@ export function createSeedWorld(): WorldState {
     {
       id: SOURCE_IMAGE_ID,
       kind: 'image',
-      src: '/demo/calculus-source.png',
-      alt: 'Photographed integration-by-parts problem',
+      src: 'handwriting://opening-attempt',
+      alt: 'Captured handwritten Gamma recurrence',
       bounds: { x: -810, y: 430, width: 190, height: 135 },
       rotation: -1.2,
       author: 'human',

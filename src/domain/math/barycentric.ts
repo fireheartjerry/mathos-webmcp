@@ -71,11 +71,11 @@ function twiceSignedArea(a: Point, b: Point, c: Point): number {
 /** Return signed sub-triangle areas and their normalized barycentric ratios. */
 export function triangleAreas(point: Point, vertices: Triangle): TriangleAreas {
   const [a, b, c] = vertices
-  const totalSigned = twiceSignedArea(a, b, c)
+  const totalSigned = twiceSignedArea(a, b, c) / 2
   const signed: BarycentricWeights = [
-    twiceSignedArea(point, b, c),
-    twiceSignedArea(point, c, a),
-    twiceSignedArea(point, a, b),
+    twiceSignedArea(point, b, c) / 2,
+    twiceSignedArea(point, c, a) / 2,
+    twiceSignedArea(point, a, b) / 2,
   ]
   const absolute: BarycentricWeights = [Math.abs(signed[0]), Math.abs(signed[1]), Math.abs(signed[2])]
   const weights: BarycentricWeights = Math.abs(totalSigned) <= EPSILON

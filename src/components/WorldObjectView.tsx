@@ -1,4 +1,5 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
+import { handwritingSampleToInk, loadHandwritingSamples } from '../domain/world/handwriting'
 import type { WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import AttentionView from './AttentionView'
 import BarycentricView from './BarycentricView'
@@ -55,8 +56,30 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
       }
     case 'text':
       return <p className={object.presentation === 'handwritten' ? 'is-handwritten' : undefined} style={{ color: object.color, fontSize: object.fontSize }}>{object.text}</p>
-    case 'image':
+    case 'image': {
+      if (object.src === 'handwriting://opening-attempt') {
+        const preview = handwritingSampleToInk(loadHandwritingSamples(), 'opening-attempt', {
+          id: `${object.id}-preview`,
+          bounds: { x: 0, y: 0, width, height },
+          color: '#171713',
+          width: 7.5,
+          rotation: 0,
+          author: 'human',
+          opacity: 1,
+        })
+        if (preview) {
+          const strokes = preview.strokes?.length ? preview.strokes : [{ points: preview.points }]
+          const strokeWidth = Math.max(0.75, preview.width * (preview.strokeScale ?? 1))
+          return (
+            <svg className="handwriting-source-preview" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={object.alt}>
+              <rect width={width} height={height} fill="#f4f0e7" />
+              {strokes.map((stroke, index) => <path key={index} d={smoothStrokePath(stroke.points)} fill="none" stroke={preview.color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />)}
+            </svg>
+          )
+        }
+      }
       return <img src={object.src} alt={object.alt} draggable={false} />
+    }
     case 'shape':
       return (
         <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">

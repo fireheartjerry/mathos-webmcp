@@ -7,7 +7,7 @@ import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, OPENING_FRAME_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
   getProjectForScene,
   getSceneForViewport,
@@ -393,7 +393,7 @@ export default function MathburstWorkspace() {
       opacity: 1,
     })
     if (capturedCorrection) {
-      const frame = worldRef.current.objects.opening_problem
+      const frame = worldRef.current.objects[OPENING_FRAME_ID]
       run(humanAction('Corrected the Gamma recurrence sign', [
         { type: 'put', object: capturedCorrection },
         ...(frame?.kind === 'frame' && !frame.childIds.includes(OPENING_CORRECTION_ID)
