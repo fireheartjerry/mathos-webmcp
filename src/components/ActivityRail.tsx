@@ -7,10 +7,12 @@ export default function ActivityRail({
   activity,
   onUndo,
   compact = false,
+  collapseOn,
 }: {
   activity: WorldCommit[]
   onUndo: () => void
   compact?: boolean
+  collapseOn?: string
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -21,6 +23,10 @@ export default function ActivityRail({
   useEffect(() => {
     if (compact) setCollapsed(false)
   }, [compact])
+
+  useEffect(() => {
+    if (collapseOn) setCollapsed(true)
+  }, [collapseOn])
 
   const latest = activity.slice(-6).reverse()
   return (

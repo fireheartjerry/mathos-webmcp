@@ -290,7 +290,10 @@ button {
   inset: 0;
   transform-origin: 0 0;
   will-change: transform;
+  transition: transform 440ms cubic-bezier(.22, .82, .18, 1);
 }
+
+.world-canvas[data-panning='true'] .world-stage { transition: none; }
 
 .world-object {
   position: absolute;
@@ -321,6 +324,7 @@ button {
   border: 1.5px solid var(--agent);
   box-shadow: 0 0 0 1px var(--ivory), 0 0 0 3px rgba(124, 92, 255, 0.18);
   pointer-events: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .world-object.is-selected::before {
@@ -341,9 +345,51 @@ button {
   animation: agent-commit 320ms ease-out both;
 }
 
+.kind-graph,
+.kind-geometry,
+.kind-matrix {
+  transition: opacity 320ms ease, box-shadow 320ms ease;
+}
+
 @keyframes agent-commit {
   0% { box-shadow: 0 0 0 2px var(--agent), 0 0 0 12px rgba(124, 92, 255, 0.26); }
   100% { box-shadow: 0 0 0 1px rgba(124, 92, 255, 0); }
+}
+
+@keyframes geometry-draw {
+  from { opacity: 0; stroke-dasharray: 1 900; }
+  to { opacity: 1; stroke-dasharray: 900 1; }
+}
+
+@keyframes geometry-point-in {
+  from { opacity: 0; transform: scale(0.2); transform-origin: center; }
+  to { opacity: 1; transform: scale(1); transform-origin: center; }
+}
+
+@keyframes matrix-vector-in {
+  from { opacity: 0; stroke-dasharray: 1 500; }
+  to { opacity: 1; stroke-dasharray: 500 1; }
+}
+
+.world-canvas[data-demo-scene='geometry'] .geometry-circle,
+.world-canvas[data-demo-scene='geometry'] .geometry-segment,
+.world-canvas[data-demo-scene='geometry'] .geometry-polygon,
+.world-canvas[data-demo-scene='geometry'] .geometry-line,
+.world-canvas[data-demo-scene='geometry'] .geometry-angle {
+  animation: geometry-draw 420ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.world-canvas[data-demo-scene='geometry'] .geometry-point {
+  animation: geometry-point-in 300ms 120ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.world-canvas[data-demo-scene='matrix'] .matrix-result-vector,
+.world-canvas[data-demo-scene='matrix'] .matrix-source-vector {
+  animation: matrix-vector-in 420ms 80ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.world-canvas[data-demo-scene='matrix'] .matrix-lattice {
+  animation: geometry-point-in 360ms ease-out both;
 }
 
 .kind-text p {
@@ -1541,6 +1587,72 @@ button {
   font: 10px/1 'Fira Code', monospace;
 }
 
+.demo-navigator {
+  position: fixed;
+  left: 230px;
+  bottom: 17px;
+  z-index: 62;
+  min-height: 38px;
+  display: flex;
+  align-items: stretch;
+  padding: 3px;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid #45443f;
+  box-shadow: 7px 8px 0 rgba(23, 23, 19, 0.1);
+}
+
+.demo-navigator-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px 0 9px;
+  color: #aaa79d;
+  border-right: 1px solid #45443f;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.demo-navigator-label kbd {
+  padding: 3px 4px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+}
+
+.demo-navigator button {
+  min-width: 104px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: #bdb9ae;
+  background: transparent;
+  font: 9px/1 'Fira Code', monospace;
+  cursor: pointer;
+}
+
+.demo-navigator button b {
+  color: #6f6c64;
+  font-size: 7px;
+}
+
+.demo-navigator button:hover,
+.demo-navigator button:focus-visible {
+  color: #fff;
+  background: #292925;
+  outline: none;
+}
+
+.demo-navigator button[aria-pressed='true'] {
+  color: #fff;
+  background: var(--agent);
+}
+
+.demo-navigator button[aria-pressed='true'] b { color: var(--agent-soft); }
+
 .canvas-mode {
   position: absolute;
   left: 16px;
@@ -1639,6 +1751,9 @@ button {
   .object-context button:nth-of-type(2),
   .object-context button:nth-of-type(4),
   .object-context button:nth-of-type(5) { display: none; }
+  .demo-navigator { left: 152px; }
+  .demo-navigator-label { display: none; }
+  .demo-navigator button { min-width: 92px; }
 }
 
 @media (max-width: 1040px) {
@@ -1652,6 +1767,8 @@ button {
 @media (max-width: 760px) {
   .webmcp-inspector-trigger { right: 12px; }
   .webmcp-inspector { left: 74px; right: 12px; width: auto; }
+  .demo-navigator { left: 74px; right: 160px; }
+  .demo-navigator button { min-width: 0; flex: 1; justify-content: center; padding: 0 5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

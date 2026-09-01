@@ -7,7 +7,8 @@ import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import { createSeedWorld, DEMO_SCENES, HERO_EQUATION_ID, HERO_GRAPH_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import type { DemoScene } from '../domain/world/seed'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
   approveReconstruction,
@@ -25,6 +26,7 @@ import {
 import type { AgentPresenceState, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
+import DemoNavigator from './DemoNavigator'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
@@ -80,6 +82,7 @@ export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const worldRef = useRef(world)
   const [hydrated, setHydrated] = useState(false)
+  const [activeScene, setActiveScene] = useState<DemoScene>('calculus')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -235,6 +238,24 @@ export default function MathburstWorkspace() {
     setWorld(next)
   }, [])
 
+  const navigateToScene = useCallback((scene: DemoScene) => {
+    const target = DEMO_SCENES[scene]
+    const canvasWidth = Math.max(1, window.innerWidth - 58)
+    const canvasHeight = Math.max(1, window.innerHeight - 54)
+    run(humanAction(`Viewed the ${target.label.toLowerCase()} world`, [{
+      type: 'viewport',
+      viewport: {
+        x: canvasWidth / 2 - target.center.x * target.zoom,
+        y: canvasHeight / 2 - target.center.y * target.zoom,
+        zoom: target.zoom,
+      },
+    }]))
+    setActiveScene(scene)
+    setMode('select')
+    setEditorId(null)
+    setEditorMatrix(null)
+  }, [run])
+
   const bridge = useMemo<WorldBridge>(() => ({
     getWorld: () => worldRef.current,
     runAgentAction: runAgent,
@@ -325,6 +346,7 @@ export default function MathburstWorkspace() {
     const seed = createSeedWorld()
     worldRef.current = seed
     setWorld(seed)
+    setActiveScene('calculus')
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -456,6 +478,9 @@ export default function MathburstWorkspace() {
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         deleteSelection()
+      } else if (event.key === '1' || event.key === '2' || event.key === '3') {
+        const scene = ({ '1': 'calculus', '2': 'geometry', '3': 'matrix' } as const)[event.key]
+        navigateToScene(scene)
       } else {
         const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', g: 'graph', c: 'geometry', x: 'matrix', s: 'shape', a: 'arrow', f: 'frame' }
         const next = shortcuts[event.key.toLowerCase()]
@@ -464,7 +489,7 @@ export default function MathburstWorkspace() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [deleteSelection, duplicateSelection, groupSelection, history])
+  }, [deleteSelection, duplicateSelection, groupSelection, history, navigateToScene])
 
   const selectedObjects = useMemo(
     () => world.selection.map((id) => world.objects[id]).filter(Boolean),
@@ -479,7 +504,7 @@ export default function MathburstWorkspace() {
     <main className="mathburst-app" id="main" data-hydrated={hydrated}>
       <header className="world-header">
         <div className="wordmark"><span>∫</span> Mathburst</div>
-        <div className="world-title"><b>Integration by parts</b><span>/</span><em>shared mathematical world</em></div>
+        <div className="world-title"><b>{DEMO_SCENES[activeScene].title}</b><span>/</span><em>shared mathematical world</em></div>
         <div className="header-actions">
           <button
             type="button"
@@ -506,6 +531,7 @@ export default function MathburstWorkspace() {
 
       <WorldCanvas
         world={world}
+        scene={activeScene}
         mode={mode}
         run={run}
         onEditObject={openEditor}
@@ -535,6 +561,7 @@ export default function MathburstWorkspace() {
           </section>
         ) : null}
       />
+      <DemoNavigator active={activeScene} onNavigate={navigateToScene} />
 
       {world.reconstruction && (
         <ReconstructionPanel
@@ -551,6 +578,7 @@ export default function MathburstWorkspace() {
         activity={world.activity}
         onUndo={() => history('undo')}
         compact={world.session.helpShown.includes('linked-integrand-graph')}
+        collapseOn={activeScene === 'calculus' ? undefined : activeScene}
       />
       <AgentPresence presence={presence} />
       <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
+import type { DemoScene } from '../domain/world/seed'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
 import WorldObjectView from './WorldObjectView'
@@ -19,8 +20,15 @@ const makeAction = (summary: string, operations: WorldAction['operations']): Wor
   operations,
 })
 
+const sceneBreadcrumbs: Record<DemoScene, { number: string; title: string; state: string }> = {
+  calculus: { number: '01', title: 'Integration by parts', state: 'live world' },
+  geometry: { number: '02', title: 'Homothety & tangency', state: 'dynamic construction' },
+  matrix: { number: '03', title: 'Attention as geometry', state: 'live transformation' },
+}
+
 export default function WorldCanvas({
   world,
+  scene,
   mode,
   run,
   onEditObject,
@@ -28,6 +36,7 @@ export default function WorldCanvas({
   tutorOverlay,
 }: {
   world: WorldState
+  scene: DemoScene
   mode: ToolMode
   run: (action: WorldAction) => void
   onEditObject: (id: string) => void
@@ -328,6 +337,7 @@ export default function WorldCanvas({
   }
 
   const viewport = viewportPreview ?? world.viewport
+  const breadcrumb = sceneBreadcrumbs[scene]
   const previewBounds = inkPreview && inkPreview.points.length > 0
     ? {
         left: Math.min(...inkPreview.points.map((point) => point.x)),
@@ -342,13 +352,15 @@ export default function WorldCanvas({
       ref={canvasRef}
       className={`world-canvas mode-${mode}`}
       data-tool={mode}
+      data-demo-scene={scene}
+      data-panning={Boolean(viewportPreview)}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishGesture}
       onPointerCancel={finishGesture}
       onWheel={handleWheel}
     >
-      <div className="problem-breadcrumb"><span>01</span> Integration by parts <i>live world</i></div>
+      <div className="problem-breadcrumb"><span>{breadcrumb.number}</span> {breadcrumb.title} <i>{breadcrumb.state}</i></div>
       <div
         className="world-stage"
         style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})` }}
