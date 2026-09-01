@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
+import type { DirectorObjectOverride } from '../domain/world/director'
 import type { DemoScene } from '../domain/world/seed'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
@@ -20,6 +21,18 @@ const makeAction = (summary: string, operations: WorldAction['operations']): Wor
   operations,
 })
 
+function expandDirectorTargetIds(world: WorldState, ids: string[]): string[] {
+  const expanded = new Set<string>()
+  const visit = (id: string) => {
+    const object = world.objects[id]
+    if (!object || expanded.has(id)) return
+    expanded.add(id)
+    if (object.kind === 'group' || object.kind === 'frame') object.childIds.forEach(visit)
+  }
+  ids.forEach(visit)
+  return world.order.filter((id) => expanded.has(id))
+}
+
 const sceneBreadcrumbs: Record<DemoScene, { number: string; title: string; state: string }> = {
   opening: { number: '00', title: 'Find the break', state: 'cold open' },
   calculus: { number: '01', title: 'Integration by parts', state: 'live world' },
@@ -36,6 +49,14 @@ export default function WorldCanvas({
   onEditObject,
   agentCommitIds = [],
   tutorOverlay,
+  directorMode = false,
+  directorViewport,
+  directorOverrides = {},
+  directorSelection = [],
+  cameraPreviewing = false,
+  onDirectorViewportChange,
+  onDirectorTransform,
+  onDirectorSelection,
 }: {
   world: WorldState
   scene: DemoScene
@@ -44,6 +65,14 @@ export default function WorldCanvas({
   onEditObject: (id: string) => void
   agentCommitIds?: string[]
   tutorOverlay?: ReactNode
+  directorMode?: boolean
+  directorViewport?: Viewport
+  directorOverrides?: Record<string, DirectorObjectOverride>
+  directorSelection?: string[]
+  cameraPreviewing?: boolean
+  onDirectorViewportChange?: (viewport: Viewport) => void
+  onDirectorTransform?: (ids: string[], delta: Point) => void
+  onDirectorSelection?: (ids: string[]) => void
 }) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -52,12 +81,24 @@ export default function WorldCanvas({
   const [dragPreview, setDragPreview] = useState<{ ids: string[]; delta: Point } | null>(null)
   const [inkPreview, setInkPreview] = useState<{ points: Point[]; highlighter: boolean } | null>(null)
   const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
+  const effectiveViewport = directorMode && directorViewport ? directorViewport : world.viewport
+  const effectiveSelection = directorMode ? directorSelection : world.selection
+
+  const withDirectorOverride = (object: WorldObject): WorldObject => {
+    if (!directorMode) return object
+    const override = directorOverrides[object.id]
+    return override ? {
+      ...object,
+      ...override,
+      bounds: override.bounds ? { ...object.bounds, ...override.bounds } : object.bounds,
+    } as WorldObject : object
+  }
 
   const screenToWorld = (clientX: number, clientY: number) => {
     const rect = canvasRef.current!.getBoundingClientRect()
     return {
-      x: (clientX - rect.left - world.viewport.x) / world.viewport.zoom,
-      y: (clientY - rect.top - world.viewport.y) / world.viewport.zoom,
+      x: (clientX - rect.left - effectiveViewport.x) / effectiveViewport.zoom,
+      y: (clientY - rect.top - effectiveViewport.y) / effectiveViewport.zoom,
     }
   }
 
@@ -176,7 +217,7 @@ export default function WorldCanvas({
         kind: 'pan',
         pointerId: event.pointerId,
         client: { x: event.clientX, y: event.clientY },
-        viewport: world.viewport,
+        viewport: effectiveViewport,
       }
       capture(event.pointerId)
       return
@@ -197,7 +238,10 @@ export default function WorldCanvas({
     }
 
     if (mode === 'select') {
-      if (world.selection.length) run(makeAction('Cleared selection', [{ type: 'select', ids: [] }]))
+      if (effectiveSelection.length) {
+        if (directorMode) onDirectorSelection?.([])
+        else run(makeAction('Cleared selection', [{ type: 'select', ids: [] }]))
+      }
       return
     }
 
@@ -205,7 +249,8 @@ export default function WorldCanvas({
   }
 
   const handleObjectPointerDown = (event: ReactPointerEvent, id: string) => {
-    const object = world.objects[id]
+    const original = world.objects[id]
+    const object = original ? withDirectorOverride(original) : undefined
     if (!object) return
 
     if (mode !== 'select' && mode !== 'eraser') return
@@ -217,15 +262,16 @@ export default function WorldCanvas({
     }
     if (mode !== 'select' || object.locked) return
 
-    const wasSelected = world.selection.includes(id)
+    const wasSelected = effectiveSelection.includes(id)
     const selected = event.shiftKey
-      ? (wasSelected ? world.selection.filter((selectedId) => selectedId !== id) : [...world.selection, id])
-      : (wasSelected ? world.selection : [id])
+      ? (wasSelected ? effectiveSelection.filter((selectedId) => selectedId !== id) : [...effectiveSelection, id])
+      : (wasSelected ? effectiveSelection : [id])
     if (event.shiftKey || !wasSelected) {
-      run(makeAction(event.shiftKey ? 'Changed multi-selection' : 'Selected object', [{ type: 'select', ids: selected }]))
+      if (directorMode) onDirectorSelection?.(selected)
+      else run(makeAction(event.shiftKey ? 'Changed multi-selection' : 'Selected object', [{ type: 'select', ids: selected }]))
     }
     if (!selected.includes(id)) return
-    const ids = expandTargetIds(world, selected)
+    const ids = directorMode ? expandDirectorTargetIds(world, selected) : expandTargetIds(world, selected)
     gestureRef.current = {
       kind: 'drag',
       pointerId: event.pointerId,
@@ -267,12 +313,16 @@ export default function WorldCanvas({
     gestureRef.current = null
 
     if (gesture.kind === 'pan') {
-      if (viewportPreview) run(makeAction('Panned the world', [{ type: 'viewport', viewport: viewportPreview }]))
+      if (viewportPreview) {
+        if (directorMode) onDirectorViewportChange?.(viewportPreview)
+        else run(makeAction('Panned the world', [{ type: 'viewport', viewport: viewportPreview }]))
+      }
       setViewportPreview(null)
     } else if (gesture.kind === 'drag') {
       const delta = dragPreview?.delta ?? { x: 0, y: 0 }
       if (Math.hypot(delta.x, delta.y) > 0.5) {
-        run(makeAction('Moved objects', buildTransformOperations(world, gesture.ids, { translate: delta })))
+        if (directorMode) onDirectorTransform?.(gesture.ids, delta)
+        else run(makeAction('Moved objects', buildTransformOperations(world, gesture.ids, { translate: delta })))
       }
       setDragPreview(null)
     } else {
@@ -305,16 +355,15 @@ export default function WorldCanvas({
   const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault()
     const rect = canvasRef.current!.getBoundingClientRect()
-    const zoom = Math.min(2.5, Math.max(0.25, world.viewport.zoom * Math.exp(-event.deltaY * 0.0012)))
+    const zoom = Math.min(2.5, Math.max(0.25, effectiveViewport.zoom * Math.exp(-event.deltaY * 0.0012)))
     const worldPoint = screenToWorld(event.clientX, event.clientY)
-    run(makeAction('Zoomed the world', [{
-      type: 'viewport',
-      viewport: {
-        x: event.clientX - rect.left - worldPoint.x * zoom,
-        y: event.clientY - rect.top - worldPoint.y * zoom,
-        zoom,
-      },
-    }]))
+    const viewport = {
+      x: event.clientX - rect.left - worldPoint.x * zoom,
+      y: event.clientY - rect.top - worldPoint.y * zoom,
+      zoom,
+    }
+    if (directorMode) onDirectorViewportChange?.(viewport)
+    else run(makeAction('Zoomed the world', [{ type: 'viewport', viewport }]))
   }
 
   const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
@@ -338,7 +387,7 @@ export default function WorldCanvas({
     reader.readAsDataURL(file)
   }
 
-  const viewport = viewportPreview ?? world.viewport
+  const viewport = viewportPreview ?? effectiveViewport
   const breadcrumb = sceneBreadcrumbs[scene]
   const previewBounds = inkPreview && inkPreview.points.length > 0
     ? {
@@ -356,6 +405,8 @@ export default function WorldCanvas({
       data-tool={mode}
       data-demo-scene={scene}
       data-panning={Boolean(viewportPreview)}
+      data-director-mode={directorMode}
+      data-camera-preview={cameraPreviewing}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishGesture}
@@ -368,14 +419,16 @@ export default function WorldCanvas({
         style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})` }}
       >
         {world.order.map((id) => {
-          const object = world.objects[id]
-          if (!object) return null
+          const original = world.objects[id]
+          if (!original) return null
+          if (directorMode && directorOverrides[id]?.opacity === 0) return null
+          const object = withDirectorOverride(original)
           const offset = dragPreview?.ids.includes(id) ? dragPreview.delta : undefined
           return (
             <WorldObjectView
               key={id}
               object={object}
-              selected={world.selection.includes(id)}
+              selected={effectiveSelection.includes(id)}
               agentCommit={agentCommitIds.includes(id)}
               previewOffset={offset}
               world={world}
@@ -409,6 +462,7 @@ export default function WorldCanvas({
           </svg>
         )}
       </div>
+      {directorMode && <div className="director-safe-frame" aria-hidden="true"><span>title safe · 7%</span></div>}
       <div className="canvas-mode"><b>{mode}</b><span>click the world</span></div>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
     </section>

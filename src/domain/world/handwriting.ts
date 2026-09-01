@@ -1,4 +1,5 @@
 import type { Bounds, InkObject, Point } from './types'
+import capturedHandwriting from './captured-handwriting.json'
 
 export const HANDWRITING_STORAGE_KEY = 'mathburst.handwriting.v1'
 
@@ -15,19 +16,28 @@ type HandwritingStore = { version: 1; samples: Record<string, HandwritingSample>
 const finitePoint = (point: { x: number; y: number }): point is Point =>
   Number.isFinite(point.x) && Number.isFinite(point.y)
 
-/** Read captured samples from the same-origin studio without making SSR fragile. */
+const BUNDLED_HANDWRITING_SAMPLES = Object.fromEntries(
+  Object.entries(
+    (capturedHandwriting as unknown as Partial<HandwritingStore>).samples ?? {},
+  ).filter(([, sample]) => isHandwritingSample(sample)),
+) as Record<string, HandwritingSample>
+
+/** Use bundled demo ink everywhere, with same-origin studio captures as overrides. */
 export function loadHandwritingSamples(): Record<string, HandwritingSample> {
-  if (typeof window === 'undefined') return {}
+  if (typeof window === 'undefined') return BUNDLED_HANDWRITING_SAMPLES
   try {
     const raw = window.localStorage.getItem(HANDWRITING_STORAGE_KEY)
-    if (!raw) return {}
+    if (!raw) return BUNDLED_HANDWRITING_SAMPLES
     const parsed = JSON.parse(raw) as Partial<HandwritingStore>
-    if (parsed.version !== 1 || !parsed.samples || typeof parsed.samples !== 'object') return {}
-    return Object.fromEntries(
+    if (parsed.version !== 1 || !parsed.samples || typeof parsed.samples !== 'object') {
+      return BUNDLED_HANDWRITING_SAMPLES
+    }
+    const localSamples = Object.fromEntries(
       Object.entries(parsed.samples).filter(([, sample]) => isHandwritingSample(sample)),
     ) as Record<string, HandwritingSample>
+    return { ...BUNDLED_HANDWRITING_SAMPLES, ...localSamples }
   } catch {
-    return {}
+    return BUNDLED_HANDWRITING_SAMPLES
   }
 }
 

@@ -9,6 +9,8 @@ import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld, DEMO_SCENES, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import type { DemoScene } from '../domain/world/seed'
+import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
+import type { DirectorShotEdit } from '../domain/world/director'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
@@ -24,10 +26,11 @@ import {
   expandTargetIds,
   unionBounds,
 } from '../domain/world/operations'
-import type { AgentPresenceState, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
+import type { AgentPresenceState, Point, Viewport, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
 import DemoNavigator from './DemoNavigator'
+import DirectorReviewPanel from './DirectorReviewPanel'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
@@ -138,6 +141,11 @@ export default function MathburstWorkspace() {
   const [traceEvents, setTraceEvents] = useState<WorldTraceEvent[]>([])
   const traceTimerRef = useRef<number | null>(null)
   const handwritingSamplesRef = useRef<Record<string, HandwritingSample>>({})
+  const [directorOpen, setDirectorOpen] = useState(false)
+  const [directorState, setDirectorState] = useState(EMPTY_DIRECTOR_REVIEW)
+  const [directorSelection, setDirectorSelection] = useState<string[]>([])
+  const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
+  const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
 
   useEffect(() => {
     const samples = loadHandwritingSamples()
@@ -155,6 +163,7 @@ export default function MathburstWorkspace() {
       worldRef.current = centered
       setWorld(centered)
     }
+    setDirectorState(loadDirectorReview())
     setHydrated(true)
   }, [])
 
@@ -163,10 +172,14 @@ export default function MathburstWorkspace() {
   }, [hydrated, world])
 
   useEffect(() => {
-    if (!hydrated) return
+    if (hydrated) saveDirectorReview(directorState)
+  }, [directorState, hydrated])
+
+  useEffect(() => {
+    if (!hydrated || directorOpen) return
     const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
     setActiveScene((current) => current === nearest ? current : nearest)
-  }, [hydrated, world.viewport])
+  }, [directorOpen, hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
     const next = dispatchWorldAction(worldRef.current, action)
@@ -405,6 +418,159 @@ export default function MathburstWorkspace() {
     }]))
   }
 
+  const directorDefaultViewport = (scene: DemoScene): Viewport => cameraViewport(
+    scene,
+    Math.max(1, window.innerWidth - 58),
+    Math.max(1, window.innerHeight - 54),
+  )
+
+  const activeDirectorShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId) ?? DIRECTOR_SHOTS[0]
+  const activeDirectorEdit = directorState.shots[activeDirectorShot.id]
+  const directorViewport = activeDirectorEdit?.viewport ?? world.viewport
+  const directorOverrides = useMemo(() => {
+    const overrides = { ...(activeDirectorEdit?.overrides ?? {}) }
+    for (const id of activeDirectorShot.hiddenObjectIds ?? []) {
+      overrides[id] = { ...overrides[id], opacity: 0 }
+    }
+    return overrides
+  }, [activeDirectorEdit?.overrides, activeDirectorShot])
+
+  const updateDirectorEdit = (update: (edit: DirectorShotEdit) => DirectorShotEdit) => {
+    setDirectorState((current) => {
+      const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === current.activeShotId) ?? DIRECTOR_SHOTS[0]
+      const existing = current.shots[shot.id] ?? {
+        viewport: directorDefaultViewport(shot.scene),
+        overrides: {},
+        approved: false,
+        updatedAt: Date.now(),
+      }
+      return {
+        ...current,
+        shots: { ...current.shots, [shot.id]: update(existing) },
+      }
+    })
+  }
+
+  const selectDirectorShot = (id: string) => {
+    const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === id)
+    if (!shot) return
+    setDirectorState((current) => ({
+      ...current,
+      activeShotId: shot.id,
+      shots: current.shots[shot.id] ? current.shots : {
+        ...current.shots,
+        [shot.id]: {
+          viewport: directorDefaultViewport(shot.scene),
+          overrides: {},
+          approved: false,
+          updatedAt: Date.now(),
+        },
+      },
+    }))
+    setActiveScene(shot.scene)
+    setDirectorSelection([])
+    setMode('select')
+    setEditorId(null)
+    setEditorMatrix(null)
+  }
+
+  const openDirectorReview = () => {
+    setDirectorControlsHidden(false)
+    setDirectorOpen(true)
+    selectDirectorShot(activeDirectorShot.id)
+  }
+
+  const closeDirectorReview = () => {
+    setDirectorControlsHidden(false)
+    setDirectorOpen(false)
+    setDirectorSelection([])
+    setActiveScene(nearestSceneForViewport(
+      worldRef.current.viewport,
+      Math.max(1, window.innerWidth - 58),
+      Math.max(1, window.innerHeight - 54),
+    ))
+  }
+
+  const setDirectorViewport = (viewport: Viewport) => updateDirectorEdit((edit) => ({
+    ...edit,
+    viewport,
+    approved: false,
+    updatedAt: Date.now(),
+  }))
+
+  const nudgeDirectorCamera = (dx: number, dy: number) => setDirectorViewport({
+    ...directorViewport,
+    x: directorViewport.x + dx,
+    y: directorViewport.y + dy,
+  })
+
+  const zoomDirectorCamera = (factor: number) => {
+    const width = Math.max(1, window.innerWidth - 58)
+    const height = Math.max(1, window.innerHeight - 54)
+    const center = { x: width / 2, y: height / 2 }
+    const zoom = Math.min(2.5, Math.max(0.25, directorViewport.zoom * factor))
+    const focus = {
+      x: (center.x - directorViewport.x) / directorViewport.zoom,
+      y: (center.y - directorViewport.y) / directorViewport.zoom,
+    }
+    setDirectorViewport({ x: center.x - focus.x * zoom, y: center.y - focus.y * zoom, zoom })
+  }
+
+  const transformDirectorObjects = (ids: string[], delta: Point) => updateDirectorEdit((edit) => {
+    const overrides = { ...edit.overrides }
+    for (const id of ids) {
+      const object = worldRef.current.objects[id]
+      if (!object) continue
+      const previous = overrides[id] ?? {}
+      const bounds = previous.bounds ?? object.bounds
+      overrides[id] = {
+        ...previous,
+        bounds: { ...bounds, x: bounds.x + delta.x, y: bounds.y + delta.y },
+      }
+    }
+    return { ...edit, overrides, approved: false, updatedAt: Date.now() }
+  })
+
+  const resetDirectorShot = () => {
+    const shot = activeDirectorShot
+    setDirectorState((current) => ({
+      ...current,
+      shots: {
+        ...current.shots,
+        [shot.id]: {
+          viewport: directorDefaultViewport(shot.scene),
+          overrides: {},
+          approved: false,
+          updatedAt: Date.now(),
+        },
+      },
+    }))
+    setDirectorSelection([])
+  }
+
+  const approveDirectorShot = () => updateDirectorEdit((edit) => ({
+    ...edit,
+    approved: true,
+    updatedAt: Date.now(),
+  }))
+
+  const previewNextDirectorShot = () => {
+    const index = DIRECTOR_SHOTS.findIndex((shot) => shot.id === activeDirectorShot.id)
+    const next = DIRECTOR_SHOTS[(index + 1) % DIRECTOR_SHOTS.length]
+    setDirectorCameraPreviewing(true)
+    window.requestAnimationFrame(() => selectDirectorShot(next.id))
+    window.setTimeout(() => setDirectorCameraPreviewing(false), 920)
+  }
+
+  const prepareDirectorShot = async () => {
+    if (activeDirectorShot.prepare === 'tutor' && !worldRef.current.objects.opening_annotation_question) {
+      await openingTutor()
+    } else if (activeDirectorShot.prepare === 'correction') {
+      if (!worldRef.current.objects.opening_annotation_question) await openingTutor()
+      if (!worldRef.current.objects[OPENING_CORRECTION_ID]) correctGammaSign()
+    }
+  }
+
   useEffect(() => {
     if (!hydrated) return
     let active = true
@@ -499,7 +665,8 @@ export default function MathburstWorkspace() {
     const centered = { ...captured, viewport: cameraViewport('opening', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
     worldRef.current = centered
     setWorld(centered)
-    setActiveScene('opening')
+    setActiveScene(directorOpen ? activeDirectorShot.scene : 'opening')
+    setDirectorSelection([])
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -661,6 +828,14 @@ export default function MathburstWorkspace() {
         <div className="header-actions">
           <button
             type="button"
+            className="director-trigger"
+            aria-pressed={directorOpen}
+            onClick={directorOpen ? closeDirectorReview : openDirectorReview}
+          >
+            {directorOpen ? 'Close review' : 'Director review'}
+          </button>
+          <button
+            type="button"
             className="reconstruct-trigger"
             disabled={agentBusy || Boolean(world.reconstruction) || world.session.reconstructionStatus === 'approved'}
             onClick={startReconstruction}
@@ -673,8 +848,8 @@ export default function MathburstWorkspace() {
       </header>
 
       <ToolRail
-        mode={mode}
-        onMode={setMode}
+        mode={directorOpen ? (mode === 'hand' ? 'hand' : 'select') : mode}
+        onMode={(nextMode) => setMode(directorOpen ? (nextMode === 'hand' ? 'hand' : 'select') : nextMode)}
         onUndo={() => history('undo')}
         onRedo={() => history('redo')}
         onGroup={groupSelection}
@@ -685,11 +860,19 @@ export default function MathburstWorkspace() {
       <WorldCanvas
         world={world}
         scene={activeScene}
-        mode={mode}
+        mode={directorOpen ? (mode === 'hand' ? 'hand' : 'select') : mode}
         run={run}
         onEditObject={openEditor}
         agentCommitIds={agentCommitIds}
-        tutorOverlay={activeScene === 'opening' ? (
+        directorMode={directorOpen}
+        directorViewport={directorViewport}
+        directorOverrides={directorOverrides}
+        directorSelection={directorSelection}
+        cameraPreviewing={directorCameraPreviewing}
+        onDirectorViewportChange={setDirectorViewport}
+        onDirectorTransform={transformDirectorObjects}
+        onDirectorSelection={setDirectorSelection}
+        tutorOverlay={activeScene === 'opening' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
           <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
             <header><span>01 · Reasoning check</span><b>human attempt</b></header>
             {!world.objects.opening_annotation_question ? (
@@ -728,7 +911,25 @@ export default function MathburstWorkspace() {
           </section>
         ) : null}
       />
-      <DemoNavigator active={activeScene} onNavigate={navigateToScene} />
+      {directorOpen ? (
+        <DirectorReviewPanel
+          state={directorState}
+          activeShot={activeDirectorShot}
+          controlsHidden={directorControlsHidden}
+          availableObjectIds={new Set(Object.values(world.objects).filter((object) => object.opacity > 0).map((object) => object.id))}
+          selectedObjectIds={directorSelection}
+          onClose={closeDirectorReview}
+          onToggleControls={() => setDirectorControlsHidden((hidden) => !hidden)}
+          onSelectShot={selectDirectorShot}
+          onSelectObject={(id) => { setDirectorSelection([id]); setMode('select') }}
+          onNudgeCamera={nudgeDirectorCamera}
+          onZoomCamera={zoomDirectorCamera}
+          onResetShot={resetDirectorShot}
+          onApproveShot={approveDirectorShot}
+          onPreviewNext={previewNextDirectorShot}
+          onPrepareShot={activeDirectorShot.prepare ? () => { void prepareDirectorShot() } : undefined}
+        />
+      ) : <DemoNavigator active={activeScene} onNavigate={navigateToScene} />}
 
       {world.reconstruction && (
         <ReconstructionPanel
@@ -751,7 +952,7 @@ export default function MathburstWorkspace() {
       <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />
       <WebMCPTrace events={traceEvents} />
 
-      {selectedObjects.length > 0 && (
+      {!directorOpen && selectedObjects.length > 0 && (
         <div className="object-context" aria-label="Selected object actions">
           <span>{selectedObjects.length} selected</span>
           <button type="button" onClick={() => alignSelection('x')}>Align left</button>
@@ -764,11 +965,13 @@ export default function MathburstWorkspace() {
         </div>
       )}
 
-      <div className="zoom-controls" aria-label="Canvas zoom">
-        <button type="button" aria-label="Zoom out" onClick={() => zoomTo(world.viewport.zoom / 1.2)}>−</button>
-        <span>{Math.round(world.viewport.zoom * 100)}%</span>
-        <button type="button" aria-label="Zoom in" onClick={() => zoomTo(world.viewport.zoom * 1.2)}>+</button>
-      </div>
+      {!directorOpen && (
+        <div className="zoom-controls" aria-label="Canvas zoom">
+          <button type="button" aria-label="Zoom out" onClick={() => zoomTo(world.viewport.zoom / 1.2)}>−</button>
+          <span>{Math.round(world.viewport.zoom * 100)}%</span>
+          <button type="button" aria-label="Zoom in" onClick={() => zoomTo(world.viewport.zoom * 1.2)}>+</button>
+        </div>
+      )}
 
       {editorId && (
         <div className={`object-editor${editorMatrix ? ' is-matrix-editor' : ''}`} role="dialog" aria-label="Edit object">
