@@ -1,3 +1,6 @@
+import type { AnimationTimeline } from '../animation/types'
+import type { SemanticBinding, SemanticEntity } from '../semantic/types'
+
 export type Actor = 'human' | 'agent'
 export type Point = { x: number; y: number }
 export type Bounds = { x: number; y: number; width: number; height: number }
@@ -37,7 +40,8 @@ export type ShapeObject = BaseObject & {
   kind: 'shape'; shape: 'rectangle' | 'ellipse' | 'triangle'; fill: string; stroke: string
 }
 export type ArrowObject = BaseObject & { kind: 'arrow'; from: Point; to: Point; color: string }
-export type EquationObject = BaseObject & { kind: 'equation'; latex: string; color: string }
+export type SemanticViewLink = { entityId?: string; bindingIds?: string[] }
+export type EquationObject = BaseObject & SemanticViewLink & { kind: 'equation'; latex: string; color: string }
 export type GraphObject = BaseObject & {
   kind: 'graph'
   equationId: string
@@ -49,7 +53,7 @@ export type GraphObject = BaseObject & {
   shadeIntegral?: [number, number]
   visualization?: 'standard' | 'gamma-density'
   binEdges?: [number, number, number, number]
-}
+} & SemanticViewLink
 export type GeometryPrimitive =
   | { kind: 'point'; id: string; at: Point; label?: string; draggable?: boolean }
   | { kind: 'segment'; id: string; from: string; to: string }
@@ -63,10 +67,10 @@ export type GeometryPrimitive =
   | { kind: 'angle'; id: string; a: string; vertex: string; b: string }
   | { kind: 'homothety'; id: string; center: string; source: string; factor: number; label?: string }
   | { kind: 'similarity'; id: string; center: string; source: string; factor: number; angle: number; label?: string }
-export type GeometryObject = BaseObject & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
+export type GeometryObject = BaseObject & SemanticViewLink & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
 export type MatrixObject = BaseObject & {
   kind: 'matrix'; values: [[number, number], [number, number]]; sourceIds: string[]; accent: string
-}
+} & SemanticViewLink
 
 export type Vector2 = [number, number]
 export type Vector3 = [number, number, number]
@@ -87,7 +91,7 @@ export type AttentionObject = BaseObject & {
   model: TinyModelState
   bridgeMasses: Vector3
   temperature: number
-}
+} & SemanticViewLink
 export type TrainingObject = BaseObject & {
   kind: 'training'
   model: TinyModelState
@@ -96,14 +100,14 @@ export type TrainingObject = BaseObject & {
   lossHistory: number[]
   probabilityHistory: number[]
   learningRate: number
-}
+} & SemanticViewLink
 export type BarycentricObject = BaseObject & {
   kind: 'barycentric'
   vertices: [Point, Point, Point]
   labels: [string, string, string]
   weights: Vector3
   linkedAttentionId?: string
-}
+} & SemanticViewLink
 export type SimplexObject = BaseObject & {
   kind: 'simplex'
   weights: [number, number, number, number]
@@ -112,7 +116,7 @@ export type SimplexObject = BaseObject & {
   section: number
   denominator: number
   showLattice: boolean
-}
+} & SemanticViewLink
 export type NumberTheoryObject = BaseObject & {
   kind: 'numberTheory'
   selectedN: number
@@ -120,7 +124,7 @@ export type NumberTheoryObject = BaseObject & {
   finiteCutoff: number
   linkedSimplexId?: string
   revealTheorem: boolean
-}
+} & SemanticViewLink
 export type FrameObject = BaseObject & { kind: 'frame'; title: string; childIds: string[] }
 export type GroupObject = BaseObject & { kind: 'group'; childIds: string[] }
 
@@ -151,6 +155,12 @@ export type AgentPresenceState = {
 export type WorldOperation =
   | { type: 'put'; object: WorldObject }
   | { type: 'remove'; id: string }
+  | { type: 'putEntity'; entity: SemanticEntity }
+  | { type: 'removeEntity'; id: string }
+  | { type: 'putBinding'; binding: SemanticBinding }
+  | { type: 'removeBinding'; id: string }
+  | { type: 'putTimeline'; timeline: AnimationTimeline }
+  | { type: 'removeTimeline'; id: string }
   | { type: 'select'; ids: string[] }
   | { type: 'viewport'; viewport: Viewport }
   | { type: 'order'; ids: string[] }
@@ -159,9 +169,12 @@ export type WorldOperation =
 export type WorldAction = { id: string; source: Actor; summary: string; operations: WorldOperation[] }
 export type WorldCommit = { action: WorldAction; inverse: WorldOperation[]; at: number }
 export type WorldState = {
-  version: 1
+  version: 2
   title: string
   objects: Record<string, WorldObject>
+  entities: Record<string, SemanticEntity>
+  bindings: Record<string, SemanticBinding>
+  timelines: Record<string, AnimationTimeline>
   order: string[]
   selection: string[]
   viewport: Viewport
