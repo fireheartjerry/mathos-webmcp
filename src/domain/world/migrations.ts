@@ -62,6 +62,7 @@ const isViewport = (value: unknown): boolean => isRecord(value)
   && isFiniteNumber(value.x)
   && isFiniteNumber(value.y)
   && isFiniteNumber(value.zoom)
+  && value.zoom > 0
 
 const isPoint = (value: unknown): boolean => isRecord(value)
   && isFiniteNumber(value.x)
@@ -72,6 +73,8 @@ const isBounds = (value: unknown): boolean => isRecord(value)
   && isFiniteNumber(value.y)
   && isFiniteNumber(value.width)
   && isFiniteNumber(value.height)
+  && value.width > 0
+  && value.height > 0
 
 const OBJECT_KINDS = new Set([
   'ink',
@@ -127,6 +130,35 @@ const isMatrixValues = (value: unknown): value is [[number, number], [number, nu
   && value.length === 2
   && value.every((row) => Array.isArray(row) && row.length === 2 && row.every(isFiniteNumber))
 
+const isStringArray = (value: unknown): value is string[] => Array.isArray(value)
+  && value.every((item) => typeof item === 'string')
+
+const isVector = (value: unknown, length: number): value is number[] => Array.isArray(value)
+  && value.length === length
+  && value.every(isFiniteNumber)
+
+const isMatrix = (value: unknown, rows: number, columns: number): boolean => Array.isArray(value)
+  && value.length === rows
+  && value.every((row) => isVector(row, columns))
+
+const isTinyModel = (value: unknown): boolean => isRecord(value)
+  && isStringArray(value.tokens)
+  && value.tokens.length === 3
+  && isMatrix(value.embeddings, 3, 2)
+  && isMatrix(value.wq, 2, 2)
+  && isMatrix(value.wk, 2, 2)
+  && isMatrix(value.wv, 2, 2)
+  && isMatrix(value.classifier, 2, 3)
+  && isVector(value.bias, 3)
+  && isFiniteNumber(value.queryIndex)
+  && Number.isInteger(value.queryIndex)
+  && value.queryIndex >= 0
+  && value.queryIndex < 3
+  && isFiniteNumber(value.targetIndex)
+  && Number.isInteger(value.targetIndex)
+  && value.targetIndex >= 0
+  && value.targetIndex < 3
+
 const isEquationObject = (value: unknown): value is EquationObject => isBaseObject(value)
   && value.kind === 'equation'
   && typeof value.latex === 'string'
@@ -148,6 +180,171 @@ const isMatrixObject = (value: unknown): value is MatrixObject => isBaseObject(v
   && value.kind === 'matrix'
   && isMatrixValues(value.values)
   && isSafeIdArray(value.sourceIds)
+  && typeof value.accent === 'string'
+
+const isPointArray = (value: unknown): boolean => Array.isArray(value)
+  && value.every(isPoint)
+
+const isInkStroke = (value: unknown): boolean => isRecord(value)
+  && isPointArray(value.points)
+
+const isInkObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'ink'
+  && isPointArray(value.points)
+  && (value.strokes === undefined || (Array.isArray(value.strokes)
+    && value.strokes.every(isInkStroke)))
+  && (value.strokeScale === undefined || (isFiniteNumber(value.strokeScale) && value.strokeScale > 0))
+  && typeof value.color === 'string'
+  && isFiniteNumber(value.width)
+  && value.width > 0
+
+const isTextObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'text'
+  && typeof value.text === 'string'
+  && typeof value.color === 'string'
+  && isFiniteNumber(value.fontSize)
+  && value.fontSize > 0
+  && (value.presentation === undefined || value.presentation === 'typed' || value.presentation === 'handwritten')
+
+const isImageObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'image'
+  && typeof value.src === 'string'
+  && typeof value.alt === 'string'
+
+const isShapeObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'shape'
+  && (value.shape === 'rectangle' || value.shape === 'ellipse' || value.shape === 'triangle')
+  && typeof value.fill === 'string'
+  && typeof value.stroke === 'string'
+
+const isArrowObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'arrow'
+  && isPoint(value.from)
+  && isPoint(value.to)
+  && typeof value.color === 'string'
+
+const isPrimitiveRefArray = (value: unknown, length?: number, minimum = 0): boolean => (
+  isSafeIdArray(value)
+  && (length === undefined || value.length === length)
+  && value.length >= minimum
+)
+
+const isOptionalPrimitiveLabel = (value: UnknownRecord): boolean => (
+  value.label === undefined || typeof value.label === 'string'
+)
+
+const isGeometryPrimitive = (value: unknown): boolean => {
+  if (!isRecord(value) || !isSafeIdentifier(value.id) || typeof value.kind !== 'string') return false
+  switch (value.kind) {
+    case 'point':
+      return isPoint(value.at)
+        && isOptionalPrimitiveLabel(value)
+        && (value.draggable === undefined || typeof value.draggable === 'boolean')
+    case 'segment':
+      return isSafeIdentifier(value.from) && isSafeIdentifier(value.to)
+    case 'line':
+      return isPrimitiveRefArray(value.through, 2)
+    case 'circle':
+      return isSafeIdentifier(value.center) && isSafeIdentifier(value.through)
+    case 'polygon':
+      return isPrimitiveRefArray(value.points, undefined, 3)
+    case 'midpoint':
+      return isPrimitiveRefArray(value.of, 2) && isOptionalPrimitiveLabel(value)
+    case 'perpendicular':
+    case 'parallel':
+      return isSafeIdentifier(value.through) && isSafeIdentifier(value.to)
+    case 'intersection':
+      return isPrimitiveRefArray(value.lines, 2) && isOptionalPrimitiveLabel(value)
+    case 'angle':
+      return isSafeIdentifier(value.a)
+        && isSafeIdentifier(value.vertex)
+        && isSafeIdentifier(value.b)
+    case 'homothety':
+      return isSafeIdentifier(value.center)
+        && isSafeIdentifier(value.source)
+        && isFiniteNumber(value.factor)
+        && isOptionalPrimitiveLabel(value)
+    case 'similarity':
+      return isSafeIdentifier(value.center)
+        && isSafeIdentifier(value.source)
+        && isFiniteNumber(value.factor)
+        && value.factor !== 0
+        && isFiniteNumber(value.angle)
+        && isOptionalPrimitiveLabel(value)
+    default:
+      return false
+  }
+}
+
+const isGeometryObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'geometry'
+  && Array.isArray(value.primitives)
+  && value.primitives.length > 0
+  && value.primitives.every(isGeometryPrimitive)
+  && typeof value.accent === 'string'
+
+const isAttentionObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'attention'
+  && isTinyModel(value.model)
+  && isVector(value.bridgeMasses, 3)
+  && isFiniteNumber(value.temperature)
+  && value.temperature > 0
+
+const isTrainingObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'training'
+  && isTinyModel(value.model)
+  && isSafeIdentifier(value.linkedAttentionId)
+  && isFiniteNumber(value.step)
+  && Number.isInteger(value.step)
+  && value.step >= 0
+  && isFiniteNumberArray(value.lossHistory)
+  && isFiniteNumberArray(value.probabilityHistory)
+  && isFiniteNumber(value.learningRate)
+  && value.learningRate >= 0
+
+const isBarycentricObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'barycentric'
+  && Array.isArray(value.vertices)
+  && value.vertices.length === 3
+  && value.vertices.every(isPoint)
+  && isStringArray(value.labels)
+  && value.labels.length === 3
+  && isVector(value.weights, 3)
+  && (value.linkedAttentionId === undefined || isSafeIdentifier(value.linkedAttentionId))
+
+const isSimplexObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'simplex'
+  && isVector(value.weights, 4)
+  && isFiniteNumber(value.rotationX)
+  && isFiniteNumber(value.rotationY)
+  && isFiniteNumber(value.section)
+  && isFiniteNumber(value.denominator)
+  && Number.isInteger(value.denominator)
+  && value.denominator > 0
+  && typeof value.showLattice === 'boolean'
+
+const isNumberTheoryObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'numberTheory'
+  && isFiniteNumber(value.selectedN)
+  && Number.isInteger(value.selectedN)
+  && value.selectedN >= 0
+  && isFiniteNumber(value.maxN)
+  && Number.isInteger(value.maxN)
+  && value.maxN >= value.selectedN
+  && isFiniteNumber(value.finiteCutoff)
+  && Number.isInteger(value.finiteCutoff)
+  && value.finiteCutoff >= value.selectedN
+  && (value.linkedSimplexId === undefined || isSafeIdentifier(value.linkedSimplexId))
+  && typeof value.revealTheorem === 'boolean'
+
+const isFrameObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'frame'
+  && typeof value.title === 'string'
+  && isSafeIdArray(value.childIds)
+
+const isGroupObject = (value: unknown): boolean => isBaseObject(value)
+  && value.kind === 'group'
+  && isSafeIdArray(value.childIds)
 
 const isExpressionEntity = (value: unknown): value is Extract<SemanticEntity, { kind: 'expression' }> => isRecord(value)
   && isSafeIdentifier(value.id)
@@ -258,12 +455,46 @@ const isAnimationTimeline = (key: string, value: unknown): value is AnimationTim
 const isAnimationTimelineStore = (value: unknown): value is UnknownRecord => isRecord(value)
   && Object.entries(value).every(([key, timeline]) => isAnimationTimeline(key, timeline))
 
+const isSessionPatch = (value: unknown): boolean => isRecord(value)
+  && Object.entries(value).every(([key, patchValue]) => {
+    switch (key) {
+      case 'attempts':
+        return isFiniteNumber(patchValue) && Number.isInteger(patchValue) && patchValue >= 0
+      case 'helpShown':
+        return isSafeIdArray(patchValue)
+      case 'currentMisconception':
+        return patchValue === null || typeof patchValue === 'string'
+      case 'reconstructionStatus':
+        return patchValue === 'source'
+          || patchValue === 'draft'
+          || patchValue === 'audited'
+          || patchValue === 'approved'
+      default:
+        return false
+    }
+  })
+
 const isWorldObject = (value: unknown): value is WorldObject => {
   if (!isBaseObject(value)) return false
-  if (value.kind === 'equation') return isEquationObject(value)
-  if (value.kind === 'graph') return isGraphObject(value)
-  if (value.kind === 'matrix') return isMatrixObject(value)
-  return true
+  switch (value.kind) {
+    case 'ink': return isInkObject(value)
+    case 'text': return isTextObject(value)
+    case 'image': return isImageObject(value)
+    case 'shape': return isShapeObject(value)
+    case 'arrow': return isArrowObject(value)
+    case 'equation': return isEquationObject(value)
+    case 'graph': return isGraphObject(value)
+    case 'geometry': return isGeometryObject(value)
+    case 'matrix': return isMatrixObject(value)
+    case 'attention': return isAttentionObject(value)
+    case 'training': return isTrainingObject(value)
+    case 'barycentric': return isBarycentricObject(value)
+    case 'simplex': return isSimplexObject(value)
+    case 'numberTheory': return isNumberTheoryObject(value)
+    case 'frame': return isFrameObject(value)
+    case 'group': return isGroupObject(value)
+    default: return false
+  }
 }
 
 const isWorldObjectStore = (value: unknown): value is UnknownRecord => isRecord(value)
@@ -287,7 +518,7 @@ const isWorldOperation = (value: unknown): boolean => {
     case 'select':
     case 'order': return isSafeIdArray(value.ids)
     case 'viewport': return isViewport(value.viewport)
-    case 'session': return isRecord(value.patch)
+    case 'session': return isSessionPatch(value.patch)
     case 'reconstruction': return value.draft === null || isReconstructionDraft(value.draft)
     default: return false
   }
@@ -482,9 +713,27 @@ const normalizeBindingIds = (objects: UnknownRecord, bindings: UnknownRecord): v
   for (const object of Object.values(objects)) {
     if (!isRecord(object) || !hasOwn(object, 'bindingIds')) continue
     if (!Array.isArray(object.bindingIds)) continue
-    const ids = [...new Set(object.bindingIds.filter((id): id is string => (
-      isSafeIdentifier(id) && hasOwn(bindings, id)
-    )))]
+    const semanticViewKinds = new Set([
+      'equation',
+      'graph',
+      'geometry',
+      'matrix',
+      'attention',
+      'training',
+      'barycentric',
+      'simplex',
+      'numberTheory',
+    ])
+    const entityId = semanticViewKinds.has(typeof object.kind === 'string' ? object.kind : '')
+      && isSafeIdentifier(object.entityId)
+      ? object.entityId
+      : null
+    const ids = [...new Set(object.bindingIds.filter((id): id is string => {
+      if (!isSafeIdentifier(id) || !hasOwn(bindings, id)) return false
+      const binding = bindings[id]
+      if (!isSemanticBinding(binding) || binding.target.objectId !== object.id) return false
+      return entityId === null || binding.source.entityId === entityId
+    }))]
     if (ids.length > 0) object.bindingIds = ids
     else delete object.bindingIds
   }

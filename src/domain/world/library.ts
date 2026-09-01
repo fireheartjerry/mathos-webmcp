@@ -25,10 +25,31 @@ const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 
+const FORBIDDEN_LIBRARY_IDS = new Set([
+  '__proto__',
+  'prototype',
+  'constructor',
+  'toString',
+  'toLocaleString',
+  'valueOf',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+])
+
+const isSafeLibraryId = (value: unknown): value is string => typeof value === 'string'
+  && value.length > 0
+  && !FORBIDDEN_LIBRARY_IDS.has(value)
+
 const isViewport = (value: unknown): value is Viewport => isRecord(value)
   && isFiniteNumber(value.x)
   && isFiniteNumber(value.y)
   && isFiniteNumber(value.zoom)
+  && value.zoom > 0
 
 const isSceneId = (value: string): value is SceneId => Object.prototype.hasOwnProperty.call(SCENES, value)
 
@@ -56,13 +77,17 @@ const parseSceneViewports = (
   startScene: CatalogSceneId,
   fallback: Viewport,
   allowedSceneIds: readonly SceneId[],
-): Partial<Record<SceneId, Viewport>> => {
+): Partial<Record<SceneId, Viewport>> | null => {
   const sceneViewports: Partial<Record<SceneId, Viewport>> = {}
+  if (value !== undefined && !isRecord(value)) return null
   if (isRecord(value)) {
     for (const [sceneId, viewport] of Object.entries(value)) {
-      if (isSceneId(sceneId) && allowedSceneIds.includes(sceneId) && isViewport(viewport)) {
-        sceneViewports[sceneId] = cloneViewport(viewport)
-      }
+      // Foreign catalog scenes are intentionally ignored at the project
+      // boundary. An invalid viewport for an owned scene makes the row
+      // untrusted instead of silently replacing saved camera state.
+      if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) continue
+      if (!isViewport(viewport)) return null
+      sceneViewports[sceneId] = cloneViewport(viewport)
     }
   }
   if (startScene !== 'overview' && !sceneViewports[startScene]) {
@@ -160,25 +185,30 @@ export type ProjectLibraryLoadResult = {
 const parseProject = (value: unknown): LibraryProject | null => {
   if (!isRecord(value)) return null
   const project = value as Partial<LibraryProject>
-  if (!(typeof project.id === 'string'
+  if (!(isSafeLibraryId(project.id)
     && typeof project.title === 'string'
     && typeof project.description === 'string'
     && (project.templateId === null || PROJECTS.some((candidate) => candidate.id === project.templateId))
     && (project.kind === 'built-in' || project.kind === 'user')
     && typeof project.startScene === 'string'
     && (project.startScene === 'overview' || isSceneId(project.startScene))
-    && typeof project.createdAt === 'number'
-    && typeof project.updatedAt === 'number'
-    && (project.deletedAt === null || typeof project.deletedAt === 'number'))) return null
+    && isFiniteNumber(project.createdAt)
+    && isFiniteNumber(project.updatedAt)
+    && (project.deletedAt === null || (isFiniteNumber(project.deletedAt) && project.deletedAt >= 0)))) return null
+  if (project.kind === 'built-in'
+    && (project.templateId === null || project.id !== project.templateId
+      || !PROJECTS.some((candidate) => candidate.id === project.templateId))) return null
   const world = migrateWorld(project.world)
   if (!world) return null
   const templateId = project.templateId as ProjectId | null
   const startScene = normalizeStartScene(templateId, project.startScene)
   const allowedSceneIds = templateId ? getScenesForProject(templateId).map((scene) => scene.id) : []
+  const sceneViewports = parseSceneViewports(project.sceneViewports, startScene, world.viewport, allowedSceneIds)
+  if (!sceneViewports) return null
   return {
     ...(project as LibraryProject),
     startScene,
-    sceneViewports: parseSceneViewports(project.sceneViewports, startScene, world.viewport, allowedSceneIds),
+    sceneViewports,
     world,
   }
 }
