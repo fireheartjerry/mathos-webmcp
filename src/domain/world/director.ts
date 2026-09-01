@@ -81,7 +81,7 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
     editable: [
       { id: 'eq_integrand', label: 'Density equation' },
       { id: 'graph_integrand', label: 'Live graph' },
-      { id: 'eq_integral', label: 'Gamma equation' },
+      { id: 'gamma_bridge_equation', label: 'Softmax bridge' },
     ],
     transition: 'Area → bins', status: 'live',
   },
