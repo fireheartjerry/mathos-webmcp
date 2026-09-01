@@ -42,7 +42,7 @@ export default function ProjectNavigator({
           aria-pressed={activeScene === 'overview'}
           onClick={onOverview}
         >
-          <b>0</b> Overview
+          <b>0</b> Projects
         </button>
       </div>
 

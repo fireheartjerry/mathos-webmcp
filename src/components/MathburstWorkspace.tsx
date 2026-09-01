@@ -6,6 +6,15 @@ import type { ToolResult, WorldBridge, WorldTraceEvent } from '../domain/tools/d
 import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
+import {
+  cloneWorld,
+  createBlankWorld,
+  createDefaultProjectLibrary,
+  createUserProject,
+  loadProjectLibrary,
+  saveProjectLibrary,
+  type LibraryProject,
+} from '../domain/world/library'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, OPENING_FRAME_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
@@ -38,6 +47,8 @@ import {
 import type { AgentPresenceState, Point, Viewport, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
+import PersonalProjectNavigator from './PersonalProjectNavigator'
+import ProjectGallery from './ProjectGallery'
 import ProjectNavigator from './ProjectNavigator'
 import DirectorReviewPanel from './DirectorReviewPanel'
 import ReconstructionPanel from './ReconstructionPanel'
@@ -113,6 +124,12 @@ function applyCapturedOpeningAttempt(world: WorldState, samples: Record<string, 
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const worldRef = useRef(world)
+  const mainWorldRef = useRef(world)
+  const [galleryOpen, setGalleryOpen] = useState(true)
+  const [libraryProjects, setLibraryProjects] = useState<LibraryProject[]>(() => createDefaultProjectLibrary())
+  const libraryProjectsRef = useRef(libraryProjects)
+  const [activeDocumentId, setActiveDocumentId] = useState<'main' | string>('main')
+  const activeDocumentIdRef = useRef<'main' | string>('main')
   const [hydrated, setHydrated] = useState(false)
   const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
   const [activeProject, setActiveProject] = useState<ProjectId>('gamma-lab')
@@ -136,13 +153,30 @@ export default function MathburstWorkspace() {
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
 
+  const updateLibraryProjects = useCallback((update: (projects: LibraryProject[]) => LibraryProject[]) => {
+    setLibraryProjects((current) => {
+      const next = update(current)
+      libraryProjectsRef.current = next
+      return next
+    })
+  }, [])
+
+  const activeLibraryProject = activeDocumentId === 'main'
+    ? null
+    : libraryProjects.find((project) => project.id === activeDocumentId) ?? null
+  const blankPersonalProject = activeLibraryProject?.templateId === null
+
   useEffect(() => {
     const samples = loadHandwritingSamples()
     handwritingSamplesRef.current = samples
+    const storedLibrary = loadProjectLibrary()
+    libraryProjectsRef.current = storedLibrary
+    setLibraryProjects(storedLibrary)
     const stored = loadWorld()
     if (stored) {
       const captured = applyCapturedOpeningAttempt(stored, samples)
       worldRef.current = captured
+      mainWorldRef.current = captured
       setWorld(captured)
       const restoredScene = nearestSceneForViewport(captured.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
       setActiveScene(restoredScene)
@@ -152,29 +186,45 @@ export default function MathburstWorkspace() {
       const captured = applyCapturedOpeningAttempt(seeded, samples)
       const centered = { ...captured, viewport: cameraViewport('gamma-clinic', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
       worldRef.current = centered
+      mainWorldRef.current = centered
       setWorld(centered)
     }
+    activeDocumentIdRef.current = 'main'
+    setActiveDocumentId('main')
+    setGalleryOpen(true)
     setDirectorState(loadDirectorReview())
     setHydrated(true)
   }, [])
 
   useEffect(() => {
-    if (hydrated) saveWorld(world)
-  }, [hydrated, world])
+    if (!hydrated) return
+    if (activeDocumentId === 'main') {
+      mainWorldRef.current = world
+      saveWorld(world)
+      return
+    }
+    updateLibraryProjects((projects) => projects.map((project) => project.id === activeDocumentId && project.kind === 'user'
+      ? { ...project, world, updatedAt: Date.now() }
+      : project))
+  }, [activeDocumentId, hydrated, updateLibraryProjects, world])
+
+  useEffect(() => {
+    if (hydrated) saveProjectLibrary(libraryProjects)
+  }, [hydrated, libraryProjects])
 
   useEffect(() => {
     if (hydrated) saveDirectorReview(directorState)
   }, [directorState, hydrated])
 
   useEffect(() => {
-    if (!hydrated || directorOpen) return
+    if (!hydrated || directorOpen || galleryOpen || blankPersonalProject) return
     const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
     setActiveScene((current) => current === nearest ? current : nearest)
     if (nearest !== 'overview') setActiveProject((current) => {
       const next = getProjectForScene(nearest).id
       return current === next ? current : next
     })
-  }, [directorOpen, hydrated, world.viewport])
+  }, [blankPersonalProject, directorOpen, galleryOpen, hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
     const next = dispatchWorldAction(worldRef.current, action)
@@ -316,11 +366,98 @@ export default function MathburstWorkspace() {
     worldRef.current = next
     setWorld(next)
     setActiveScene(scene)
+    setGalleryOpen(false)
     if (scene !== 'overview') setActiveProject(getProjectForScene(scene).id)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
   }, [])
+
+  const stashActiveProject = useCallback(() => {
+    const documentId = activeDocumentIdRef.current
+    if (documentId === 'main') {
+      mainWorldRef.current = worldRef.current
+      saveWorld(worldRef.current)
+      return
+    }
+    updateLibraryProjects((projects) => projects.map((project) => project.id === documentId && project.kind === 'user'
+      ? { ...project, world: worldRef.current, updatedAt: Date.now() }
+      : project))
+  }, [updateLibraryProjects])
+
+  const openLibraryProject = useCallback((project: LibraryProject, requestedScene: CatalogSceneId = project.startScene) => {
+    stashActiveProject()
+    const targetWorld = project.kind === 'built-in'
+      ? mainWorldRef.current
+      : project.world ?? createBlankWorld(project.title)
+    const canvasWidth = Math.max(1, window.innerWidth - 58)
+    const canvasHeight = Math.max(1, window.innerHeight - 54)
+    const viewport = project.templateId
+      ? cameraViewport(requestedScene, canvasWidth, canvasHeight)
+      : { x: canvasWidth / 2, y: canvasHeight / 2, zoom: 1 }
+    const nextWorld = { ...targetWorld, title: project.title, viewport, selection: [] }
+    const documentId = project.kind === 'built-in' ? 'main' : project.id
+    activeDocumentIdRef.current = documentId
+    setActiveDocumentId(documentId)
+    worldRef.current = nextWorld
+    setWorld(nextWorld)
+    setGalleryOpen(false)
+    setDirectorOpen(false)
+    setDirectorSelection([])
+    setActiveScene(requestedScene)
+    setActiveProject(project.templateId ?? 'gamma-lab')
+    setMode('select')
+    setEditorId(null)
+    setEditorMatrix(null)
+  }, [stashActiveProject])
+
+  const openProjectGallery = useCallback(() => {
+    stashActiveProject()
+    setGalleryOpen(true)
+    setDirectorOpen(false)
+    setDirectorSelection([])
+    setMode('select')
+    setEditorId(null)
+    setEditorMatrix(null)
+  }, [stashActiveProject])
+
+  const createLibraryProject = useCallback((title: string, templateId: ProjectId | null) => {
+    const sourceWorld = templateId ? mainWorldRef.current : createBlankWorld(title)
+    const project = createUserProject(title, templateId, sourceWorld)
+    updateLibraryProjects((projects) => [...projects, project])
+    openLibraryProject(project)
+  }, [openLibraryProject, updateLibraryProjects])
+
+  const duplicateLibraryProject = useCallback((project: LibraryProject) => {
+    const sourceWorld = project.kind === 'built-in'
+      ? mainWorldRef.current
+      : project.world ?? createBlankWorld(project.title)
+    const duplicate = createUserProject(`${project.title} copy`, project.templateId, cloneWorld(sourceWorld))
+    updateLibraryProjects((projects) => [...projects, duplicate])
+  }, [updateLibraryProjects])
+
+  const trashLibraryProject = useCallback((project: LibraryProject) => {
+    updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === project.id
+      ? { ...candidate, deletedAt: Date.now(), updatedAt: Date.now() }
+      : candidate))
+  }, [updateLibraryProjects])
+
+  const restoreLibraryProject = useCallback((project: LibraryProject) => {
+    updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === project.id
+      ? { ...candidate, deletedAt: null, updatedAt: Date.now() }
+      : candidate))
+  }, [updateLibraryProjects])
+
+  const deleteLibraryProjectForever = useCallback((project: LibraryProject) => {
+    if (project.kind !== 'user') return
+    updateLibraryProjects((projects) => projects.filter((candidate) => candidate.id !== project.id))
+    if (activeDocumentIdRef.current === project.id) {
+      activeDocumentIdRef.current = 'main'
+      setActiveDocumentId('main')
+      worldRef.current = mainWorldRef.current
+      setWorld(mainWorldRef.current)
+    }
+  }, [updateLibraryProjects])
 
   const bridge = useMemo<WorldBridge>(() => ({
     getWorld: () => worldRef.current,
@@ -654,15 +791,34 @@ export default function MathburstWorkspace() {
   }
 
   const resetDemo = () => {
-    const seed = createSeedWorld()
+    const personalProject = activeDocumentIdRef.current === 'main'
+      ? null
+      : libraryProjectsRef.current.find((project) => project.id === activeDocumentIdRef.current) ?? null
+    const seed = personalProject?.templateId === null
+      ? createBlankWorld(personalProject.title)
+      : createSeedWorld()
     const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
     handwritingSamplesRef.current = samples
-    const captured = applyCapturedOpeningAttempt(seed, samples)
-    const centered = { ...captured, viewport: cameraViewport('gamma-clinic', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
+    const captured = personalProject?.templateId === null ? seed : applyCapturedOpeningAttempt(seed, samples)
+    const resetScene = personalProject?.startScene ?? 'gamma-clinic'
+    const centered = {
+      ...captured,
+      title: personalProject?.title ?? captured.title,
+      viewport: personalProject?.templateId === null
+        ? { x: Math.max(1, window.innerWidth - 58) / 2, y: Math.max(1, window.innerHeight - 54) / 2, zoom: 1 }
+        : cameraViewport(resetScene, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)),
+    }
     worldRef.current = centered
     setWorld(centered)
-    setActiveScene(directorOpen ? activeDirectorShot.scene : 'gamma-clinic')
-    setActiveProject(directorOpen && activeDirectorShot.scene !== 'overview' ? getProjectForScene(activeDirectorShot.scene).id : 'gamma-lab')
+    if (personalProject) {
+      updateLibraryProjects((projects) => projects.map((project) => project.id === personalProject.id
+        ? { ...project, world: centered, updatedAt: Date.now() }
+        : project))
+    } else {
+      mainWorldRef.current = centered
+    }
+    setActiveScene(directorOpen ? activeDirectorShot.scene : resetScene)
+    setActiveProject(personalProject?.templateId ?? (directorOpen && activeDirectorShot.scene !== 'overview' ? getProjectForScene(activeDirectorShot.scene).id : 'gamma-lab'))
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
@@ -796,10 +952,18 @@ export default function MathburstWorkspace() {
         event.preventDefault()
         deleteSelection()
       } else if (/^[0-8]$/.test(event.key)) {
-        const scene = event.key === '0'
-          ? 'overview'
-          : (Object.values(SCENES).find((candidate) => candidate.keyboard === Number(event.key))?.id ?? 'gamma-clinic')
-        navigateToScene(scene)
+        if (event.key === '0') {
+          openProjectGallery()
+        } else {
+          const scene = Object.values(SCENES).find((candidate) => candidate.keyboard === Number(event.key))?.id ?? 'gamma-clinic'
+          if (galleryOpen) {
+            const projectId = getProjectForScene(scene).id
+            const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId)
+            if (project && project.deletedAt === null) openLibraryProject(project, scene)
+          } else {
+            navigateToScene(scene)
+          }
+        }
       } else {
         const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', g: 'graph', c: 'geometry', x: 'matrix', s: 'shape', a: 'arrow', f: 'frame' }
         const next = shortcuts[event.key.toLowerCase()]
@@ -808,7 +972,7 @@ export default function MathburstWorkspace() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [deleteSelection, duplicateSelection, groupSelection, history, navigateToScene])
+  }, [deleteSelection, duplicateSelection, galleryOpen, groupSelection, history, navigateToScene, openLibraryProject, openProjectGallery])
 
   const selectedObjects = useMemo(
     () => world.selection.map((id) => world.objects[id]).filter(Boolean),
@@ -820,31 +984,49 @@ export default function MathburstWorkspace() {
   }
 
   return (
-    <main className="mathburst-app" id="main" data-hydrated={hydrated}>
+    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen}>
       <header className="world-header">
-        <div className="wordmark"><span>∫</span> Mathburst</div>
-        <div className="world-title"><b>{activeScene === 'overview' ? 'One mathematical world' : SCENES[activeScene].title}</b><span>/</span><em>shared mathematical world</em></div>
+        <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><span>∫</span> Mathburst</button>
+        <div className="world-title"><b>{galleryOpen ? 'Project gallery' : activeLibraryProject?.title ?? (activeScene === 'overview' ? 'One mathematical world' : SCENES[activeScene].title)}</b><span>/</span><em>shared mathematical world</em></div>
         <div className="header-actions">
-          <button
-            type="button"
-            className="director-trigger"
-            aria-pressed={directorOpen}
-            onClick={directorOpen ? closeDirectorReview : openDirectorReview}
-          >
-            {directorOpen ? 'Close review' : 'Director review'}
-          </button>
-          <button
-            type="button"
-            className="reconstruct-trigger"
-            disabled={agentBusy || Boolean(world.reconstruction) || world.session.reconstructionStatus === 'approved'}
-            onClick={startReconstruction}
-          >
-            {world.session.reconstructionStatus === 'approved' ? '✓ live scene' : 'Reconstruct photo'}
-          </button>
-          <button type="button" className="reset-trigger" onClick={resetDemo}>Reset demo</button>
+          {galleryOpen ? (
+            <span className="gallery-header-count"><b>{libraryProjects.filter((project) => project.deletedAt === null).length}</b> projects</span>
+          ) : (
+            <>
+              {!blankPersonalProject && <button
+                type="button"
+                className="director-trigger"
+                aria-pressed={directorOpen}
+                onClick={directorOpen ? closeDirectorReview : openDirectorReview}
+              >
+                {directorOpen ? 'Close review' : 'Director review'}
+              </button>}
+              {!blankPersonalProject && <button
+                type="button"
+                className="reconstruct-trigger"
+                disabled={agentBusy || Boolean(world.reconstruction) || world.session.reconstructionStatus === 'approved'}
+                onClick={startReconstruction}
+              >
+                {world.session.reconstructionStatus === 'approved' ? '✓ live scene' : 'Reconstruct photo'}
+              </button>}
+              <button type="button" className="reset-trigger" onClick={resetDemo}>{activeLibraryProject ? 'Reset project' : 'Reset demo'}</button>
+            </>
+          )}
           <div className="world-status"><i /> local session · saved</div>
         </div>
       </header>
+
+      {galleryOpen && (
+        <ProjectGallery
+          projects={libraryProjects}
+          onOpen={openLibraryProject}
+          onCreate={createLibraryProject}
+          onDuplicate={duplicateLibraryProject}
+          onTrash={trashLibraryProject}
+          onRestore={restoreLibraryProject}
+          onDeleteForever={deleteLibraryProjectForever}
+        />
+      )}
 
       <ToolRail
         mode={directorOpen ? (mode === 'hand' ? 'hand' : 'select') : mode}
@@ -871,7 +1053,8 @@ export default function MathburstWorkspace() {
         onDirectorViewportChange={setDirectorViewport}
         onDirectorTransform={transformDirectorObjects}
         onDirectorSelection={setDirectorSelection}
-        tutorOverlay={activeScene === 'gamma-clinic' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
+        customBreadcrumb={blankPersonalProject && activeLibraryProject ? { number: '01', title: activeLibraryProject.title, state: 'blank canvas' } : undefined}
+        tutorOverlay={!galleryOpen && !blankPersonalProject && activeScene === 'gamma-clinic' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
           <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
             <header><span>01 · Reasoning check</span><b>human attempt</b></header>
             {!world.objects.opening_annotation_question ? (
@@ -928,6 +1111,14 @@ export default function MathburstWorkspace() {
           onPreviewNext={previewNextDirectorShot}
           onPrepareShot={activeDirectorShot.prepare ? () => { void prepareDirectorShot() } : undefined}
         />
+      ) : activeLibraryProject ? (
+        <PersonalProjectNavigator
+          title={activeLibraryProject.title}
+          templateId={activeLibraryProject.templateId}
+          activeScene={activeScene}
+          onHome={openProjectGallery}
+          onSceneChange={(sceneId) => navigateToScene(sceneId)}
+        />
       ) : (
         <ProjectNavigator
           activeProject={activeProject}
@@ -937,7 +1128,7 @@ export default function MathburstWorkspace() {
             navigateToScene(getScenesForProject(projectId)[0].id)
           }}
           onSceneChange={(sceneId: SceneId) => navigateToScene(sceneId)}
-          onOverview={() => navigateToScene('overview')}
+          onOverview={openProjectGallery}
         />
       )}
 

@@ -61,6 +61,7 @@ export default function WorldCanvas({
   onDirectorViewportChange,
   onDirectorTransform,
   onDirectorSelection,
+  customBreadcrumb,
 }: {
   world: WorldState
   scene: CatalogSceneId
@@ -77,6 +78,7 @@ export default function WorldCanvas({
   onDirectorViewportChange?: (viewport: Viewport) => void
   onDirectorTransform?: (ids: string[], delta: Point) => void
   onDirectorSelection?: (ids: string[]) => void
+  customBreadcrumb?: { number: string; title: string; state: string }
 }) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -392,7 +394,7 @@ export default function WorldCanvas({
   }
 
   const viewport = viewportPreview ?? effectiveViewport
-  const breadcrumb = sceneBreadcrumbs[scene]
+  const breadcrumb = customBreadcrumb ?? sceneBreadcrumbs[scene]
   const previewBounds = inkPreview && inkPreview.points.length > 0
     ? {
         left: Math.min(...inkPreview.points.map((point) => point.x)),
