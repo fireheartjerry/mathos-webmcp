@@ -700,48 +700,54 @@ const isGeometryDependenciesValid = (value: UnknownRecord): boolean => {
   if (primitives.length !== value.primitives.length) return false
 
   const primitiveKinds = new Map<string, string>()
-  for (const primitive of primitives) {
+  const primitivePositions = new Map<string, number>()
+  for (const [index, primitive] of primitives.entries()) {
     if (!isSafeIdentifier(primitive.id) || typeof primitive.kind !== 'string' || primitiveKinds.has(primitive.id)) return false
     primitiveKinds.set(primitive.id, primitive.kind)
+    primitivePositions.set(primitive.id, index)
   }
-  const hasKind = (id: unknown, kinds: Set<string>): boolean => (
-    isSafeIdentifier(id) && kinds.has(primitiveKinds.get(id) ?? '')
+  const hasKind = (id: unknown, kinds: Set<string>, currentIndex: number): boolean => (
+    isSafeIdentifier(id)
+    && (primitivePositions.get(id) ?? -1) < currentIndex
+    && kinds.has(primitiveKinds.get(id) ?? '')
   )
-  const hasPoints = (ids: unknown): boolean => isSafeIdArray(ids) && ids.every((id) => hasKind(id, POINT_PRIMITIVE_KINDS))
-  const hasDirections = (ids: unknown): boolean => isSafeIdArray(ids) && ids.every((id) => hasKind(id, DIRECTION_PRIMITIVE_KINDS))
+  const hasPoints = (ids: unknown, currentIndex: number): boolean => isSafeIdArray(ids)
+    && ids.every((id) => hasKind(id, POINT_PRIMITIVE_KINDS, currentIndex))
+  const hasDirections = (ids: unknown, currentIndex: number): boolean => isSafeIdArray(ids)
+    && ids.every((id) => hasKind(id, DIRECTION_PRIMITIVE_KINDS, currentIndex))
 
-  for (const primitive of primitives) {
+  for (const [index, primitive] of primitives.entries()) {
     switch (primitive.kind) {
       case 'point':
         break
       case 'segment':
-        if (!hasPoints([primitive.from, primitive.to])) return false
+        if (!hasPoints([primitive.from, primitive.to], index)) return false
         break
       case 'line':
-        if (!hasPoints(primitive.through)) return false
+        if (!hasPoints(primitive.through, index)) return false
         break
       case 'circle':
-        if (!hasPoints([primitive.center, primitive.through])) return false
+        if (!hasPoints([primitive.center, primitive.through], index)) return false
         break
       case 'polygon':
-        if (!hasPoints(primitive.points)) return false
+        if (!hasPoints(primitive.points, index)) return false
         break
       case 'midpoint':
-        if (!hasPoints(primitive.of)) return false
+        if (!hasPoints(primitive.of, index)) return false
         break
       case 'perpendicular':
       case 'parallel':
-        if (!hasPoints([primitive.through]) || !hasDirections([primitive.to])) return false
+        if (!hasPoints([primitive.through], index) || !hasDirections([primitive.to], index)) return false
         break
       case 'intersection':
-        if (!hasDirections(primitive.lines)) return false
+        if (!hasDirections(primitive.lines, index)) return false
         break
       case 'angle':
-        if (!hasPoints([primitive.a, primitive.vertex, primitive.b])) return false
+        if (!hasPoints([primitive.a, primitive.vertex, primitive.b], index)) return false
         break
       case 'homothety':
       case 'similarity':
-        if (!hasPoints([primitive.center, primitive.source])) return false
+        if (!hasPoints([primitive.center, primitive.source], index)) return false
         break
       default:
         return false
@@ -770,6 +776,21 @@ const isWorldDependenciesValid = (objects: UnknownRecord): boolean => {
   return true
 }
 
+const isObjectEntityLinksValid = (objects: UnknownRecord, entities: UnknownRecord | undefined): boolean => {
+  for (const object of Object.values(objects)) {
+    if (!isWorldObject(object)) continue
+    const objectRecord = object as unknown as UnknownRecord
+    if (objectRecord.entityId === undefined) continue
+    if (!isSafeIdentifier(objectRecord.entityId)) return false
+    const entityId = objectRecord.entityId
+    const entity = entities && hasOwn(entities, entityId) ? entities[entityId] : undefined
+    if (!isRecord(entity)) return false
+    if ((object.kind === 'equation' || object.kind === 'graph') && entity.kind !== 'expression') return false
+    if (object.kind === 'matrix' && entity.kind !== 'matrix') return false
+  }
+  return true
+}
+
 const isReconstructionDependenciesValid = (value: unknown, objects: UnknownRecord): boolean => {
   if (value === null) return true
   if (!isReconstructionDraft(value)) return false
@@ -782,13 +803,15 @@ const isReconstructionDependenciesValid = (value: unknown, objects: UnknownRecor
   const combinedObjects: UnknownRecord = { ...objects }
   const proposedIds = new Set<string>()
   for (const proposedObject of draft.proposedObjects) {
-    if (!isWorldObject(proposedObject) || proposedIds.has(proposedObject.id)) return false
+    if (!isWorldObject(proposedObject)
+      || proposedIds.has(proposedObject.id)
+      || hasOwn(objects, proposedObject.id)) return false
     proposedIds.add(proposedObject.id)
     combinedObjects[proposedObject.id] = proposedObject
   }
 
-  return hasObjectKind(combinedObjects, draft.sourceImageId, 'image')
-    && draft.uncertainObjectIds.every((id) => hasOwn(combinedObjects, id))
+  return hasObjectKind(objects, draft.sourceImageId, 'image')
+    && draft.uncertainObjectIds.every((id) => proposedIds.has(id))
     && isWorldDependenciesValid(combinedObjects)
 }
 
@@ -810,6 +833,7 @@ const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
     || !order.every((id) => hasOwn(objects, id))
     || !selection.every((id) => hasOwn(objects, id))
     || !isWorldDependenciesValid(objects)
+    || !isObjectEntityLinksValid(objects, isRecord(value.entities) ? value.entities : undefined)
     || !isReconstructionDependenciesValid(value.reconstruction, objects)) return false
 
   const timelineEntities = isRecord(value.entities) ? value.entities : undefined
