@@ -15,6 +15,7 @@ import {
   loadProjectLibraryResult,
   saveProjectLibrary,
   type LibraryProject,
+  type SceneViewport,
 } from '../domain/world/library'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, OPENING_FRAME_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
@@ -76,6 +77,44 @@ const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport 
   && Number.isFinite(viewport.zoom)
   && viewport.zoom > 0,
 )
+
+const canvasSize = () => ({
+  width: Math.max(1, window.innerWidth - 58),
+  height: Math.max(1, window.innerHeight - 54),
+})
+
+const sceneViewportBookmark = (viewport: Viewport, width: number, height: number): SceneViewport => ({
+  ...viewport,
+  canvasWidth: width,
+  canvasHeight: height,
+})
+
+const boundedViewportZoom = (zoom: number) => Math.min(2.5, Math.max(0.25, zoom))
+
+/** Rebase screen-space offsets when a saved camera was recorded at another size. */
+const rebaseSceneViewport = (
+  viewport: SceneViewport,
+  width: number,
+  height: number,
+  fallback: Viewport,
+): Viewport => {
+  const sourceWidth = viewport.canvasWidth
+  const sourceHeight = viewport.canvasHeight
+  if (!isUsableViewport(viewport)
+    || typeof sourceWidth !== 'number' || !Number.isFinite(sourceWidth) || sourceWidth <= 0
+    || typeof sourceHeight !== 'number' || !Number.isFinite(sourceHeight) || sourceHeight <= 0) {
+    // Legacy bookmarks only contain screen-space x/y. Their old offsets cannot
+    // be translated safely, so use the scene's responsive camera instead.
+    return { ...fallback }
+  }
+  const scale = Math.min(1.8, Math.max(0.55, Math.min(width / sourceWidth, height / sourceHeight)))
+  const zoom = boundedViewportZoom(viewport.zoom * scale)
+  const center = {
+    x: (sourceWidth / 2 - viewport.x) / viewport.zoom,
+    y: (sourceHeight / 2 - viewport.y) / viewport.zoom,
+  }
+  return { x: width / 2 - center.x * zoom, y: height / 2 - center.y * zoom, zoom }
+}
 
 function demoReconstruction(audited: boolean): WorldObject[] {
   return [
@@ -160,7 +199,7 @@ export default function MathburstWorkspace() {
   const [directorSelection, setDirectorSelection] = useState<string[]>([])
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
-  const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: Viewport } | null>(null)
+  const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: SceneViewport } | null>(null)
   const directorOpenRef = useRef(false)
   const directorPreviewFrameRef = useRef<number | null>(null)
 
@@ -198,8 +237,9 @@ export default function MathburstWorkspace() {
     const project = libraryProjectsRef.current.find((candidate) => candidate.id === documentId)
     if (!project?.templateId || scene === 'overview') return
     if (!getScenesForProject(project.templateId).some((candidate) => candidate.id === scene)) return
+    const { width, height } = canvasSize()
     updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === documentId
-      ? { ...candidate, sceneViewports: { ...candidate.sceneViewports, [scene]: { ...viewport } }, updatedAt: Date.now() }
+      ? { ...candidate, sceneViewports: { ...candidate.sceneViewports, [scene]: sceneViewportBookmark(viewport, width, height) }, updatedAt: Date.now() }
       : candidate))
   }, [hydrated, updateLibraryProjects])
 
@@ -396,14 +436,17 @@ export default function MathburstWorkspace() {
 
     const snapshot = directorSceneSnapshotRef.current
     const currentScene = snapshot?.scene ?? activeSceneRef.current
-    const viewport = snapshot?.viewport ?? currentWorld.viewport
+    const { width, height } = canvasSize()
+    const viewport = snapshot
+      ? rebaseSceneViewport(snapshot.viewport, width, height, cameraViewport(currentScene, width, height))
+      : currentWorld.viewport
     const currentProject = libraryProjectsRef.current.find((project) => project.id === documentId)
     if (!currentProject) return null
     const ownsScene = currentProject.templateId
       && currentScene !== 'overview'
       && getScenesForProject(currentProject.templateId).some((scene) => scene.id === currentScene)
     const sceneViewports = ownsScene
-      ? { ...currentProject.sceneViewports, [currentScene]: { ...viewport } }
+      ? { ...currentProject.sceneViewports, [currentScene]: sceneViewportBookmark(viewport, width, height) }
       : { ...currentProject.sceneViewports }
     const nextProject = { ...currentProject, sceneViewports, world: currentWorld, updatedAt: Date.now() }
     updateLibraryProjects((projects) => projects.map((project) => project.id === documentId ? nextProject : project))
@@ -421,7 +464,7 @@ export default function MathburstWorkspace() {
     // never pollute learner history or the activity rail.
     const storedViewport = currentProject.sceneViewports[scene]
     const viewport = isUsableViewport(storedViewport)
-      ? { ...storedViewport }
+      ? rebaseSceneViewport(storedViewport, canvasWidth, canvasHeight, cameraViewport(scene, canvasWidth, canvasHeight))
       : cameraViewport(scene, canvasWidth, canvasHeight)
     const next = { ...worldRef.current, viewport }
     worldRef.current = next
@@ -447,7 +490,7 @@ export default function MathburstWorkspace() {
       ? targetProject.sceneViewports[targetScene]
       : undefined
     const viewport = targetProject.templateId && isUsableViewport(storedViewport)
-      ? { ...storedViewport }
+      ? rebaseSceneViewport(storedViewport, canvasWidth, canvasHeight, cameraViewport(targetScene, canvasWidth, canvasHeight))
       : targetProject.templateId
         ? cameraViewport(targetScene, canvasWidth, canvasHeight)
       : { x: canvasWidth / 2, y: canvasHeight / 2, zoom: 1 }
@@ -695,9 +738,10 @@ export default function MathburstWorkspace() {
     const allowedShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId && isDirectorShotAllowed(shot))
       ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
     if (!allowedShot) return
+    const { width, height } = canvasSize()
     directorSceneSnapshotRef.current = {
       scene: activeSceneRef.current,
-      viewport: { ...worldRef.current.viewport },
+      viewport: sceneViewportBookmark(worldRef.current.viewport, width, height),
     }
     directorOpenRef.current = true
     setDirectorControlsHidden(false)
@@ -714,7 +758,11 @@ export default function MathburstWorkspace() {
     const snapshot = directorSceneSnapshotRef.current
     directorSceneSnapshotRef.current = null
     if (snapshot) {
-      const restored = { ...worldRef.current, viewport: { ...snapshot.viewport } }
+      const { width, height } = canvasSize()
+      const restored = {
+        ...worldRef.current,
+        viewport: rebaseSceneViewport(snapshot.viewport, width, height, cameraViewport(snapshot.scene, width, height)),
+      }
       worldRef.current = restored
       setWorld(restored)
       changeActiveScene(snapshot.scene)
@@ -906,19 +954,27 @@ export default function MathburstWorkspace() {
     handwritingSamplesRef.current = samples
     const captured = personalProject?.templateId === null ? seed : applyCapturedOpeningAttempt(seed, samples)
     const resetScene = personalProject?.startScene ?? 'gamma-clinic'
+    const { width, height } = canvasSize()
     const centered = {
       ...captured,
       title: personalProject?.title ?? captured.title,
       viewport: personalProject?.templateId === null
-        ? { x: Math.max(1, window.innerWidth - 58) / 2, y: Math.max(1, window.innerHeight - 54) / 2, zoom: 1 }
-        : cameraViewport(resetScene, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)),
+        ? { x: width / 2, y: height / 2, zoom: 1 }
+        : cameraViewport(resetScene, width, height),
     }
     worldRef.current = centered
     setWorld(centered)
     if (personalProject) {
       markLibraryStorageRepaired()
       updateLibraryProjects((projects) => projects.map((project) => project.id === personalProject.id
-        ? { ...project, world: centered, updatedAt: Date.now() }
+        ? {
+            ...project,
+            world: centered,
+            sceneViewports: personalProject.templateId && resetScene !== 'overview'
+              ? { ...project.sceneViewports, [resetScene]: sceneViewportBookmark(centered.viewport, width, height) }
+              : project.sceneViewports,
+            updatedAt: Date.now(),
+          }
         : project))
     } else {
       mainWorldRef.current = centered

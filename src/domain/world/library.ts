@@ -5,6 +5,12 @@ import type { Bounds, Viewport, WorldObject, WorldState } from './types'
 
 export const PROJECT_LIBRARY_STORAGE_KEY = 'mathburst.project-library.v2'
 
+export type SceneViewport = Viewport & {
+  /** Canvas dimensions used to rebase screen-space offsets after a resize. */
+  canvasWidth?: number
+  canvasHeight?: number
+}
+
 export type LibraryProject = {
   id: string
   title: string
@@ -15,7 +21,7 @@ export type LibraryProject = {
   createdAt: number
   updatedAt: number
   deletedAt: number | null
-  sceneViewports: Partial<Record<SceneId, Viewport>>
+  sceneViewports: Partial<Record<SceneId, SceneViewport>>
   world: WorldState
 }
 
@@ -55,15 +61,24 @@ const isSceneId = (value: string): value is SceneId => Object.prototype.hasOwnPr
 
 const cloneViewport = (viewport: Viewport): Viewport => ({ ...viewport })
 
-const cloneSceneViewports = (
-  sceneViewports: Partial<Record<SceneId, Viewport>>,
-): Partial<Record<SceneId, Viewport>> => Object.fromEntries(
-  Object.entries(sceneViewports).map(([sceneId, viewport]) => [sceneId, cloneViewport(viewport)]),
-) as Partial<Record<SceneId, Viewport>>
+const cloneSceneViewport = (viewport: SceneViewport): SceneViewport => {
+  const { canvasWidth, canvasHeight, ...camera } = viewport
+  return {
+    ...cloneViewport(camera),
+    ...(isFiniteNumber(canvasWidth) && canvasWidth > 0 ? { canvasWidth } : {}),
+    ...(isFiniteNumber(canvasHeight) && canvasHeight > 0 ? { canvasHeight } : {}),
+  }
+}
 
-const canonicalSceneViewports = (projectId: ProjectId): Partial<Record<SceneId, Viewport>> => Object.fromEntries(
+const cloneSceneViewports = (
+  sceneViewports: Partial<Record<SceneId, SceneViewport>>,
+): Partial<Record<SceneId, SceneViewport>> => Object.fromEntries(
+  Object.entries(sceneViewports).map(([sceneId, viewport]) => [sceneId, cloneSceneViewport(viewport)]),
+) as Partial<Record<SceneId, SceneViewport>>
+
+const canonicalSceneViewports = (projectId: ProjectId): Partial<Record<SceneId, SceneViewport>> => Object.fromEntries(
   getScenesForProject(projectId).map((scene) => [scene.id, getViewportForScene(scene.id)]),
-) as Partial<Record<SceneId, Viewport>>
+) as Partial<Record<SceneId, SceneViewport>>
 
 const normalizeStartScene = (templateId: ProjectId | null, startScene: CatalogSceneId): CatalogSceneId => {
   if (!templateId) return 'overview'
@@ -77,8 +92,8 @@ const parseSceneViewports = (
   startScene: CatalogSceneId,
   fallback: Viewport,
   allowedSceneIds: readonly SceneId[],
-): Partial<Record<SceneId, Viewport>> | null => {
-  const sceneViewports: Partial<Record<SceneId, Viewport>> = {}
+): Partial<Record<SceneId, SceneViewport>> | null => {
+  const sceneViewports: Partial<Record<SceneId, SceneViewport>> = {}
   if (value !== undefined && !isRecord(value)) return null
   if (isRecord(value)) {
     for (const [sceneId, viewport] of Object.entries(value)) {
@@ -87,7 +102,7 @@ const parseSceneViewports = (
       // untrusted instead of silently replacing saved camera state.
       if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) continue
       if (!isViewport(viewport)) return null
-      sceneViewports[sceneId] = cloneViewport(viewport)
+      sceneViewports[sceneId] = cloneSceneViewport(viewport)
     }
   }
   if (startScene !== 'overview' && !sceneViewports[startScene]) {
