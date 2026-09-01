@@ -161,6 +161,8 @@ export default function MathburstWorkspace() {
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
   const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: Viewport } | null>(null)
+  const directorOpenRef = useRef(false)
+  const directorPreviewFrameRef = useRef<number | null>(null)
 
   const updateLibraryProjects = useCallback((update: (projects: LibraryProject[]) => LibraryProject[]) => {
     setLibraryProjects((current) => {
@@ -175,11 +177,31 @@ export default function MathburstWorkspace() {
     setActiveScene(scene)
   }, [])
 
+  const cancelDirectorPreview = useCallback(() => {
+    if (directorPreviewFrameRef.current !== null) {
+      window.cancelAnimationFrame(directorPreviewFrameRef.current)
+      directorPreviewFrameRef.current = null
+    }
+  }, [])
+
   // A user action that intentionally repairs a project is allowed to replace
   // malformed raw storage. Passive hydration/world effects stay blocked.
   const markLibraryStorageRepaired = useCallback(() => {
     libraryStorageNeedsRepairRef.current = false
   }, [])
+
+  const persistActiveViewport = useCallback((viewport: Viewport) => {
+    if (!hydrated || directorOpenRef.current) return
+    const documentId = activeDocumentIdRef.current
+    if (documentId === 'main') return
+    const scene = activeSceneRef.current
+    const project = libraryProjectsRef.current.find((candidate) => candidate.id === documentId)
+    if (!project?.templateId || scene === 'overview') return
+    if (!getScenesForProject(project.templateId).some((candidate) => candidate.id === scene)) return
+    updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === documentId
+      ? { ...candidate, sceneViewports: { ...candidate.sceneViewports, [scene]: { ...viewport } }, updatedAt: Date.now() }
+      : candidate))
+  }, [hydrated, updateLibraryProjects])
 
   const activeLibraryProject = activeDocumentId === 'main'
     ? null
@@ -232,7 +254,8 @@ export default function MathburstWorkspace() {
     const next = dispatchWorldAction(worldRef.current, action)
     worldRef.current = next
     setWorld(next)
-  }, [])
+    if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
+  }, [persistActiveViewport])
 
   const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
     if (agentBusyRef.current) {
@@ -272,6 +295,7 @@ export default function MathburstWorkspace() {
         const next = dispatchWorldAction(worldRef.current, action)
         worldRef.current = next
         setWorld(next)
+        if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
         setAgentCommitIds(changedIds)
         window.requestAnimationFrame(() => resolve({
           ok: true,
@@ -301,7 +325,7 @@ export default function MathburstWorkspace() {
 
     setPresence({ visible: true, x, y, label: 'Tutor', action: action.summary })
     window.setTimeout(commit, 180)
-  }), [])
+  }), [persistActiveViewport])
 
   const runHistoryBridge = useCallback((direction: 'undo' | 'redo'): Promise<ToolResult> => new Promise((resolve) => {
     if (agentBusyRef.current) {
@@ -333,6 +357,7 @@ export default function MathburstWorkspace() {
       const next = stepWorldHistory(worldRef.current, direction, 'agent')
       worldRef.current = next
       setWorld(next)
+      if (commit.action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
       setAgentCommitIds(changedIds)
       window.requestAnimationFrame(() => resolve({ ok: true, summary, changedIds, data: { source: 'agent' } }))
       window.setTimeout(() => {
@@ -350,13 +375,15 @@ export default function MathburstWorkspace() {
       setPresence({ visible: true, x, y, label: 'Tutor', action: summary })
       window.setTimeout(applyHistory, 180)
     }
-  }), [])
+  }), [persistActiveViewport])
 
   const history = useCallback((direction: 'undo' | 'redo') => {
     const next = stepWorldHistory(worldRef.current, direction, 'human')
     worldRef.current = next
     setWorld(next)
-  }, [])
+    const commit = (direction === 'undo' ? next.future : next.history).at(-1)
+    if (commit?.action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
+  }, [persistActiveViewport])
 
   const stashActiveProject = useCallback(() => {
     const documentId = activeDocumentIdRef.current
@@ -367,14 +394,16 @@ export default function MathburstWorkspace() {
       return null
     }
 
-    const currentScene = activeSceneRef.current
+    const snapshot = directorSceneSnapshotRef.current
+    const currentScene = snapshot?.scene ?? activeSceneRef.current
+    const viewport = snapshot?.viewport ?? currentWorld.viewport
     const currentProject = libraryProjectsRef.current.find((project) => project.id === documentId)
     if (!currentProject) return null
     const ownsScene = currentProject.templateId
       && currentScene !== 'overview'
       && getScenesForProject(currentProject.templateId).some((scene) => scene.id === currentScene)
     const sceneViewports = ownsScene
-      ? { ...currentProject.sceneViewports, [currentScene]: { ...currentWorld.viewport } }
+      ? { ...currentProject.sceneViewports, [currentScene]: { ...viewport } }
       : { ...currentProject.sceneViewports }
     const nextProject = { ...currentProject, sceneViewports, world: currentWorld, updatedAt: Date.now() }
     updateLibraryProjects((projects) => projects.map((project) => project.id === documentId ? nextProject : project))
@@ -406,6 +435,9 @@ export default function MathburstWorkspace() {
 
   const openLibraryProject = useCallback((project: LibraryProject) => {
     stashActiveProject()
+    directorOpenRef.current = false
+    cancelDirectorPreview()
+    directorSceneSnapshotRef.current = null
     const targetProject = libraryProjectsRef.current.find((candidate) => candidate.id === project.id) ?? project
     const targetWorld = targetProject.world
     const canvasWidth = Math.max(1, window.innerWidth - 58)
@@ -432,17 +464,20 @@ export default function MathburstWorkspace() {
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
-  }, [changeActiveScene, stashActiveProject])
+  }, [cancelDirectorPreview, changeActiveScene, stashActiveProject])
 
   const openProjectGallery = useCallback(() => {
     stashActiveProject()
+    directorOpenRef.current = false
+    cancelDirectorPreview()
+    directorSceneSnapshotRef.current = null
     setGalleryOpen(true)
     setDirectorOpen(false)
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
-  }, [stashActiveProject])
+  }, [cancelDirectorPreview, stashActiveProject])
 
   const createLibraryProject = useCallback((title: string, templateId: ProjectId | null) => {
     const template = templateId
@@ -491,6 +526,11 @@ export default function MathburstWorkspace() {
 
   const bridge = useMemo<WorldBridge>(() => ({
     getWorld: () => worldRef.current,
+    getActiveScene: () => activeSceneRef.current,
+    getActiveProject: () => {
+      const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+      return project?.templateId ?? null
+    },
     runAgentAction: runAgent,
     runHistory: runHistoryBridge,
     onTrace: (event) => {
@@ -626,7 +666,11 @@ export default function MathburstWorkspace() {
 
   const selectDirectorShot = (id: string) => {
     const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === id)
-    if (!shot || !isDirectorShotAllowed(shot)) return
+    if (!shot || !isDirectorShotAllowed(shot) || !directorOpenRef.current) return
+    const shotViewport = directorState.shots[shot.id]?.viewport ?? directorDefaultViewport(shot.scene)
+    const nextWorld = { ...worldRef.current, viewport: { ...shotViewport } }
+    worldRef.current = nextWorld
+    setWorld(nextWorld)
     setDirectorState((current) => ({
       ...current,
       activeShotId: shot.id,
@@ -655,12 +699,15 @@ export default function MathburstWorkspace() {
       scene: activeSceneRef.current,
       viewport: { ...worldRef.current.viewport },
     }
+    directorOpenRef.current = true
     setDirectorControlsHidden(false)
     setDirectorOpen(true)
     selectDirectorShot(allowedShot.id)
   }
 
   const closeDirectorReview = () => {
+    directorOpenRef.current = false
+    cancelDirectorPreview()
     setDirectorControlsHidden(false)
     setDirectorOpen(false)
     setDirectorSelection([])
@@ -743,7 +790,10 @@ export default function MathburstWorkspace() {
     const index = availableShots.findIndex((shot) => shot.id === activeDirectorShot.id)
     const next = availableShots[(index + 1) % availableShots.length]
     setDirectorCameraPreviewing(true)
-    window.requestAnimationFrame(() => selectDirectorShot(next.id))
+    directorPreviewFrameRef.current = window.requestAnimationFrame(() => {
+      directorPreviewFrameRef.current = null
+      if (directorOpenRef.current) selectDirectorShot(next.id)
+    })
     window.setTimeout(() => setDirectorCameraPreviewing(false), 920)
   }
 

@@ -189,25 +189,11 @@ export function getViewportForScene(sceneId: CatalogSceneId, width = 1440, heigh
   }
 
   const target = SCENES[sceneId]
-  const responsiveScale = Math.min(1.8, Math.max(1, width / 1382))
+  // Scale down on narrow canvases so a scene remains visible on split-screen and
+  // mobile layouts; keep a floor so labels never become unusably tiny.
+  const responsiveScale = Math.min(1.8, Math.max(0.55, Math.min(width / 1382, height / 846)))
   const zoom = target.zoom * responsiveScale
   return { x: width / 2 - target.center.x * zoom, y: height / 2 - target.center.y * zoom, zoom }
-}
-
-/** Legacy read-only camera lookup retained for world-tool compatibility. */
-export function getSceneForViewport(viewport: Viewport, width = 1440, height = 900): CatalogSceneId {
-  if (viewport.zoom <= 0.52) return OVERVIEW_SCENE_ID
-  const worldCenter = {
-    x: (width / 2 - viewport.x) / viewport.zoom,
-    y: (height / 2 - viewport.y) / viewport.zoom,
-  }
-  return (Object.keys(SCENES) as SceneId[]).reduce<SceneId>((closest, sceneId) => {
-    const candidate = SCENES[sceneId].center
-    const nextDistance = Math.hypot(worldCenter.x - candidate.x, worldCenter.y - candidate.y)
-    const current = SCENES[closest].center
-    const currentDistance = Math.hypot(worldCenter.x - current.x, worldCenter.y - current.y)
-    return nextDistance < currentDistance ? sceneId : closest
-  }, 'gamma-clinic')
 }
 
 export function getProjectForScene(sceneId: SceneId): SavedProject {

@@ -6,7 +6,8 @@ import { pascalRecurrence, tetrahedralLatticeCount } from '../math/simplex'
 import { finiteEulerProductCoefficients, verifyRamanujanFive } from '../math/partitions'
 import { createInitialTinyModel, evaluateTinyModel } from '../math/transformer'
 import { buildDeleteOperations, buildTransformOperations } from '../world/operations'
-import { getProjectForScene, getScene, getSceneForViewport, type CatalogSceneId, type SceneId } from '../world/projects'
+import { getProject, getScene } from '../world/projects'
+import type { CatalogSceneId, ProjectId, SceneId } from '../world/projects'
 import { auditReconstruction, proposeReconstruction } from '../world/reconstruction'
 import type {
   Bounds,
@@ -38,6 +39,9 @@ export type WorldTraceEvent = {
 
 export type WorldBridge = {
   getWorld: () => WorldState
+  /** Explicit UI context; camera coordinates are never used to infer scene ownership. */
+  getActiveScene?: () => CatalogSceneId | null
+  getActiveProject?: () => ProjectId | null
   runAgentAction: (action: WorldAction, targetIds?: string[]) => Promise<ToolResult>
   runHistory: (direction: 'undo' | 'redo') => Promise<ToolResult>
   onTrace?: (event: WorldTraceEvent) => void
@@ -276,12 +280,14 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const args = values(input, ['includeObjects'])
     if (args.includeObjects !== undefined && typeof args.includeObjects !== 'boolean') throw new Error('includeObjects must be boolean.')
     const world = bridge.getWorld(); const all = world.order.map((id) => world.objects[id]).filter(Boolean)
-    const activeScene = getSceneForViewport(world.viewport)
-    const activeProject = activeScene === 'overview' ? null : getProjectForScene(activeScene as SceneId)
-    const sceneMetadata = activeProject
-      ? { id: activeScene, title: getScene(activeScene as SceneId).title, projectId: activeProject.id, projectTitle: activeProject.title }
-      : { id: 'overview' as CatalogSceneId, title: 'One mathematical world', projectId: null, projectTitle: null }
-    return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, scene: sceneMetadata, activeScene: sceneMetadata.id, activeProject: sceneMetadata.projectId, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
+    const activeScene = bridge.getActiveScene?.() ?? null
+    const activeProject = bridge.getActiveProject?.() ?? null
+    const sceneMetadata = activeScene === 'overview'
+      ? { id: 'overview' as CatalogSceneId, title: 'One mathematical world', projectId: null, projectTitle: null }
+      : activeScene
+        ? { id: activeScene, title: getScene(activeScene as SceneId).title, projectId: activeProject, projectTitle: activeProject ? getProject(activeProject).title : null }
+        : null
+    return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, scene: sceneMetadata, activeScene, activeProject, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
   })
 
   const getObjects = tool('get_objects', 'Read world objects', 'Read objects by id or kind. Results are bounded to one hundred objects.', schema({ ids: { type: 'array', items: { type: 'string' } }, kinds: { type: 'array', items: { type: 'string', enum: KINDS } }, limit: { type: 'integer', minimum: 1, maximum: 100 } }), true, (input) => {
