@@ -281,7 +281,9 @@ export default function WorldCanvas({
     })
 
     if (owner === 'control' || owner === 'handle' || owner === null) return
-    event.preventDefault()
+    // Keep native focus/click/double-click behavior for selected objects. Pan and
+    // ink are the only gestures whose browser defaults must be suppressed.
+    if (owner === 'pan' || owner === 'ink') event.preventDefault()
     event.stopPropagation()
     if (owner === 'pan') startPan(event)
     else if (owner === 'ink') startInk(event)
