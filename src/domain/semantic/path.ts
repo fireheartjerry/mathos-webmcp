@@ -32,6 +32,25 @@ const FORBIDDEN_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor'])
 const IDENTIFIER_SEGMENT = /^[^.[\]\\/\s]+$/
 const INDEX_SEGMENT = /^(?:0|[1-9][0-9]*)$/
 
+const UNSAFE_IDENTIFIER_NAMES = new Set([
+  ...FORBIDDEN_SEGMENTS,
+  'toString',
+  'toLocaleString',
+  'valueOf',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+])
+
+/** IDs used as plain-record keys must not address an inherited/prototype slot. */
+export function isSafeIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !UNSAFE_IDENTIFIER_NAMES.has(value)
+}
+
 const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key)
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))
@@ -132,7 +151,7 @@ function entityShapeError(entity: SemanticEntity, detail: string): SemanticPathE
 /** Validate the serializable shape and numerical leaves of one entity. */
 export function validateSemanticEntity(entity: unknown): string | null {
   if (!isRecord(entity)) return 'Semantic entity must be an object.'
-  if (typeof entity.id !== 'string' || entity.id.length === 0) return 'Semantic entity needs a non-empty id.'
+  if (!isSafeIdentifier(entity.id)) return 'Semantic entity needs a non-empty safe id.'
   if (typeof entity.kind !== 'string') return `Entity ${entity.id} needs a kind.`
 
   const rejectUnsafeRecordKeys = (record: Record<string, unknown>, label: string): string | null => {

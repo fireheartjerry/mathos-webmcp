@@ -1,4 +1,5 @@
 import { validateSemanticWorld } from '../semantic/bindings'
+import { isSafeIdentifier } from '../semantic/path'
 import type { WorldAction, WorldOperation, WorldState } from './types'
 
 const finite = (...values: number[]) => values.every(Number.isFinite)
@@ -24,7 +25,7 @@ function validateOperationShape(operation: unknown): string | null {
   if (!isRecord(operation) || typeof operation.type !== 'string') return 'Every operation needs a supported type.'
   if (!OPERATION_TYPES.has(operation.type as WorldOperation['type'])) return `Unsupported operation type ${operation.type}.`
   if (operation.type === 'put') {
-    if (!isRecord(operation.object) || typeof operation.object.id !== 'string') return 'Put operations need an object with an id.'
+    if (!isRecord(operation.object) || !isSafeIdentifier(operation.object.id)) return 'Put operations need an object with a safe id.'
     const bounds = operation.object.bounds
     if (!isRecord(bounds) || !finite(bounds.x as number, bounds.y as number, bounds.width as number, bounds.height as number)) return `Object ${operation.object.id} contains a non-finite number.`
     if (!finite(operation.object.rotation as number, operation.object.opacity as number)) {
@@ -34,17 +35,21 @@ function validateOperationShape(operation: unknown): string | null {
   if (operation.type === 'viewport') {
     if (!isRecord(operation.viewport) || !finite(operation.viewport.x as number, operation.viewport.y as number, operation.viewport.zoom as number)) return 'Viewport contains a non-finite number.'
   }
-  if (operation.type === 'putEntity' && (!isRecord(operation.entity) || typeof operation.entity.id !== 'string')) {
-    return 'putEntity operations need an entity with an id.'
+  if (operation.type === 'putEntity' && (!isRecord(operation.entity) || !isSafeIdentifier(operation.entity.id))) {
+    return 'putEntity operations need an entity with a safe id.'
   }
-  if (operation.type === 'putBinding' && (!isRecord(operation.binding) || typeof operation.binding.id !== 'string')) {
-    return 'putBinding operations need a binding with an id.'
+  if (operation.type === 'putBinding' && (!isRecord(operation.binding) || !isSafeIdentifier(operation.binding.id))) {
+    return 'putBinding operations need a binding with a safe id.'
   }
-  if (operation.type === 'putTimeline' && (!isRecord(operation.timeline) || typeof operation.timeline.id !== 'string')) {
-    return 'putTimeline operations need a timeline with an id.'
+  if (operation.type === 'putTimeline' && (!isRecord(operation.timeline) || !isSafeIdentifier(operation.timeline.id))) {
+    return 'putTimeline operations need a timeline with a safe id.'
   }
-  if (['remove', 'removeEntity', 'removeBinding', 'removeTimeline'].includes(operation.type) && typeof operation.id !== 'string') {
+  if (['remove', 'removeEntity', 'removeBinding', 'removeTimeline'].includes(operation.type) && !isSafeIdentifier(operation.id)) {
     return `${operation.type} operations need an id.`
+  }
+  if (['select', 'order'].includes(operation.type)
+    && (!Array.isArray(operation.ids) || !operation.ids.every((id) => isSafeIdentifier(id)))) {
+    return `${operation.type} operations need safe ids.`
   }
   return null
 }

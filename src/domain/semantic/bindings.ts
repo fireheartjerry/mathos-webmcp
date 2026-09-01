@@ -2,6 +2,7 @@ import type { SemanticBinding, SemanticEntity } from './types'
 import {
   parseSemanticEntityPath,
   parseSemanticTargetPath,
+  isSafeIdentifier,
   readSemanticPath,
   validateSemanticEntity,
   writeSemanticTargetPath,
@@ -29,14 +30,17 @@ const SUPPORTED_FORWARD = new Set<SemanticBinding['forward']>(['identity', 'expr
 
 const SUPPORTED_INVERSE = new Set<NonNullable<SemanticBinding['inverse']>>(['identity', 'expression-parameter', 'matrix-cell', 'point-coordinate'])
 
+const COMPATIBLE_INVERSE: Record<SemanticBinding['forward'], NonNullable<SemanticBinding['inverse']>> = {
+  identity: 'identity',
+  'expression-parameter': 'expression-parameter',
+  'matrix-cell': 'matrix-cell',
+  'point-coordinate': 'point-coordinate'
+}
+
 const compareIds = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
 
 function bindingError(binding: SemanticBinding, detail: string): string {
   return `Binding ${binding.id}: ${detail}`
-}
-
-function isStringId(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0
 }
 
 function isEntityPathFor(entity: SemanticEntity, path: string): SemanticEntityPath {
@@ -97,6 +101,9 @@ function assertAdapterCombination(binding: SemanticBinding, source: SemanticEnti
   if (binding.inverse !== null && !SUPPORTED_INVERSE.has(binding.inverse)) {
     throw new Error(`unsupported inverse adapter ${String(binding.inverse)}`)
   }
+  if (binding.inverse !== null && binding.inverse !== COMPATIBLE_INVERSE[binding.forward]) {
+    throw new Error(`inverse ${binding.inverse} is incompatible with forward ${binding.forward}`)
+  }
 
   if (binding.forward === 'identity') {
     // The target writer enforces the target's concrete type. Identity does not
@@ -126,7 +133,7 @@ function assertAdapterCombination(binding: SemanticBinding, source: SemanticEnti
   }
 
   if (!isPointSource(source) || target.kind !== 'point-coordinate') {
-    throw new Error('point-coordinate requires scalar value or vector cell source and exact at.x/at.y target')
+    throw new Error('point-coordinate requires a scalar value source and exact at.x/at.y target')
   }
 }
 
@@ -137,11 +144,11 @@ function assertAdapterCombination(binding: SemanticBinding, source: SemanticEnti
 export function validateSemanticBinding(world: WorldState, binding: unknown): string | null {
   if (!isRecord(binding)) return 'Binding must be an object.'
   const candidate = binding as unknown as SemanticBinding
-  if (!isStringId(candidate.id)) return 'Binding needs a non-empty id.'
-  if (!isRecord(candidate.source) || !isStringId(candidate.source.entityId) || typeof candidate.source.path !== 'string') {
+  if (!isSafeIdentifier(candidate.id)) return 'Binding needs a non-empty safe id.'
+  if (!isRecord(candidate.source) || !isSafeIdentifier(candidate.source.entityId) || typeof candidate.source.path !== 'string') {
     return bindingError(candidate, 'source must contain an entityId and path.')
   }
-  if (!isRecord(candidate.target) || !isStringId(candidate.target.objectId) || typeof candidate.target.path !== 'string') {
+  if (!isRecord(candidate.target) || !isSafeIdentifier(candidate.target.objectId) || typeof candidate.target.path !== 'string') {
     return bindingError(candidate, 'target must contain an objectId and path.')
   }
   if (candidate.inverse !== null && !SUPPORTED_INVERSE.has(candidate.inverse)) {
@@ -151,9 +158,13 @@ export function validateSemanticBinding(world: WorldState, binding: unknown): st
     return bindingError(candidate, `unsupported forward adapter ${String(candidate.forward)}.`)
   }
 
-  const sourceEntity = world.entities[candidate.source.entityId]
+  const sourceEntity = hasOwn(world.entities, candidate.source.entityId)
+    ? world.entities[candidate.source.entityId]
+    : undefined
   if (!sourceEntity) return bindingError(candidate, `source entity ${candidate.source.entityId} does not exist.`)
-  const targetObject = world.objects[candidate.target.objectId]
+  const targetObject = hasOwn(world.objects, candidate.target.objectId)
+    ? world.objects[candidate.target.objectId]
+    : undefined
   if (!targetObject) return bindingError(candidate, `target object ${candidate.target.objectId} does not exist.`)
 
   try {
@@ -172,8 +183,12 @@ export function validateSemanticBinding(world: WorldState, binding: unknown): st
 
 /** Apply one supported forward binding to a target object clone. */
 export function applyForwardBinding(world: WorldState, binding: SemanticBinding, sourceValue?: SemanticPathValue): WorldObject | ExactPointTarget {
-  const sourceEntity = world.entities[binding.source.entityId]
-  const targetObject = world.objects[binding.target.objectId]
+  const sourceEntity = hasOwn(world.entities, binding.source.entityId)
+    ? world.entities[binding.source.entityId]
+    : undefined
+  const targetObject = hasOwn(world.objects, binding.target.objectId)
+    ? world.objects[binding.target.objectId]
+    : undefined
   if (!sourceEntity || !targetObject) {
     throw new Error(bindingError(binding, 'cannot apply without existing endpoints'))
   }
@@ -232,12 +247,26 @@ export function buildBindingGraph(world: WorldState): BindingGraphEdge[] {
   for (const object of Object.values(world.objects)) {
     const linkedEntityId = 'entityId' in object && typeof object.entityId === 'string' ? object.entityId : null
     if (!linkedEntityId) continue
-    const direct = (targetBindings.get(object.id) ?? []).some((binding) => binding.source.entityId === linkedEntityId)
-    if (!direct)
+    const objectBindings = targetBindings.get(object.id) ?? []
+    if (objectBindings.length === 0) {
       addEdge(edges, {
         from: OBJECT_NODE(object.id),
         to: ENTITY_NODE(linkedEntityId)
       })
+      continue
+    }
+    for (const binding of objectBindings) {
+      // Suppress only the exact reverse of this binding's own direct view
+      // link. A second binding into the same view still contributes an edge,
+      // so direct + cross-binding cycles cannot hide behind one another.
+      if (binding.source.entityId !== linkedEntityId) {
+        addEdge(edges, {
+          from: OBJECT_NODE(object.id),
+          to: ENTITY_NODE(linkedEntityId),
+          bindingId: binding.id
+        })
+      }
+    }
   }
   return edges
 }
@@ -312,10 +341,30 @@ export function validateSemanticBindings(world: WorldState): string | null {
 /** Alias used by callers that validate the complete semantic dependency graph. */
 export const validateBindingGraph = validateSemanticBindings
 
+/** Ensure every map key agrees with its embedded stable ID before use. */
+export function validateWorldStoreKeys(world: WorldState): string | null {
+  const stores: Array<[string, unknown]> = [
+    ['object', world.objects],
+    ['entity', world.entities],
+    ['binding', world.bindings],
+    ['timeline', world.timelines]
+  ]
+  for (const [label, store] of stores) {
+    if (!isRecord(store)) return `World ${label} store must be a record.`
+    for (const [key, value] of Object.entries(store)) {
+      if (!isSafeIdentifier(key)) return `World ${label} key ${key} is unsafe.`
+      if (!isRecord(value) || !isSafeIdentifier(value.id)) return `World ${label} ${key} needs a safe id.`
+      if (key !== value.id) return `World ${label} key ${key} does not match id ${value.id}.`
+    }
+  }
+  return null
+}
+
 /** Validate the complete semantic stores of a candidate world. */
 export function validateSemanticWorld(world: WorldState): string | null {
+  const keyError = validateWorldStoreKeys(world)
+  if (keyError) return keyError
   for (const [key, entity] of Object.entries(world.entities).sort(([a], [b]) => a.localeCompare(b))) {
-    if (entity.id !== key) return `Semantic entity key ${key} does not match entity id ${entity.id}.`
     const error = validateSemanticEntity(entity)
     if (error) return error
   }

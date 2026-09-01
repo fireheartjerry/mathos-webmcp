@@ -1,5 +1,5 @@
-import { applyForwardBinding, validateSemanticBinding, validateSemanticWorld } from './bindings'
-import { readSemanticPath, writeSemanticPath } from './path'
+import { applyForwardBinding, validateSemanticBinding, validateSemanticWorld, validateWorldStoreKeys } from './bindings'
+import { isSafeIdentifier, readSemanticPath, writeSemanticPath } from './path'
 import type { SemanticEntity } from './types'
 import type { WorldOperation, WorldState } from '../world/types'
 
@@ -27,6 +27,8 @@ function sameValue(left: unknown, right: unknown): boolean {
 function assertWorldStores(world: WorldState): void {
   if (!world || typeof world !== 'object') throw semanticEditError('world is required.')
   if (!world.entities || !world.objects || !world.bindings) throw semanticEditError('world semantic stores are missing.')
+  const keyError = validateWorldStoreKeys(world)
+  if (keyError) throw semanticEditError(keyError)
 }
 
 /**
@@ -36,8 +38,8 @@ function assertWorldStores(world: WorldState): void {
 export function buildSemanticEdit(world: WorldState, edit: SemanticEdit): WorldOperation[] {
   assertWorldStores(world)
   if (!edit || typeof edit !== 'object') throw semanticEditError('an edit is required.')
-  if (typeof edit.entityId !== 'string' || edit.entityId.length === 0) {
-    throw semanticEditError('entityId must be a non-empty string.')
+  if (!isSafeIdentifier(edit.entityId)) {
+    throw semanticEditError('entityId must be a non-empty safe identifier.')
   }
   if (typeof edit.path !== 'string' || edit.path.length === 0) {
     throw semanticEditError('path must be a non-empty string.')
