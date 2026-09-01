@@ -55,6 +55,7 @@ import DirectorReviewPanel from './DirectorReviewPanel'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
+import ProgressiveInspector from './inspector/ProgressiveInspector'
 import WebMCPInspector from './WebMCPInspector'
 import WebMCPTrace from './WebMCPTrace'
 import WorldCanvas from './WorldCanvas'
@@ -1403,28 +1404,19 @@ export default function MathburstWorkspace() {
         </div>
       )}
 
-      {editorId && (
-        <div className={`object-editor${editorMatrix ? ' is-matrix-editor' : ''}`} role="dialog" aria-label="Edit object">
-          <label htmlFor="object-editor-input">Edit live object</label>
-          {editorMatrix ? (
-            <div className="matrix-editor-grid" id="object-editor-input">
-              <input autoFocus type="number" step="0.1" value={editorMatrix[0][0]} onChange={(event) => updateMatrixCell(0, 0, Number(event.target.value))} />
-              <input type="number" step="0.1" value={editorMatrix[0][1]} onChange={(event) => updateMatrixCell(0, 1, Number(event.target.value))} />
-              <input type="number" step="0.1" value={editorMatrix[1][0]} onChange={(event) => updateMatrixCell(1, 0, Number(event.target.value))} />
-              <input type="number" step="0.1" value={editorMatrix[1][1]} onChange={(event) => updateMatrixCell(1, 1, Number(event.target.value))} />
-            </div>
-          ) : (
-            <input
-              id="object-editor-input"
-              autoFocus
-              value={editorValue}
-              onChange={(event) => setEditorValue(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') saveEditor(); if (event.key === 'Escape') setEditorId(null) }}
-            />
-          )}
-          <button type="button" onClick={saveEditor}>Commit</button>
-          <button type="button" onClick={() => { setEditorId(null); setEditorMatrix(null) }}>Cancel</button>
-        </div>
+      {!directorOpen && selectedObjects[0] && (
+        <ProgressiveInspector
+          object={selectedObjects[0]}
+          world={world}
+          editorId={editorId}
+          editorValue={editorValue}
+          editorMatrix={editorMatrix}
+          onEdit={openEditor}
+          onValueChange={setEditorValue}
+          onMatrixChange={updateMatrixCell}
+          onSave={saveEditor}
+          onCancel={() => { setEditorId(null); setEditorMatrix(null) }}
+        />
       )}
     </main>
   )
