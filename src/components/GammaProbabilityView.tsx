@@ -19,7 +19,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const [draggingBound, setDraggingBound] = useState(false)
   const width = Math.max(360, object.bounds.width)
   const height = Math.max(240, object.bounds.height)
-  const plot = { left: 42, top: 34, right: width - 18, bottom: height - 86 }
+  const plot = { left: 42, top: 34, right: width - 18, bottom: height - 120 }
   const [xMin, rawXMax] = object.xDomain
   const xMax = Math.max(xMin + 1, rawXMax)
   const [yMin, rawYMax] = object.yDomain

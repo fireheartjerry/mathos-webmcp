@@ -181,7 +181,12 @@ const scalarLocations = (): ScalarLocation[] => {
 }
 
 /** Central finite-difference gradient of cross-entropy over all visible parameters. */
-export function centralNumericalGradient(model: TinyModelState, epsilon = 1e-4): TransformerGradients {
+export function centralNumericalGradient(
+  model: TinyModelState,
+  epsilon = 1e-4,
+  bridgeMasses?: readonly number[],
+  temperature = 1,
+): TransformerGradients {
   const gradients = zeroGradients()
   for (const location of scalarLocations()) {
     const plus = cloneModel(model)
@@ -189,7 +194,10 @@ export function centralNumericalGradient(model: TinyModelState, epsilon = 1e-4):
     const center = location.read(model)
     location.write(plus, center + epsilon)
     location.write(minus, center - epsilon)
-    const derivative = (evaluateTinyModel(plus).loss - evaluateTinyModel(minus).loss) / (2 * epsilon)
+    const derivative = (
+      evaluateTinyModel(plus, bridgeMasses, temperature).loss
+      - evaluateTinyModel(minus, bridgeMasses, temperature).loss
+    ) / (2 * epsilon)
     const match = location.path.match(/(?:embeddings|wq|wk|wv|classifier|bias)\[(\d+)\](?:\[(\d+)\])?/)
     if (!match) continue
     const first = Number(match[1])
@@ -221,9 +229,13 @@ const applyGradient = (model: TinyModelState, g: TransformerGradients, rate: num
 }
 
 /** One honest numerical-gradient update with deterministic loss/probability backtracking. */
-export function trainOneStep(model: TinyModelState): TrainStepResult {
-  const before = evaluateTinyModel(model)
-  const gradients = centralNumericalGradient(model)
+export function trainOneStep(
+  model: TinyModelState,
+  bridgeMasses?: readonly number[],
+  temperature = 1,
+): TrainStepResult {
+  const before = evaluateTinyModel(model, bridgeMasses, temperature)
+  const gradients = centralNumericalGradient(model, 1e-4, bridgeMasses, temperature)
   const norm = gradientNorm(gradients)
   let rate = 0.35
   let candidate = model
@@ -231,7 +243,7 @@ export function trainOneStep(model: TinyModelState): TrainStepResult {
   let accepted = false
   for (let attempt = 0; attempt < 14; attempt += 1) {
     candidate = applyGradient(model, gradients, rate)
-    after = evaluateTinyModel(candidate)
+    after = evaluateTinyModel(candidate, bridgeMasses, temperature)
     if (after.loss < before.loss - 1e-10 && after.targetProbability > before.targetProbability + 1e-10) {
       accepted = true
       break

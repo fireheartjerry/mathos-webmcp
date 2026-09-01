@@ -15,7 +15,12 @@ function linkedAttention(world: WorldState, id: string): AttentionObject | null 
 
 export default function TrainingView({ object, world, run }: Props) {
   const attention = linkedAttention(world, object.linkedAttentionId)
-  const pass = useMemo(() => evaluateTinyModel(object.model), [object.model])
+  const bridgeMasses = attention?.bridgeMasses
+  const temperature = attention?.temperature ?? 1
+  const pass = useMemo(
+    () => evaluateTinyModel(object.model, bridgeMasses, temperature),
+    [object.model, bridgeMasses, temperature],
+  )
   const history = object.lossHistory.length ? object.lossHistory : [pass.loss]
   const probabilities = object.probabilityHistory.length ? object.probabilityHistory : [pass.targetProbability]
   const spark = (values: number[], color: string) => {
@@ -26,7 +31,7 @@ export default function TrainingView({ object, world, run }: Props) {
     return <svg className="training-sparkline" viewBox="0 0 180 48" aria-hidden="true"><polyline points={points} fill="none" stroke={color} strokeWidth="2.5" /><circle cx={180} cy={44 - ((values.at(-1)! - min) / span) * 36} r="3" fill={color} /></svg>
   }
   const train = () => {
-    const result = trainOneStep(object.model)
+    const result = trainOneStep(object.model, bridgeMasses, temperature)
     if (!result.accepted) return
     const nextTraining: TrainingObject = { ...object, model: result.state, step: object.step + 1, lossHistory: [...object.lossHistory, result.lossAfter], probabilityHistory: [...object.probabilityHistory, result.targetProbabilityAfter], learningRate: result.learningRate }
     const operations: WorldAction['operations'] = [{ type: 'put', object: nextTraining }]
@@ -35,7 +40,7 @@ export default function TrainingView({ object, world, run }: Props) {
   }
   const reset = () => {
     const model = createInitialTinyModel(attention?.bridgeMasses)
-    const initial = evaluateTinyModel(model)
+    const initial = evaluateTinyModel(model, bridgeMasses, temperature)
     const nextTraining: TrainingObject = { ...object, model, step: 0, lossHistory: [initial.loss], probabilityHistory: [initial.targetProbability], learningRate: 0 }
     const operations: WorldAction['operations'] = [{ type: 'put', object: nextTraining }]
     if (attention) operations.push({ type: 'put', object: { ...attention, model } })
@@ -51,4 +56,3 @@ export default function TrainingView({ object, world, run }: Props) {
     </section>
   )
 }
-
