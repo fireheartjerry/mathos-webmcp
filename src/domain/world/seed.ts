@@ -3,21 +3,43 @@ import type { Point, WorldObject, WorldState } from './types'
 export const HERO_EQUATION_ID = 'eq_integral'
 export const HERO_GRAPH_ID = 'graph_integrand'
 export const SOURCE_IMAGE_ID = 'source'
+export const OPENING_FRAME_ID = 'opening_problem'
+export const OPENING_ATTEMPT_ID = 'opening_attempt'
+export const OPENING_CORRECTION_ID = 'opening_correction'
 
 export const DEMO_SCENES = {
-  calculus: { label: 'Calculus', title: 'Integration by parts', center: { x: 640, y: 340 } satisfies Point, zoom: 0.95 },
+  opening: { label: 'Opening', title: 'Find the break', center: { x: -450, y: 340 } satisfies Point, zoom: 1.15 },
+  calculus: { label: 'Calculus', title: 'Gamma becomes probability', center: { x: 640, y: 340 } satisfies Point, zoom: 0.95 },
   geometry: { label: 'Geometry', title: 'Homothety & tangency', center: { x: 1840, y: 350 } satisfies Point, zoom: 1 },
   matrix: { label: 'Transformer', title: 'Attention as geometry', center: { x: 2900, y: 350 } satisfies Point, zoom: 1 },
+  overview: { label: 'Overview', title: 'One mathematical world', center: { x: 1275, y: 350 } satisfies Point, zoom: 0.33 },
 } as const
 
 export type DemoScene = keyof typeof DEMO_SCENES
 
 export function createSeedWorld(): WorldState {
   const objects: WorldObject[] = [
-    { id: 'problem', kind: 'frame', title: 'Integration by parts', childIds: [SOURCE_IMAGE_ID, HERO_EQUATION_ID], bounds: { x: 80, y: 80, width: 660, height: 520 }, rotation: 0, author: 'human', opacity: 1 },
+    {
+      id: OPENING_FRAME_ID, kind: 'frame', title: 'Repeated integration by parts',
+      childIds: ['opening_prompt', OPENING_ATTEMPT_ID],
+      bounds: { x: -840, y: 80, width: 780, height: 520 }, rotation: 0, author: 'human', opacity: 1,
+    },
+    {
+      id: 'opening_prompt', kind: 'text',
+      text: 'Don’t finish it. Mark the exact place my reasoning breaks.', color: '#171713', fontSize: 23,
+      bounds: { x: -790, y: 155, width: 690, height: 78 }, rotation: 0, author: 'human', opacity: 1,
+    },
+    {
+      id: OPENING_ATTEMPT_ID, kind: 'text',
+      text: 'Γ(9/2) = ∫₀∞ x⁷ᐟ²e⁻ˣ dx\n= [−x⁷ᐟ²e⁻ˣ]₀∞ − (7/2)Γ(7/2)',
+      color: '#171713', fontSize: 29,
+      presentation: 'handwritten', bounds: { x: -790, y: 285, width: 690, height: 150 },
+      rotation: -1.2, author: 'human', opacity: 1,
+    },
+    { id: 'problem', kind: 'frame', title: 'Gamma becomes probability', childIds: [SOURCE_IMAGE_ID, HERO_EQUATION_ID], bounds: { x: 80, y: 80, width: 660, height: 520 }, rotation: 0, author: 'human', opacity: 1 },
     { id: SOURCE_IMAGE_ID, kind: 'image', src: '/demo/calculus-source.png', alt: 'Photographed integration-by-parts problem', bounds: { x: 120, y: 150, width: 280, height: 210 }, rotation: -1.2, author: 'human', opacity: 1 },
-    { id: HERO_EQUATION_ID, kind: 'equation', latex: '\\int x e^x\\,dx', color: '#171713', bounds: { x: 440, y: 155, width: 240, height: 76 }, rotation: 0, author: 'human', opacity: 0 },
-    { id: 'eq_integrand', kind: 'equation', latex: 'a x e^x', color: '#171713', bounds: { x: 785, y: 92, width: 210, height: 54 }, rotation: 0, author: 'agent', opacity: 0 },
+    { id: HERO_EQUATION_ID, kind: 'equation', latex: '\\Gamma\\!\\left(\\frac92\\right)=\\int_0^\\infty x^{7/2}e^{-x}\\,dx', color: '#171713', bounds: { x: 410, y: 145, width: 300, height: 88 }, rotation: 0, author: 'human', opacity: 0 },
+    { id: 'eq_integrand', kind: 'equation', latex: '\\frac{x^{a}e^{-x}}{\\Gamma(a+1)}', color: '#171713', bounds: { x: 785, y: 92, width: 240, height: 64 }, rotation: 0, author: 'agent', opacity: 0 },
     { id: HERO_GRAPH_ID, kind: 'graph', equationId: 'eq_integrand', xDomain: [-2, 2], yDomain: [-1, 16], color: '#7c5cff', parameters: { a: 1 }, showTangentAt: 1, shadeIntegral: [0, 1], bounds: { x: 740, y: 150, width: 460, height: 330 }, rotation: 0, author: 'agent', opacity: 0 },
     {
       id: 'geometry_problem', kind: 'frame', title: 'Homothety & tangency',

@@ -22,10 +22,20 @@ export type ToolResult = {
   error?: string
 }
 
+export type WorldTraceEvent = {
+  invocationId: string
+  toolName: string
+  readOnly: boolean
+  phase: 'running' | 'complete' | 'error'
+  summary: string
+  changedIds?: string[]
+}
+
 export type WorldBridge = {
   getWorld: () => WorldState
   runAgentAction: (action: WorldAction, targetIds?: string[]) => Promise<ToolResult>
   runHistory: (direction: 'undo' | 'redo') => Promise<ToolResult>
+  onTrace?: (event: WorldTraceEvent) => void
 }
 
 export type WorldTool = {
@@ -47,6 +57,7 @@ const OPERATION_TYPES: WorldOperation['type'][] = ['put', 'remove', 'select', 'v
 const finite = (...numbers: number[]) => numbers.every(Number.isFinite)
 const isRecord = (value: unknown): value is Values => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 const isPoint = (value: unknown): value is Point => isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number' && finite(value.x, value.y)
+const isStroke = (value: unknown): value is { points: Point[] } => isRecord(value) && Array.isArray(value.points) && value.points.length > 0 && value.points.every(isPoint)
 const isBounds = (value: unknown): value is Bounds => isRecord(value)
   && typeof value.x === 'number' && typeof value.y === 'number'
   && typeof value.width === 'number' && typeof value.height === 'number'
@@ -138,8 +149,8 @@ function objectError(value: unknown): string | null {
   if (typeof value.opacity !== 'number' || !Number.isFinite(value.opacity)) return `Object ${value.id} needs a finite opacity.`
   const id = value.id
   switch (value.kind) {
-    case 'ink': return Array.isArray(value.points) && value.points.every(isPoint) && typeof value.color === 'string' && typeof value.width === 'number' ? null : `Ink ${id} is incomplete.`
-    case 'text': return typeof value.text === 'string' && typeof value.color === 'string' && typeof value.fontSize === 'number' ? null : `Text ${id} is incomplete.`
+    case 'ink': return Array.isArray(value.points) && value.points.every(isPoint) && (value.strokes === undefined || (Array.isArray(value.strokes) && value.strokes.every(isStroke))) && (value.strokeScale === undefined || (typeof value.strokeScale === 'number' && Number.isFinite(value.strokeScale) && value.strokeScale > 0)) && typeof value.color === 'string' && typeof value.width === 'number' ? null : `Ink ${id} is incomplete.`
+    case 'text': return typeof value.text === 'string' && typeof value.color === 'string' && typeof value.fontSize === 'number' && (value.presentation === undefined || value.presentation === 'typed' || value.presentation === 'handwritten') ? null : `Text ${id} is incomplete.`
     case 'image': return typeof value.src === 'string' && typeof value.alt === 'string' ? null : `Image ${id} is incomplete.`
     case 'shape': return ['rectangle', 'ellipse', 'triangle'].includes(String(value.shape)) && typeof value.fill === 'string' && typeof value.stroke === 'string' ? null : `Shape ${id} is incomplete.`
     case 'arrow': return isPoint(value.from) && isPoint(value.to) && typeof value.color === 'string' ? null : `Arrow ${id} is incomplete.`
@@ -197,7 +208,7 @@ function requiredString(value: unknown, field: string): string {
 
 const COMMON_PATCH_FIELDS = ['bounds', 'rotation', 'opacity', 'locked']
 const KIND_PATCH_FIELDS: Record<WorldObject['kind'], string[]> = {
-  ink: ['points', 'color', 'width'], text: ['text', 'color', 'fontSize'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
+  ink: ['points', 'strokes', 'strokeScale', 'color', 'width'], text: ['text', 'color', 'fontSize', 'presentation'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
   arrow: ['from', 'to', 'color'], equation: ['latex', 'color'], graph: ['equationId', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral'],
   geometry: ['primitives', 'accent'], matrix: ['values', 'sourceIds', 'accent'], frame: ['title', 'childIds'], group: ['childIds'],
 }
@@ -282,7 +293,10 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
   })
 
   const createObjects = tool('create_objects', 'Create world objects', 'Create typed objects in one attributed, undoable commit.', schema({ summary: { type: 'string' }, objects: { type: 'array', minItems: 1, items: objectSchema } }, ['objects']), false, async (input) => {
-    const args = values(input, ['summary', 'objects']); const objects = objectList(args.objects); const operations: WorldOperation[] = objects.map((object) => ({ type: 'put', object }))
+    const args = values(input, ['summary', 'objects']); const objects = objectList(args.objects); const operations: WorldOperation[] = [
+      ...objects.map((object) => ({ type: 'put' as const, object })),
+      { type: 'select', ids: objects.map((object) => object.id) },
+    ]
     return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Created ${objects.length} objects`, operations), objects.map((object) => object.id))
   })
 
@@ -376,9 +390,34 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     return bridge.runAgentAction(action(`Visualized ${String(args.concept)}`, operations), changedIds(operations))
   })
 
-  return [
+  const tools: WorldTool[] = [
     getWorld, getObjects, getSelection, getSessionContext, getHistory, inspectMath,
     createObjects, updateObjects, deleteObjects, transformObjects, applyActions, stepHistory, setViewport,
     reconstructProblem, auditReconstructionTool, graphExpression, constructGeometry, visualizeConcept,
   ]
+
+  if (!bridge.onTrace) return tools
+  return tools.map((worldTool) => ({
+    ...worldTool,
+    execute: async (input: unknown) => {
+      const invocationId = crypto.randomUUID()
+      bridge.onTrace?.({ invocationId, toolName: worldTool.name, readOnly: worldTool.annotations.readOnlyHint, phase: 'running', summary: 'Running' })
+      try {
+        const result = await worldTool.execute(input)
+        bridge.onTrace?.({
+          invocationId,
+          toolName: worldTool.name,
+          readOnly: worldTool.annotations.readOnlyHint,
+          phase: result.ok ? 'complete' : 'error',
+          summary: result.ok ? result.summary : (result.error ?? 'No changes made'),
+          changedIds: result.changedIds,
+        })
+        return result
+      } catch (error) {
+        const summary = error instanceof Error ? error.message : 'The tool call failed.'
+        bridge.onTrace?.({ invocationId, toolName: worldTool.name, readOnly: worldTool.annotations.readOnlyHint, phase: 'error', summary })
+        throw error
+      }
+    },
+  }))
 }

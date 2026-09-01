@@ -2,6 +2,7 @@ export type Actor = 'human' | 'agent'
 export type Point = { x: number; y: number }
 export type Bounds = { x: number; y: number; width: number; height: number }
 export type Viewport = { x: number; y: number; zoom: number }
+export type InkStroke = { points: Point[] }
 
 export type BaseObject = {
   id: string
@@ -12,8 +13,25 @@ export type BaseObject = {
   locked?: boolean
 }
 
-export type InkObject = BaseObject & { kind: 'ink'; points: Point[]; color: string; width: number }
-export type TextObject = BaseObject & { kind: 'text'; text: string; color: string; fontSize: number }
+export type InkObject = BaseObject & {
+  kind: 'ink'
+  /** Legacy single-stroke representation retained for existing drawings and tools. */
+  points: Point[]
+  /** Optional captured/multi-stroke representation. Coordinates are local to bounds. */
+  strokes?: InkStroke[]
+  /** Source-to-world scale for captured stroke widths. */
+  strokeScale?: number
+  color: string
+  width: number
+}
+export type TextObject = BaseObject & {
+  kind: 'text'
+  text: string
+  color: string
+  fontSize: number
+  /** Optional presentation hint for authored handwriting-style text. */
+  presentation?: 'typed' | 'handwritten'
+}
 export type ImageObject = BaseObject & { kind: 'image'; src: string; alt: string }
 export type ShapeObject = BaseObject & {
   kind: 'shape'; shape: 'rectangle' | 'ellipse' | 'triangle'; fill: string; stroke: string

@@ -1,6 +1,6 @@
 import type { WorldState } from './types'
 
-export const STORAGE_KEY = 'mathburst.world.v1'
+export const STORAGE_KEY = 'mathburst.world.v3'
 
 export function loadWorld(): WorldState | null {
   try {

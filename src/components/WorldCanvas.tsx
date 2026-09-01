@@ -21,9 +21,11 @@ const makeAction = (summary: string, operations: WorldAction['operations']): Wor
 })
 
 const sceneBreadcrumbs: Record<DemoScene, { number: string; title: string; state: string }> = {
+  opening: { number: '00', title: 'Find the break', state: 'cold open' },
   calculus: { number: '01', title: 'Integration by parts', state: 'live world' },
   geometry: { number: '02', title: 'Homothety & tangency', state: 'dynamic construction' },
   matrix: { number: '03', title: 'Attention as geometry', state: 'live transformation' },
+  overview: { number: '—', title: 'One mathematical world', state: 'all islands' },
 }
 
 export default function WorldCanvas({

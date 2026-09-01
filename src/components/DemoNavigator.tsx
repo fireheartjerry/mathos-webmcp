@@ -3,7 +3,7 @@
 import { DEMO_SCENES } from '../domain/world/seed'
 import type { DemoScene } from '../domain/world/seed'
 
-const sceneOrder = ['calculus', 'geometry', 'matrix'] as const satisfies readonly DemoScene[]
+const sceneOrder = ['opening', 'calculus', 'geometry', 'matrix', 'overview'] as const satisfies readonly DemoScene[]
 
 export default function DemoNavigator({
   active,
@@ -14,7 +14,7 @@ export default function DemoNavigator({
 }) {
   return (
     <nav className="demo-navigator" aria-label="Mathematical world scenes">
-      <span className="demo-navigator-label">World map <kbd>1–3</kbd></span>
+      <span className="demo-navigator-label">World map <kbd>0–4</kbd></span>
       {sceneOrder.map((scene, index) => (
         <button
           key={scene}

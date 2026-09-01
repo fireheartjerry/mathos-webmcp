@@ -398,6 +398,14 @@ button {
   line-height: 1.2;
 }
 
+.kind-text p.is-handwritten {
+  font-family: 'Comic Sans MS', 'Bradley Hand', 'Segoe Print', cursive;
+  letter-spacing: 0.015em;
+  line-height: 1.12;
+  transform: rotate(-1deg);
+  text-shadow: 0.35px 0 var(--ink), -0.25px 0 rgba(23, 23, 19, 0.18);
+}
+
 .kind-equation {
   display: grid;
   place-items: center;
@@ -871,6 +879,11 @@ button {
   pointer-events: auto;
 }
 
+.world-canvas[data-demo-scene='opening'] .tutor-overlay {
+  left: -195px;
+  top: 20px;
+}
+
 .tutor-attempt-panel {
   width: 100%;
   display: grid;
@@ -934,6 +947,42 @@ button {
   margin: 0;
   color: #b14231;
   font: 9px/1.35 'Fira Code', monospace;
+}
+
+.opening-tutor-panel {
+  width: 260px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  color: var(--ink);
+  background: rgba(251, 249, 243, 0.97);
+  border: 1px solid var(--ink);
+  box-shadow: 6px 7px 0 rgba(23, 23, 19, 0.1);
+}
+
+.opening-tutor-panel header {
+  display: flex;
+  justify-content: space-between;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.opening-tutor-panel header span { color: var(--agent); }
+.opening-tutor-panel header b { color: var(--muted); }
+.opening-tutor-panel button {
+  min-height: 34px;
+  color: var(--paper);
+  background: var(--agent);
+  font: 9px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.opening-tutor-panel button:disabled { opacity: 0.4; cursor: default; }
+.opening-tutor-panel p {
+  margin: 0;
+  color: var(--muted);
+  font: 8px/1.35 'Fira Code', monospace;
 }
 
 .reconstruction-panel {
@@ -1159,6 +1208,47 @@ button {
   outline: none;
 }
 
+.webmcp-trace {
+  position: fixed;
+  top: 51px;
+  right: 397px;
+  z-index: 104;
+  max-width: min(390px, calc(100vw - 440px));
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  color: var(--muted);
+  background: rgba(251, 249, 243, 0.94);
+  border: 1px solid rgba(23, 23, 19, 0.24);
+  pointer-events: none;
+}
+
+.webmcp-trace-label {
+  color: var(--agent);
+  font: 7px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.webmcp-trace-list { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+.webmcp-trace-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 5px;
+  color: var(--ink);
+  background: #eeece3;
+  font: 8px/1 'Fira Code', monospace;
+  white-space: nowrap;
+}
+.webmcp-trace-chip i { font-style: normal; color: #3c6e49; }
+.webmcp-trace-chip.is-write i { color: var(--agent); }
+.webmcp-trace-chip small { color: #3c6e49; font-size: 9px; }
+.webmcp-trace-chip.is-running small { color: #b18a22; }
+.webmcp-trace-chip.is-error small { color: #b14231; }
+
 .webmcp-inspector-trigger i,
 .webmcp-registration i {
   width: 7px;
@@ -1195,6 +1285,10 @@ button {
 .mathburst-app:has(.webmcp-inspector) .reconstruction-panel {
   right: 496px;
 }
+
+.mathburst-app:has(.webmcp-inspector) .webmcp-trace { right: 496px; }
+.mathburst-app:has(.webmcp-inspector) .activity-rail { right: 496px; }
+.mathburst-app:has(.webmcp-inspector) .zoom-controls { right: 496px; }
 
 .webmcp-inspector > header {
   min-height: 72px;
@@ -1762,11 +1856,18 @@ button {
   .webmcp-inspector-trigger { right: 365px; }
   .webmcp-inspector { right: 12px; width: 400px; }
   .mathburst-app:has(.webmcp-inspector) .reconstruction-panel { right: 424px; }
+  .mathburst-app:has(.webmcp-inspector) .webmcp-trace { right: 424px; }
+  .mathburst-app:has(.webmcp-inspector) .activity-rail { right: 424px; }
+  .mathburst-app:has(.webmcp-inspector) .zoom-controls { right: 424px; }
 }
 
 @media (max-width: 760px) {
   .webmcp-inspector-trigger { right: 12px; }
   .webmcp-inspector { left: 74px; right: 12px; width: auto; }
+  .webmcp-trace,
+  .mathburst-app:has(.webmcp-inspector) .webmcp-trace { left: 74px; right: 12px; max-width: none; }
+  .mathburst-app:has(.webmcp-inspector) .activity-rail,
+  .mathburst-app:has(.webmcp-inspector) .zoom-controls { right: 12px; }
   .demo-navigator { left: 74px; right: 160px; }
   .demo-navigator button { min-width: 0; flex: 1; justify-content: center; padding: 0 5px; }
 }

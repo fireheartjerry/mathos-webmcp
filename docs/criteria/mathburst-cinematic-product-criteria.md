@@ -1,229 +1,206 @@
 # Criteria: Mathburst as a cinematic WebMCP mathematical world
 
-**Status:** APPROVED by user on 2026-08-31  
+**Status:** APPROVED, then scope-amended by user on 2026-08-31
 **Sources:** user conversation; `docs/video/MATHBURST_CINEMATIC_STORYBOARD.md`;
 `docs/superpowers/specs/2026-08-31-mathburst-hackathon-design.md`; WebMCP Challenge
-requirements captured in the project docs  
-**Artifact:** the live Mathburst app at a 16:9 desktop viewport, evaluated through the
-approved storyboard; the rendered video itself is not yet in scope  
-**Target:** 92/100  
-**Budget:** five rounds, stopping early at 92 with every gate passing  
+requirements captured in project docs
+**Artifact:** live Mathburst at a 16:9 desktop viewport, evaluated through the approved
+storyboard; the rendered film remains out of scope
+**Target:** 92/100
+**Budget:** five scored improvement rounds; the user-approved scope amendment does not add
+production ceremony or tests
 **Pinned scorer:** fresh-context `gpt-5.6-luna`, high reasoning, worktree
 `C:\Jerry\Important\Coding\Mathos\mathos-webmcp\.worktrees\hackathon-build`, scorer brief
-`C:\Users\fireh\.codex\skills\iterative-improvement\references\scorer-brief.md`  
-**Created:** 2026-08-31  
-**Baseline score:** pending approval and independent scoring
+`C:\Users\fireh\.codex\skills\iterative-improvement\references\scorer-brief.md`
+**Created:** 2026-08-31
+**Original v1 baseline:** 36/100
+**Amended v2 baseline:** pending re-score of the pre-improvement artifact at `e9db560`
 
 ## Context
 
 Mathburst is a human-first mathematical canvas in which an external WebMCP tutor and a
-learner act on the same semantic objects. The immediate objective is not commercial
-completeness: it is an award-caliber hackathon product whose real interactions support a
-silent, cinematic 2:42 film. Judges should understand the collaboration in the first
-thirteen seconds, see WebMCP cause visible mathematical changes, and finish believing they
-have visited one coherent mathematical world rather than watched a feature slideshow.
+learner act on the same semantic objects. The objective is an award-caliber hackathon product,
+not commercial completeness. Its real interactions must support a silent 2:42 film whose
+mathematical chain is:
+
+`Gamma recurrence → live probability → tiny-transformer training → attention/barycentrics →
+Olympiad geometry → 3D simplex → integer partitions/Ramanujan`.
+
+A sophisticated topic earns no credit if it is merely labeled. The visible invariant,
+computed value, or state change must be real.
 
 ## Gates — binary, non-negotiable
 
 - **G1. App health.** The product type-checks and builds after every round.  
   *Check:* run `pnpm typecheck` and `pnpm build`; both must exit successfully.
 - **G2. WebMCP integrity.** Exactly eighteen page tools remain discoverable and every tool
-  shown in the storyboard invokes its real registered handler.  
-  *Check:* open the live inspector and Browser WebMCP discovery; count eighteen matching
-  tool names, then invoke every tool used by a shot and confirm a matching visible result.
-- **G3. Mathematical truth.** No displayed equation, integral value, matrix transform,
-  attention weight, homothety ratio, spiral-similarity relation, or barycentric coordinate
-  is mathematically false for the visible state.  
-  *Check:* independently recompute one displayed value or invariant in every mathematical
-  act and compare it with the canvas.
-- **G4. Shared-world truth.** Every tutor change shown in the storyboard is an attributed,
-  undoable action in the same world and history as learner changes; no fake video-only
-  mutation substitutes for product behavior.  
-  *Check:* perform each tutor action, inspect activity/history, and undo it from the learner
-  UI.
-- **G5. Demo reliability.** The complete storyboard interaction path works twice from a
-  fresh reset with no uncaught console error and no manual recovery outside the visible
-  interface.  
-  *Check:* manually run the product path twice at the target 16:9 viewport.
-- **G6. Hackathon boundary.** No test suite, CI/CD, production infrastructure, authentication,
-  or non-demo edge-case system is added.  
-  *Check:* inspect the round diff and package scripts.
-- **G7. Media freeze.** Until the user explicitly opens production, narration, audio,
-  capture, rendering, deployment, and all pre-existing dirty video files remain untouched.  
-  *Check:* compare the round diff against the pre-loop dirty-file snapshot.
+  shown invokes its real registered handler.
+  *Check:* Browser discovery and inspector expose the same eighteen names; invoke every
+  storyboard tool and confirm the corresponding visible result.
+- **G3. Mathematical truth.** No displayed recurrence, integral/CDF value, matrix transform,
+  attention weight, loss, gradient-step claim, barycentric coordinate, homothety ratio,
+  spiral relation, simplex coordinate, partition coefficient, or congruence is false for the
+  visible state.
+  *Check:* independently recompute at least one invariant in every mathematical act.
+- **G4. Shared-world truth.** Every Tutor change shown is attributed and undoable in the same
+  semantic world/history as learner changes; no video-only mutation substitutes for product
+  behavior.
+  *Check:* perform every hero Tutor action, inspect activity/history, and undo from learner UI.
+- **G5. Demo reliability.** The complete storyboard path works twice from a fresh reset at
+  2560×1440, with no uncaught console error or recovery outside visible controls.
+  *Check:* run the full product path twice.
+- **G6. Hackathon boundary.** No test suite, CI/CD, authentication, production infrastructure,
+  generalized theorem prover, or non-demo edge-case system is added.
+  *Check:* inspect each round diff and package scripts.
+- **G7. Media freeze.** Until explicitly reopened, narration, audio, capture, rendering,
+  deployment, and all pre-existing dirty video files remain untouched.
+  *Check:* compare against the pre-loop dirty-file snapshot.
 
 ## Criteria — 100 points total
 
-### C1. First-thirteen-second comprehension — 16 pts
+### C1. Advanced first-fourteen-second comprehension — 14 pts
 
-**What it means:** A cold viewer immediately understands that a learner and an external
-tutor are collaborating inside the same mathematical canvas, and that the tutor marks the
-reasoning rather than dumping an answer into chat.
+**What it means:** A cold viewer immediately understands that a learner made a subtle sign
+error while reducing `Γ(9/2)` and an external Tutor marked the exact reasoning break inside
+the shared mathematical canvas.
 
-**How to check it:** Capture the planned 0:00–0:13 interaction without narration. Give it to
-a fresh reviewer with no project context and ask: “What is this product, what did the tutor
-do, and where did it act?”
+**How to check it:** Run the opening without narration for a fresh reviewer. Ask what the
+learner did, what the Tutor marked, and where the Tutor acted.
 
-**Scoring anchors:**
-- `0` — the viewer cannot identify the product or mistakes it for a normal chatbot.
-- `8` — shared whiteboard tutoring is understood, but external-agent/WebMCP involvement or
-  the precise tutor action remains ambiguous.
-- `16` — the viewer accurately identifies a learner, external tutor, exact marked mistake,
-  shared canvas, and visible agent action without explanatory text.
+**Anchors:** `0` no comprehensible opening; `7` shared tutoring is clear but the exact error
+or external-agent action is ambiguous; `14` the `Γ(9/2)` mistake, exact two-negatives
+correction, shared world, real tool trace, attribution, and learner revision are all legible,
+with captured vector ink rather than a handwriting-style font.
 
-### C2. Mathematical escalation and continuity — 13 pts
+### C2. Mathematical escalation and continuity — 12 pts
 
-**What it means:** Everyday algebra grows naturally into calculus, attention geometry, and
-Olympiad geometry as one rising intellectual and visual arc.
+**What it means:** Every act follows from a real mathematical structure in the previous act,
+not from a navigation cut or a desire to name another advanced topic.
 
-**How to check it:** Follow the storyboard from start to finish and list the entry and exit
-motif of every act. Verify that each transition reuses a visible line, curve, angle, axis,
-point, or area from the preceding shot.
+**How to check it:** List each exit object and next entry object. Verify this chain on canvas:
+area → probability → softmax → barycentrics → simplex → lattice → coefficients.
 
-**Scoring anchors:**
-- `0` — independent scene cuts or a random “cool math” reel.
-- `6` — the order escalates, but two or more transitions are arbitrary navigation cuts.
-- `13` — every act has a motivated mathematical match transition and the final overview
-  confirms one continuous world.
+**Anchors:** `0` random cool-math reel; `6` the order escalates but two transitions are
+arbitrary; `12` every transition preserves a visible object/invariant and the overview reveals
+one continuous world.
 
-### C3. WebMCP causality and indispensability — 16 pts
+### C3. WebMCP causality and indispensability — 15 pts
 
-**What it means:** WebMCP is visibly the control layer connecting an external tutor to the
-world, not a badge, inspector screenshot, or interchangeable internal AI call.
+**What it means:** WebMCP is visibly the control layer through which the external Tutor reads
+and mutates the world, not a badge or interchangeable internal AI button.
 
-**How to check it:** For each of the six crescendo calls and three earlier hero calls, record
-the tool name, visible target, visible change, attribution, and undo result. Inspect the HUD
-to ensure it is driven by that actual invocation.
+**How to check it:** For each showcased call, record tool, visible target, visible result,
+attribution, and undo. Confirm the HUD is driven by the real invocation and the inspector
+resolves to exactly `18 / 18`.
 
-**Scoring anchors:**
-- `0` — WebMCP appears only as copy or a tool count.
-- `8` — real calls are visible but feel detached from their on-canvas effects.
-- `16` — every showcased call has immediate, legible cause-and-effect, and the external-agent
-  architecture is impossible to remove without breaking the demonstrated product.
+**Anchors:** `0` copy/count only; `7` calls are real but detached from effects; `15` every
+hero call has immediate causality and removing WebMCP would break the demonstrated product.
 
-### C4. Human–tutor shared-world choreography — 12 pts
+### C4. Human–Tutor shared-world choreography — 10 pts
 
-**What it means:** Learner and tutor take alternating, visually distinct turns on the same
-objects while preserving learner agency.
+**What it means:** Learner and Tutor alternate clear turns on the same objects without the
+Tutor stealing authorship or learner control.
 
-**How to check it:** In the opening, attention, and barycentric acts, verify at least one
-graphite learner action and one purple tutor action, separate attribution, a shared activity
-history, and learner-controlled undo or revision.
+**How to check it:** In the opening, training, barycentric, and finale acts, confirm graphite
+learner action, purple Tutor action, separate attribution, shared history, and learner undo.
 
-**Scoring anchors:**
-- `0` — the tutor talks beside the work or replaces it wholesale.
-- `6` — both actors edit the canvas, but turn ownership or reversibility is unclear.
-- `12` — authorship, causality, revision, and learner control are instantly legible in all
-  three acts.
+**Anchors:** `0` Tutor only talks beside/replaces work; `5` both edit but ownership or
+reversibility is unclear; `10` authorship, causality, revision, and control are unmistakable.
 
-### C5. Calculus as a living relationship — 10 pts
+### C5. Gamma calculus as a living probability relationship — 10 pts
 
-**What it means:** The equation, curve, tangent, bounds, shaded area, and numeric values form
-one reactive semantic system.
+**What it means:** Recurrence, equation, curve, bound, tangent, shaded area, normalization,
+and CDF form one reactive semantic system.
 
-**How to check it:** Change the source equation or parameter, then drag an integration bound.
-Confirm curve, tangent, shading, and displayed values update in the same committed state.
+**How to check it:** Correct the recurrence, reconstruct it, drag the CDF bound, and change
+the Gamma shape parameter. Recompute total area and one displayed CDF/tangent value.
 
-**Scoring anchors:**
-- `0` — a static graph or unrelated equation and picture.
-- `5` — the graph reacts, but bounds or derived values remain passive or visually unclear.
-- `10` — every linked element updates correctly and the relationship remains readable in a
-  16:9 cinematic crop.
+**Anchors:** `0` static/unrelated graph; `5` graph reacts but bound or normalization is
+passive; `10` every linked element updates correctly and remains cinematic at 16:9.
 
-### C6. Attention as geometry — 10 pts
+### C6. Attention geometry and honest training — 12 pts
 
-**What it means:** Query/key projection, angular similarity, dot products, and softmax
-attention become one understandable live spatial construction.
+**What it means:** Q/K/V projection, dot products, scaled softmax, attention ribbons,
+prediction, cross-entropy, and a real tiny-model update form one understandable mechanism.
 
-**How to check it:** Edit one matrix entry and independently compute the two visible query–key
-dot products and their softmax. Confirm the grid, vectors, angles, ribbon widths, and labels
-change consistently.
+**How to check it:** Edit one matrix entry and recompute visible dot products/softmax. Run one
+training step and verify a real weight mutation, higher target probability, lower loss, and an
+undoable commit. The UI must say “tiny transformer,” not imply a frontier LLM is trained.
 
-**Scoring anchors:**
-- `0` — generic matrix animation with “attention” labels.
-- `5` — vectors transform correctly, but attention scores are static or hard to connect.
-- `10` — a viewer can visually trace matrix edit → vector geometry → dot products → softmax
-  weights, with correct live values.
+**Anchors:** `0` generic matrix/LLM theater; `6` attention works but training is static or
+opaque; `12` a viewer can trace matrix → geometry → softmax → prediction → loss → update.
 
-### C7. Olympiad geometry depth — 10 pts
+### C7. Barycentric and Olympiad geometry depth — 10 pts
 
-**What it means:** Homothety, spiral similarity, and barycentric coordinates are real dynamic
-constructions with proof-relevant invariants, not decorative diagrams.
+**What it means:** Attention weights become real barycentric coordinates before expanding
+into dynamic homothety and spiral similarity.
 
-**How to check it:** Drag each designated source point. Verify tangent-circle dependency and
-homothety ratio; equal-angle/segment mapping for spiral similarity; signed-area coordinates
-and centroid `[1:1:1]` for barycentrics.
+**How to check it:** Verify `P = αA + βB + γC`, sum-to-one, and signed areas; drag sources and
+check homothety ratios plus equal-angle/segment mapping at the spiral center.
 
-**Scoring anchors:**
-- `0` — static or mathematically shallow geometry artwork.
-- `5` — homothety is dynamic, but spiral/barycentric layers are absent or ornamental.
-- `10` — all three constructions remain correct, legible, and visually exceptional through
-  the planned interactions.
+**Anchors:** `0` decorative diagram; `5` one dynamic construction but missing bridge/depth;
+`10` all invariants are correct, live, and visually exceptional.
 
-### C8. Cinematic shot readiness — 7 pts
+### C8. 3D simplex and number-theory finale — 10 pts
 
-**What it means:** The live product offers deterministic states and camera targets that can
-be captured cleanly without brittle coordinate improvisation.
+**What it means:** A mathematically correct projected tetrahedral probability simplex becomes
+an integer lattice and a computed partition-generating-function visualization that honestly
+reveals Ramanujan's mod-5 congruence.
 
-**How to check it:** From reset, reach every storyboard shot by named target or visible action.
-Capture at 2560×1440 and confirm stable framing, settled end states, and no overlay collision.
+**How to check it:** Change one simplex weight and verify normalized 4-way barycentrics and
+the visible section. Recompute a sample of generated partition coefficients and verify all
+shown `p(5n+4)` values are divisible by five. Reject any unsupported claim of a complete
+proof.
 
-**Scoring anchors:**
-- `0` — manual panning and lucky timing are required for most shots.
-- `3` — core scenes are addressable, but opening, overview, or overlays require manual repair.
-- `7` — every shot has a deterministic entry, action, rest state, and exit-ready composition.
+**Anchors:** `0` decorative 3D/Ramanujan labels; `5` one half is real while the transition or
+computation is shallow; `10` projected geometry, lattice morph, coefficients, and congruence
+are correct, continuous, and tool-controlled.
 
-### C9. Legibility and visual discipline — 4 pts
+### C9. Cinematic shot readiness and legibility — 5 pts
 
-**What it means:** Ivory, graphite, and purple stay coherent while dense mathematics remains
-readable after ordinary video downscaling.
+**What it means:** Every shot has a deterministic entry/action/rest state, safe framing, one
+dominant idea, and readable math after 1280×720 downscaling.
 
-**How to check it:** Downscale each keyframe to 1280×720. Inspect all equations, values,
-tool traces, authorship marks, and focus states; flag clipped labels or competing focal points.
+**How to check it:** Reach each shot from Reset by named target/visible action at 2560×1440;
+downscale keyframes and inspect labels, overlays, tool traces, and author marks.
 
-**Scoring anchors:**
-- `0` — any key mathematical relationship becomes unreadable or the palette becomes noisy.
-- `2` — readable overall with two or more crowded/ambiguous frames.
-- `4` — every keyframe has one dominant idea, readable math, and unmistakable author color.
+**Anchors:** `0` brittle framing/unreadable math; `2` mostly capturable with collisions or
+crowding; `5` every shot is deterministic, clean, and immediately readable.
 
 ### C10. Visible feature density without fakery — 2 pts
 
-**What it means:** The film earns a high wow-per-second while every visible control, value,
-and mathematical response is real.
+**What it means:** The film maximizes wow-per-second while every hero behavior is real.
 
-**How to check it:** Count the storyboard's distinct visible product capabilities and mark
-whether each is interactive, computed, attributed, and repeatable. Flag any mock or film-only
-behavior.
+**How to check it:** Mark every visible capability as interactive, computed, attributed, and
+repeatable.
 
-**Scoring anchors:**
-- `0` — any hero behavior is fake or the montage repeatedly shows the same capability.
-- `1` — all hero behavior is real but one act feels redundant or thin.
-- `2` — every act adds a distinct real capability and no hero moment depends on fakery.
+**Anchors:** `0` any hero behavior is fake; `1` all real but one act is thin/redundant; `2`
+every act adds a distinct real capability with no theater.
 
 ## Out of scope
 
-- Narration, voice generation, scriptwriting, music, sound design, capture, compositing,
-  rendering, thumbnails, upload, deployment, or submission edits.
-- Mobile completeness, authentication, collaboration networking, production persistence,
-  generalized OCR, generalized theorem proving, 3D mathematics, or non-demo edge cases.
-- Automated tests, CI/CD, monitoring, analytics, enterprise architecture, or recovery systems.
-- Reimplementing Desmos, GeoGebra, Miro, Overleaf, or Asymptote beyond the exact filmed paths.
+- Narration, voice, scriptwriting, music, capture, compositing, rendering, thumbnails,
+  deployment, submission edits, or any dirty video-workspace file.
+- Mobile completeness, auth, networking, production persistence, generalized OCR, generalized
+  theorem proving, arbitrary 3D modeling, or non-demo edge cases.
+- Automated tests, CI/CD, monitoring, analytics, enterprise architecture, and recovery systems.
+- Reimplementing Desmos, GeoGebra, Miro, Overleaf, or Asymptote beyond the filmed paths.
 
 ## Constraints
 
-- Keep the existing React/TypeScript/Vinext stack, canonical world reducer, shared undo/history,
+- Preserve the React/TypeScript/Vinext stack, canonical world reducer, shared undo/history,
   and exactly eighteen WebMCP tools.
-- Preserve ivory/graphite/purple visual identity; purple is reserved for tutor authorship and
-  active mathematical focus.
-- Every visible storyboard feature must be a functioning product behavior, but implementation
-  should remain hackathon-simple and optimized for the deterministic judge path.
-- No tests or CI/CD. Verification is type-check, build, browser inspection, mathematical spot
-  checks, and two manual golden-path runs.
+- Preserve Mathburst's ivory/graphite/purple identity; use a temporary dark focus field only
+  where it materially clarifies dense number-theory or 3D geometry.
+- Every visible storyboard feature must function, but its implementation should be the
+  cheapest deterministic hackathon path.
+- No tests or CI/CD. Verification is type-check, build, browser inspection, independent math
+  spot checks, and two manual golden-path runs.
 - Only Luna-or-lower subagents may be used.
-- Existing uncommitted narration, capture, and video-workspace files are off-limits.
+- Existing narration, capture, and video-workspace changes remain off-limits.
 
 ## Score log
 
-| Round | Score | Δ | Gates | Note |
-|---|---:|---:|---|---|
-| 0 | — | — | — | Baseline after approval |
+| Round | Rubric | Score | Δ | Gates | Note |
+|---|---|---:|---:|---|---|
+| 0 | v1 | 36 | — | G1–G3, G6–G7 pass; G4–G5 fail | Superseded scope; retained for audit |

@@ -2,27 +2,54 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import type { WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import MathObjectView from './MathObjectView'
 
+function smoothStrokePath(points: { x: number; y: number }[]) {
+  if (points.length === 0) return ''
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
+  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
+
+  // Quadratic midpoint smoothing keeps the captured trajectory faithful while
+  // removing the mouse's tiny corners. The final point is explicitly landed on.
+  let path = `M ${points[0].x} ${points[0].y}`
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const current = points[index]
+    const next = points[index + 1]
+    const midpoint = { x: (current.x + next.x) / 2, y: (current.y + next.y) / 2 }
+    path += ` Q ${current.x} ${current.y} ${midpoint.x} ${midpoint.y}`
+  }
+  const penultimate = points[points.length - 2]
+  const last = points[points.length - 1]
+  path += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`
+  return path
+}
+
 function objectContents(object: WorldObject, world: WorldState, run: (action: WorldAction) => void): ReactNode {
   const width = Math.max(1, object.bounds.width)
   const height = Math.max(1, object.bounds.height)
 
   switch (object.kind) {
     case 'ink':
-      return (
-        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
-          <polyline
-            points={object.points.map((point) => `${point.x},${point.y}`).join(' ')}
-            fill="none"
-            stroke={object.color}
-            strokeWidth={object.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      )
+      {
+        const strokes = object.strokes?.length ? object.strokes : [{ points: object.points }]
+        const strokeWidth = Math.max(0.75, object.width * (object.strokeScale ?? 1))
+        return (
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+            {strokes.map((stroke, index) => (
+              <path
+                key={`${object.id}-stroke-${index}`}
+                d={smoothStrokePath(stroke.points)}
+                fill="none"
+                stroke={object.color}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect={object.strokeScale === undefined ? 'non-scaling-stroke' : undefined}
+              />
+            ))}
+          </svg>
+        )
+      }
     case 'text':
-      return <p style={{ color: object.color, fontSize: object.fontSize }}>{object.text}</p>
+      return <p className={object.presentation === 'handwritten' ? 'is-handwritten' : undefined} style={{ color: object.color, fontSize: object.fontSize }}>{object.text}</p>
     case 'image':
       return <img src={object.src} alt={object.alt} draggable={false} />
     case 'shape':

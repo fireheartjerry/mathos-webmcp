@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createWorldTools } from '../domain/tools/definitions'
-import type { ToolResult, WorldBridge } from '../domain/tools/definitions'
+import type { ToolResult, WorldBridge, WorldTraceEvent } from '../domain/tools/definitions'
 import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld, DEMO_SCENES, HERO_EQUATION_ID, HERO_GRAPH_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import { createSeedWorld, DEMO_SCENES, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import type { DemoScene } from '../domain/world/seed'
+import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
   approveReconstruction,
@@ -31,6 +32,7 @@ import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
 import WebMCPInspector from './WebMCPInspector'
+import WebMCPTrace from './WebMCPTrace'
 import WorldCanvas from './WorldCanvas'
 
 const humanAction = (summary: string, operations: WorldOperation[]): WorldAction => ({
@@ -41,6 +43,30 @@ const humanAction = (summary: string, operations: WorldOperation[]): WorldAction
 })
 
 const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: 'Tutor', action: '' }
+
+function cameraViewport(scene: DemoScene, width: number, height: number) {
+  const target = DEMO_SCENES[scene]
+  // Give wide 16:9 captures a more cinematic crop while keeping the full frame
+  // usable on the ordinary laptop viewport. Overview is deliberately world-fit.
+  const responsiveScale = scene === 'overview' ? 1 : Math.min(1.8, Math.max(1, width / 1382))
+  const zoom = target.zoom * responsiveScale
+  return {
+    x: width / 2 - target.center.x * zoom,
+    y: height / 2 - target.center.y * zoom,
+    zoom,
+  }
+}
+
+function nearestSceneForViewport(viewport: WorldState['viewport'], width: number, height: number): DemoScene {
+  const center = { x: (width / 2 - viewport.x) / viewport.zoom, y: (height / 2 - viewport.y) / viewport.zoom }
+  return (Object.keys(DEMO_SCENES) as DemoScene[]).reduce((nearest, scene) => {
+    const target = DEMO_SCENES[scene].center
+    const candidateDistance = Math.hypot(center.x - target.x, center.y - target.y)
+    const nearestTarget = DEMO_SCENES[nearest].center
+    const nearestDistance = Math.hypot(center.x - nearestTarget.x, center.y - nearestTarget.y)
+    return candidateDistance < nearestDistance ? scene : nearest
+  }, 'opening' as DemoScene)
+}
 
 function demoReconstruction(audited: boolean): WorldObject[] {
   return [
@@ -78,11 +104,26 @@ function demoReconstruction(audited: boolean): WorldObject[] {
   ]
 }
 
+function applyCapturedOpeningAttempt(world: WorldState, samples: Record<string, HandwritingSample>): WorldState {
+  const attempt = world.objects[OPENING_ATTEMPT_ID]
+  if (!attempt) return world
+  const captured = handwritingSampleToInk(samples, 'opening-attempt', {
+    id: OPENING_ATTEMPT_ID,
+    bounds: attempt.bounds,
+    color: attempt.kind === 'ink' ? attempt.color : '#171713',
+    width: attempt.kind === 'ink' ? attempt.width : 7.5,
+    rotation: attempt.rotation,
+    author: 'human',
+    opacity: attempt.opacity,
+  })
+  return captured ? { ...world, objects: { ...world.objects, [OPENING_ATTEMPT_ID]: captured } } : world
+}
+
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const worldRef = useRef(world)
   const [hydrated, setHydrated] = useState(false)
-  const [activeScene, setActiveScene] = useState<DemoScene>('calculus')
+  const [activeScene, setActiveScene] = useState<DemoScene>('opening')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -94,12 +135,25 @@ export default function MathburstWorkspace() {
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus | null>(null)
   const [nextStep, setNextStep] = useState('')
   const [attemptFeedback, setAttemptFeedback] = useState('')
+  const [traceEvents, setTraceEvents] = useState<WorldTraceEvent[]>([])
+  const traceTimerRef = useRef<number | null>(null)
+  const handwritingSamplesRef = useRef<Record<string, HandwritingSample>>({})
 
   useEffect(() => {
+    const samples = loadHandwritingSamples()
+    handwritingSamplesRef.current = samples
     const stored = loadWorld()
     if (stored) {
-      worldRef.current = stored
-      setWorld(stored)
+      const captured = applyCapturedOpeningAttempt(stored, samples)
+      worldRef.current = captured
+      setWorld(captured)
+      setActiveScene(nearestSceneForViewport(captured.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)))
+    } else {
+      const seeded = createSeedWorld()
+      const captured = applyCapturedOpeningAttempt(seeded, samples)
+      const centered = { ...captured, viewport: cameraViewport('opening', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
+      worldRef.current = centered
+      setWorld(centered)
     }
     setHydrated(true)
   }, [])
@@ -107,6 +161,12 @@ export default function MathburstWorkspace() {
   useEffect(() => {
     if (hydrated) saveWorld(world)
   }, [hydrated, world])
+
+  useEffect(() => {
+    if (!hydrated) return
+    const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
+    setActiveScene((current) => current === nearest ? current : nearest)
+  }, [hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
     const next = dispatchWorldAction(worldRef.current, action)
@@ -239,29 +299,111 @@ export default function MathburstWorkspace() {
   }, [])
 
   const navigateToScene = useCallback((scene: DemoScene) => {
-    const target = DEMO_SCENES[scene]
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
-    run(humanAction(`Viewed the ${target.label.toLowerCase()} world`, [{
-      type: 'viewport',
-      viewport: {
-        x: canvasWidth / 2 - target.center.x * target.zoom,
-        y: canvasHeight / 2 - target.center.y * target.zoom,
-        zoom: target.zoom,
-      },
-    }]))
+    // Camera navigation is intentionally not a world commit: changing scenes should
+    // never pollute learner history or the activity rail.
+    const viewport = cameraViewport(scene, canvasWidth, canvasHeight)
+    const next = { ...worldRef.current, viewport }
+    worldRef.current = next
+    setWorld(next)
     setActiveScene(scene)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
-  }, [run])
+  }, [])
 
   const bridge = useMemo<WorldBridge>(() => ({
     getWorld: () => worldRef.current,
     runAgentAction: runAgent,
     runHistory: runHistoryBridge,
+    onTrace: (event) => {
+      setTraceEvents((current) => [
+        ...current.filter((existing) => existing.invocationId !== event.invocationId),
+        event,
+      ].slice(-6))
+      if (traceTimerRef.current !== null) window.clearTimeout(traceTimerRef.current)
+      traceTimerRef.current = window.setTimeout(() => setTraceEvents([]), 5200)
+    },
   }), [runAgent, runHistoryBridge])
   const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
+
+  const openingTutor = async () => {
+    const getSelection = webMcpTools.find((tool) => tool.name === 'get_selection')
+    const getObjects = webMcpTools.find((tool) => tool.name === 'get_objects')
+    const createObjects = webMcpTools.find((tool) => tool.name === 'create_objects')
+    if (!getSelection || !getObjects || !createObjects || worldRef.current.objects[OPENING_ATTEMPT_ID] === undefined) return
+    await getSelection.execute({})
+    await getObjects.execute({ ids: [OPENING_ATTEMPT_ID] })
+    const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
+    const tutorNote = handwritingSampleToInk(samples, 'tutor-note', {
+      id: 'opening_annotation_question',
+      bounds: { x: -730, y: 448, width: 360, height: 58 },
+      color: '#7c5cff',
+      width: 7.5,
+      rotation: -1.8,
+      author: 'agent',
+      opacity: 1,
+    }) ?? {
+      id: 'opening_annotation_question', kind: 'text' as const, text: 'v = −e⁻ˣ. Two negatives.', color: '#7c5cff', fontSize: 23,
+      presentation: 'handwritten' as const, bounds: { x: -730, y: 448, width: 360, height: 58 }, rotation: -1.8, author: 'agent' as const, opacity: 1,
+    }
+    await createObjects.execute({
+      summary: 'Tutor annotated the reasoning break',
+      objects: [
+        {
+          id: 'opening_annotation_circle', kind: 'ink',
+          points: [
+            { x: 4, y: 27 }, { x: 10, y: 10 }, { x: 28, y: 3 }, { x: 48, y: 7 },
+            { x: 58, y: 21 }, { x: 57, y: 38 }, { x: 44, y: 50 }, { x: 24, y: 52 },
+            { x: 8, y: 43 }, { x: 4, y: 27 },
+          ],
+          color: '#7c5cff', width: 4, bounds: { x: -470, y: 324, width: 62, height: 56 }, rotation: -3, author: 'agent', opacity: 1,
+        },
+        {
+          id: 'opening_annotation_strike', kind: 'ink',
+          points: [{ x: 0, y: 8 }, { x: 18, y: 6 }, { x: 37, y: 7 }, { x: 57, y: 3 }],
+          color: '#7c5cff', width: 5, bounds: { x: -468, y: 376, width: 62, height: 14 }, rotation: -6, author: 'agent', opacity: 1,
+        },
+        tutorNote,
+      ],
+    })
+  }
+
+  const correctGammaSign = () => {
+    const attempt = worldRef.current.objects[OPENING_ATTEMPT_ID]
+    if (!attempt) return
+    const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
+    const capturedCorrection = handwritingSampleToInk(samples, 'opening-correction', {
+      id: OPENING_CORRECTION_ID,
+      bounds: { x: attempt.bounds.x, y: attempt.bounds.y + attempt.bounds.height + 12, width: attempt.bounds.width, height: 125 },
+      color: '#171713',
+      width: 7.5,
+      rotation: -0.8,
+      author: 'human',
+      opacity: 1,
+    })
+    if (capturedCorrection) {
+      const frame = worldRef.current.objects.opening_problem
+      run(humanAction('Corrected the Gamma recurrence sign', [
+        { type: 'put', object: capturedCorrection },
+        ...(frame?.kind === 'frame' && !frame.childIds.includes(OPENING_CORRECTION_ID)
+          ? [{ type: 'put' as const, object: { ...frame, childIds: [...frame.childIds, OPENING_CORRECTION_ID] } }]
+          : []),
+        { type: 'select', ids: [OPENING_CORRECTION_ID] },
+      ]))
+      return
+    }
+    if (attempt.kind !== 'text') return
+    run(humanAction('Corrected the Gamma recurrence sign', [{
+      type: 'put', object: {
+        ...attempt,
+        text: 'Γ(9/2) = ∫₀∞ x⁷ᐟ²e⁻ˣ dx\n= [−x⁷ᐟ²e⁻ˣ]₀∞ + (7/2)Γ(7/2)\n= (7/2)(5/2)(3/2)(1/2)√π = 105√π/16',
+        bounds: { ...attempt.bounds, height: 205 },
+        author: 'human',
+      },
+    }]))
+  }
 
   useEffect(() => {
     if (!hydrated) return
@@ -299,16 +441,23 @@ export default function MathburstWorkspace() {
 
   const submitAttempt = () => {
     const attempts = world.session.attempts + 1
+    const normalized = nextStep
+      .toLowerCase()
+      .replace(/\\left|\\right|\\,/g, '')
+      .replace(/[{}\\*\s]/g, '')
+    const correct = normalized === 'xe^x-e^x+c' || normalized === 'e^x(x-1)+c'
     run(humanAction('Checked a calculus step', [{
       type: 'session',
-      patch: {
-        attempts,
-        currentMisconception: 'integration-by-parts-differential',
-      },
+        patch: {
+          attempts,
+          currentMisconception: correct ? null : 'integration-by-parts-differential',
+        },
     }]))
-    setAttemptFeedback(attempts === 1
-      ? 'Not quite. Write du before carrying the term forward.'
-      : 'Still stuck symbolically. Ask Tutor for another representation.')
+    setAttemptFeedback(correct
+      ? 'Correct. The antiderivative is xeˣ − eˣ + C.'
+      : attempts === 1
+        ? 'Not quite. Write du before carrying the term forward.'
+        : 'Still stuck symbolically. Ask Tutor for another representation.')
   }
 
   const requestTutorHelp = () => {
@@ -344,9 +493,13 @@ export default function MathburstWorkspace() {
 
   const resetDemo = () => {
     const seed = createSeedWorld()
-    worldRef.current = seed
-    setWorld(seed)
-    setActiveScene('calculus')
+    const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
+    handwritingSamplesRef.current = samples
+    const captured = applyCapturedOpeningAttempt(seed, samples)
+    const centered = { ...captured, viewport: cameraViewport('opening', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
+    worldRef.current = centered
+    setWorld(centered)
+    setActiveScene('opening')
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -478,8 +631,8 @@ export default function MathburstWorkspace() {
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         deleteSelection()
-      } else if (event.key === '1' || event.key === '2' || event.key === '3') {
-        const scene = ({ '1': 'calculus', '2': 'geometry', '3': 'matrix' } as const)[event.key]
+      } else if (event.key === '0' || event.key === '1' || event.key === '2' || event.key === '3' || event.key === '4') {
+        const scene = ({ '0': 'opening', '1': 'calculus', '2': 'geometry', '3': 'matrix', '4': 'overview' } as const)[event.key]
         navigateToScene(scene)
       } else {
         const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', g: 'graph', c: 'geometry', x: 'matrix', s: 'shape', a: 'arrow', f: 'frame' }
@@ -536,7 +689,21 @@ export default function MathburstWorkspace() {
         run={run}
         onEditObject={openEditor}
         agentCommitIds={agentCommitIds}
-        tutorOverlay={world.session.reconstructionStatus === 'approved' ? (
+        tutorOverlay={activeScene === 'opening' ? (
+          <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
+            <header><span>01 · Reasoning check</span><b>human attempt</b></header>
+            {!world.objects.opening_annotation_question ? (
+              <button type="button" disabled={agentBusy} onClick={() => { void openingTutor() }}>Ask WebMCP tutor</button>
+            ) : (
+              <button
+                type="button"
+                onClick={correctGammaSign}
+                disabled={agentBusy || Boolean(world.objects[OPENING_CORRECTION_ID]) || (world.objects[OPENING_ATTEMPT_ID]?.kind === 'text' && world.objects[OPENING_ATTEMPT_ID].text.includes('105√π/16'))}
+              >Correct the sign</button>
+            )}
+            <p>{world.objects.opening_annotation_question ? 'The Tutor marked the sign lost during integration by parts.' : 'Use the live page tools to inspect and annotate the recurrence.'}</p>
+          </section>
+        ) : world.session.reconstructionStatus === 'approved' ? (
           <section className="tutor-attempt-panel" aria-label="Try the next calculus step">
             <header><span>02 · Your turn</span><b>{world.session.attempts} attempts</b></header>
             <label htmlFor="next-step-input">My next step</label>
@@ -582,6 +749,7 @@ export default function MathburstWorkspace() {
       />
       <AgentPresence presence={presence} />
       <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />
+      <WebMCPTrace events={traceEvents} />
 
       {selectedObjects.length > 0 && (
         <div className="object-context" aria-label="Selected object actions">

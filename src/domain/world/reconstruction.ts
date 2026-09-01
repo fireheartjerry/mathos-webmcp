@@ -48,6 +48,8 @@ export function approveReconstruction(world: WorldState): WorldAction {
   const draft = world.reconstruction
   if (!draft) throw new Error('There is no reconstruction to approve.')
   const source = world.objects[draft.sourceImageId]
+  const problem = world.objects.problem
+  const approvedIds = draft.proposedObjects.map((object) => object.id)
   return {
     id: actionId(),
     source: 'human',
@@ -55,6 +57,9 @@ export function approveReconstruction(world: WorldState): WorldAction {
     operations: [
       ...draft.proposedObjects.map((object) => ({ type: 'put' as const, object })),
       ...(source ? [{ type: 'put' as const, object: { ...source, opacity: 0.18 } }] : []),
+      ...(problem?.kind === 'frame'
+        ? [{ type: 'put' as const, object: { ...problem, childIds: [...new Set([...problem.childIds, ...approvedIds])] } }]
+        : []),
       { type: 'session', patch: { reconstructionStatus: 'approved' } },
       { type: 'reconstruction', draft: null },
     ],
