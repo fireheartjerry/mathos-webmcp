@@ -34,15 +34,15 @@ function expandDirectorTargetIds(world: WorldState, ids: string[]): string[] {
 }
 
 const sceneBreadcrumbs: Record<CatalogSceneId, { number: string; title: string; state: string }> = {
-  'gamma-clinic': { number: '01', title: 'Recurrence Clinic', state: 'human + Tutor' },
-  'gamma-probability': { number: '02', title: 'Area Becomes Probability', state: 'normalized mass' },
-  'attention-geometry': { number: '03', title: 'Attention Geometry', state: 'live softmax' },
-  'train-from-scratch': { number: '04', title: 'Train From Scratch', state: 'real optimization' },
+  'gamma-clinic': { number: '01', title: 'Gamma Recurrence', state: 'human + tutor' },
+  'gamma-probability': { number: '02', title: 'Gamma Density', state: 'normalized mass' },
+  'attention-geometry': { number: '03', title: 'Attention', state: 'live softmax' },
+  'train-from-scratch': { number: '04', title: 'Gradient Step', state: 'model update' },
   'attention-barycentrics': { number: '05', title: 'Barycentric Coordinates', state: 'affine weights' },
-  'spiral-similarity': { number: '06', title: 'Homothety & Spiral Similarity', state: 'preserved invariant' },
-  'tetrahedral-probability': { number: '07', title: 'Tetrahedral Probability', state: 'projected 3-simplex' },
-  'partition-observatory': { number: '08', title: 'Partition Observatory', state: 'finite verification' },
-  overview: { number: '—', title: 'One mathematical world', state: 'all islands' },
+  'spiral-similarity': { number: '06', title: 'Spiral Similarity', state: 'preserved ratio' },
+  'tetrahedral-probability': { number: '07', title: 'Simplex', state: 'projected 3-simplex' },
+  'partition-observatory': { number: '08', title: 'Integer Partitions', state: 'finite verification' },
+  overview: { number: '—', title: 'Project overview', state: 'all scenes' },
 }
 
 export default function WorldCanvas({

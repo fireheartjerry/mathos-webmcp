@@ -9,11 +9,11 @@ export default function NotFound() {
     <main className="mathburst-404">
       <header>
         <a className="wordmark" href="/" aria-label="Mathburst home"><span>∫</span> Mathburst</a>
-        <em>shared mathematical world</em>
+        <em>math canvas</em>
       </header>
       <section aria-labelledby="not-found-title">
         <span>404 · outside the frame</span>
-        <h1 id="not-found-title">This part of the world is still blank.</h1>
+        <h1 id="not-found-title">This canvas is blank.</h1>
         <p>The mathematics is one step back.</p>
         <a href="/">Return to Mathburst <b>→</b></a>
       </section>

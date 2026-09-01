@@ -56,7 +56,7 @@ export default function NumberTheoryView({ object, run }: NumberTheoryViewProps)
   const stopPointer = (event: React.PointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
-    <section className="number-theory-view" aria-label="Partition observatory" onPointerDown={stopPointer}>
+    <section className="number-theory-view" aria-label="Integer partitions" onPointerDown={stopPointer}>
       <header className="number-theory-header">
         <div>
           <span className="math-object-kicker">ARITHMETIC / FINITE OBSERVATORY</span>

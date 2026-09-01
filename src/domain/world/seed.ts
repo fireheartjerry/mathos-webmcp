@@ -147,7 +147,7 @@ export function createSeedWorld(): WorldState {
   }
 
   const objects: WorldObject[] = [
-    frame(OPENING_FRAME_ID, 'Gamma Lab · Recurrence Clinic', [
+    frame(OPENING_FRAME_ID, 'Gamma Function · Gamma Recurrence', [
       'opening_prompt', OPENING_ATTEMPT_ID, SOURCE_IMAGE_ID, HERO_EQUATION_ID,
     ], -860, 70, 820, 550),
     {
@@ -194,7 +194,7 @@ export function createSeedWorld(): WorldState {
       opacity: 0,
     },
 
-    frame('gamma_probability_frame', 'Gamma Lab · Area Becomes Probability', [
+    frame('gamma_probability_frame', 'Gamma Function · Gamma Density', [
       'eq_integrand', HERO_GRAPH_ID, 'gamma_bridge_equation',
     ], 220, 70, 860, 550),
     {
@@ -235,7 +235,7 @@ export function createSeedWorld(): WorldState {
       opacity: 1,
     },
 
-    frame('attention_geometry_frame', 'Tiny Transformer · Attention Geometry', [
+    frame('attention_geometry_frame', 'Tiny Transformer · Attention', [
       attention.id, 'attention_bridge_label',
     ], 1320, 70, 860, 550),
     {
@@ -251,7 +251,7 @@ export function createSeedWorld(): WorldState {
     },
     attention,
 
-    frame('train_from_scratch_frame', 'Tiny Transformer · Train From Scratch', [
+    frame('train_from_scratch_frame', 'Tiny Transformer · Gradient Step', [
       training.id, 'training_truth_label',
     ], 2420, 70, 860, 550),
     {
@@ -282,7 +282,7 @@ export function createSeedWorld(): WorldState {
     },
     barycentric,
 
-    frame('spiral_similarity_frame', 'Olympiad Geometry · Homothety & Spiral Similarity', [
+    frame('spiral_similarity_frame', 'Olympiad Geometry · Spiral Similarity', [
       similarity.id, 'geometry_ratio', 'geometry_prompt', 'geometry_hint',
     ], 220, 750, 860, 550),
     {
@@ -319,7 +319,7 @@ export function createSeedWorld(): WorldState {
     },
     similarity,
 
-    frame('tetrahedral_probability_frame', 'Simplex → Ramanujan · Tetrahedral Probability', [
+    frame('tetrahedral_probability_frame', 'Simplex and Partitions · Simplex', [
       simplex.id, 'simplex_equation',
     ], 1320, 750, 860, 550),
     {
@@ -345,7 +345,7 @@ export function createSeedWorld(): WorldState {
     },
     simplex,
 
-    frame('partition_observatory_frame', 'Simplex → Ramanujan · Partition Observatory', [
+    frame('partition_observatory_frame', 'Simplex and Partitions · Integer Partitions', [
       numberTheory.id, 'partition_equation',
     ], 2420, 750, 860, 550),
     {

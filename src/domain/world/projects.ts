@@ -1,13 +1,13 @@
 import type { Point, Viewport } from './types'
 
-/** The four persistent camera bookmarks in the shared mathematical world. */
+/** The four persistent project templates. */
 export type ProjectId =
   | 'gamma-lab'
   | 'tiny-transformer'
   | 'olympiad-geometry'
   | 'simplex-ramanujan'
 
-/** The eight live scene islands.  `overview` is a camera mode, not a scene. */
+/** The eight live scenes. `overview` is a camera mode, not a scene. */
 export type SceneId =
   | 'gamma-clinic'
   | 'gamma-probability'
@@ -29,7 +29,7 @@ export type ProjectScene = {
   zoom: number
   frameId: string
   keyboard: number
-  /** The sentence that carries the viewer into the next scene. */
+  /** The sentence used to connect this scene to the next one in the video. */
   transition: string
 }
 
@@ -52,25 +52,25 @@ const scene = <T extends ProjectScene>(value: T): T => value
 export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
   'gamma-clinic': scene({
     id: 'gamma-clinic', projectId: 'gamma-lab',
-    title: 'Recurrence Clinic', subtitle: 'Find the sign that breaks',
+    title: 'Gamma Recurrence', subtitle: 'Correct the sign',
     center: { x: -450, y: 340 }, zoom: 1.05, frameId: 'gamma_clinic_frame', keyboard: 1,
     transition: 'The corrected recurrence normalizes into a probability density.',
   }),
   'gamma-probability': scene({
     id: 'gamma-probability', projectId: 'gamma-lab',
-    title: 'Area Becomes Probability', subtitle: 'Mass under a live curve',
+    title: 'Gamma Density', subtitle: 'Area under the curve',
     center: { x: 650, y: 340 }, zoom: 0.95, frameId: 'gamma_probability_frame', keyboard: 2,
     transition: 'Log-masses pass through softmax and become attention weights.',
   }),
   'attention-geometry': scene({
     id: 'attention-geometry', projectId: 'tiny-transformer',
-    title: 'Attention Geometry', subtitle: 'Scores become a direction',
+    title: 'Attention', subtitle: 'Compute a weighted sum',
     center: { x: 1750, y: 340 }, zoom: 1.05, frameId: 'attention_geometry_frame', keyboard: 3,
     transition: 'The weighted value vector is an exact point inside a triangle.',
   }),
   'train-from-scratch': scene({
     id: 'train-from-scratch', projectId: 'tiny-transformer',
-    title: 'Train From Scratch', subtitle: 'One honest gradient step',
+    title: 'Gradient Step', subtitle: 'Update the model weights',
     center: { x: 2850, y: 340 }, zoom: 0.95, frameId: 'train_from_scratch_frame', keyboard: 4,
     transition: 'A learned attention mixture becomes barycentric geometry.',
   }),
@@ -82,19 +82,19 @@ export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
   }),
   'spiral-similarity': scene({
     id: 'spiral-similarity', projectId: 'olympiad-geometry',
-    title: 'Homothety & Spiral Similarity', subtitle: 'The invariant survives motion',
+    title: 'Spiral Similarity', subtitle: 'Preserve the ratio',
     center: { x: 650, y: 1030 }, zoom: 0.95, frameId: 'spiral_similarity_frame', keyboard: 6,
     transition: 'Three weights lift into a fourth dimension without losing their sum.',
   }),
   'tetrahedral-probability': scene({
     id: 'tetrahedral-probability', projectId: 'simplex-ramanujan',
-    title: 'Tetrahedral Probability', subtitle: 'A simplex with one more axis',
+    title: 'Simplex', subtitle: 'Add a dimension',
     center: { x: 1750, y: 1030 }, zoom: 0.9, frameId: 'tetrahedral_probability_frame', keyboard: 7,
     transition: 'Quantized weights form an integer lattice counted by Pascal.',
   }),
   'partition-observatory': scene({
     id: 'partition-observatory', projectId: 'simplex-ramanujan',
-    title: 'Partition Observatory', subtitle: 'From lattice points to Ramanujan',
+    title: 'Integer Partitions', subtitle: 'Compute the coefficients',
     center: { x: 2850, y: 1030 }, zoom: 0.9, frameId: 'partition_observatory_frame', keyboard: 8,
     transition: 'The finite coefficient stream reveals the five-fold congruence.',
   }),
@@ -102,23 +102,23 @@ export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
 
 export const PROJECTS: readonly SavedProject[] = [
   {
-    id: 'gamma-lab', title: 'Gamma Lab', eyebrow: '01 / CALCULUS',
-    description: 'Repair a recurrence, then turn its area into normalized mass.', accent: '#8b6cf6',
+    id: 'gamma-lab', title: 'Gamma Function', eyebrow: '01 / CALCULUS',
+    description: 'Correct the recurrence. Then compute the area under its curve.', accent: '#8b6cf6',
     sceneIds: ['gamma-clinic', 'gamma-probability'],
   },
   {
-    id: 'tiny-transformer', title: 'Tiny Transformer', eyebrow: '02 / LEARNING',
-    description: 'Inspect one-head attention, then train one visible gradient step.', accent: '#e38b57',
+    id: 'tiny-transformer', title: 'Tiny Transformer', eyebrow: '02 / MACHINE LEARNING',
+    description: 'Edit one attention head. Then apply one gradient step.', accent: '#e38b57',
     sceneIds: ['attention-geometry', 'train-from-scratch'],
   },
   {
-    id: 'olympiad-geometry', title: 'Olympiad Geometry', eyebrow: '03 / INVARIANTS',
-    description: 'Move a weighted point through barycentrics and spiral similarity.', accent: '#4c9f9a',
+    id: 'olympiad-geometry', title: 'Olympiad Geometry', eyebrow: '03 / GEOMETRY',
+    description: 'Use barycentric coordinates and spiral similarity to move a point.', accent: '#4c9f9a',
     sceneIds: ['attention-barycentrics', 'spiral-similarity'],
   },
   {
-    id: 'simplex-ramanujan', title: 'Simplex → Ramanujan', eyebrow: '04 / ARITHMETIC',
-    description: 'Lift the weights into a tetrahedron and unfold them into partitions.', accent: '#c5759e',
+    id: 'simplex-ramanujan', title: 'Simplex and Partitions', eyebrow: '04 / NUMBER THEORY',
+    description: 'Map the weights to a tetrahedron. Then count integer partitions.', accent: '#c5759e',
     sceneIds: ['tetrahedral-probability', 'partition-observatory'],
   },
 ]
