@@ -383,9 +383,12 @@ export function createSeedWorld(): WorldState {
   ]
 
   return {
-    version: 1,
+    version: 2,
     title: 'Mathburst',
     objects: Object.fromEntries(objects.map((object) => [object.id, object])),
+    entities: {},
+    bindings: {},
+    timelines: {},
     order: objects.map((object) => object.id),
     selection: [],
     viewport: { x: 0, y: 0, zoom: 1 },

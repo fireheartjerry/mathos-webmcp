@@ -22,6 +22,9 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
   const next: WorldState = {
     ...state,
     objects: { ...state.objects },
+    entities: { ...state.entities },
+    bindings: { ...state.bindings },
+    timelines: { ...state.timelines },
     order: [...state.order],
     selection: [...state.selection],
     session: { ...state.session },
@@ -46,6 +49,36 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
         next.order = next.order.filter((id) => id !== operation.id)
         next.selection = next.selection.filter((id) => id !== operation.id)
       }
+    } else if (operation.type === 'putEntity') {
+      const previous = next.entities[operation.entity.id]
+      inverse.unshift(previous ? { type: 'putEntity', entity: previous } : { type: 'removeEntity', id: operation.entity.id })
+      next.entities[operation.entity.id] = operation.entity
+    } else if (operation.type === 'removeEntity') {
+      const previous = next.entities[operation.id]
+      if (previous) {
+        inverse.unshift({ type: 'putEntity', entity: previous })
+        delete next.entities[operation.id]
+      }
+    } else if (operation.type === 'putBinding') {
+      const previous = next.bindings[operation.binding.id]
+      inverse.unshift(previous ? { type: 'putBinding', binding: previous } : { type: 'removeBinding', id: operation.binding.id })
+      next.bindings[operation.binding.id] = operation.binding
+    } else if (operation.type === 'removeBinding') {
+      const previous = next.bindings[operation.id]
+      if (previous) {
+        inverse.unshift({ type: 'putBinding', binding: previous })
+        delete next.bindings[operation.id]
+      }
+    } else if (operation.type === 'putTimeline') {
+      const previous = next.timelines[operation.timeline.id]
+      inverse.unshift(previous ? { type: 'putTimeline', timeline: previous } : { type: 'removeTimeline', id: operation.timeline.id })
+      next.timelines[operation.timeline.id] = operation.timeline
+    } else if (operation.type === 'removeTimeline') {
+      const previous = next.timelines[operation.id]
+      if (previous) {
+        inverse.unshift({ type: 'putTimeline', timeline: previous })
+        delete next.timelines[operation.id]
+      }
     } else if (operation.type === 'select') {
       inverse.unshift({ type: 'select', ids: [...next.selection] })
       next.selection = operation.ids.filter((id) => Boolean(next.objects[id]))
@@ -61,7 +94,7 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
     } else if (operation.type === 'session') {
       inverse.unshift({ type: 'session', patch: { ...next.session } })
       next.session = { ...next.session, ...operation.patch }
-    } else {
+    } else if (operation.type === 'reconstruction') {
       inverse.unshift({ type: 'reconstruction', draft: next.reconstruction })
       next.reconstruction = operation.draft
     }
