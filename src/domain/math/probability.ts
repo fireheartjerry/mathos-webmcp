@@ -189,4 +189,3 @@ export function massesToSoftmax(masses: readonly number[]): { masses: number[]; 
   const logs = logMasses(safe)
   return { masses: safe, logs, probabilities: softmax(logs) }
 }
-
