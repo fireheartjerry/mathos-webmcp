@@ -1,22 +1,74 @@
+import { validateSemanticWorld } from '../semantic/bindings'
 import type { WorldAction, WorldOperation, WorldState } from './types'
 
 const finite = (...values: number[]) => values.every(Number.isFinite)
 const clone = <T>(value: T): T => structuredClone(value)
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))
+const OPERATION_TYPES = new Set<WorldOperation['type']>([
+  'put',
+  'remove',
+  'putEntity',
+  'removeEntity',
+  'putBinding',
+  'removeBinding',
+  'putTimeline',
+  'removeTimeline',
+  'select',
+  'viewport',
+  'order',
+  'session',
+  'reconstruction'
+])
 
-export function validateWorldAction(_state: WorldState, action: WorldAction): string | null {
-  if (action.operations.length === 0) return 'An action needs at least one operation.'
-  for (const operation of action.operations) {
-    if (operation.type === 'put') {
-      const { bounds, rotation, opacity } = operation.object
-      if (!finite(bounds.x, bounds.y, bounds.width, bounds.height, rotation, opacity)) {
-        return `Object ${operation.object.id} contains a non-finite number.`
-      }
-    }
-    if (operation.type === 'viewport' && !finite(operation.viewport.x, operation.viewport.y, operation.viewport.zoom)) {
-      return 'Viewport contains a non-finite number.'
+function validateOperationShape(operation: unknown): string | null {
+  if (!isRecord(operation) || typeof operation.type !== 'string') return 'Every operation needs a supported type.'
+  if (!OPERATION_TYPES.has(operation.type as WorldOperation['type'])) return `Unsupported operation type ${operation.type}.`
+  if (operation.type === 'put') {
+    if (!isRecord(operation.object) || typeof operation.object.id !== 'string') return 'Put operations need an object with an id.'
+    const bounds = operation.object.bounds
+    if (!isRecord(bounds) || !finite(bounds.x as number, bounds.y as number, bounds.width as number, bounds.height as number)) return `Object ${operation.object.id} contains a non-finite number.`
+    if (!finite(operation.object.rotation as number, operation.object.opacity as number)) {
+      return `Object ${operation.object.id} contains a non-finite number.`
     }
   }
+  if (operation.type === 'viewport') {
+    if (!isRecord(operation.viewport) || !finite(operation.viewport.x as number, operation.viewport.y as number, operation.viewport.zoom as number)) return 'Viewport contains a non-finite number.'
+  }
+  if (operation.type === 'putEntity' && (!isRecord(operation.entity) || typeof operation.entity.id !== 'string')) {
+    return 'putEntity operations need an entity with an id.'
+  }
+  if (operation.type === 'putBinding' && (!isRecord(operation.binding) || typeof operation.binding.id !== 'string')) {
+    return 'putBinding operations need a binding with an id.'
+  }
+  if (operation.type === 'putTimeline' && (!isRecord(operation.timeline) || typeof operation.timeline.id !== 'string')) {
+    return 'putTimeline operations need a timeline with an id.'
+  }
+  if (['remove', 'removeEntity', 'removeBinding', 'removeTimeline'].includes(operation.type) && typeof operation.id !== 'string') {
+    return `${operation.type} operations need an id.`
+  }
   return null
+}
+
+export function validateWorldAction(state: WorldState, action: WorldAction): string | null {
+  if (!action || typeof action !== 'object' || !Array.isArray(action.operations)) {
+    return 'An action needs an operations array.'
+  }
+  if (action.operations.length === 0) return 'An action needs at least one operation.'
+  for (const operation of action.operations) {
+    const shapeError = validateOperationShape(operation)
+    if (shapeError) return shapeError
+  }
+
+  // Apply to a deep candidate first. This makes validation observe the final
+  // state of a batch (including entity/object creation before putBinding), and
+  // keeps a rejected action completely detached from the live world.
+  try {
+    const candidate = clone(state)
+    const { next } = applyOperations(candidate, action.operations)
+    return validateSemanticWorld(next)
+  } catch (error) {
+    return `Action could not be validated: ${error instanceof Error ? error.message : String(error)}`
+  }
 }
 
 function applyOperations(state: WorldState, operations: WorldOperation[]) {
@@ -28,7 +80,7 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
     timelines: { ...state.timelines },
     order: [...state.order],
     selection: [...state.selection],
-    session: { ...state.session },
+    session: { ...state.session }
   }
   const inverse: WorldOperation[] = []
 
@@ -41,11 +93,7 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
     } else if (operation.type === 'remove') {
       const previous = next.objects[operation.id]
       if (previous) {
-        inverse.unshift(
-          { type: 'put', object: previous },
-          { type: 'order', ids: [...next.order] },
-          { type: 'select', ids: [...next.selection] },
-        )
+        inverse.unshift({ type: 'put', object: previous }, { type: 'order', ids: [...next.order] }, { type: 'select', ids: [...next.selection] })
         delete next.objects[operation.id]
         next.order = next.order.filter((id) => id !== operation.id)
         next.selection = next.selection.filter((id) => id !== operation.id)
@@ -88,9 +136,7 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
       next.viewport = operation.viewport
     } else if (operation.type === 'order') {
       inverse.unshift({ type: 'order', ids: [...next.order] })
-      const requested = operation.ids.filter(
-        (id, index) => Boolean(next.objects[id]) && operation.ids.indexOf(id) === index,
-      )
+      const requested = operation.ids.filter((id, index) => Boolean(next.objects[id]) && operation.ids.indexOf(id) === index)
       next.order = [...requested, ...next.order.filter((id) => !requested.includes(id))]
     } else if (operation.type === 'session') {
       inverse.unshift({ type: 'session', patch: { ...next.session } })
@@ -113,15 +159,11 @@ export function dispatchWorldAction(state: WorldState, action: WorldAction): Wor
     ...next,
     history: [...state.history, commit],
     future: [],
-    activity: [...state.activity, commit].slice(-30),
+    activity: [...state.activity, commit].slice(-30)
   }
 }
 
-export function stepWorldHistory(
-  state: WorldState,
-  direction: 'undo' | 'redo',
-  source: WorldAction['source'],
-): WorldState {
+export function stepWorldHistory(state: WorldState, direction: 'undo' | 'redo', source: WorldAction['source']): WorldState {
   const stack = direction === 'undo' ? state.history : state.future
   const commit = stack.at(-1)
   if (!commit) return state
@@ -132,22 +174,22 @@ export function stepWorldHistory(
       ...commit.action,
       id: crypto.randomUUID(),
       source,
-      summary: `${direction === 'undo' ? 'Undid' : 'Redid'} ${commit.action.summary.toLowerCase()}`,
+      summary: `${direction === 'undo' ? 'Undid' : 'Redid'} ${commit.action.summary.toLowerCase()}`
     },
     inverse,
-    at: Date.now(),
+    at: Date.now()
   }
   return direction === 'undo'
     ? {
         ...next,
         history: state.history.slice(0, -1),
         future: [...state.future, commit],
-        activity: [...state.activity, replay].slice(-30),
+        activity: [...state.activity, replay].slice(-30)
       }
     : {
         ...next,
         history: [...state.history, commit],
         future: state.future.slice(0, -1),
-        activity: [...state.activity, replay].slice(-30),
+        activity: [...state.activity, replay].slice(-30)
       }
 }
