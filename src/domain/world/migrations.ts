@@ -791,7 +791,36 @@ const isObjectEntityLinksValid = (objects: UnknownRecord, entities: UnknownRecor
   return true
 }
 
-const isReconstructionDependenciesValid = (value: unknown, objects: UnknownRecord): boolean => {
+const isObjectBindingLinksValid = (
+  object: unknown,
+  entities: UnknownRecord | undefined,
+  bindings: UnknownRecord | undefined,
+): boolean => {
+  if (!isWorldObject(object)) return false
+  const objectRecord = object as unknown as UnknownRecord
+  if (objectRecord.bindingIds === undefined) return true
+  if (!isSafeIdArray(objectRecord.bindingIds)) return false
+
+  const entityId = SEMANTIC_VIEW_KINDS.has(object.kind) && isSafeIdentifier(objectRecord.entityId)
+    ? objectRecord.entityId
+    : null
+  return objectRecord.bindingIds.every((bindingId) => {
+    const binding = bindings && hasOwn(bindings, bindingId) ? bindings[bindingId] : undefined
+    if (!isSemanticBinding(binding) || binding.target.objectId !== object.id) return false
+    const sourceEntity = entities && hasOwn(entities, binding.source.entityId)
+      ? entities[binding.source.entityId]
+      : undefined
+    if (!isSemanticEntity(sourceEntity)) return false
+    return entityId === null || binding.source.entityId === entityId
+  })
+}
+
+const isReconstructionDependenciesValid = (
+  value: unknown,
+  objects: UnknownRecord,
+  entities: UnknownRecord | undefined,
+  bindings: UnknownRecord | undefined,
+): boolean => {
   if (value === null) return true
   if (!isReconstructionDraft(value)) return false
   const draft = value as {
@@ -809,6 +838,9 @@ const isReconstructionDependenciesValid = (value: unknown, objects: UnknownRecor
     proposedIds.add(proposedObject.id)
     combinedObjects[proposedObject.id] = proposedObject
   }
+
+  if (!isObjectEntityLinksValid(combinedObjects, entities)
+    || draft.proposedObjects.some((object) => !isObjectBindingLinksValid(object, entities, bindings))) return false
 
   return hasObjectKind(objects, draft.sourceImageId, 'image')
     && draft.uncertainObjectIds.every((id) => proposedIds.has(id))
@@ -834,7 +866,12 @@ const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
     || !selection.every((id) => hasOwn(objects, id))
     || !isWorldDependenciesValid(objects)
     || !isObjectEntityLinksValid(objects, isRecord(value.entities) ? value.entities : undefined)
-    || !isReconstructionDependenciesValid(value.reconstruction, objects)) return false
+    || !isReconstructionDependenciesValid(
+      value.reconstruction,
+      objects,
+      isRecord(value.entities) ? value.entities : undefined,
+      isRecord(value.bindings) ? value.bindings : undefined,
+    )) return false
 
   const timelineEntities = isRecord(value.entities) ? value.entities : undefined
   if ((version === 2 || value.timelines !== undefined)
