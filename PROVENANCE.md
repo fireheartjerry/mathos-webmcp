@@ -1,124 +1,82 @@
-# Project provenance
+# Mathburst provenance
 
-This file separates the new WebMCP challenge project from existing Mathos systems and external design references.
+This document draws the new-work boundary for the 2026 WebMCP Challenge. Git history is the primary evidence; this file explains what the history contains.
 
-## Challenge dates
+## Submission-period timeline
 
-The official submission period runs from **August 25, 2026 at 11:00 AM Pacific Time** to **September 3, 2026 at 1:00 PM Pacific Time**.
+The official submission period runs from **August 25, 2026 at 11:00 AM Pacific Time** through **September 3, 2026 at 1:00 PM Pacific Time**.
 
-Mathos started this repository during that period. The first dated project commit is `409dfcc` on August 26, 2026.
+This repository was created during that period. Its first dated project commit is `409dfcc` on August 26, 2026.
 
-## The product this repository submits
+The repository first explored a different challenge-period product called **Second Try**, a narrow calculus scratchpad. On August 31 the team made a complete final pivot to **Mathburst**. Second Try predates the final pivot, but it does not predate the challenge and is not presented as the submitted product.
 
-The submitted product is **Second Try** — a math scratchpad in which the learner writes real multi-step working, the page's own computer algebra system finds the first step that stopped being equivalent, and a WebMCP agent teaches to that exact step.
+The evolution is intentionally preserved in Git rather than rewritten. Old screenshots, audits, scripts, tests, and runtime files were removed from the public tree once they no longer described the submitted application.
 
-An earlier concept, *Mathos: From Calculus to Transformers*, was built and then retired during the challenge period after an internal audit. It is not the submission. The change is recorded here rather than erased: the landing narrative, the ten-stage curriculum rail, the curated two-literal diagnosis loop, and the browser-trained transformer lab all belonged to that earlier concept.
+## New Mathburst work
 
-Both concepts are entirely challenge-period work. Retiring one for the other moved no work across the boundary in either direction.
+The following submitted capabilities were designed and implemented during the final Mathburst pivot:
 
-## New challenge-period work
+- the infinite pan-and-zoom mathematical canvas and compact direct-manipulation tool rail;
+- the typed world model for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, frames, and groups;
+- the canonical action kernel shared by human gestures and agent calls;
+- attributed global history, undo/redo, activity rail, agent presence, and local document persistence;
+- live equation-to-graph dependencies, dynamic geometry constructions, and editable matrix transformations;
+- the photograph-to-semantic-scene reconstruction proposal, audit, and learner-approval workflow;
+- the tutoring attempt state and representation-switch interaction;
+- all eighteen Mathburst WebMCP tools, their schemas, registration/read-back bridge, result envelopes, and local inspector;
+- the seeded calculus, Olympiad geometry, and matrix-space showcase scenes;
+- the Mathburst visual system, favicon, Open Graph image, judge path, submission copy, and final demo recording.
 
-All application source in this repository is new challenge-period work. This work includes:
+The pivot is recorded by these commits:
 
-- The mathematics core: expression parser, the dual-route equivalence oracle, the seeded problem generator, and the misconception diagnoser.
-- The session domain: one shared transition function for learners, agents, and the local inspector; monotonic revisions; idempotency; and versioned local persistence.
-- The eighteen WebMCP tool definitions, their input schemas and annotations, the registration bridge, and the seven live platform probes.
-- The scratchpad interface, the Agent Console, and the local inspector.
-- The evidence receipt and its stated claim boundary.
-- The landing page and the visual system built on the frozen token set.
-- The test suite (415 tests).
-- The deployment configuration, the judge-facing documents, and the Remotion composition that assembles the demo video from a real screencast of the production build, including the camera that is positioned from element bounding boxes measured during capture, and the local Kokoro-82M narration pipeline.
+| Commit | Mathburst work |
+| --- | --- |
+| `5999f39` | Approved product/design specification |
+| `2c92db7` | One-shot implementation plan |
+| `fb46057` | Typed world kernel and persistence |
+| `50cdddd` | Human-operable whiteboard |
+| `9b422a2` | Live graph, geometry, and matrix engines |
+| `72a4b15` | Reconstruction, tutoring, and agent presence |
+| `da133d8` | Exact eighteen-tool WebMCP surface |
+| `eec8f44` | Frontier scenes and final visual polish |
 
-The first application-source commit is `8150dc4`, dated August 26, 2026. No application source in this repository predates the submission period.
+Later release commits contain repository cleanup, demo media, and deployment alignment only.
 
-## Retired and relocated challenge-period work
+## Reused challenge-period work
 
-These were built during the challenge period and are no longer on the judged path. They remain challenge-period work; they are simply not part of the submitted product.
+Mathburst retains a small amount of infrastructure written earlier in this same challenge repository:
 
-- **The tiny transformer lab.** A real one-block causal transformer trained in the browser with TensorFlow.js. Moved to `experiments/tiny-transformer/`. It is out of the build, out of the bundle, and out of the demo. `@tensorflow/tfjs` is no longer a dependency of the shipped application. The reason is stated in the README under "What we cut, and why": it exercised no WebMCP tool.
-- **The ten-stage curriculum rail.** Deleted. Nine of its ten stages did not exist.
-- **The curated `36` / `8` diagnosis-and-transfer loop.** Replaced by generated problems and a real equivalence check.
-- **The plain-HTTP proxy to a bare IP address** in the former deployment configuration. Removed.
+- KaTeX rendering through `src/components/Tex.tsx`;
+- supported expression parsing/evaluation and equivalence helpers in `src/domain/math/`;
+- the Vinext/Next/ChatGPT Sites application shell and hosting project;
+- local font assets; and
+- the Remotion recording/rendering workspace, rewritten around the Mathburst demo.
+
+This is reuse within one submission period, not pre-existing commercial source.
 
 ## Pre-existing Mathos work
 
-Mathos Video Generation is an existing Mathos product and service. Its generation engine, API, hosted player, and production capability are not challenge-period source in this repository.
+Mathos is a pre-existing company and product identity. Its production video-generation service, hosted systems, users, partnerships, and any private monorepo are outside this repository and outside the submission.
 
-The earlier concept embedded a canonical Mathos-generated shared-path lesson with this identifier:
+Mathburst does not call or claim the existing Mathos video-generation engine. The judged product runs locally in the browser and needs no Mathos backend.
 
-```text
-dec88f8290464fbe88707899523145e6
-```
+## Third-party software and assets
 
-**That video is no longer part of the judged path.** Video generation is not exposed as an agent tool and is not required by, or referenced from, the demo journey. The hosted lesson and player remain Mathos assets outside this repository.
-
-The submission must not describe the existing Mathos video engine as new challenge-period code. It may describe the new WebMCP learning product as a use of that company capability.
-
-## External software
-
-The application uses the ChatGPT Sites Vinext runtime, React, TypeScript, and:
-
-| Package | Role | Pre-existing or new |
-| --- | --- | --- |
-| `@cortex-js/compute-engine` | The computer algebra system that writes every verdict. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
-| `katex` | Typesetting the problem, the learner's steps, and the engine's expressions. Third-party, MIT-licensed, unmodified. | Pre-existing third-party library |
-| `vitest` | The test runner for the 226-test suite. | Pre-existing third-party tool |
-
-Package names and versions appear in `package.json` and `pnpm-lock.yaml`. No third-party source is vendored, forked, or modified in this repository.
-
-The verdict logic is ours; the symbolic engine underneath it is not, and this document says so plainly. What Second Try contributes is the dual-route relation inference (`equals` or `differentiates`, inferred rather than asked), the first-broken-step walk, the seeded generator with its collision guard, and the agent-facing contract around all of it.
-
-## Design references
-
-The product uses two design references:
-
-- The [YC Requests for Startups Primer](https://www.ycombinator.com/rfs#the-primer) influenced the long-form learning narrative and ambitious thesis.
-- [Sarsa](https://sarsa.app/) influenced the quiet document page, the hairline rules, the restrained motion, and the layout rhythm. The measured reference values are recorded in `docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md`.
-
-The project does not copy source code, text, images, icons, video, or other assets from either reference. The visual system and implementation in this repository are original challenge-period work.
-
-## Credibility claims
-
-Only the following statements about Mathos appear in this repository, and both are corroborated by third-party sources: **Y Combinator W24** and **Forbes 30 Under 30**.
-
-No App Store rating, funding figure, user count, or university-partnership claim appears anywhere in the submission. The reasoning is recorded in `docs/overnight-audit/07_MATHOS_SARSA_DESIGN_DNA.md` §2.6. An earlier README carried a line combining a user count with those two awards; it has been removed.
-
-## Commit boundary
-
-The commit history records the work in order.
-
-**Earlier concept — built, then retired:**
-
-| Commit | Challenge-period work |
+| Dependency or asset | Role |
 | --- | --- |
-| `409dfcc` | Product design |
-| `89a8cd1` | Implementation plans |
-| `8150dc4` | First application source and adaptive judge path |
-| `986976a` | Calculus-to-transformers landing narrative |
-| `6b9b5bd` through `03d775d` | WebMCP tools and live session behavior |
-| `79688d1` | Mathos video integration |
-| `aef2aa8` through `267fdb9` | Real browser-trained transformer lab |
-| `551b549` through `94fed22` | Presentation, navigation polish, and deployment fixes |
-| `5b8196c`, `126c71f` | Judge and submission documents |
+| React, TypeScript, Vinext, Vite | Application/runtime tooling |
+| `@cortex-js/compute-engine` | Browser-side symbolic expression support |
+| KaTeX | Mathematical typesetting |
+| ChatGPT Sites / Cloudflare tooling | Build and hosting |
+| Remotion | Demo-video composition |
+| STIX Two Text and Fira Code | Open-licensed local fonts; notices are included in `public/fonts/` |
 
-**Audit, freeze, and the submitted product:**
+No third-party source is vendored or modified. The seeded calculus photograph in `public/demo/calculus-source.png`, interface, copy, diagrams, and Mathburst branding are challenge-period project assets.
 
-| Commit | Challenge-period work |
-| --- | --- |
-| `6f17b25` | Overnight audit — current state, math feasibility, design DNA, anti-slop research, live WebMCP verification against Chrome 151 |
-| `f8fb147` | The real math core, and the frozen redesign spec |
-| `cfe9d33` | Session domain and the six tools, written against verified Chrome behaviour |
-| `15fe3df` | The scratchpad interface on the frozen design system |
-| `f200ce8` | New landing page; the old product surface retired |
-
-The release-package commit adds only judge and submission documents. It does not change the product source.
-
-## Documents referenced elsewhere
-
-`MATHOS_WEBMCP_OMEGA_CANONICAL_SPEC.md` has never existed in this repository. Any external reference to it describes a document that was not written here and does not govern this work. The frozen specification for the submitted product is `docs/overnight-audit/10_FINAL_REDESIGN_SPEC.md`, which supersedes every earlier design document in this repository, including everything under `docs/plans/` and `docs/superpowers/`.
+The [YC Requests for Startups Primer](https://www.ycombinator.com/rfs#the-primer) influenced the long-term vision of deeply adaptive tutoring. It supplied inspiration, not source, text, images, or product assets.
 
 ## Licence
 
-This repository is released under the MIT Licence. See [`LICENSE`](LICENSE).
+The repository is released under the [MIT Licence](LICENSE).
 
 Copyright 2026 MetaDigits.AI Inc.

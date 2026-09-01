@@ -11,8 +11,7 @@ import '../styles/katex-font-display.css'
 
 /**
  * Math is typeset, never typed. `a = x²` set in the UI font is the single fastest way
- * to make a mathematics product look like a mock-up, and Mathos renders through KaTeX
- * in production, so we do too.
+ * to make a mathematics product look like a mock-up, so Mathburst renders through KaTeX.
  *
  * `throwOnError` is off: a learner mid-keystroke is constantly holding invalid LaTeX,
  * and the editor must not flash an exception at them. Invalid input renders in the

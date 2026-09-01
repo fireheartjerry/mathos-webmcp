@@ -1,5 +1,5 @@
 {
-  "name": "second-try",
+  "name": "mathburst",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -11,10 +11,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:webmcp": "node scripts/final-webmcp-e2e.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@cortex-js/compute-engine": "0.119.0",
@@ -24,7 +21,6 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
-    "@babel/parser": "^8.0.4",
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
     "@openai/sites-vite-plugin": "0.2.0",
@@ -37,7 +33,6 @@
     "typescript": "5.9.3",
     "vinext": "1.0.0-beta.3",
     "vite": "8.0.13",
-    "vitest": "^4.1.11",
     "wrangler": "4.92.0"
   },
   "packageManager": "pnpm@11.10.0"

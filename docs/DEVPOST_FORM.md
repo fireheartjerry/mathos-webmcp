@@ -1,112 +1,61 @@
-# Devpost form — every field, paste-ready
+# Mathburst — Devpost fields
 
-Fill top to bottom. Nothing here needs composing at the deadline.
-The challenge additionally requires the description to cover four specific points; they
-are marked **(required point N)** where they appear.
-
----
+Paste-ready submission copy. Replace only the final public video URL after upload.
 
 ## Project name
 
+```text
+Mathburst
 ```
-Second Try
-```
-
-Not AI-generated, and it means something: the page exists for the attempt after the one
-that went wrong.
 
 ## Elevator pitch
 
-*Devpost caps this at 200 characters. This is 169, counted, not estimated.*
-
-```
-A calculus scratchpad whose own algebra engine finds the first line that stopped being true — and hands 18 WebMCP tools to any agent, so it can verify before it teaches.
+```text
+Mathburst turns a photographed problem into a live canvas where a learner and WebMCP tutor share 18 tools to read, build, graph, transform, and undo the same mathematical world.
 ```
 
 ## Built With
 
-```
-webmcp, typescript, react, next.js, vite, katex, compute-engine, cloudflare-workers, chatgpt-sites, vitest, chrome
-```
-
-## Try it out links
-
-```
-https://mathos-second-try.fireheartjerry.chatgpt.site        (live app)
-https://github.com/fireheartjerry/mathos-webmcp              (source, MIT)
+```text
+webmcp, typescript, react, next.js, vinext, vite, svg, katex, cortex-js-compute-engine, openai-sites, cloudflare-workers, remotion
 ```
 
-## Image gallery
+## Try it out
 
-Devpost uses the **first** image as the gallery thumbnail — for most judges it is the
-entire first impression, seen before any text. Upload in this order:
-
-1. [`docs/images/devpost-thumbnail.png`](images/devpost-thumbnail.png) — 1890×1260,
-   exactly **3:2**, so Devpost's card crop is deterministic rather than whatever its
-   resizer decides. It is the real product, not a mock: line 3 marked *Does not follow*
-   with the diagnosis *"Short of the line above by 3x²"*, and the whole eighteen-tool
-   console beside it. Cropped from `second-try-learn.png` to drop the browser scrollbar
-   and a sentence the viewport had cut in half; nothing was added, retouched or staged.
-2. [`docs/images/platform-probe.png`](images/platform-probe.png) — the seven platform
-   verdicts, including the two Chrome accepts and does not honour. This is the most
-   distinctive thing in the submission and it deserves to be visible without pressing
-   play.
-
-Captions, if Devpost asks for them:
-
-```
-The page's own computer algebra system has marked the first line that stopped being true — and nothing after it. The eighteen WebMCP tools are on the right, grouped so their shape and size are legible without a click.
-```
-
-```
-Seven WebMCP features, each probed by executing it in this browser. Two of them Chrome accepts and silently does not honour, and the page says so.
+```text
+Live app: https://mathos-second-try.fireheartjerry.chatgpt.site
+Source: https://github.com/fireheartjerry/mathos-webmcp
+Video: PASTE_PUBLIC_VIDEO_URL_HERE
 ```
 
 ## Themes
 
-Devpost offers three: **Machine Learning/AI**, **E-commerce/Retail**, **Web**. Tick
-**Web** and **Machine Learning/AI**. Not E-commerce — ticking a theme the project has
-nothing to do with reads as a hedge and gives a judge a reason to discount the other two.
+Select **Web** and **Machine Learning / AI**.
 
-## Video demo
+## Gallery
 
-Upload [`docs/video/second-try-demo.mp4`](video/second-try-demo.mp4) — 2:44, 1920×1080, with
-narration — to YouTube as **public**, then paste the URL here.
+Upload `public/og.png` first. It is the real Mathburst interface at 1200×630 and works as the card thumbnail. Add a final calculus reconstruction screenshot and one geometry/matrix montage frame only if the form benefits from more than one image.
 
-The rules ask that the video cover *"what you built and how you used WebMCP"*, and both
-are in the narration: the marked line, the eighteen-tool surface, the read-only maths
-tools, the agent repairing a line through `executeTool`, the receipt, and the platform
-probe reporting what Chrome does not honour.
+## Video
 
-YouTube title and description, so the upload does not sit there as `second-try-demo.mp4`:
+Upload `docs/video/mathburst-demo.mp4` publicly. Keep the final cut under three minutes, start on the functioning product, include audible narration, and use no copyrighted music.
 
-```
-Second Try — a calculus scratchpad with 18 WebMCP tools (OpenAI WebMCP Challenge)
+Suggested title:
+
+```text
+Mathburst — the shared mathematical world powered by 18 WebMCP tools
 ```
 
+Suggested description:
+
+```text
+A photograph becomes a living mathematical world that a student and any WebMCP tutor can inhabit together.
+
+Mathburst gives a learner and an external tutor equivalent control of one semantic canvas: equations, linked graphs, dynamic geometry, matrix transformations, diagrams, notes, and freehand work. The page registers 18 WebMCP tools, and every agent edit is visible, attributed, and undoable through the same action kernel as the human interface.
+
+Built for the 2026 WebMCP Challenge.
+Source: https://github.com/fireheartjerry/mathos-webmcp
 ```
-A mathematics scratchpad whose own computer algebra system finds the first line of a
-derivation that stopped being true — and hands 18 WebMCP tools to any agent, so it can
-verify against the page's engine before it teaches.
-
-Everything in this recording is the production build driven through its own WebMCP
-tools. No state change was staged; every one went through document.modelContext
-.executeTool.
-
-0:00  A half-finished derivation, and the line the page marked
-0:27  The verdict comes from a computer algebra system, not a language model
-0:39  The whole WebMCP surface: 18 tools, nine read and nine write, in six groups
-1:01  The read-only mathematics tools an agent can check itself with
-1:19  An agent repairs the line it broke, and finishes the answer
-1:44  The receipt: who did what, and what it does not establish
-2:15  Seven WebMCP features probed live — including the two Chrome accepts and
-      silently does not honour
-
-Source, MIT licensed: https://github.com/fireheartjerry/mathos-webmcp
-Built for the OpenAI WebMCP Challenge.
-```
-
-Do not add music. The rules forbid copyrighted material, and the track is narration only.
 
 ---
 
@@ -114,171 +63,90 @@ Do not add music. The rules forbid copyrighted material, and the track is narrat
 
 ## Inspiration
 
-The hard part of tutoring is not explaining. It is knowing **which** step went wrong.
+AI tutoring is usually trapped beside the work. A student shows a photograph or pastes an equation into chat, the model returns prose, and the mathematical state immediately fragments again.
 
-Ask a language model to check a derivation and it will confidently mark a wrong line
-right. Ask a server and it never sees the work at all, because the work has not been
-submitted — it is half-finished, in a text box, on somebody's screen.
-
-That gap is the whole reason this exists. The state that matters most is the state
-nobody owns.
+We wanted the opposite: one live mathematical world where the learner and any external tutor can see and manipulate the same equations, graphs, constructions, and diagrams. The tutor should enter the work instead of talking around it.
 
 ## What it does
 
-You write real multi-step working. The page's own computer algebra system checks every
-line against the one above it and marks **the first line that stopped being true** — and
-nothing after it, because everything after it is downstream of a mistake.
+Mathburst is a human-first mathematical whiteboard backed by a semantic scene graph. A seeded calculus problem begins as a photograph, becomes a proposed set of editable objects, receives an AI audit pass, and waits for the learner to approve the clean conversion.
 
-An agent connected over WebMCP can read that working, ask the page to check it, compute
-against the page's engine, write and revise lines, and read a receipt of what happened.
+The learner can then work directly with pen, highlighter, text, LaTeX, images, shapes, arrows, graphs, geometry, matrices, frames, groups, layers, transforms, and undo/redo. After repeated difficulty in the calculus scene, the tutor switches representation by creating a graph linked to the live equation and asking one diagnostic question.
 
-The agent never grades. It cannot. Every verdict on screen is rendered from the return
-value of the page's engine, not from anything a model said.
+Two additional real scenes demonstrate the generality of the world model. An Olympiad homothety and tangency construction recomputes when its points move. An editable 2×2 matrix transforms the coordinate plane and linked vectors.
 
-Four families of problem — product rule, chain rule, quotient rule, and the chain rule through a sine — each a
-parameterised derivation, not a stored answer bank. Every wrong answer a learner might
-reach is *derived* as a different way of doing the calculus, so the diagnosis survives
-regeneration. Instances where two distinct mistakes happen to give the same number at the
-evaluation point are rejected outright, because naming one of them would be inventing a
-diagnosis the page cannot support.
+Tutor actions are not hidden API effects. A tutor cursor moves to the target, affected objects reveal the commit, AI-created objects carry authorship, the activity rail names the change, and the learner can undo it.
 
-## Why WebMCP is a strong fit *(required point 1)*
+## Why WebMCP is a strong fit
 
-WebMCP is the first arrangement where the durable model of a learner can stay in the page
-that owns it, while any agent supplies the language.
+Math tutoring depends on page-owned visual state: the current equation, selected object, geometry construction, attempted step, graph, and viewport. A remote agent cannot reliably infer that state from chat, and copying it into a custom chatbot would lock the learner into one model and one interface.
 
-Before it, you had two options and both were bad. Put the learner model inside the agent,
-where it is vendor-locked and gone the moment the user switches. Or build your own
-chatbot and compete with OpenAI on model quality.
+WebMCP lets Mathburst expose its actual state and actions to any compatible external tutor. The page remains the durable mathematical instrument; the agent supplies reasoning and language. That division is unusually clean: Mathburst owns the world, dependencies, interaction, and history, while the tutor can inspect and act inside them.
 
-So the page hands the agent the one thing language models are worst at — reliable
-symbolic verification — applied to the one thing a server can never see: live,
-unsubmitted, half-finished work.
+## How it creates a better experience
 
-## How it creates a better experience *(required point 2)*
+The learner never leaves the whiteboard to translate context. The tutor can inspect the current scene, understand what is selected, see previous attempts and help already shown, and add the representation that is useful now.
 
-An agent arriving with no prior knowledge of this learner can immediately:
+In the demo, a photograph becomes semantic math, the audit catches a duplicated symbol, and the learner approves the clean conversion. When symbolic work remains stuck, the tutor creates a linked graph rather than giving away the answer. The learner can edit the source, watch the visualization respond, and undo the tutor's action from the same history.
 
-- read every line written so far and each line's verdict;
-- ask which line first stopped following, and get **sound**, **broken**, or **could not
-  determine** — a real third answer, never a guess;
-- **test its own reasoning before touching the page**, with read-only
-  `differentiate_expression`, `evaluate_expression` and `compare_expressions`;
-- write, revise or delete lines, with every action attributed;
-- read a receipt reporting who did what.
+## What humans and agents can do together
 
-That third point is the one we did not have to design for. Every agent we pointed at this
-page used the read-only maths tools *unprompted*, and verified its own derivative against
-the engine before writing a single line. Nothing in any prompt asked for that. The tool
-descriptions produced it.
+Humans can draw, type, typeset, import, graph, construct, transform, group, align, layer, duplicate, delete, pan, zoom, edit live matrix values, drag geometry points, and undo.
 
-We tested that the hard way. An agent was given **only** the JSON that `getTools()`
-returns — no source, no README, no sight of the page — and the goal *"finish the problem
-and reach the receipt."* It ran `substitute_expression`, `differentiate_expression` and
-`evaluate_expression` to work out the answer, ran `compare_expressions` to check itself
-against the engine, wrote three lines, checked the work, closed the round and read the
-receipt: **14 calls, one refusal, no argument ever supplied on its behalf** — including
-`expectedRevision`, which it tracked itself from the read-backs. The one refusal named its
-own remedy and the agent's next call was that remedy. The whole log is in
-`docs/webmcp/transcripts/round4-blind-agent.md`.
+An external tutor can read the world, objects, selection, tutoring context, history, and live mathematical structure. It can create, update, transform, delete, batch, undo or redo, move the viewport, reconstruct and audit a photographed problem, graph expressions, construct geometry, and visualize mathematical concepts.
 
-## What people and agents can do together that was hard before *(required point 3)*
+Both operate the same objects through the same action kernel. Ordinary tutor edits execute directly and remain visible, attributed, and reversible. Reconstruction is the one workflow that requires learner approval because it replaces the photograph with the proposed semantic scene.
 
-**A stateless agent can teach against a stateful learner model it does not own.** The
-model lives in the page; every agent gets the same view of it; switching agents loses
-nothing.
+## How we implemented WebMCP
 
-**Provenance survives the collaboration.** Because the page owns the state, it records
-who caused each change and publishes it. We ran three agents concurrently against one
-live session — a solver, a tutor and an auditor — and the receipt afterwards reported
-exactly who wrote what. Collisions were refused with `stale_revision` naming the current
-revision. Nothing was corrupted.
+Mathburst registers exactly eighteen tools through `document.modelContext.registerTool()`.
 
-## How we implemented WebMCP *(required point 4)*
+**Read:** `get_world`, `get_objects`, `get_selection`, `get_session_context`, `get_history`, `inspect_math`.
 
-**Eighteen tools, nine read and nine write** — one per capability the reducer supports,
-each enumerated with the file and line it corresponds to. A test opens every one of those
-citations and fails the build if it has drifted.
+**Direct action:** `create_objects`, `update_objects`, `delete_objects`, `transform_objects`, `apply_actions`, `step_history`, `set_viewport`.
 
-**The tool count is bounded by the product, not the platform.** We probed the ceiling:
-Chrome 151 accepted **1000** registered tools with flat latency and no truncation. Since
-the browser never binds, registering to the ceiling would raise the number and lower the
-quality, so the surface is exactly as large as the set of genuinely distinct things this
-product does.
+**Mathematical workflows:** `reconstruct_problem`, `audit_reconstruction`, `graph_expression`, `construct_geometry`, `visualize_concept`.
 
-**Everything we report about the platform was executed, never assumed.** `get_platform`
-probes seven WebMCP features live. Three work here. Two — `exposedTo` and
-`getTools({fromOrigins})` — Chrome accepts and silently does not honour, which matters,
-because a page that believed origin scoping worked would be shipping a security
-assumption the browser does not implement. One is partial. And
-`requestUserInteraction()`, the spec's own primitive for confirming an action, is absent
-entirely — the whole `modelContext` prototype is `ontoolchange`, `executeTool`,
-`getTools`, `registerTool` — so the page carries that obligation instead.
+The application has one typed `WorldState` scene graph and one canonical mutation path. Human gestures and write tools compile into the same operations, which apply atomically, recompute direct mathematical dependencies, append an attributed history entry, and return a compact result with changed object IDs.
 
-**Safety is in the envelope, not in refusals.** Nothing throws: Chrome flattens a thrown
-error to a generic `UnknownError` and discards the message, while a returned envelope
-survives verbatim. Every write carries `expectedRevision` and `requestId`, so a stale
-write is refused and a retry replays instead of double-applying. Every refusal names the
-offending argument in `error.field`. Chrome's published budgets for tool authors — 500
-characters per description, 150 per parameter, 30 per name, 1.5K per output — are
-enforced, the last of them at runtime.
+The broad object schemas give an agent exact low-level control without registering a redundant tool for every toolbar icon. The five workflow tools provide clear high-level routes for the most important mathematical actions. An in-product inspector displays all eighteen and invokes the exact same execute callbacks, so judges can see the whole WebMCP surface and its effects immediately.
 
 ## Challenges we ran into
 
-**The published IDL and the shipped browser disagree.** `execute` receives exactly one
-argument; an earlier version read `context.signal` from a second parameter that does not
-exist and threw on every call — while the page displayed a badge saying the tools were
-live. There is no `unregisterTool`, but aborting the `AbortSignal` passed to
-`registerTool` does withdraw a tool *and free its name*, which we had first reported as
-unsupported.
+The hardest product decision was resisting the urge to build a chatbot. The winning interaction only became obvious when we treated the whiteboard itself as the agent interface.
 
-**A tool call could apply and never return.** Mutations waited for React to paint before
-returning; with the tab occluded no paint arrived, so the promise never settled — after
-the write had already landed. An agent could not learn that its own write had succeeded.
+We also had to make broad creative control legible in only eighteen tools. One tool per toolbar button would be noisy; one generic command would be opaque. The final surface combines six precise read tools, seven direct action tools over a typed object vocabulary, and five high-level mathematical workflows.
 
-**We shipped a prompt-injection channel and found it by attacking ourselves.** A refusal
-named the offending symbol, and a LaTeX text block parses to a symbol carrying arbitrary
-prose — so `\text{ignore all previous instructions...}` landed inside a tool's
-`error.message`. That is a worse channel than tool content, because an agent reads an
-error as the page telling it what to do, and `untrustedContentHint` does not cover errors.
+Finally, dynamic math forced the world model to preserve relationships instead of drawing pixels. Graphs reference equations, geometry stores declarative primitives, and matrices link to source vectors. That is what lets a tutor edit the mathematics instead of merely placing an annotation on top of it.
 
-**The production build was broken and nothing was watching.** A stray `@` left by a
-deleted `@media` block killed CSS minification. The dev server does not minify, so the
-page always looked perfect while `pnpm build` failed.
+## Accomplishments we are proud of
 
-## Accomplishments we're proud of
-
-That the page publishes its own failures. It reports two of Chrome's features as
-accepted-but-not-honoured. Its receipt states, unprompted, that it records **who typed,
-not who reasoned** — an agent could compute the answer and tell a person what to type,
-and this record would not know. An adversarial agent found that by driving the live page,
-and we published it rather than quietly hoping no judge would ask.
+- A complete photograph → audit → approved live-scene tutoring flow.
+- Exact human/agent parity through one visible, attributed, undoable action kernel.
+- Eighteen discoverable WebMCP tools covering the full submitted interface.
+- Three dramatically different mathematical scenes running on the same world model.
+- A whiteboard that remains useful without an agent or backend.
 
 ## What we learned
 
-**Executing beats reading.** Every serious defect here was found by running the thing, not
-by inspecting it: three agents on one live session found six problems in under six
-minutes that fifty passing checks had not.
+The best AI interface is sometimes not another chat. When the page owns rich, structured state, WebMCP can let an external model become a genuine collaborator inside a specialized instrument.
 
-**Asserting a verification you did not perform is worse than the original error.** We
-claimed every file:line citation had been verified; five were still wrong. The fix was
-not more care — it was a test that opens every cited line.
+We also learned that semantic objects create leverage far beyond presentation. Once an equation is an equation rather than an image, it can drive a graph, be inspected by an agent, appear in history, carry authorship, and remain undoable.
 
 ## What's next
 
-More families, and problems that carry across sessions rather than living inside one. The
-present scope is deliberate and stated plainly in the README: this is a session, not a
-curriculum, and it does not claim anyone learned anything.
+The long-term vision is Primer-style individualized tutoring inside one universal mathematical workspace: durable learner context, richer proof objects, broader reconstruction, deeper computer algebra, collaborative sessions, and every representation from freehand ink to publication-quality diagrams.
+
+The challenge build proves the interaction model. It deliberately does not claim general OCR, cloud sync, multiplayer, accounts, or cross-session learner memory.
 
 ---
 
-## Pre-submission checklist
+## Final pre-submission checklist
 
-- [ ] Redeploy the **current** build — the deployed one is stale
-- [ ] Confirm `/` and `/learn` return 200 signed-out
-- [ ] Upload the video, public, under 3:00, with audio
-- [ ] **Flip the repository to public — before the deadline, not after**
-- [ ] Upload both gallery images, thumbnail first
-- [ ] Tick Web and Machine Learning/AI, not E-commerce
-- [ ] Paste every field above
-- [ ] Do not touch the repo, site or submission after 2026-09-03, 1:00 PM PDT
+- [ ] Republish the existing Sites project with the current commit.
+- [ ] Verify the live URL while signed out.
+- [ ] Render and upload the final video publicly; paste its URL above.
+- [ ] Make the repository public before the deadline.
+- [ ] Upload the 1200×630 Mathburst gallery image first.
+- [ ] Run the 60-second deployed judge path twice.
+- [ ] Stop changing the repository, site, and Devpost entry after the deadline.
