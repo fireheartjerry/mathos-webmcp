@@ -108,7 +108,7 @@ function LiveGraph({
       </svg>
       <div className="graph-formula"><span>f(x)</span><Tex latex={latex} /></div>
       {parameter && (
-        <label className="graph-parameter" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
+        <label className="graph-parameter" data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
           <span>{parameter[0]} = <b>{parameter[1].toFixed(1)}</b></span>
           <input
             aria-label={`Parameter ${parameter[0]}`}
@@ -226,6 +226,7 @@ function LiveGeometry({
         {resolved.points.map((point) => <g key={point.id}>
           <circle
             className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}`}
+            data-canvas-handle={point.draggable ? 'true' : undefined}
             cx={point.point.x}
             cy={point.point.y}
             r={point.draggable ? 6 : 4.5}

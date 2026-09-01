@@ -7,6 +7,7 @@ import MathObjectView from './MathObjectView'
 import NumberTheoryView from './NumberTheoryView'
 import SimplexView from './SimplexView'
 import TrainingView from './TrainingView'
+import { isCanvasControlTarget } from './canvas/useCanvasInputRouter'
 
 function smoothStrokePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return ''
@@ -160,7 +161,10 @@ export default function WorldObjectView({
       aria-hidden={object.opacity <= 0.02}
       style={style}
       onPointerDown={(event) => onPointerDown(event, object.id)}
-      onDoubleClick={() => onDoubleClick(object.id)}
+      onDoubleClick={(event) => {
+        if (isCanvasControlTarget(event.target)) return
+        onDoubleClick(object.id)
+      }}
     >
       {objectContents(object, world, run)}
       {object.author === 'agent' && <span className="author-pip" aria-label="Created by tutor">AI</span>}

@@ -7,6 +7,7 @@ import type { DirectorObjectOverride } from '../domain/world/director'
 import type { CatalogSceneId } from '../domain/world/projects'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
+import { isCanvasControlTarget, useCanvasInputRouter } from './canvas/useCanvasInputRouter'
 import WorldObjectView from './WorldObjectView'
 
 type Gesture =
@@ -89,6 +90,7 @@ export default function WorldCanvas({
   const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
   const effectiveViewport = directorMode && directorViewport ? directorViewport : world.viewport
   const effectiveSelection = directorMode ? directorSelection : world.selection
+  const routeInput = useCanvasInputRouter(mode)
 
   const withDirectorOverride = (object: WorldObject): WorldObject => {
     if (!directorMode) return object
@@ -119,6 +121,14 @@ export default function WorldCanvas({
       client: { x: event.clientX, y: event.clientY },
       viewport: effectiveViewport,
     }
+    capture(event.pointerId)
+  }
+
+  const startInk = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const highlighter = mode === 'highlighter'
+    const point = screenToWorld(event.clientX, event.clientY)
+    gestureRef.current = { kind: 'ink', pointerId: event.pointerId, points: [point], highlighter }
+    setInkPreview({ points: [point], highlighter })
     capture(event.pointerId)
   }
 
@@ -225,6 +235,9 @@ export default function WorldCanvas({
   }
 
   const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Capture-phase routing handles pan/ink/object gestures first. This guard keeps
+    // an unclaimed select/control event from clearing the current selection.
+    if (mode === 'select' && isCanvasControlTarget(event.target)) return
     if (event.button === 2 || (event.button === 0 && mode === 'hand')) {
       event.preventDefault()
       startPan(event)
@@ -234,10 +247,7 @@ export default function WorldCanvas({
     const point = screenToWorld(event.clientX, event.clientY)
 
     if (mode === 'pen' || mode === 'highlighter') {
-      const highlighter = mode === 'highlighter'
-      gestureRef.current = { kind: 'ink', pointerId: event.pointerId, points: [point], highlighter }
-      setInkPreview({ points: [point], highlighter })
-      capture(event.pointerId)
+      startInk(event)
       return
     }
 
@@ -258,7 +268,36 @@ export default function WorldCanvas({
     createAt(point)
   }
 
+  const handleCanvasPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const target = typeof Element !== 'undefined' && event.target instanceof Element ? event.target : null
+    const objectElement = target?.closest('[data-object-id]')
+    const objectId = objectElement?.getAttribute('data-object-id')
+    const object = objectId ? world.objects[objectId] : undefined
+    const owner = routeInput({
+      button: event.button,
+      target: event.target,
+      objectId,
+      objectKind: object?.kind,
+    })
+
+    if (owner === 'control' || owner === 'handle' || owner === null) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (owner === 'pan') startPan(event)
+    else if (owner === 'ink') startInk(event)
+    else if (owner === 'erase' || owner === 'object') handleObjectPointerDown(event, objectId!)
+  }
+
   const handleObjectPointerDown = (event: ReactPointerEvent, id: string) => {
+    const original = world.objects[id]
+    const object = original ? withDirectorOverride(original) : undefined
+    const owner = routeInput({
+      button: event.button,
+      target: event.target,
+      objectId: id,
+      objectKind: object?.kind,
+    })
+    if (owner === 'control' || owner === 'handle') return
     if (event.button === 2) {
       event.preventDefault()
       event.stopPropagation()
@@ -266,8 +305,6 @@ export default function WorldCanvas({
       return
     }
     if (event.button !== 0) return
-    const original = world.objects[id]
-    const object = original ? withDirectorOverride(original) : undefined
     if (!object) return
 
     if (mode !== 'select' && mode !== 'eraser') return
@@ -424,6 +461,7 @@ export default function WorldCanvas({
       data-panning={Boolean(viewportPreview)}
       data-director-mode={directorMode}
       data-camera-preview={cameraPreviewing}
+      onPointerDownCapture={handleCanvasPointerDownCapture}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishGesture}
