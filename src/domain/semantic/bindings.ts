@@ -50,9 +50,6 @@ function isEntityPathFor(entity: SemanticEntity, path: string): SemanticEntityPa
   if (parsed.kind === 'parameter' && entity.kind !== 'expression') {
     throw new Error('parameters.<name> requires an expression entity')
   }
-  if (parsed.kind === 'vector-cell' && entity.kind !== 'vector') {
-    throw new Error('values.<index> requires a vector entity')
-  }
   if (parsed.kind === 'matrix-cell' && entity.kind !== 'matrix') {
     throw new Error('values.<row>.<column> requires a matrix entity')
   }
@@ -90,7 +87,7 @@ function sameMatrixCell(source: SemanticEntityPath, target: SemanticTargetPath):
 }
 
 function isPointSource(source: SemanticEntityPath): boolean {
-  return source.kind === 'value' || source.kind === 'vector-cell'
+  return source.kind === 'value'
 }
 
 function assertAdapterCombination(binding: SemanticBinding, source: SemanticEntityPath, target: SemanticTargetPath, sourceEntity: SemanticEntity, targetObject: WorldObject): void {
