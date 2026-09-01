@@ -5,7 +5,7 @@ import type { SemanticEntity } from './types'
 export type SemanticPathValue = number | string
 
 export type SemanticEntityPath =
-  { kind: 'value' } | { kind: 'latex' } | { kind: 'parameter'; name: string } | { kind: 'vector-cell'; index: number } | { kind: 'matrix-cell'; row: number; column: number }
+  { kind: 'value' } | { kind: 'latex' } | { kind: 'parameter'; name: string } | { kind: 'matrix-cell'; row: number; column: number }
 
 export type SemanticTargetPath = { kind: 'latex' } | { kind: 'parameter'; name: string } | { kind: 'matrix-cell'; row: number; column: number } | { kind: 'point-coordinate'; coordinate: 'x' | 'y' }
 
@@ -78,13 +78,6 @@ export function parseSemanticEntityPath(path: string): SemanticEntityPath {
 
   const valueParts = path.split('.')
   if (valueParts[0] === 'values') {
-    if (valueParts.length === 2) {
-      // Vectors need a single indexed cell for point-coordinate bindings.
-      return {
-        kind: 'vector-cell',
-        index: parseIndex(path, valueParts[1], 'vector index')
-      }
-    }
     if (valueParts.length === 3) {
       return {
         kind: 'matrix-cell',
@@ -92,7 +85,7 @@ export function parseSemanticEntityPath(path: string): SemanticEntityPath {
         column: parseIndex(path, valueParts[2], 'matrix column')
       }
     }
-    throw pathError(path, 'only values.<index> for vectors or values.<row>.<column> for matrices are supported.')
+    throw pathError(path, 'only values.<row>.<column> is supported for matrices.')
   }
 
   throw pathError(path, 'only value, latex, parameters.<name>, and values cell paths are supported.')
@@ -159,6 +152,21 @@ export function validateSemanticEntity(entity: unknown): string | null {
     }
     return null
   }
+  const finiteArrayRecord = (record: unknown, label: string): string | null => {
+    if (!isRecord(record)) return `Entity ${entity.id} ${label} must be a record.`
+    for (const [key, value] of Object.entries(record)) {
+      if (FORBIDDEN_SEGMENTS.has(key) || !IDENTIFIER_SEGMENT.test(key)) {
+        return `Entity ${entity.id} contains an unsafe ${label} name.`
+      }
+      if (!Array.isArray(value)) return `Entity ${entity.id} ${label}.${key} must be an array.`
+      for (let index = 0; index < value.length; index += 1) {
+        if (!hasOwn(value, String(index)) || typeof value[index] !== 'number' || !Number.isFinite(value[index])) {
+          return `Entity ${entity.id} ${label}.${key} must contain finite numbers.`
+        }
+      }
+    }
+    return null
+  }
 
   switch (entity.kind) {
     case 'expression':
@@ -183,7 +191,7 @@ export function validateSemanticEntity(entity: unknown): string | null {
       }
       return null
     case 'data':
-      return finiteRecord(entity.columns, 'columns')
+      return finiteArrayRecord(entity.columns, 'columns')
     default:
       return `Entity ${entity.id} has unsupported kind ${String(entity.kind)}.`
   }
@@ -198,9 +206,6 @@ function assertEntityPathShape(entity: SemanticEntity, parsed: SemanticEntityPat
   }
   if (parsed.kind === 'parameter' && entity.kind !== 'expression') {
     throw pathError(path, 'parameters.<name> is only supported by expression entities.')
-  }
-  if (parsed.kind === 'vector-cell' && entity.kind !== 'vector') {
-    throw pathError(path, 'values.<index> is only supported by vector entities.')
   }
   if (parsed.kind === 'matrix-cell' && entity.kind !== 'matrix') {
     throw pathError(path, 'values.<row>.<column> is only supported by matrix entities.')
@@ -227,13 +232,6 @@ export function readSemanticPath(entity: SemanticEntity, path: string): Semantic
       throw pathError(path, `parameter ${parsed.name} does not exist.`)
     }
     return finiteNumber(expression.parameters[parsed.name], path)
-  }
-  if (parsed.kind === 'vector-cell') {
-    const vector = entity as Extract<SemanticEntity, { kind: 'vector' }>
-    if (parsed.index >= vector.values.length || !hasOwn(vector.values, String(parsed.index))) {
-      throw pathError(path, `vector index ${parsed.index} is out of range.`)
-    }
-    return finiteNumber(vector.values[parsed.index], path)
   }
   const matrix = entity as Extract<SemanticEntity, { kind: 'matrix' }>
   if (parsed.row >= matrix.values.length || !Array.isArray(matrix.values[parsed.row])) {
@@ -267,15 +265,6 @@ export function writeSemanticPath(entity: SemanticEntity, path: string, value: u
     expression.parameters[parsed.name] = finiteNumber(value, path)
     return expression
   }
-  if (parsed.kind === 'vector-cell') {
-    const vector = next as Extract<SemanticEntity, { kind: 'vector' }>
-    if (parsed.index >= vector.values.length || !hasOwn(vector.values, String(parsed.index))) {
-      throw pathError(path, `vector index ${parsed.index} is out of range.`)
-    }
-    vector.values[parsed.index] = finiteNumber(value, path)
-    return vector
-  }
-
   const matrix = next as Extract<SemanticEntity, { kind: 'matrix' }>
   if (parsed.row >= matrix.values.length || !Array.isArray(matrix.values[parsed.row])) {
     throw pathError(path, `matrix row ${parsed.row} is out of range.`)
