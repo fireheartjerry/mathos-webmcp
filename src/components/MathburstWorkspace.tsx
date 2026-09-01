@@ -29,7 +29,7 @@ import {
   type ProjectId,
 } from '../domain/world/projects'
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
-import type { DirectorShotEdit } from '../domain/world/director'
+import type { DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
@@ -93,20 +93,20 @@ const boundedViewportZoom = (zoom: number) => Math.min(2.5, Math.max(0.25, zoom)
 
 /** Rebase screen-space offsets when a saved camera was recorded at another size. */
 const rebaseSceneViewport = (
-  viewport: SceneViewport,
+  viewport: SceneViewport | DirectorShotViewport | undefined,
   width: number,
   height: number,
   fallback: Viewport,
 ): Viewport => {
-  const sourceWidth = viewport.canvasWidth
-  const sourceHeight = viewport.canvasHeight
-  if (!isUsableViewport(viewport)
-    || typeof sourceWidth !== 'number' || !Number.isFinite(sourceWidth) || sourceWidth <= 0
-    || typeof sourceHeight !== 'number' || !Number.isFinite(sourceHeight) || sourceHeight <= 0) {
+  if (!viewport || !isUsableViewport(viewport)
+    || typeof viewport.canvasWidth !== 'number' || !Number.isFinite(viewport.canvasWidth) || viewport.canvasWidth <= 0
+    || typeof viewport.canvasHeight !== 'number' || !Number.isFinite(viewport.canvasHeight) || viewport.canvasHeight <= 0) {
     // Legacy bookmarks only contain screen-space x/y. Their old offsets cannot
     // be translated safely, so use the scene's responsive camera instead.
     return { ...fallback }
   }
+  const sourceWidth = viewport.canvasWidth
+  const sourceHeight = viewport.canvasHeight
   const scale = Math.min(1.8, Math.max(0.55, Math.min(width / sourceWidth, height / sourceHeight)))
   const zoom = boundedViewportZoom(viewport.zoom * scale)
   const center = {
@@ -476,7 +476,7 @@ export default function MathburstWorkspace() {
     setEditorMatrix(null)
   }, [changeActiveScene, stashActiveProject])
 
-  const openLibraryProject = useCallback((project: LibraryProject) => {
+  const openLibraryProject = useCallback((project: LibraryProject, requestedScene?: CatalogSceneId) => {
     stashActiveProject()
     directorOpenRef.current = false
     cancelDirectorPreview()
@@ -485,7 +485,18 @@ export default function MathburstWorkspace() {
     const targetWorld = targetProject.world
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
-    const targetScene = targetProject.templateId ? getScenesForProject(targetProject.templateId)[0].id : 'overview'
+    const ownScenes = targetProject.templateId ? getScenesForProject(targetProject.templateId) : []
+    const requestedOwnedScene = requestedScene && requestedScene !== 'overview'
+      ? ownScenes.find((scene) => scene.id === requestedScene)?.id
+      : undefined
+    const configuredStartScene = targetProject.templateId && targetProject.startScene !== 'overview'
+      ? ownScenes.find((scene) => scene.id === targetProject.startScene)?.id
+      : undefined
+    // Gallery clicks honor the project's persisted start scene. A numeric
+    // shortcut may explicitly request one of this project's own scenes.
+    const targetScene = targetProject.templateId
+      ? requestedOwnedScene ?? configuredStartScene ?? ownScenes[0].id
+      : 'overview'
     const storedViewport = targetProject.templateId && targetScene !== 'overview'
       ? targetProject.sceneViewports[targetScene]
       : undefined
@@ -670,17 +681,29 @@ export default function MathburstWorkspace() {
     return getScenesForProject(project.templateId).some((scene) => scene.id === shot.scene)
   }
 
-  const directorDefaultViewport = (scene: CatalogSceneId): Viewport => cameraViewport(
-    scene,
-    Math.max(1, window.innerWidth - 58),
-    Math.max(1, window.innerHeight - 54),
-  )
+  const directorDefaultViewport = (scene: CatalogSceneId): Viewport => {
+    const { width, height } = canvasSize()
+    const viewport = cameraViewport(scene, width, height)
+    return { ...viewport, zoom: boundedViewportZoom(viewport.zoom) }
+  }
+
+  const directorViewportBookmark = (viewport: Viewport): DirectorShotViewport => {
+    const { width, height } = canvasSize()
+    return { ...viewport, zoom: boundedViewportZoom(viewport.zoom), canvasWidth: width, canvasHeight: height }
+  }
+
+  const directorViewportForShot = (edit: DirectorShotEdit | undefined, scene: CatalogSceneId): Viewport => {
+    const { width, height } = canvasSize()
+    return rebaseSceneViewport(edit?.viewport, width, height, directorDefaultViewport(scene))
+  }
 
   const activeDirectorShot = DIRECTOR_SHOTS.find((shot) => shot.id === directorState.activeShotId && isDirectorShotAllowed(shot))
     ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
     ?? DIRECTOR_SHOTS[0]
   const activeDirectorEdit = directorState.shots[activeDirectorShot.id]
-  const directorViewport = activeDirectorEdit?.viewport ?? world.viewport
+  const directorViewport = directorOpen
+    ? directorViewportForShot(activeDirectorEdit, activeDirectorShot.scene)
+    : world.viewport
   const directorOverrides = useMemo(() => {
     const overrides = { ...(activeDirectorEdit?.overrides ?? {}) }
     for (const id of activeDirectorShot.hiddenObjectIds ?? []) {
@@ -695,7 +718,7 @@ export default function MathburstWorkspace() {
         ?? DIRECTOR_SHOTS.find(isDirectorShotAllowed)
         ?? DIRECTOR_SHOTS[0]
       const existing = current.shots[shot.id] ?? {
-        viewport: directorDefaultViewport(shot.scene),
+        viewport: directorViewportBookmark(directorDefaultViewport(shot.scene)),
         overrides: {},
         approved: false,
         updatedAt: Date.now(),
@@ -710,7 +733,7 @@ export default function MathburstWorkspace() {
   const selectDirectorShot = (id: string) => {
     const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === id)
     if (!shot || !isDirectorShotAllowed(shot) || !directorOpenRef.current) return
-    const shotViewport = directorState.shots[shot.id]?.viewport ?? directorDefaultViewport(shot.scene)
+    const shotViewport = directorViewportForShot(directorState.shots[shot.id], shot.scene)
     const nextWorld = { ...worldRef.current, viewport: { ...shotViewport } }
     worldRef.current = nextWorld
     setWorld(nextWorld)
@@ -720,7 +743,7 @@ export default function MathburstWorkspace() {
       shots: current.shots[shot.id] ? current.shots : {
         ...current.shots,
         [shot.id]: {
-          viewport: directorDefaultViewport(shot.scene),
+          viewport: directorViewportBookmark(directorDefaultViewport(shot.scene)),
           overrides: {},
           approved: false,
           updatedAt: Date.now(),
@@ -771,7 +794,9 @@ export default function MathburstWorkspace() {
 
   const setDirectorViewport = (viewport: Viewport) => updateDirectorEdit((edit) => ({
     ...edit,
-    viewport,
+    viewport: directorViewportBookmark(isUsableViewport(viewport)
+      ? { ...viewport, zoom: boundedViewportZoom(viewport.zoom) }
+      : directorDefaultViewport(activeDirectorShot.scene)),
     approved: false,
     updatedAt: Date.now(),
   }))
@@ -816,7 +841,7 @@ export default function MathburstWorkspace() {
       shots: {
         ...current.shots,
         [shot.id]: {
-          viewport: directorDefaultViewport(shot.scene),
+          viewport: directorViewportBookmark(directorDefaultViewport(shot.scene)),
           overrides: {},
           approved: false,
           updatedAt: Date.now(),
@@ -1120,7 +1145,7 @@ export default function MathburstWorkspace() {
           if (galleryOpen) {
             const projectId = getProjectForScene(scene).id
             const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId)
-            if (project && project.deletedAt === null) openLibraryProject(project)
+            if (project && project.deletedAt === null) openLibraryProject(project, scene)
           } else if (activeLibraryProject?.templateId) {
             const allowed = getScenesForProject(activeLibraryProject.templateId).find((candidate) => candidate.id === scene)
             if (allowed) navigateToScene(allowed.id)

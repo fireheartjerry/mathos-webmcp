@@ -9,8 +9,14 @@ export type DirectorObjectOverride = {
   opacity?: number
 }
 
+/** A saved camera may carry the canvas size it was authored against. */
+export type DirectorShotViewport = Viewport & {
+  canvasWidth?: number
+  canvasHeight?: number
+}
+
 export type DirectorShotEdit = {
-  viewport: Viewport
+  viewport: DirectorShotViewport
   overrides: Record<string, DirectorObjectOverride>
   approved: boolean
   updatedAt: number
