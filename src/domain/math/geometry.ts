@@ -169,16 +169,24 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
 
     const center = pointFrom(resolved, primitive.center)
     const source = pointFrom(resolved, primitive.source)
-    if (center && source) keep({
-      kind: 'point',
-      id: primitive.id,
-      point: {
-        x: center.x + primitive.factor * (source.x - center.x),
-        y: center.y + primitive.factor * (source.y - center.y),
-      },
-      label: primitive.label,
-      derived: true,
-    })
+    if (center && source) {
+      const angle = primitive.kind === 'similarity' ? primitive.angle * Math.PI / 180 : 0
+      const offset = difference(source, center)
+      const rotated = {
+        x: offset.x * Math.cos(angle) - offset.y * Math.sin(angle),
+        y: offset.x * Math.sin(angle) + offset.y * Math.cos(angle),
+      }
+      keep({
+        kind: 'point',
+        id: primitive.id,
+        point: {
+          x: center.x + primitive.factor * rotated.x,
+          y: center.y + primitive.factor * rotated.y,
+        },
+        label: primitive.label,
+        derived: true,
+      })
+    }
   }
 
   return output

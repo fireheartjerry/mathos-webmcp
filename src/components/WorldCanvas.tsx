@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
 import type { DirectorObjectOverride } from '../domain/world/director'
-import type { DemoScene } from '../domain/world/seed'
+import type { CatalogSceneId } from '../domain/world/projects'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
 import WorldObjectView from './WorldObjectView'
@@ -33,11 +33,15 @@ function expandDirectorTargetIds(world: WorldState, ids: string[]): string[] {
   return world.order.filter((id) => expanded.has(id))
 }
 
-const sceneBreadcrumbs: Record<DemoScene, { number: string; title: string; state: string }> = {
-  opening: { number: '00', title: 'Find the break', state: 'cold open' },
-  calculus: { number: '01', title: 'Integration by parts', state: 'live world' },
-  geometry: { number: '02', title: 'Homothety & tangency', state: 'dynamic construction' },
-  matrix: { number: '03', title: 'Attention as geometry', state: 'live transformation' },
+const sceneBreadcrumbs: Record<CatalogSceneId, { number: string; title: string; state: string }> = {
+  'gamma-clinic': { number: '01', title: 'Recurrence Clinic', state: 'human + Tutor' },
+  'gamma-probability': { number: '02', title: 'Area Becomes Probability', state: 'normalized mass' },
+  'attention-geometry': { number: '03', title: 'Attention Geometry', state: 'live softmax' },
+  'train-from-scratch': { number: '04', title: 'Train From Scratch', state: 'real optimization' },
+  'attention-barycentrics': { number: '05', title: 'Attention Becomes Barycentrics', state: 'affine weights' },
+  'spiral-similarity': { number: '06', title: 'Homothety & Spiral Similarity', state: 'preserved invariant' },
+  'tetrahedral-probability': { number: '07', title: 'Tetrahedral Probability', state: 'projected 3-simplex' },
+  'partition-observatory': { number: '08', title: 'Partition Observatory', state: 'finite verification' },
   overview: { number: '—', title: 'One mathematical world', state: 'all islands' },
 }
 
@@ -59,7 +63,7 @@ export default function WorldCanvas({
   onDirectorSelection,
 }: {
   world: WorldState
-  scene: DemoScene
+  scene: CatalogSceneId
   mode: ToolMode
   run: (action: WorldAction) => void
   onEditObject: (id: string) => void

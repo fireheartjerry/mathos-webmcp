@@ -1,5 +1,5 @@
 import type { Bounds, Viewport, WorldState } from './types'
-import type { DemoScene } from './seed'
+import type { CatalogSceneId } from './projects'
 
 export const DIRECTOR_STORAGE_KEY = 'mathburst.director.v1'
 
@@ -28,7 +28,7 @@ export type DirectorShot = {
   timecode: string
   title: string
   intent: string
-  scene: DemoScene
+  scene: CatalogSceneId
   editable: Array<{ id: string; label: string }>
   transition: string
   status: 'live' | 'planned'
@@ -39,14 +39,14 @@ export type DirectorShot = {
 export const DIRECTOR_SHOTS: DirectorShot[] = [
   {
     id: 'opening-attempt', number: '01', timecode: '0:00–0:05', title: 'The hidden sign',
-    intent: 'Hold on the human recurrence before the Tutor enters.', scene: 'opening',
+    intent: 'Hold on the human recurrence before the Tutor enters.', scene: 'gamma-clinic',
     editable: [{ id: 'opening_attempt', label: 'Human attempt' }],
     transition: 'Macro drift', status: 'live',
     hiddenObjectIds: ['opening_annotation_circle', 'opening_annotation_strike', 'opening_annotation_question', 'opening_correction'],
   },
   {
     id: 'opening-tutor', number: '02', timecode: '0:05–0:11', title: 'Tutor marks the break',
-    intent: 'Circle only the wrong minus; keep the note clear of the recurrence.', scene: 'opening',
+    intent: 'Circle only the wrong minus; keep the note clear of the recurrence.', scene: 'gamma-clinic',
     editable: [
       { id: 'opening_annotation_circle', label: 'Circle' },
       { id: 'opening_annotation_strike', label: 'Underline' },
@@ -57,7 +57,7 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
   },
   {
     id: 'opening-correction', number: '03', timecode: '0:11–0:14', title: 'Learner repairs it',
-    intent: 'The graphite correction lands separately and remains visibly human.', scene: 'opening',
+    intent: 'The graphite correction lands separately and remains visibly human.', scene: 'gamma-clinic',
     editable: [
       { id: 'opening_correction', label: 'Correction' },
       { id: 'opening_annotation_circle', label: 'Circle' },
@@ -67,18 +67,17 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
   },
   {
     id: 'reconstruction', number: '04', timecode: '0:14–0:29', title: 'Ink becomes semantic math',
-    intent: 'Photo and reconstructed objects remain linked in one readable composition.', scene: 'calculus',
+    intent: 'Photo and reconstructed objects remain linked in one readable composition.', scene: 'gamma-clinic',
     editable: [
       { id: 'source', label: 'Source photo' },
-      { id: 'eq_integral', label: 'Semantic equation' },
-      { id: 'recon_prompt', label: 'Prompt' },
-      { id: 'recon_work', label: 'Reconstructed work' },
+      { id: 'opening_attempt', label: 'Source handwriting' },
+      { id: 'gamma_clinic_frame', label: 'Clinic frame' },
     ],
     transition: 'Lateral track', status: 'live',
   },
   {
     id: 'gamma-probability', number: '05', timecode: '0:29–0:49', title: 'Area becomes probability',
-    intent: 'The linked curve, normalization, and shaded area own the frame.', scene: 'calculus',
+    intent: 'The linked curve, normalization, and shaded area own the frame.', scene: 'gamma-probability',
     editable: [
       { id: 'eq_integrand', label: 'Density equation' },
       { id: 'graph_integrand', label: 'Live graph' },
@@ -88,38 +87,34 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
   },
   {
     id: 'attention', number: '06', timecode: '0:49–1:08', title: 'Attention geometry',
-    intent: 'Matrix, vectors, logits, and ribbons read as one mechanism.', scene: 'matrix',
+    intent: 'Matrix, vectors, logits, and ribbons read as one mechanism.', scene: 'attention-geometry',
     editable: [
-      { id: 'transformer_matrix', label: 'Q/K/V plane' },
-      { id: 'transformer_equation', label: 'Projection' },
-      { id: 'attention_equation', label: 'Softmax' },
-      { id: 'transformer_note', label: 'Interaction note' },
+      { id: 'attention_mechanism', label: 'Attention mechanism' },
+      { id: 'attention_bridge_label', label: 'Gamma bridge' },
     ],
     transition: 'Bins → logits', status: 'live',
   },
   {
     id: 'training-step', number: '07', timecode: '1:08–1:18', title: 'One honest training step',
-    intent: 'Probability rises and loss falls without implying frontier-model training.', scene: 'matrix',
+    intent: 'Probability rises and loss falls without implying frontier-model training.', scene: 'train-from-scratch',
     editable: [
       { id: 'training_panel', label: 'Training state' },
-      { id: 'loss_sparkline', label: 'Loss sparkline' },
-      { id: 'transformer_matrix', label: 'Model weights' },
+      { id: 'training_truth_label', label: 'Truth boundary' },
     ],
-    transition: 'Ribbons → triangle', status: 'planned',
+    transition: 'Ribbons → triangle', status: 'live',
   },
   {
     id: 'barycentrics', number: '08', timecode: '1:18–1:32', title: 'Weights become barycentrics',
-    intent: 'The weighted sum and triangle point share the same visible coefficients.', scene: 'geometry',
+    intent: 'The weighted sum and triangle point share the same visible coefficients.', scene: 'attention-barycentrics',
     editable: [
       { id: 'barycentric_geometry', label: 'Barycentric triangle' },
       { id: 'barycentric_equation', label: 'Weighted sum' },
-      { id: 'geometry_construction', label: 'Current geometry' },
     ],
-    transition: 'Weights → areas', status: 'planned',
+    transition: 'Weights → areas', status: 'live',
   },
   {
     id: 'homothety', number: '09', timecode: '1:32–1:46', title: 'Homothety and spiral similarity',
-    intent: 'Ratios, tangency, and angle marks stay clear while the construction moves.', scene: 'geometry',
+    intent: 'Ratios, tangency, and angle marks stay clear while the construction moves.', scene: 'spiral-similarity',
     editable: [
       { id: 'geometry_construction', label: 'Construction' },
       { id: 'geometry_ratio', label: 'Ratio' },
@@ -130,23 +125,21 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
   },
   {
     id: 'simplex', number: '10', timecode: '1:46–2:03', title: 'Probability simplex',
-    intent: 'A projected tetrahedron stays mathematically readable during the section sweep.', scene: 'overview',
+    intent: 'A projected tetrahedron stays mathematically readable during the section sweep.', scene: 'tetrahedral-probability',
     editable: [
       { id: 'simplex_projection', label: 'Tetrahedron' },
       { id: 'simplex_equation', label: 'Four weights' },
-      { id: 'simplex_section', label: 'Section plane' },
     ],
-    transition: 'Simplex → lattice', status: 'planned',
+    transition: 'Simplex → lattice', status: 'live',
   },
   {
     id: 'ramanujan', number: '11', timecode: '2:03–2:23', title: 'Integer lattice to Ramanujan',
-    intent: 'Computed coefficients and the mod-five invariant remain the only spectacle.', scene: 'overview',
+    intent: 'Computed coefficients and the mod-five invariant remain the only spectacle.', scene: 'partition-observatory',
     editable: [
-      { id: 'partition_lattice', label: 'Partition lattice' },
+      { id: 'partition_observatory', label: 'Partition observatory' },
       { id: 'partition_equation', label: 'Generating function' },
-      { id: 'ramanujan_lanes', label: 'Residue lanes' },
     ],
-    transition: 'Lattice → tool lanes', status: 'planned',
+    transition: 'Lattice → tool lanes', status: 'live',
   },
   {
     id: 'webmcp-crescendo', number: '12', timecode: '2:23–2:34', title: 'WebMCP crescendo',
@@ -157,10 +150,10 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
     id: 'one-world', number: '13', timecode: '2:34–2:42', title: 'One mathematical world',
     intent: 'Every island is legible and the final lockup has room to breathe.', scene: 'overview',
     editable: [
-      { id: 'opening_problem', label: 'Gamma island' },
-      { id: 'problem', label: 'Calculus island' },
-      { id: 'geometry_problem', label: 'Geometry island' },
-      { id: 'transformer_problem', label: 'Transformer island' },
+      { id: 'gamma_clinic_frame', label: 'Gamma clinic' },
+      { id: 'attention_geometry_frame', label: 'Attention island' },
+      { id: 'spiral_similarity_frame', label: 'Geometry island' },
+      { id: 'partition_observatory_frame', label: 'Arithmetic island' },
     ],
     transition: 'Final pullback', status: 'live',
   },

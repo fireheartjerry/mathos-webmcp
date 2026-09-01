@@ -1,7 +1,12 @@
 import { resolveGeometry } from '../math/geometry'
 import { evaluateLatexAt } from '../math/graph'
 import { transformVectors } from '../math/matrix'
+import { normalizeBarycentricWeights, pointFromWeights, triangleAreas } from '../math/barycentric'
+import { pascalRecurrence, tetrahedralLatticeCount } from '../math/simplex'
+import { finiteEulerProductCoefficients, verifyRamanujanFive } from '../math/partitions'
+import { createInitialTinyModel, evaluateTinyModel } from '../math/transformer'
 import { buildDeleteOperations, buildTransformOperations } from '../world/operations'
+import { getProjectForScene, getScene, getSceneForViewport, type CatalogSceneId, type SceneId } from '../world/projects'
 import { auditReconstruction, proposeReconstruction } from '../world/reconstruction'
 import type {
   Bounds,
@@ -51,7 +56,8 @@ type Values = Record<string, unknown>
 type ToolExecutor = (input: unknown) => Promise<ToolResult> | ToolResult
 
 const KINDS: WorldObject['kind'][] = [
-  'ink', 'text', 'image', 'shape', 'arrow', 'equation', 'graph', 'geometry', 'matrix', 'frame', 'group',
+  'ink', 'text', 'image', 'shape', 'arrow', 'equation', 'graph', 'geometry', 'matrix',
+  'attention', 'training', 'barycentric', 'simplex', 'numberTheory', 'frame', 'group',
 ]
 const OPERATION_TYPES: WorldOperation['type'][] = ['put', 'remove', 'select', 'viewport', 'order', 'session', 'reconstruction']
 const finite = (...numbers: number[]) => numbers.every(Number.isFinite)
@@ -64,6 +70,19 @@ const isBounds = (value: unknown): value is Bounds => isRecord(value)
   && finite(value.x, value.y, value.width, value.height) && value.width > 0 && value.height > 0
 const isPair = (value: unknown): value is [number, number] => Array.isArray(value)
   && value.length === 2 && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
+const isVector = (value: unknown, length: number): value is number[] => Array.isArray(value)
+  && value.length === length && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
+const isMatrix2 = (value: unknown): value is [[number, number], [number, number]] => Array.isArray(value)
+  && value.length === 2 && value.every((row) => isVector(row, 2))
+const isStringNumberMap = (value: unknown): value is Record<string, number> => isRecord(value)
+  && Object.values(value).every((entry) => typeof entry === 'number' && Number.isFinite(entry))
+const isTinyModel = (value: unknown): boolean => isRecord(value)
+  && Array.isArray(value.tokens) && value.tokens.length === 3 && value.tokens.every((entry) => typeof entry === 'string')
+  && Array.isArray(value.embeddings) && value.embeddings.length === 3 && value.embeddings.every((entry) => isVector(entry, 2))
+  && isMatrix2(value.wq) && isMatrix2(value.wk) && isMatrix2(value.wv)
+  && Array.isArray(value.classifier) && value.classifier.length === 2 && value.classifier.every((entry) => isVector(entry, 3))
+  && isVector(value.bias, 3) && typeof value.queryIndex === 'number' && Number.isFinite(value.queryIndex)
+  && typeof value.targetIndex === 'number' && Number.isFinite(value.targetIndex)
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((entry) => typeof entry === 'string')
 
 function readInput(input: unknown): Values {
@@ -137,6 +156,7 @@ function geometryPrimitiveError(value: unknown): string | null {
   if (value.kind === 'intersection') return isStringArray(value.lines) && value.lines.length === 2 ? null : `Intersection ${value.id} needs two line ids.`
   if (value.kind === 'angle') return string('a') && string('vertex') && string('b') ? null : `Angle ${value.id} needs a, vertex and b ids.`
   if (value.kind === 'homothety') return string('center') && string('source') && typeof value.factor === 'number' ? null : `Homothety ${value.id} needs center, source and factor.`
+  if (value.kind === 'similarity') return string('center') && string('source') && typeof value.factor === 'number' && Number.isFinite(value.factor) && value.factor !== 0 && typeof value.angle === 'number' && Number.isFinite(value.angle) ? null : `Similarity ${value.id} needs center, source, factor and angle.`
   return `Geometry primitive ${value.id} has an unknown kind.`
 }
 
@@ -155,12 +175,20 @@ function objectError(value: unknown): string | null {
     case 'shape': return ['rectangle', 'ellipse', 'triangle'].includes(String(value.shape)) && typeof value.fill === 'string' && typeof value.stroke === 'string' ? null : `Shape ${id} is incomplete.`
     case 'arrow': return isPoint(value.from) && isPoint(value.to) && typeof value.color === 'string' ? null : `Arrow ${id} is incomplete.`
     case 'equation': return typeof value.latex === 'string' && typeof value.color === 'string' ? null : `Equation ${id} needs LaTeX and color.`
-    case 'graph': return typeof value.equationId === 'string' && isPair(value.xDomain) && isPair(value.yDomain) && typeof value.color === 'string' ? null : `Graph ${id} needs equationId and domains.`
+    case 'graph': return typeof value.equationId === 'string' && isPair(value.xDomain) && isPair(value.yDomain) && typeof value.color === 'string'
+      && (value.visualization === undefined || value.visualization === 'standard' || value.visualization === 'gamma-density')
+      && (value.binEdges === undefined || (Array.isArray(value.binEdges) && value.binEdges.length === 4 && value.binEdges.every((entry) => typeof entry === 'number' && Number.isFinite(entry))))
+      ? null : `Graph ${id} needs equationId, domains and valid visualization fields.`
     case 'geometry': {
       if (!Array.isArray(value.primitives) || typeof value.accent !== 'string') return `Geometry ${id} is incomplete.`
       return value.primitives.map(geometryPrimitiveError).find(Boolean) ?? null
     }
     case 'matrix': return Array.isArray(value.values) && value.values.length === 2 && value.values.every(isPair) && isStringArray(value.sourceIds) && typeof value.accent === 'string' ? null : `Matrix ${id} needs a 2×2 array and sourceIds.`
+    case 'attention': return isTinyModel(value.model) && isVector(value.bridgeMasses, 3) && typeof value.temperature === 'number' && Number.isFinite(value.temperature) && value.temperature > 0 ? null : `Attention ${id} needs a tiny model, three bridge masses and positive temperature.`
+    case 'training': return isTinyModel(value.model) && typeof value.linkedAttentionId === 'string' && typeof value.step === 'number' && Number.isInteger(value.step) && value.step >= 0 && Array.isArray(value.lossHistory) && value.lossHistory.every((entry) => typeof entry === 'number' && Number.isFinite(entry)) && Array.isArray(value.probabilityHistory) && value.probabilityHistory.every((entry) => typeof entry === 'number' && Number.isFinite(entry)) && typeof value.learningRate === 'number' && Number.isFinite(value.learningRate) && value.learningRate > 0 ? null : `Training ${id} needs model, history and positive learningRate.`
+    case 'barycentric': return Array.isArray(value.vertices) && value.vertices.length === 3 && value.vertices.every(isPoint) && isStringArray(value.labels) && value.labels.length === 3 && isVector(value.weights, 3) && (value.linkedAttentionId === undefined || typeof value.linkedAttentionId === 'string') ? null : `Barycentric ${id} needs three vertices, labels and weights.`
+    case 'simplex': return isVector(value.weights, 4) && typeof value.rotationX === 'number' && Number.isFinite(value.rotationX) && typeof value.rotationY === 'number' && Number.isFinite(value.rotationY) && typeof value.section === 'number' && Number.isFinite(value.section) && typeof value.denominator === 'number' && Number.isInteger(value.denominator) && value.denominator > 0 && typeof value.showLattice === 'boolean' ? null : `Simplex ${id} needs four weights, rotations, section and positive denominator.`
+    case 'numberTheory': return typeof value.selectedN === 'number' && Number.isInteger(value.selectedN) && value.selectedN >= 0 && typeof value.maxN === 'number' && Number.isInteger(value.maxN) && value.maxN >= value.selectedN && typeof value.finiteCutoff === 'number' && Number.isInteger(value.finiteCutoff) && value.finiteCutoff >= value.selectedN && (value.linkedSimplexId === undefined || typeof value.linkedSimplexId === 'string') && typeof value.revealTheorem === 'boolean' ? null : `Number theory ${id} needs valid N, cutoff and theorem state.`
     case 'frame': return typeof value.title === 'string' && isStringArray(value.childIds) ? null : `Frame ${id} is incomplete.`
     case 'group': return isStringArray(value.childIds) ? null : `Group ${id} needs childIds.`
     default: return `Object ${id} has an unknown kind.`
@@ -209,8 +237,11 @@ function requiredString(value: unknown, field: string): string {
 const COMMON_PATCH_FIELDS = ['bounds', 'rotation', 'opacity', 'locked']
 const KIND_PATCH_FIELDS: Record<WorldObject['kind'], string[]> = {
   ink: ['points', 'strokes', 'strokeScale', 'color', 'width'], text: ['text', 'color', 'fontSize', 'presentation'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
-  arrow: ['from', 'to', 'color'], equation: ['latex', 'color'], graph: ['equationId', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral'],
-  geometry: ['primitives', 'accent'], matrix: ['values', 'sourceIds', 'accent'], frame: ['title', 'childIds'], group: ['childIds'],
+  arrow: ['from', 'to', 'color'], equation: ['latex', 'color'], graph: ['equationId', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges'],
+  geometry: ['primitives', 'accent'], matrix: ['values', 'sourceIds', 'accent'],
+  attention: ['model', 'bridgeMasses', 'temperature'], training: ['model', 'linkedAttentionId', 'step', 'lossHistory', 'probabilityHistory', 'learningRate'],
+  barycentric: ['vertices', 'labels', 'weights', 'linkedAttentionId'], simplex: ['weights', 'rotationX', 'rotationY', 'section', 'denominator', 'showLattice'],
+  numberTheory: ['selectedN', 'maxN', 'finiteCutoff', 'linkedSimplexId', 'revealTheorem'], frame: ['title', 'childIds'], group: ['childIds'],
 }
 
 function validateOperations(world: WorldState, raw: unknown): WorldOperation[] {
@@ -245,7 +276,12 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const args = values(input, ['includeObjects'])
     if (args.includeObjects !== undefined && typeof args.includeObjects !== 'boolean') throw new Error('includeObjects must be boolean.')
     const world = bridge.getWorld(); const all = world.order.map((id) => world.objects[id]).filter(Boolean)
-    return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
+    const activeScene = getSceneForViewport(world.viewport)
+    const activeProject = activeScene === 'overview' ? null : getProjectForScene(activeScene as SceneId)
+    const sceneMetadata = activeProject
+      ? { id: activeScene, title: getScene(activeScene as SceneId).title, projectId: activeProject.id, projectTitle: activeProject.title }
+      : { id: 'overview' as CatalogSceneId, title: 'One mathematical world', projectId: null, projectTitle: null }
+    return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, scene: sceneMetadata, activeScene: sceneMetadata.id, activeProject: sceneMetadata.projectId, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
   })
 
   const getObjects = tool('get_objects', 'Read world objects', 'Read objects by id or kind. Results are bounded to one hundred objects.', schema({ ids: { type: 'array', items: { type: 'string' } }, kinds: { type: 'array', items: { type: 'string', enum: KINDS } }, limit: { type: 'integer', minimum: 1, maximum: 100 } }), true, (input) => {
@@ -289,6 +325,31 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
       return { ok: true, summary: `Inspected construction ${id}`, data: { kind: object.kind, primitives: object.primitives, resolvedCounts: { points: resolved.points.length, lines: resolved.lines.length, segments: resolved.segments.length, circles: resolved.circles.length, polygons: resolved.polygons.length, angles: resolved.angles.length } } }
     }
     if (object.kind === 'matrix') return { ok: true, summary: `Inspected matrix ${id}`, data: { kind: object.kind, values: object.values, sourceIds: object.sourceIds, vectors: transformVectors(object, world) } }
+    if (object.kind === 'attention') {
+      const pass = evaluateTinyModel(object.model, object.bridgeMasses, object.temperature)
+      return { ok: true, summary: `Inspected attention ${id}`, data: { kind: object.kind, tokens: object.model.tokens, scores: pass.scores, weights: pass.attentionWeights, weightSum: pass.attentionWeights.reduce((sum, value) => sum + value, 0), context: pass.context, logits: pass.logits, probabilities: pass.probabilities, targetProbability: pass.targetProbability, loss: pass.loss, bridgeMasses: object.bridgeMasses, temperature: object.temperature } }
+    }
+    if (object.kind === 'training') {
+      const pass = evaluateTinyModel(object.model)
+      return { ok: true, summary: `Inspected training state ${id}`, data: { kind: object.kind, linkedAttentionId: object.linkedAttentionId, step: object.step, probabilities: pass.probabilities, targetProbability: pass.targetProbability, loss: pass.loss, lossHistory: object.lossHistory, probabilityHistory: object.probabilityHistory, learningRate: object.learningRate } }
+    }
+    if (object.kind === 'barycentric') {
+      const weights = normalizeBarycentricWeights(object.weights)
+      const point = pointFromWeights(object.vertices, weights)
+      const areas = triangleAreas(point, object.vertices)
+      return { ok: true, summary: `Inspected barycentric point ${id}`, data: { kind: object.kind, vertices: object.vertices, point, weights, weightSum: weights.reduce((sum, value) => sum + value, 0), signedSubareas: areas.signed, totalArea: areas.total, linkedAttentionId: object.linkedAttentionId ?? null } }
+    }
+    if (object.kind === 'simplex') {
+      const n = Math.max(0, Math.round(object.denominator))
+      const recurrence = pascalRecurrence(n, 3)
+      return { ok: true, summary: `Inspected simplex ${id}`, data: { kind: object.kind, weights: object.weights, weightSum: object.weights.reduce((sum, value) => sum + value, 0), denominator: n, latticeCount: tetrahedralLatticeCount(n), recurrence, rotation: { x: object.rotationX, y: object.rotationY }, section: object.section, showLattice: object.showLattice } }
+    }
+    if (object.kind === 'numberTheory') {
+      const cutoff = Math.max(0, Math.round(object.finiteCutoff))
+      const coefficients = finiteEulerProductCoefficients(cutoff, cutoff)
+      const verification = verifyRamanujanFive(cutoff)
+      return { ok: true, summary: `Inspected partition observatory ${id}`, data: { kind: object.kind, selectedN: object.selectedN, finiteCutoff: cutoff, coefficient: coefficients[object.selectedN] ?? null, coefficients, ramanujan: { checked: verification.checked, verified: verification.verified, counterexamples: verification.counterexamples, statement: verification.statement }, linkedSimplexId: object.linkedSimplexId ?? null, revealTheorem: object.revealTheorem } }
+    }
     throw new Error(`Object ${id} is not a mathematical object.`)
   })
 
@@ -352,12 +413,12 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     return bridge.runAgentAction(auditReconstruction(world.reconstruction, requiredString(args.auditSummary, 'auditSummary'), proposed, uncertain), [world.reconstruction.sourceImageId])
   })
 
-  const graphExpression = tool('graph_expression', 'Graph a live expression', 'Create a reactive graph from new LaTeX or one existing equation.', schema({ latex: { type: 'string' }, equationId: { type: 'string' }, bounds: boundsSchema, parameters: { type: 'object', additionalProperties: { type: 'number' } }, showTangentAt: { type: 'number' }, shadeIntegral: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } } }), false, async (input) => {
-    const args = values(input, ['latex', 'equationId', 'bounds', 'parameters', 'showTangentAt', 'shadeIntegral']); const hasLatex = typeof args.latex === 'string' && Boolean(args.latex.trim()); const hasEquation = typeof args.equationId === 'string' && Boolean(args.equationId.trim()); if (hasLatex === hasEquation) throw new Error('Provide exactly one of latex or equationId.')
-    const world = bridge.getWorld(); const graphBounds = args.bounds === undefined ? { x: 730, y: 150, width: 460, height: 330 } : args.bounds; if (!isBounds(graphBounds)) throw new Error('bounds are invalid.'); if (args.parameters !== undefined && (!isRecord(args.parameters) || Object.values(args.parameters).some((value) => typeof value !== 'number' || !Number.isFinite(value)))) throw new Error('parameters must map names to numbers.'); if (args.showTangentAt !== undefined && (typeof args.showTangentAt !== 'number' || !Number.isFinite(args.showTangentAt))) throw new Error('showTangentAt must be finite.'); if (args.shadeIntegral !== undefined && !isPair(args.shadeIntegral)) throw new Error('shadeIntegral must contain two numbers.')
+  const graphExpression = tool('graph_expression', 'Graph a live expression', 'Create a reactive graph from new LaTeX or one existing equation.', schema({ latex: { type: 'string' }, equationId: { type: 'string' }, bounds: boundsSchema, parameters: { type: 'object', additionalProperties: { type: 'number' } }, showTangentAt: { type: 'number' }, shadeIntegral: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } }, visualization: { type: 'string', enum: ['standard', 'gamma-density'] }, binEdges: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number' } } }), false, async (input) => {
+    const args = values(input, ['latex', 'equationId', 'bounds', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges']); const hasLatex = typeof args.latex === 'string' && Boolean(args.latex.trim()); const hasEquation = typeof args.equationId === 'string' && Boolean(args.equationId.trim()); if (hasLatex === hasEquation) throw new Error('Provide exactly one of latex or equationId.')
+    const world = bridge.getWorld(); const graphBounds = args.bounds === undefined ? { x: 730, y: 150, width: 460, height: 330 } : args.bounds; if (!isBounds(graphBounds)) throw new Error('bounds are invalid.'); if (args.parameters !== undefined && !isStringNumberMap(args.parameters)) throw new Error('parameters must map names to numbers.'); if (args.showTangentAt !== undefined && (typeof args.showTangentAt !== 'number' || !Number.isFinite(args.showTangentAt))) throw new Error('showTangentAt must be finite.'); if (args.shadeIntegral !== undefined && !isPair(args.shadeIntegral)) throw new Error('shadeIntegral must contain two numbers.'); if (args.visualization !== undefined && args.visualization !== 'standard' && args.visualization !== 'gamma-density') throw new Error('visualization must be standard or gamma-density.'); if (args.binEdges !== undefined && (!Array.isArray(args.binEdges) || args.binEdges.length !== 4 || args.binEdges.some((value) => typeof value !== 'number' || !Number.isFinite(value)))) throw new Error('binEdges must contain four finite numbers.')
     const operations: WorldOperation[] = []; let equationId = String(args.equationId ?? '')
     if (hasLatex) { equationId = crypto.randomUUID(); operations.push({ type: 'put', object: { id: equationId, kind: 'equation', latex: String(args.latex), color: '#171713', bounds: { x: graphBounds.x + 30, y: graphBounds.y - 62, width: 300, height: 50 }, rotation: 0, author: 'agent', opacity: 1 } }) } else if (world.objects[equationId]?.kind !== 'equation') throw new Error(`${equationId} is not an equation object.`)
-    const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId, xDomain: [-4, 4], yDomain: [-5, 10], color: '#7c5cff', parameters: args.parameters as Record<string, number> | undefined, showTangentAt: args.showTangentAt as number | undefined, shadeIntegral: args.shadeIntegral as [number, number] | undefined, bounds: graphBounds, rotation: 0, author: 'agent', opacity: 1 }
+    const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId, xDomain: [-4, 4], yDomain: [-5, 10], color: '#7c5cff', parameters: args.parameters as Record<string, number> | undefined, showTangentAt: args.showTangentAt as number | undefined, shadeIntegral: args.shadeIntegral as [number, number] | undefined, visualization: args.visualization as 'standard' | 'gamma-density' | undefined, binEdges: args.binEdges as [number, number, number, number] | undefined, bounds: graphBounds, rotation: 0, author: 'agent', opacity: 1 }
     operations.push({ type: 'put', object: graph }, { type: 'select', ids: [graph.id] }); return bridge.runAgentAction(action('Graphed a live expression', operations), changedIds(operations))
   })
 
@@ -367,17 +428,38 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     return bridge.runAgentAction(action('Constructed dynamic geometry', [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id])
   })
 
-  const visualizeConcept = tool('visualize_concept', 'Visualize a mathematical concept', 'Create a curated integral, tangent, homothety or matrix scene.', schema({ concept: { type: 'string', enum: ['integral', 'tangent', 'homothety', 'matrix-transform'] }, sourceIds: { type: 'array', items: { type: 'string' } }, bounds: boundsSchema }, ['concept']), false, async (input) => {
-    const args = values(input, ['concept', 'sourceIds', 'bounds']); if (!['integral', 'tangent', 'homothety', 'matrix-transform'].includes(String(args.concept))) throw new Error('concept is not supported.'); if (args.sourceIds !== undefined && !isStringArray(args.sourceIds)) throw new Error('sourceIds must be a string array.'); const bounds = args.bounds === undefined ? { x: 720, y: 160, width: 470, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.'); const world = bridge.getWorld(); const operations: WorldOperation[] = []
-    if (args.concept === 'integral' || args.concept === 'tangent') {
-      const equation: WorldObject = { id: crypto.randomUUID(), kind: 'equation', latex: args.concept === 'integral' ? 'a x e^x' : 'x^2-2x-1', color: '#171713', bounds: { x: bounds.x + 30, y: bounds.y - 62, width: 280, height: 50 }, rotation: 0, author: 'agent', opacity: 1 }
-      const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId: equation.id, xDomain: [-3, 3], yDomain: [-4, 10], color: '#7c5cff', parameters: args.concept === 'integral' ? { a: 1 } : undefined, shadeIntegral: args.concept === 'integral' ? [0, 1] : undefined, showTangentAt: args.concept === 'tangent' ? 1.5 : undefined, bounds, rotation: 0, author: 'agent', opacity: 1 }
+  const visualizeConcept = tool('visualize_concept', 'Visualize a mathematical concept', 'Create a curated integral, tangent, homothety, matrix, probability, attention, geometry or partition scene.', schema({ concept: { type: 'string', enum: ['integral', 'tangent', 'homothety', 'matrix-transform', 'gamma-density', 'attention', 'training', 'barycentric', 'spiral-similarity', 'simplex', 'partitions'] }, sourceIds: { type: 'array', items: { type: 'string' } }, bounds: boundsSchema }, ['concept']), false, async (input) => {
+    const args = values(input, ['concept', 'sourceIds', 'bounds']); const supportedConcepts = ['integral', 'tangent', 'homothety', 'matrix-transform', 'gamma-density', 'attention', 'training', 'barycentric', 'spiral-similarity', 'simplex', 'partitions']; if (!supportedConcepts.includes(String(args.concept))) throw new Error('concept is not supported.'); if (args.sourceIds !== undefined && !isStringArray(args.sourceIds)) throw new Error('sourceIds must be a string array.'); const bounds = args.bounds === undefined ? { x: 720, y: 160, width: 470, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.'); const world = bridge.getWorld(); const operations: WorldOperation[] = []
+    if (args.concept === 'integral' || args.concept === 'tangent' || args.concept === 'gamma-density') {
+      const equation: WorldObject = { id: crypto.randomUUID(), kind: 'equation', latex: args.concept === 'gamma-density' ? '\\frac{x^{a-1}e^{-x}}{\\Gamma(a)}' : args.concept === 'integral' ? 'a x e^x' : 'x^2-2x-1', color: '#171713', bounds: { x: bounds.x + 30, y: bounds.y - 62, width: 280, height: 50 }, rotation: 0, author: 'agent', opacity: 1 }
+      const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId: equation.id, xDomain: args.concept === 'gamma-density' ? [0, 12] : [-3, 3], yDomain: args.concept === 'gamma-density' ? [0, 0.25] : [-4, 10], color: '#7c5cff', parameters: args.concept === 'gamma-density' ? { a: 4.5 } : args.concept === 'integral' ? { a: 1 } : undefined, shadeIntegral: args.concept === 'gamma-density' || args.concept === 'integral' ? [0, 1] : undefined, showTangentAt: args.concept === 'tangent' ? 1.5 : undefined, visualization: args.concept === 'gamma-density' ? 'gamma-density' : 'standard', binEdges: args.concept === 'gamma-density' ? [0, 2.5, 5, 12] : undefined, bounds, rotation: 0, author: 'agent', opacity: 1 }
       operations.push({ type: 'put', object: equation }, { type: 'put', object: graph }, { type: 'select', ids: [graph.id] })
     } else if (args.concept === 'homothety') {
       const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', accent: '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1, primitives: [
         { kind: 'point', id: 'O', at: { x: 100, y: 170 }, label: 'O', draggable: true }, { kind: 'point', id: 'A', at: { x: 235, y: 85 }, label: 'A', draggable: true }, { kind: 'point', id: 'B', at: { x: 245, y: 250 }, label: 'B', draggable: true },
         { kind: 'segment', id: 'OA', from: 'O', to: 'A' }, { kind: 'segment', id: 'OB', from: 'O', to: 'B' }, { kind: 'homothety', id: 'A2', center: 'O', source: 'A', factor: 1.65, label: 'A′' }, { kind: 'homothety', id: 'B2', center: 'O', source: 'B', factor: 1.65, label: 'B′' }, { kind: 'segment', id: 'A2B2', from: 'A2', to: 'B2' },
       ] }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else if (args.concept === 'attention' || args.concept === 'training') {
+      const model = createInitialTinyModel()
+      const object: WorldObject = args.concept === 'attention'
+        ? { id: crypto.randomUUID(), kind: 'attention', model, bridgeMasses: [0.2, 0.5, 0.3], temperature: 1, bounds, rotation: 0, author: 'agent', opacity: 1 }
+        : { id: crypto.randomUUID(), kind: 'training', model, linkedAttentionId: '', step: 0, lossHistory: [evaluateTinyModel(model).loss], probabilityHistory: [evaluateTinyModel(model).targetProbability], learningRate: 0.35, bounds, rotation: 0, author: 'agent', opacity: 1 }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else if (args.concept === 'barycentric') {
+      const object: WorldObject = { id: crypto.randomUUID(), kind: 'barycentric', vertices: [{ x: 90, y: 270 }, { x: 380, y: 270 }, { x: 235, y: 55 }], labels: ['A', 'B', 'C'], weights: [0.2, 0.5, 0.3], bounds, rotation: 0, author: 'agent', opacity: 1 }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else if (args.concept === 'spiral-similarity') {
+      const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', accent: '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1, primitives: [
+        { kind: 'point', id: 'O', at: { x: 235, y: 170 }, label: 'O', draggable: true }, { kind: 'point', id: 'A', at: { x: 90, y: 75 }, label: 'A', draggable: true }, { kind: 'point', id: 'B', at: { x: 100, y: 265 }, label: 'B' },
+        { kind: 'similarity', id: 'A′', center: 'O', source: 'A', factor: 0.72, angle: 36, label: 'A′' }, { kind: 'similarity', id: 'B′', center: 'O', source: 'B', factor: 0.72, angle: 36, label: 'B′' }, { kind: 'segment', id: 'AB', from: 'A', to: 'B' }, { kind: 'segment', id: 'A′B′', from: 'A′', to: 'B′' },
+      ] }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else if (args.concept === 'simplex') {
+      const object: WorldObject = { id: crypto.randomUUID(), kind: 'simplex', weights: [0.2, 0.35, 0.25, 0.2], rotationX: 0.2, rotationY: -0.25, section: 0.5, denominator: 8, showLattice: true, bounds, rotation: 0, author: 'agent', opacity: 1 }
+      operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
+    } else if (args.concept === 'partitions') {
+      const object: WorldObject = { id: crypto.randomUUID(), kind: 'numberTheory', selectedN: 9, maxN: 24, finiteCutoff: 12, revealTheorem: true, bounds, rotation: 0, author: 'agent', opacity: 1 }
       operations.push({ type: 'put', object }, { type: 'select', ids: [object.id] })
     } else {
       let sourceIds = args.sourceIds as string[] | undefined; if (sourceIds?.some((id) => world.objects[id]?.kind !== 'arrow')) throw new Error('Every matrix sourceId must reference an arrow.')

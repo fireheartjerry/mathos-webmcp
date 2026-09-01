@@ -1,6 +1,11 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import type { WorldAction, WorldObject, WorldState } from '../domain/world/types'
+import AttentionView from './AttentionView'
+import BarycentricView from './BarycentricView'
 import MathObjectView from './MathObjectView'
+import NumberTheoryView from './NumberTheoryView'
+import SimplexView from './SimplexView'
+import TrainingView from './TrainingView'
 
 function smoothStrokePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return ''
@@ -78,6 +83,16 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
     case 'geometry':
     case 'matrix':
       return <MathObjectView object={object} world={world} run={run} />
+    case 'attention':
+      return <AttentionView object={object} run={run} />
+    case 'training':
+      return <TrainingView object={object} world={world} run={run} />
+    case 'barycentric':
+      return <BarycentricView object={object} run={run} />
+    case 'simplex':
+      return <SimplexView object={object} run={run} />
+    case 'numberTheory':
+      return <NumberTheoryView object={object} run={run} />
     case 'frame':
       return <div className="frame-label"><span>{object.title}</span><small>{object.childIds.length} objects</small></div>
     case 'group':

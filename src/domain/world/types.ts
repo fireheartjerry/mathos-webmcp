@@ -47,6 +47,8 @@ export type GraphObject = BaseObject & {
   parameters?: Record<string, number>
   showTangentAt?: number
   shadeIntegral?: [number, number]
+  visualization?: 'standard' | 'gamma-density'
+  binEdges?: [number, number, number, number]
 }
 export type GeometryPrimitive =
   | { kind: 'point'; id: string; at: Point; label?: string; draggable?: boolean }
@@ -60,16 +62,72 @@ export type GeometryPrimitive =
   | { kind: 'intersection'; id: string; lines: [string, string]; label?: string }
   | { kind: 'angle'; id: string; a: string; vertex: string; b: string }
   | { kind: 'homothety'; id: string; center: string; source: string; factor: number; label?: string }
+  | { kind: 'similarity'; id: string; center: string; source: string; factor: number; angle: number; label?: string }
 export type GeometryObject = BaseObject & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
 export type MatrixObject = BaseObject & {
   kind: 'matrix'; values: [[number, number], [number, number]]; sourceIds: string[]; accent: string
+}
+
+export type Vector2 = [number, number]
+export type Vector3 = [number, number, number]
+export type Matrix2 = [Vector2, Vector2]
+export type TinyModelState = {
+  tokens: [string, string, string]
+  embeddings: [Vector2, Vector2, Vector2]
+  wq: Matrix2
+  wk: Matrix2
+  wv: Matrix2
+  classifier: [Vector3, Vector3]
+  bias: Vector3
+  queryIndex: number
+  targetIndex: number
+}
+export type AttentionObject = BaseObject & {
+  kind: 'attention'
+  model: TinyModelState
+  bridgeMasses: Vector3
+  temperature: number
+}
+export type TrainingObject = BaseObject & {
+  kind: 'training'
+  model: TinyModelState
+  linkedAttentionId: string
+  step: number
+  lossHistory: number[]
+  probabilityHistory: number[]
+  learningRate: number
+}
+export type BarycentricObject = BaseObject & {
+  kind: 'barycentric'
+  vertices: [Point, Point, Point]
+  labels: [string, string, string]
+  weights: Vector3
+  linkedAttentionId?: string
+}
+export type SimplexObject = BaseObject & {
+  kind: 'simplex'
+  weights: [number, number, number, number]
+  rotationX: number
+  rotationY: number
+  section: number
+  denominator: number
+  showLattice: boolean
+}
+export type NumberTheoryObject = BaseObject & {
+  kind: 'numberTheory'
+  selectedN: number
+  maxN: number
+  finiteCutoff: number
+  linkedSimplexId?: string
+  revealTheorem: boolean
 }
 export type FrameObject = BaseObject & { kind: 'frame'; title: string; childIds: string[] }
 export type GroupObject = BaseObject & { kind: 'group'; childIds: string[] }
 
 export type WorldObject =
   | InkObject | TextObject | ImageObject | ShapeObject | ArrowObject | EquationObject
-  | GraphObject | GeometryObject | MatrixObject | FrameObject | GroupObject
+  | GraphObject | GeometryObject | MatrixObject | AttentionObject | TrainingObject
+  | BarycentricObject | SimplexObject | NumberTheoryObject | FrameObject | GroupObject
 
 export type SessionContext = {
   attempts: number

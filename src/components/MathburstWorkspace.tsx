@@ -7,8 +7,17 @@ import { registerWorldTools } from '../domain/tools/registry'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld, DEMO_SCENES, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
-import type { DemoScene } from '../domain/world/seed'
+import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import {
+  getProjectForScene,
+  getSceneForViewport,
+  getScenesForProject,
+  getViewportForScene,
+  SCENES,
+  type CatalogSceneId,
+  type ProjectId,
+  type SceneId,
+} from '../domain/world/projects'
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
 import type { DirectorShotEdit } from '../domain/world/director'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
@@ -29,7 +38,7 @@ import {
 import type { AgentPresenceState, Point, Viewport, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
-import DemoNavigator from './DemoNavigator'
+import ProjectNavigator from './ProjectNavigator'
 import DirectorReviewPanel from './DirectorReviewPanel'
 import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
@@ -47,38 +56,17 @@ const humanAction = (summary: string, operations: WorldOperation[]): WorldAction
 
 const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: 'Tutor', action: '' }
 
-function cameraViewport(scene: DemoScene, width: number, height: number) {
-  const target = DEMO_SCENES[scene]
-  // Give wide 16:9 captures a more cinematic crop while keeping the full frame
-  // usable on the ordinary laptop viewport. Overview is deliberately world-fit.
-  const responsiveScale = scene === 'overview' ? 1 : Math.min(1.8, Math.max(1, width / 1382))
-  const zoom = target.zoom * responsiveScale
-  return {
-    x: width / 2 - target.center.x * zoom,
-    y: height / 2 - target.center.y * zoom,
-    zoom,
-  }
-}
-
-function nearestSceneForViewport(viewport: WorldState['viewport'], width: number, height: number): DemoScene {
-  const center = { x: (width / 2 - viewport.x) / viewport.zoom, y: (height / 2 - viewport.y) / viewport.zoom }
-  return (Object.keys(DEMO_SCENES) as DemoScene[]).reduce((nearest, scene) => {
-    const target = DEMO_SCENES[scene].center
-    const candidateDistance = Math.hypot(center.x - target.x, center.y - target.y)
-    const nearestTarget = DEMO_SCENES[nearest].center
-    const nearestDistance = Math.hypot(center.x - nearestTarget.x, center.y - nearestTarget.y)
-    return candidateDistance < nearestDistance ? scene : nearest
-  }, 'opening' as DemoScene)
-}
+const cameraViewport = (scene: CatalogSceneId, width: number, height: number) => getViewportForScene(scene, width, height)
+const nearestSceneForViewport = (viewport: WorldState['viewport'], width: number, height: number) => getSceneForViewport(viewport, width, height)
 
 function demoReconstruction(audited: boolean): WorldObject[] {
   return [
     {
       id: HERO_EQUATION_ID,
       kind: 'equation',
-      latex: '\\int x e^x\\,dx',
+      latex: '\\Gamma\\!\\left(\\frac92\\right)=\\int_0^\\infty x^{7/2}e^{-x}\\,dx',
       color: '#171713',
-      bounds: { x: 430, y: 156, width: 275, height: 72 },
+      bounds: { x: -595, y: 410, width: 485, height: 66 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -86,10 +74,10 @@ function demoReconstruction(audited: boolean): WorldObject[] {
     {
       id: 'recon_prompt',
       kind: 'text',
-      text: 'Evaluate the integral, then explain the geometry.',
+      text: 'Repeated integration by parts · sign audited against source',
       color: '#171713',
       fontSize: 17,
-      bounds: { x: 438, y: 242, width: 260, height: 50 },
+      bounds: { x: -585, y: 485, width: 465, height: 34 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -97,9 +85,9 @@ function demoReconstruction(audited: boolean): WorldObject[] {
     {
       id: 'recon_work',
       kind: 'equation',
-      latex: audited ? 'xe^x-e^x+C' : 'xe^x-e^x x+C',
+      latex: audited ? '\\frac72\\Gamma\\!\\left(\\frac72\\right)' : '-\\frac72\\Gamma\\!\\left(\\frac72\\right)\\;?',
       color: audited ? '#171713' : '#f05f44',
-      bounds: { x: 430, y: 308, width: 275, height: 62 },
+      bounds: { x: -575, y: 530, width: 410, height: 58 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -126,7 +114,8 @@ export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const worldRef = useRef(world)
   const [hydrated, setHydrated] = useState(false)
-  const [activeScene, setActiveScene] = useState<DemoScene>('opening')
+  const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
+  const [activeProject, setActiveProject] = useState<ProjectId>('gamma-lab')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -155,11 +144,13 @@ export default function MathburstWorkspace() {
       const captured = applyCapturedOpeningAttempt(stored, samples)
       worldRef.current = captured
       setWorld(captured)
-      setActiveScene(nearestSceneForViewport(captured.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)))
+      const restoredScene = nearestSceneForViewport(captured.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
+      setActiveScene(restoredScene)
+      if (restoredScene !== 'overview') setActiveProject(getProjectForScene(restoredScene).id)
     } else {
       const seeded = createSeedWorld()
       const captured = applyCapturedOpeningAttempt(seeded, samples)
-      const centered = { ...captured, viewport: cameraViewport('opening', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
+      const centered = { ...captured, viewport: cameraViewport('gamma-clinic', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
       worldRef.current = centered
       setWorld(centered)
     }
@@ -179,6 +170,10 @@ export default function MathburstWorkspace() {
     if (!hydrated || directorOpen) return
     const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
     setActiveScene((current) => current === nearest ? current : nearest)
+    if (nearest !== 'overview') setActiveProject((current) => {
+      const next = getProjectForScene(nearest).id
+      return current === next ? current : next
+    })
   }, [directorOpen, hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
@@ -311,7 +306,7 @@ export default function MathburstWorkspace() {
     setWorld(next)
   }, [])
 
-  const navigateToScene = useCallback((scene: DemoScene) => {
+  const navigateToScene = useCallback((scene: CatalogSceneId) => {
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
     // Camera navigation is intentionally not a world commit: changing scenes should
@@ -321,6 +316,7 @@ export default function MathburstWorkspace() {
     worldRef.current = next
     setWorld(next)
     setActiveScene(scene)
+    if (scene !== 'overview') setActiveProject(getProjectForScene(scene).id)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
@@ -418,7 +414,7 @@ export default function MathburstWorkspace() {
     }]))
   }
 
-  const directorDefaultViewport = (scene: DemoScene): Viewport => cameraViewport(
+  const directorDefaultViewport = (scene: CatalogSceneId): Viewport => cameraViewport(
     scene,
     Math.max(1, window.innerWidth - 58),
     Math.max(1, window.innerHeight - 54),
@@ -662,10 +658,11 @@ export default function MathburstWorkspace() {
     const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
     handwritingSamplesRef.current = samples
     const captured = applyCapturedOpeningAttempt(seed, samples)
-    const centered = { ...captured, viewport: cameraViewport('opening', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
+    const centered = { ...captured, viewport: cameraViewport('gamma-clinic', Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54)) }
     worldRef.current = centered
     setWorld(centered)
-    setActiveScene(directorOpen ? activeDirectorShot.scene : 'opening')
+    setActiveScene(directorOpen ? activeDirectorShot.scene : 'gamma-clinic')
+    setActiveProject(directorOpen && activeDirectorShot.scene !== 'overview' ? getProjectForScene(activeDirectorShot.scene).id : 'gamma-lab')
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
@@ -798,8 +795,10 @@ export default function MathburstWorkspace() {
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         deleteSelection()
-      } else if (event.key === '0' || event.key === '1' || event.key === '2' || event.key === '3' || event.key === '4') {
-        const scene = ({ '0': 'opening', '1': 'calculus', '2': 'geometry', '3': 'matrix', '4': 'overview' } as const)[event.key]
+      } else if (/^[0-8]$/.test(event.key)) {
+        const scene = event.key === '0'
+          ? 'overview'
+          : (Object.values(SCENES).find((candidate) => candidate.keyboard === Number(event.key))?.id ?? 'gamma-clinic')
         navigateToScene(scene)
       } else {
         const shortcuts: Record<string, ToolMode> = { v: 'select', h: 'hand', p: 'pen', e: 'eraser', t: 'text', m: 'equation', g: 'graph', c: 'geometry', x: 'matrix', s: 'shape', a: 'arrow', f: 'frame' }
@@ -824,7 +823,7 @@ export default function MathburstWorkspace() {
     <main className="mathburst-app" id="main" data-hydrated={hydrated}>
       <header className="world-header">
         <div className="wordmark"><span>∫</span> Mathburst</div>
-        <div className="world-title"><b>{DEMO_SCENES[activeScene].title}</b><span>/</span><em>shared mathematical world</em></div>
+        <div className="world-title"><b>{activeScene === 'overview' ? 'One mathematical world' : SCENES[activeScene].title}</b><span>/</span><em>shared mathematical world</em></div>
         <div className="header-actions">
           <button
             type="button"
@@ -872,7 +871,7 @@ export default function MathburstWorkspace() {
         onDirectorViewportChange={setDirectorViewport}
         onDirectorTransform={transformDirectorObjects}
         onDirectorSelection={setDirectorSelection}
-        tutorOverlay={activeScene === 'opening' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
+        tutorOverlay={activeScene === 'gamma-clinic' && (!directorOpen || activeDirectorShot.id !== 'opening-attempt') ? (
           <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
             <header><span>01 · Reasoning check</span><b>human attempt</b></header>
             {!world.objects.opening_annotation_question ? (
@@ -929,7 +928,18 @@ export default function MathburstWorkspace() {
           onPreviewNext={previewNextDirectorShot}
           onPrepareShot={activeDirectorShot.prepare ? () => { void prepareDirectorShot() } : undefined}
         />
-      ) : <DemoNavigator active={activeScene} onNavigate={navigateToScene} />}
+      ) : (
+        <ProjectNavigator
+          activeProject={activeProject}
+          activeScene={activeScene}
+          onProjectChange={(projectId) => {
+            setActiveProject(projectId)
+            navigateToScene(getScenesForProject(projectId)[0].id)
+          }}
+          onSceneChange={(sceneId: SceneId) => navigateToScene(sceneId)}
+          onOverview={() => navigateToScene('overview')}
+        />
+      )}
 
       {world.reconstruction && (
         <ReconstructionPanel
@@ -946,7 +956,7 @@ export default function MathburstWorkspace() {
         activity={world.activity}
         onUndo={() => history('undo')}
         compact={world.session.helpShown.includes('linked-integrand-graph')}
-        collapseOn={activeScene === 'calculus' ? undefined : activeScene}
+        collapseOn={activeScene === 'gamma-probability' ? undefined : activeScene}
       />
       <AgentPresence presence={presence} />
       <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />

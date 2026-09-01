@@ -15,6 +15,7 @@ import type {
   WorldAction,
   WorldState,
 } from '../domain/world/types'
+import GammaProbabilityView from './GammaProbabilityView'
 import { Tex } from './Tex'
 
 const humanPut = (summary: string, object: GraphObject | GeometryObject | MatrixObject): WorldAction => ({
@@ -307,7 +308,9 @@ export default function MathObjectView({
   run: (action: WorldAction) => void
 }) {
   if (object.kind === 'equation') return <div className="math-equation-object"><Tex latex={object.latex} display ariaLabel={object.latex} /></div>
-  if (object.kind === 'graph') return <LiveGraph object={object} world={world} run={run} />
+  if (object.kind === 'graph') return object.visualization === 'gamma-density'
+    ? <GammaProbabilityView object={object} run={run} />
+    : <LiveGraph object={object} world={world} run={run} />
   if (object.kind === 'geometry') return <LiveGeometry object={object} run={run} />
   return <MatrixPlane object={object} world={world} />
 }

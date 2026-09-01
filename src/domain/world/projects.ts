@@ -1,0 +1,191 @@
+import type { Point, Viewport } from './types'
+
+/** The four persistent camera bookmarks in the shared mathematical world. */
+export type ProjectId =
+  | 'gamma-lab'
+  | 'tiny-transformer'
+  | 'olympiad-geometry'
+  | 'simplex-ramanujan'
+
+/** The eight live scene islands.  `overview` is a camera mode, not a scene. */
+export type SceneId =
+  | 'gamma-clinic'
+  | 'gamma-probability'
+  | 'attention-geometry'
+  | 'train-from-scratch'
+  | 'attention-barycentrics'
+  | 'spiral-similarity'
+  | 'tetrahedral-probability'
+  | 'partition-observatory'
+
+export type CatalogSceneId = SceneId | 'overview'
+
+export type ProjectScene = {
+  id: SceneId
+  projectId: ProjectId
+  title: string
+  subtitle: string
+  center: Point
+  zoom: number
+  frameId: string
+  keyboard: number
+  /** The sentence that carries the viewer into the next scene. */
+  transition: string
+}
+
+export type SavedProject = {
+  id: ProjectId
+  title: string
+  eyebrow: string
+  description: string
+  accent: string
+  sceneIds: readonly [SceneId, SceneId]
+}
+
+const scene = <T extends ProjectScene>(value: T): T => value
+
+/**
+ * Scene locations are intentionally arranged as two rows of four.  This gives
+ * the overview a readable world-map silhouette while keeping each saved
+ * project as a pair of adjacent camera bookmarks.
+ */
+export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
+  'gamma-clinic': scene({
+    id: 'gamma-clinic', projectId: 'gamma-lab',
+    title: 'Recurrence Clinic', subtitle: 'Find the sign that breaks',
+    center: { x: -450, y: 340 }, zoom: 1.05, frameId: 'gamma_clinic_frame', keyboard: 1,
+    transition: 'The corrected recurrence normalizes into a probability density.',
+  }),
+  'gamma-probability': scene({
+    id: 'gamma-probability', projectId: 'gamma-lab',
+    title: 'Area Becomes Probability', subtitle: 'Mass under a live curve',
+    center: { x: 650, y: 340 }, zoom: 0.95, frameId: 'gamma_probability_frame', keyboard: 2,
+    transition: 'Log-masses pass through softmax and become attention weights.',
+  }),
+  'attention-geometry': scene({
+    id: 'attention-geometry', projectId: 'tiny-transformer',
+    title: 'Attention Geometry', subtitle: 'Scores become a direction',
+    center: { x: 1750, y: 340 }, zoom: 0.95, frameId: 'attention_geometry_frame', keyboard: 3,
+    transition: 'The weighted value vector is an exact point inside a triangle.',
+  }),
+  'train-from-scratch': scene({
+    id: 'train-from-scratch', projectId: 'tiny-transformer',
+    title: 'Train From Scratch', subtitle: 'One honest gradient step',
+    center: { x: 2850, y: 340 }, zoom: 0.95, frameId: 'train_from_scratch_frame', keyboard: 4,
+    transition: 'A learned attention mixture becomes barycentric geometry.',
+  }),
+  'attention-barycentrics': scene({
+    id: 'attention-barycentrics', projectId: 'olympiad-geometry',
+    title: 'Attention Becomes Barycentrics', subtitle: 'Weights locate a point',
+    center: { x: -450, y: 1030 }, zoom: 0.95, frameId: 'attention_barycentrics_frame', keyboard: 5,
+    transition: 'Similarity preserves the normalized combination while the figure moves.',
+  }),
+  'spiral-similarity': scene({
+    id: 'spiral-similarity', projectId: 'olympiad-geometry',
+    title: 'Homothety & Spiral Similarity', subtitle: 'The invariant survives motion',
+    center: { x: 650, y: 1030 }, zoom: 0.95, frameId: 'spiral_similarity_frame', keyboard: 6,
+    transition: 'Three weights lift into a fourth dimension without losing their sum.',
+  }),
+  'tetrahedral-probability': scene({
+    id: 'tetrahedral-probability', projectId: 'simplex-ramanujan',
+    title: 'Tetrahedral Probability', subtitle: 'A simplex with one more axis',
+    center: { x: 1750, y: 1030 }, zoom: 0.9, frameId: 'tetrahedral_probability_frame', keyboard: 7,
+    transition: 'Quantized weights form an integer lattice counted by Pascal.',
+  }),
+  'partition-observatory': scene({
+    id: 'partition-observatory', projectId: 'simplex-ramanujan',
+    title: 'Partition Observatory', subtitle: 'From lattice points to Ramanujan',
+    center: { x: 2850, y: 1030 }, zoom: 0.9, frameId: 'partition_observatory_frame', keyboard: 8,
+    transition: 'The finite coefficient stream reveals the five-fold congruence.',
+  }),
+}
+
+export const PROJECTS: readonly SavedProject[] = [
+  {
+    id: 'gamma-lab', title: 'Gamma Lab', eyebrow: '01 / CALCULUS',
+    description: 'Repair a recurrence, then turn its area into normalized mass.', accent: '#8b6cf6',
+    sceneIds: ['gamma-clinic', 'gamma-probability'],
+  },
+  {
+    id: 'tiny-transformer', title: 'Tiny Transformer', eyebrow: '02 / LEARNING',
+    description: 'Watch probability become attention, then train one visible step.', accent: '#e38b57',
+    sceneIds: ['attention-geometry', 'train-from-scratch'],
+  },
+  {
+    id: 'olympiad-geometry', title: 'Olympiad Geometry', eyebrow: '03 / INVARIANTS',
+    description: 'Move a weighted point through barycentrics and spiral similarity.', accent: '#4c9f9a',
+    sceneIds: ['attention-barycentrics', 'spiral-similarity'],
+  },
+  {
+    id: 'simplex-ramanujan', title: 'Simplex → Ramanujan', eyebrow: '04 / ARITHMETIC',
+    description: 'Lift the weights into a tetrahedron and unfold them into partitions.', accent: '#c5759e',
+    sceneIds: ['tetrahedral-probability', 'partition-observatory'],
+  },
+]
+
+export const OVERVIEW_SCENE_ID = 'overview' as const
+
+/** A 1440×900-friendly fit for the two-row overview camera. */
+export const OVERVIEW_VIEWPORT: Viewport = { x: 384, y: 258, zoom: 0.28 }
+
+const PROJECT_BY_ID: Readonly<Record<ProjectId, SavedProject>> = Object.fromEntries(
+  PROJECTS.map((project) => [project.id, project]),
+) as Record<ProjectId, SavedProject>
+
+export function getProject(projectId: ProjectId): SavedProject {
+  return PROJECT_BY_ID[projectId]
+}
+
+export function getScene(sceneId: SceneId): ProjectScene {
+  return SCENES[sceneId]
+}
+
+export function getScenesForProject(projectId: ProjectId): readonly [ProjectScene, ProjectScene] {
+  const [first, second] = getProject(projectId).sceneIds
+  return [SCENES[first], SCENES[second]]
+}
+
+/**
+ * Return a camera viewport for a catalog scene at the current canvas size.
+ * Keeping this here prevents each navigator/canvas from inventing its own
+ * camera math.  Overview remains a fixed fit on the intended 1440×900 judge
+ * canvas and scales naturally when a different size is supplied.
+ */
+export function getViewportForScene(sceneId: CatalogSceneId, width = 1440, height = 900): Viewport {
+  if (sceneId === OVERVIEW_SCENE_ID) {
+    const overviewCenter = { x: 1200, y: 685 }
+    const zoom = OVERVIEW_VIEWPORT.zoom * Math.min(width / 1440, height / 900)
+    return { x: width / 2 - overviewCenter.x * zoom, y: height / 2 - overviewCenter.y * zoom, zoom }
+  }
+
+  const target = SCENES[sceneId]
+  const responsiveScale = Math.min(1.8, Math.max(1, width / 1382))
+  const zoom = target.zoom * responsiveScale
+  return { x: width / 2 - target.center.x * zoom, y: height / 2 - target.center.y * zoom, zoom }
+}
+
+/**
+ * Infer the closest catalog scene from a camera.  Canvas dimensions matter
+ * because `Viewport.x/y` are screen-space offsets rather than world centers.
+ * Overview is selected only when the camera is materially zoomed out.
+ */
+export function getSceneForViewport(viewport: Viewport, width = 1440, height = 900): CatalogSceneId {
+  if (viewport.zoom <= 0.52) return OVERVIEW_SCENE_ID
+
+  const worldCenter = {
+    x: (width / 2 - viewport.x) / viewport.zoom,
+    y: (height / 2 - viewport.y) / viewport.zoom,
+  }
+
+  return (Object.keys(SCENES) as SceneId[]).reduce<SceneId>((closest, sceneId) => {
+    const candidate = SCENES[sceneId].center
+    const nextDistance = Math.hypot(worldCenter.x - candidate.x, worldCenter.y - candidate.y)
+    const current = SCENES[closest].center
+    const currentDistance = Math.hypot(worldCenter.x - current.x, worldCenter.y - current.y)
+    return nextDistance < currentDistance ? sceneId : closest
+  }, 'gamma-clinic')
+}
+
+export function getProjectForScene(sceneId: SceneId): SavedProject {
+  return getProject(SCENES[sceneId].projectId)
+}
