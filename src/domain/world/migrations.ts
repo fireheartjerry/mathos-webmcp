@@ -1,6 +1,6 @@
 import type { SemanticBinding, SemanticEntity } from '../semantic/types'
 import { validateSemanticWorld } from '../semantic/bindings'
-import type { AnimationKeyframe, AnimationTargetPath, AnimationTimeline } from '../animation/types'
+import type { AnimationKeyframe } from '../animation/types'
 import type { EquationObject, GraphObject, MatrixObject, WorldObject, WorldState } from './types'
 
 type UnknownRecord = Record<string, unknown>
@@ -93,6 +93,18 @@ const OBJECT_KINDS = new Set([
   'numberTheory',
   'frame',
   'group',
+])
+
+const SEMANTIC_VIEW_KINDS = new Set([
+  'equation',
+  'graph',
+  'geometry',
+  'matrix',
+  'attention',
+  'training',
+  'barycentric',
+  'simplex',
+  'numberTheory',
 ])
 
 const isSemanticViewLink = (value: UnknownRecord): boolean => (
@@ -420,13 +432,115 @@ const isAnimationValue = (value: unknown): boolean => isFiniteNumber(value)
   || isFiniteNumberArray(value)
   || (Array.isArray(value) && value.every(isFiniteNumberArray))
 
-const isAnimationTarget = (value: unknown): value is AnimationTargetPath => isRecord(value)
-  && (value.kind === 'camera'
-    ? isSemanticPath(value.path)
-    : value.kind === 'entity'
-      ? isSafeIdentifier(value.entityId) && isSemanticPath(value.path)
-      : value.kind === 'object'
-        && isSafeIdentifier(value.objectId) && isSemanticPath(value.path))
+const ANIMATION_OBJECT_PATH_ROOTS = new Set([
+  'bounds',
+  'rotation',
+  'opacity',
+  'points',
+  'strokes',
+  'strokeScale',
+  'color',
+  'width',
+  'text',
+  'fontSize',
+  'presentation',
+  'src',
+  'alt',
+  'shape',
+  'fill',
+  'stroke',
+  'from',
+  'to',
+  'latex',
+  'xDomain',
+  'yDomain',
+  'parameters',
+  'showTangentAt',
+  'shadeIntegral',
+  'visualization',
+  'binEdges',
+  'primitives',
+  'accent',
+  'values',
+  'model',
+  'bridgeMasses',
+  'temperature',
+  'step',
+  'lossHistory',
+  'probabilityHistory',
+  'learningRate',
+  'vertices',
+  'labels',
+  'weights',
+  'rotationX',
+  'rotationY',
+  'section',
+  'denominator',
+  'showLattice',
+  'title',
+  'selectedN',
+  'maxN',
+  'finiteCutoff',
+  'revealTheorem',
+])
+
+const ANIMATION_ENTITY_PATH_ROOTS = new Set(['latex', 'parameters', 'value', 'values', 'columns'])
+const CAMERA_ANIMATION_PATHS = new Set(['x', 'y', 'zoom', 'viewport.x', 'viewport.y', 'viewport.zoom'])
+const SPECIAL_ANIMATION_TARGET_KINDS = new Set(['reveal', 'highlight'])
+
+const readAnimationPath = (root: unknown, path: string): unknown => {
+  let current = root
+  for (const segment of path.split('.')) {
+    if (Array.isArray(current)) {
+      if (!/^(?:0|[1-9][0-9]*)$/.test(segment) || !hasOwn(current, segment)) return undefined
+      current = current[Number(segment)]
+    } else if (isRecord(current) && hasOwn(current, segment)) {
+      current = current[segment]
+    } else {
+      return undefined
+    }
+  }
+  return current
+}
+
+const isAnimationObjectPath = (object: unknown, path: unknown): boolean => {
+  if (!isWorldObject(object) || !isSemanticPath(path)) return false
+  const root = path.split('.')[0]
+  if (!ANIMATION_OBJECT_PATH_ROOTS.has(root)) return false
+  return isAnimationValue(readAnimationPath(object, path))
+}
+
+const isAnimationEntityPath = (entity: unknown, path: unknown): boolean => {
+  if (!isSemanticEntity(entity) || !isSemanticPath(path)) return false
+  const root = path.split('.')[0]
+  if (!ANIMATION_ENTITY_PATH_ROOTS.has(root)) return false
+  return isAnimationValue(readAnimationPath(entity, path))
+}
+
+const isAnimationTarget = (
+  value: unknown,
+  objects?: UnknownRecord,
+  entities?: UnknownRecord,
+): boolean => {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+  if (value.kind === 'camera') return typeof value.path === 'string' && CAMERA_ANIMATION_PATHS.has(value.path)
+  if (value.kind === 'object') {
+    if (!isSafeIdentifier(value.objectId) || !isSemanticPath(value.path)) return false
+    if (objects === undefined) return ANIMATION_OBJECT_PATH_ROOTS.has(value.path.split('.')[0])
+    return hasOwn(objects, value.objectId) && isAnimationObjectPath(objects[value.objectId], value.path)
+  }
+  if (value.kind === 'entity') {
+    if (!isSafeIdentifier(value.entityId) || !isSemanticPath(value.path)) return false
+    if (entities === undefined) return ANIMATION_ENTITY_PATH_ROOTS.has(value.path.split('.')[0])
+    return hasOwn(entities, value.entityId) && isAnimationEntityPath(entities[value.entityId], value.path)
+  }
+  if (SPECIAL_ANIMATION_TARGET_KINDS.has(value.kind)) {
+    if (!isSafeIdentifier(value.objectId)) return false
+    if (objects !== undefined && !hasOwn(objects, value.objectId)) return false
+    return value.path === undefined || isSemanticPath(value.path)
+  }
+  return false
+}
 
 const isAnimationKeyframe = (key: string, value: unknown): value is AnimationKeyframe => isRecord(value)
   && isSafeIdentifier(key)
@@ -434,14 +548,24 @@ const isAnimationKeyframe = (key: string, value: unknown): value is AnimationKey
   && isFiniteNumber(value.time)
   && isAnimationValue(value.value)
 
-const isAnimationTrack = (key: string, value: unknown): boolean => isRecord(value)
+const isAnimationTrack = (
+  key: string,
+  value: unknown,
+  objects?: UnknownRecord,
+  entities?: UnknownRecord,
+): boolean => isRecord(value)
   && isSafeIdentifier(key)
   && value.id === key
-  && isAnimationTarget(value.target)
+  && isAnimationTarget(value.target, objects, entities)
   && isRecord(value.keyframes)
   && Object.entries(value.keyframes).every(([frameKey, frame]) => isAnimationKeyframe(frameKey, frame))
 
-const isAnimationTimeline = (key: string, value: unknown): value is AnimationTimeline => isRecord(value)
+const isAnimationTimeline = (
+  key: string,
+  value: unknown,
+  objects?: UnknownRecord,
+  entities?: UnknownRecord,
+): boolean => isRecord(value)
   && isSafeIdentifier(key)
   && value.id === key
   && typeof value.name === 'string'
@@ -450,10 +574,14 @@ const isAnimationTimeline = (key: string, value: unknown): value is AnimationTim
   && isFiniteNumber(value.playbackRange.start)
   && isFiniteNumber(value.playbackRange.end)
   && isRecord(value.tracks)
-  && Object.entries(value.tracks).every(([trackKey, track]) => isAnimationTrack(trackKey, track))
+  && Object.entries(value.tracks).every(([trackKey, track]) => isAnimationTrack(trackKey, track, objects, entities))
 
-const isAnimationTimelineStore = (value: unknown): value is UnknownRecord => isRecord(value)
-  && Object.entries(value).every(([key, timeline]) => isAnimationTimeline(key, timeline))
+const isAnimationTimelineStore = (
+  value: unknown,
+  objects?: UnknownRecord,
+  entities?: UnknownRecord,
+): value is UnknownRecord => isRecord(value)
+  && Object.entries(value).every(([key, timeline]) => isAnimationTimeline(key, timeline, objects, entities))
 
 const isSessionPatch = (value: unknown): boolean => isRecord(value)
   && Object.entries(value).every(([key, patchValue]) => {
@@ -642,6 +770,28 @@ const isWorldDependenciesValid = (objects: UnknownRecord): boolean => {
   return true
 }
 
+const isReconstructionDependenciesValid = (value: unknown, objects: UnknownRecord): boolean => {
+  if (value === null) return true
+  if (!isReconstructionDraft(value)) return false
+  const draft = value as {
+    proposedObjects: WorldObject[]
+    sourceImageId: string
+    uncertainObjectIds: string[]
+  }
+
+  const combinedObjects: UnknownRecord = { ...objects }
+  const proposedIds = new Set<string>()
+  for (const proposedObject of draft.proposedObjects) {
+    if (!isWorldObject(proposedObject) || proposedIds.has(proposedObject.id)) return false
+    proposedIds.add(proposedObject.id)
+    combinedObjects[proposedObject.id] = proposedObject
+  }
+
+  return hasObjectKind(combinedObjects, draft.sourceImageId, 'image')
+    && draft.uncertainObjectIds.every((id) => hasOwn(combinedObjects, id))
+    && isWorldDependenciesValid(combinedObjects)
+}
+
 const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
   if (!isWorldObjectStore(value.objects)
     || !isSafeIdArray(value.order)
@@ -659,7 +809,12 @@ const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
     || !isSafeIdArray(selection)
     || !order.every((id) => hasOwn(objects, id))
     || !selection.every((id) => hasOwn(objects, id))
-    || !isWorldDependenciesValid(objects)) return false
+    || !isWorldDependenciesValid(objects)
+    || !isReconstructionDependenciesValid(value.reconstruction, objects)) return false
+
+  const timelineEntities = isRecord(value.entities) ? value.entities : undefined
+  if ((version === 2 || value.timelines !== undefined)
+    && !isAnimationTimelineStore(value.timelines, objects, timelineEntities)) return false
 
   if (version === 1) {
     // v1 did not define semantic stores, but preserve and validate an
@@ -795,18 +950,7 @@ const normalizeBindingIds = (objects: UnknownRecord, bindings: UnknownRecord): v
   for (const object of Object.values(objects)) {
     if (!isRecord(object) || !hasOwn(object, 'bindingIds')) continue
     if (!Array.isArray(object.bindingIds)) continue
-    const semanticViewKinds = new Set([
-      'equation',
-      'graph',
-      'geometry',
-      'matrix',
-      'attention',
-      'training',
-      'barycentric',
-      'simplex',
-      'numberTheory',
-    ])
-    const entityId = semanticViewKinds.has(typeof object.kind === 'string' ? object.kind : '')
+    const entityId = SEMANTIC_VIEW_KINDS.has(typeof object.kind === 'string' ? object.kind : '')
       && isSafeIdentifier(object.entityId)
       ? object.entityId
       : null
