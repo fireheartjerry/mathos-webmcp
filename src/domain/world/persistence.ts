@@ -3,9 +3,12 @@ import type { WorldState } from './types'
 
 export const STORAGE_KEY = 'mathburst.world.v5'
 
+/** Read and migrate a world in memory; loading never repairs or removes raw storage. */
 export function loadWorld(): WorldState | null {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw === null) return null
+    const value: unknown = JSON.parse(raw)
     return migrateWorld(value)
   } catch {
     return null

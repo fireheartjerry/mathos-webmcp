@@ -1,5 +1,6 @@
 import { gammaBinMasses } from '../math/probability'
 import { createInitialTinyModel, evaluateTinyModel } from '../math/transformer'
+import { migrateWorld } from './migrations'
 import type {
   AttentionObject,
   BarycentricObject,
@@ -382,7 +383,7 @@ export function createSeedWorld(): WorldState {
     numberTheory,
   ]
 
-  return {
+  const world: WorldState = {
     version: 2,
     title: 'Mathburst',
     objects: Object.fromEntries(objects.map((object) => [object.id, object])),
@@ -403,4 +404,11 @@ export function createSeedWorld(): WorldState {
     },
     reconstruction: null,
   }
+
+  // Keep fresh canonical worlds on the same semantic path as persisted v1/v2
+  // worlds. The migration is pure and deterministic, so every seed gets the
+  // same entity and binding IDs without introducing a seed/migration cycle.
+  const migrated = migrateWorld(world)
+  if (!migrated) throw new Error('The canonical Mathburst seed could not be migrated.')
+  return migrated
 }
