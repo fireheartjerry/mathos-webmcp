@@ -1085,7 +1085,6 @@ export default function MathburstWorkspace() {
     setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
     else if (object.kind === 'equation') setEditorValue(object.latex)
-    else if (object.kind === 'frame') setEditorValue(object.title)
     else if (object.kind === 'matrix') setEditorMatrix([
       [...object.values[0]],
       [...object.values[1]],
@@ -1101,7 +1100,6 @@ export default function MathburstWorkspace() {
     let updated: WorldObject = object
     if (object.kind === 'text') updated = { ...object, text: editorValue }
     if (object.kind === 'equation') updated = { ...object, latex: editorValue }
-    if (object.kind === 'frame') updated = { ...object, title: editorValue }
     if (object.kind === 'matrix' && editorMatrix) updated = { ...object, values: editorMatrix }
     const dependents = object.kind === 'equation' ? findDependentIds(world, [object.id]) : []
     run(humanAction(`Edited ${object.kind}`, [

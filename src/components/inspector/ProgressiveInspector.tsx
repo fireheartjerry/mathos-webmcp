@@ -129,7 +129,7 @@ export default function ProgressiveInspector({
 }: ProgressiveInspectorProps) {
   const [tab, setTab] = useState<InspectorTab>('values')
   const isEditing = editorId === object.id
-  const canEdit = object.kind === 'text' || object.kind === 'equation' || object.kind === 'frame' || object.kind === 'matrix'
+  const canEdit = object.kind === 'text' || object.kind === 'equation' || object.kind === 'matrix'
   const entityId = entityIdFor(object)
   const bindingIds = bindingIdsFor(object, world)
   const linkedViewIds = linkedViewIdsFor(object)
@@ -230,7 +230,7 @@ export default function ProgressiveInspector({
           { label: 'Theorem', value: object.revealTheorem ? 'revealed' : 'hidden', status: 'derived' },
         ]
       case 'frame':
-        return [editableText('Title', object.title), { label: 'Children', value: `${object.childIds.length} views`, status: 'derived' }, { label: 'Author', value: object.author, status: 'derived' }]
+        return [{ label: 'Title', value: object.title, status: 'derived' }, { label: 'Children', value: `${object.childIds.length} views`, status: 'derived' }, { label: 'Author', value: object.author, status: 'derived' }]
       case 'group':
         return [{ label: 'Children', value: `${object.childIds.length} views`, status: 'derived' }, { label: 'Selection', value: object.childIds.join(', '), status: 'derived' }, { label: 'Author', value: object.author, status: 'derived' }]
       case 'image':
