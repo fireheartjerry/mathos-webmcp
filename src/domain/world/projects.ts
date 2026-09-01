@@ -1,4 +1,4 @@
-import type { Point, Viewport } from './types'
+import type { Point, Viewport, WorldState } from './types'
 
 /** The four persistent project templates. */
 export type ProjectId =
@@ -145,6 +145,36 @@ export function getScenesForProject(projectId: ProjectId): readonly [ProjectScen
   return [SCENES[first], SCENES[second]]
 }
 
+const containsCenter = (bounds: { x: number; y: number; width: number; height: number }, object: { bounds: { x: number; y: number; width: number; height: number } }) => {
+  const centerX = object.bounds.x + object.bounds.width / 2
+  const centerY = object.bounds.y + object.bounds.height / 2
+  return centerX >= bounds.x
+    && centerX <= bounds.x + bounds.width
+    && centerY >= bounds.y
+    && centerY <= bounds.y + bounds.height
+}
+
+/** Return the frame, local contents, and direct semantic companions of a scene. */
+export function getSceneObjectIds(world: WorldState, sceneId: SceneId): string[] {
+  const frame = world.objects[SCENES[sceneId].frameId]
+  if (!frame) return []
+  const ids = new Set<string>()
+  const visit = (id: string) => {
+    const object = world.objects[id]
+    if (!object || ids.has(id)) return
+    ids.add(id)
+    if (object.kind === 'frame' || object.kind === 'group') object.childIds.forEach(visit)
+    if (object.kind === 'graph') visit(object.equationId)
+    if (object.kind === 'matrix') object.sourceIds.forEach(visit)
+  }
+
+  visit(frame.id)
+  for (const object of Object.values(world.objects)) {
+    if (containsCenter(frame.bounds, object)) visit(object.id)
+  }
+  return world.order.filter((id) => ids.has(id))
+}
+
 /**
  * Return a camera viewport for a catalog scene at the current canvas size.
  * Keeping this here prevents each navigator/canvas from inventing its own
@@ -164,19 +194,13 @@ export function getViewportForScene(sceneId: CatalogSceneId, width = 1440, heigh
   return { x: width / 2 - target.center.x * zoom, y: height / 2 - target.center.y * zoom, zoom }
 }
 
-/**
- * Infer the closest catalog scene from a camera.  Canvas dimensions matter
- * because `Viewport.x/y` are screen-space offsets rather than world centers.
- * Overview is selected only when the camera is materially zoomed out.
- */
+/** Legacy read-only camera lookup retained for world-tool compatibility. */
 export function getSceneForViewport(viewport: Viewport, width = 1440, height = 900): CatalogSceneId {
   if (viewport.zoom <= 0.52) return OVERVIEW_SCENE_ID
-
   const worldCenter = {
     x: (width / 2 - viewport.x) / viewport.zoom,
     y: (height / 2 - viewport.y) / viewport.zoom,
   }
-
   return (Object.keys(SCENES) as SceneId[]).reduce<SceneId>((closest, sceneId) => {
     const candidate = SCENES[sceneId].center
     const nextDistance = Math.hypot(worldCenter.x - candidate.x, worldCenter.y - candidate.y)

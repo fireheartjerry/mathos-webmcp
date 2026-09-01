@@ -207,16 +207,18 @@ const parseProject = (value: unknown): ParsedProject | null => {
   const world = migrateWorld(project.world)
   if (!world) return null
   const templateId = project.templateId as ProjectId | null
+  const ownedWorld = templateId ? createProjectWorld(world, templateId, project.title) : world
   const startScene = normalizeStartScene(templateId, project.startScene)
   const allowedSceneIds = templateId ? getScenesForProject(templateId).map((scene) => scene.id) : []
   let needsRepair = startScene !== project.startScene
+  if (templateId && Object.keys(world.objects).length !== Object.keys(ownedWorld.objects).length) needsRepair = true
   if (project.sceneViewports !== undefined) {
     if (!isRecord(project.sceneViewports)) return null
     for (const sceneId of Object.keys(project.sceneViewports)) {
       if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) needsRepair = true
     }
   }
-  const sceneViewports = parseSceneViewports(project.sceneViewports, startScene, world.viewport, allowedSceneIds)
+  const sceneViewports = parseSceneViewports(project.sceneViewports, startScene, ownedWorld.viewport, allowedSceneIds)
   if (!sceneViewports) return null
   return {
     needsRepair,
@@ -224,7 +226,7 @@ const parseProject = (value: unknown): ParsedProject | null => {
       ...(project as LibraryProject),
       startScene,
       sceneViewports,
-      world,
+      world: ownedWorld,
     },
   }
 }
@@ -275,7 +277,7 @@ export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
               ...cloneSceneViewports(project.sceneViewports),
               ...cloneSceneViewports(saved.sceneViewports),
             },
-            world: cloneWorld(saved.world, project.title),
+            world: cloneWorld(createProjectWorld(saved.world, project.templateId!, project.title), project.title),
           }
         : {
             ...project,
@@ -365,6 +367,6 @@ export function createUserProject(
     updatedAt: now,
     deletedAt: null,
     sceneViewports: templateId ? canonicalSceneViewports(templateId) : {},
-    world: cloneWorld(world, cleanTitle),
+    world: cloneWorld(templateId ? createProjectWorld(world, templateId, cleanTitle) : world, cleanTitle),
   }
 }

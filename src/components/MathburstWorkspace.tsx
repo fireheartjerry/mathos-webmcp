@@ -20,7 +20,7 @@ import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, OPENING_FRAME_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
   getProjectForScene,
-  getSceneForViewport,
+  getSceneObjectIds,
   getScenesForProject,
   getViewportForScene,
   SCENES,
@@ -68,7 +68,14 @@ const humanAction = (summary: string, operations: WorldOperation[]): WorldAction
 const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: 'Tutor', action: '' }
 
 const cameraViewport = (scene: CatalogSceneId, width: number, height: number) => getViewportForScene(scene, width, height)
-const nearestSceneForViewport = (viewport: WorldState['viewport'], width: number, height: number) => getSceneForViewport(viewport, width, height)
+
+const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport => Boolean(
+  viewport
+  && Number.isFinite(viewport.x)
+  && Number.isFinite(viewport.y)
+  && Number.isFinite(viewport.zoom)
+  && viewport.zoom > 0,
+)
 
 function demoReconstruction(audited: boolean): WorldObject[] {
   return [
@@ -133,6 +140,7 @@ export default function MathburstWorkspace() {
   const [hydrated, setHydrated] = useState(false)
   const libraryStorageNeedsRepairRef = useRef(false)
   const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
+  const activeSceneRef = useRef<CatalogSceneId>('gamma-clinic')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -159,6 +167,11 @@ export default function MathburstWorkspace() {
       libraryProjectsRef.current = next
       return next
     })
+  }, [])
+
+  const changeActiveScene = useCallback((scene: CatalogSceneId) => {
+    activeSceneRef.current = scene
+    setActiveScene(scene)
   }, [])
 
   // A user action that intentionally repairs a project is allowed to replace
@@ -213,14 +226,6 @@ export default function MathburstWorkspace() {
   useEffect(() => {
     if (hydrated) saveDirectorReview(directorState)
   }, [directorState, hydrated])
-
-  useEffect(() => {
-    if (!hydrated || directorOpen || galleryOpen || blankPersonalProject || !activeLibraryProject?.templateId) return
-    const nearest = nearestSceneForViewport(world.viewport, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
-    const belongsToOpenProject = nearest !== 'overview'
-      && getScenesForProject(activeLibraryProject.templateId).some((scene) => scene.id === nearest)
-    if (belongsToOpenProject) setActiveScene((current) => current === nearest ? current : nearest)
-  }, [activeLibraryProject?.templateId, blankPersonalProject, directorOpen, galleryOpen, hydrated, world.viewport])
 
   const run = useCallback((action: WorldAction) => {
     const next = dispatchWorldAction(worldRef.current, action)
@@ -352,44 +357,69 @@ export default function MathburstWorkspace() {
     setWorld(next)
   }, [])
 
+  const stashActiveProject = useCallback(() => {
+    const documentId = activeDocumentIdRef.current
+    const currentWorld = worldRef.current
+    if (documentId === 'main') {
+      mainWorldRef.current = currentWorld
+      saveWorld(currentWorld)
+      return null
+    }
+
+    const currentScene = activeSceneRef.current
+    const currentProject = libraryProjectsRef.current.find((project) => project.id === documentId)
+    if (!currentProject) return null
+    const ownsScene = currentProject.templateId
+      && currentScene !== 'overview'
+      && getScenesForProject(currentProject.templateId).some((scene) => scene.id === currentScene)
+    const sceneViewports = ownsScene
+      ? { ...currentProject.sceneViewports, [currentScene]: { ...currentWorld.viewport } }
+      : { ...currentProject.sceneViewports }
+    const nextProject = { ...currentProject, sceneViewports, world: currentWorld, updatedAt: Date.now() }
+    updateLibraryProjects((projects) => projects.map((project) => project.id === documentId ? nextProject : project))
+    return nextProject
+  }, [updateLibraryProjects])
+
   const navigateToScene = useCallback((scene: CatalogSceneId) => {
+    const currentProject = stashActiveProject()
+    if (!currentProject?.templateId || scene === 'overview') return
+    const ownsScene = getScenesForProject(currentProject.templateId).some((candidate) => candidate.id === scene)
+    if (!ownsScene) return
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
     // Camera navigation is intentionally not a world commit: changing scenes should
     // never pollute learner history or the activity rail.
-    const viewport = cameraViewport(scene, canvasWidth, canvasHeight)
+    const storedViewport = currentProject.sceneViewports[scene]
+    const viewport = isUsableViewport(storedViewport)
+      ? { ...storedViewport }
+      : cameraViewport(scene, canvasWidth, canvasHeight)
     const next = { ...worldRef.current, viewport }
     worldRef.current = next
     setWorld(next)
-    setActiveScene(scene)
+    changeActiveScene(scene)
     setGalleryOpen(false)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
-  }, [])
+  }, [changeActiveScene, stashActiveProject])
 
-  const stashActiveProject = useCallback(() => {
-    const documentId = activeDocumentIdRef.current
-    if (documentId === 'main') {
-      mainWorldRef.current = worldRef.current
-      saveWorld(worldRef.current)
-      return
-    }
-    updateLibraryProjects((projects) => projects.map((project) => project.id === documentId
-      ? { ...project, world: worldRef.current, updatedAt: Date.now() }
-      : project))
-  }, [updateLibraryProjects])
-
-  const openLibraryProject = useCallback((project: LibraryProject, requestedScene: CatalogSceneId = project.startScene) => {
+  const openLibraryProject = useCallback((project: LibraryProject) => {
     stashActiveProject()
-    const targetWorld = project.world
+    const targetProject = libraryProjectsRef.current.find((candidate) => candidate.id === project.id) ?? project
+    const targetWorld = targetProject.world
     const canvasWidth = Math.max(1, window.innerWidth - 58)
     const canvasHeight = Math.max(1, window.innerHeight - 54)
-    const viewport = project.templateId
-      ? cameraViewport(requestedScene, canvasWidth, canvasHeight)
+    const targetScene = targetProject.templateId ? getScenesForProject(targetProject.templateId)[0].id : 'overview'
+    const storedViewport = targetProject.templateId && targetScene !== 'overview'
+      ? targetProject.sceneViewports[targetScene]
+      : undefined
+    const viewport = targetProject.templateId && isUsableViewport(storedViewport)
+      ? { ...storedViewport }
+      : targetProject.templateId
+        ? cameraViewport(targetScene, canvasWidth, canvasHeight)
       : { x: canvasWidth / 2, y: canvasHeight / 2, zoom: 1 }
-    const nextWorld = { ...targetWorld, title: project.title, viewport, selection: [] }
-    const documentId = project.id
+    const nextWorld = { ...targetWorld, title: targetProject.title, viewport, selection: [] }
+    const documentId = targetProject.id
     activeDocumentIdRef.current = documentId
     setActiveDocumentId(documentId)
     worldRef.current = nextWorld
@@ -397,11 +427,11 @@ export default function MathburstWorkspace() {
     setGalleryOpen(false)
     setDirectorOpen(false)
     setDirectorSelection([])
-    setActiveScene(requestedScene)
+    changeActiveScene(targetScene)
     setMode('select')
     setEditorId(null)
     setEditorMatrix(null)
-  }, [stashActiveProject])
+  }, [changeActiveScene, stashActiveProject])
 
   const openProjectGallery = useCallback(() => {
     stashActiveProject()
@@ -599,7 +629,7 @@ export default function MathburstWorkspace() {
         },
       },
     }))
-    setActiveScene(shot.scene)
+    changeActiveScene(shot.scene)
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
@@ -616,11 +646,6 @@ export default function MathburstWorkspace() {
     setDirectorControlsHidden(false)
     setDirectorOpen(false)
     setDirectorSelection([])
-    setActiveScene(nearestSceneForViewport(
-      worldRef.current.viewport,
-      Math.max(1, window.innerWidth - 58),
-      Math.max(1, window.innerHeight - 54),
-    ))
   }
 
   const setDirectorViewport = (viewport: Viewport) => updateDirectorEdit((edit) => ({
@@ -790,9 +815,10 @@ export default function MathburstWorkspace() {
   }
 
   const resetDemo = () => {
-    const personalProject = activeDocumentIdRef.current === 'main'
+    const stashedProject = stashActiveProject()
+    const personalProject = stashedProject ?? (activeDocumentIdRef.current === 'main'
       ? null
-      : libraryProjectsRef.current.find((project) => project.id === activeDocumentIdRef.current) ?? null
+      : libraryProjectsRef.current.find((project) => project.id === activeDocumentIdRef.current) ?? null)
     const seed = personalProject?.templateId === null
       ? createBlankWorld(personalProject.title)
       : personalProject?.templateId
@@ -819,7 +845,7 @@ export default function MathburstWorkspace() {
     } else {
       mainWorldRef.current = centered
     }
-    setActiveScene(directorOpen ? activeDirectorShot.scene : resetScene)
+    changeActiveScene(directorOpen ? activeDirectorShot.scene : resetScene)
     setDirectorSelection([])
     setMode('select')
     setEditorId(null)
@@ -960,7 +986,7 @@ export default function MathburstWorkspace() {
           if (galleryOpen) {
             const projectId = getProjectForScene(scene).id
             const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId)
-            if (project && project.deletedAt === null) openLibraryProject(project, scene)
+            if (project && project.deletedAt === null) openLibraryProject(project)
           } else if (activeLibraryProject?.templateId) {
             const allowed = getScenesForProject(activeLibraryProject.templateId).find((candidate) => candidate.id === scene)
             if (allowed) navigateToScene(allowed.id)
@@ -983,6 +1009,44 @@ export default function MathburstWorkspace() {
 
   const zoomTo = (zoom: number) => {
     run(humanAction('Changed zoom', [{ type: 'viewport', viewport: { ...world.viewport, zoom: Math.min(2.5, Math.max(0.25, zoom)) } }]))
+  }
+
+  const viewportForBounds = (bounds: { x: number; y: number; width: number; height: number }): Viewport => {
+    const width = Math.max(1, window.innerWidth - 58)
+    const height = Math.max(1, window.innerHeight - 54)
+    const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.08))
+    const availableWidth = Math.max(1, width - padding * 2)
+    const availableHeight = Math.max(1, height - padding * 2)
+    const rawZoom = bounds.width > 0 && bounds.height > 0
+      ? Math.min(availableWidth / bounds.width, availableHeight / bounds.height)
+      : 1
+    const zoom = Math.min(2.5, Math.max(0.25, Number.isFinite(rawZoom) ? rawZoom : 1))
+    return {
+      x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
+      y: height / 2 - (bounds.y + bounds.height / 2) * zoom,
+      zoom,
+    }
+  }
+
+  const fitScene = (sceneId: CatalogSceneId) => {
+    const currentWorld = worldRef.current
+    const bounds = sceneId === 'overview'
+      ? null
+      : unionBounds(currentWorld, getSceneObjectIds(currentWorld, sceneId))
+    const viewport = bounds
+      ? viewportForBounds(bounds)
+      : sceneId === 'overview'
+        ? cameraViewport(sceneId, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
+        : null
+    if (!viewport) return
+    run(humanAction(`Fit ${sceneId === 'overview' ? 'overview' : 'scene'}`, [{ type: 'viewport', viewport }]))
+  }
+
+  const fitSelection = () => {
+    const currentWorld = worldRef.current
+    const bounds = unionBounds(currentWorld, expandTargetIds(currentWorld, currentWorld.selection))
+    if (!bounds) return
+    run(humanAction('Fit selection', [{ type: 'viewport', viewport: viewportForBounds(bounds) }]))
   }
 
   const projectBreadcrumb = activeLibraryProject?.templateId && activeScene !== 'overview'
@@ -1172,6 +1236,8 @@ export default function MathburstWorkspace() {
 
       {!directorOpen && (
         <div className="zoom-controls" aria-label="Canvas zoom">
+          <button type="button" aria-label="Fit scene" onClick={() => fitScene(activeScene)}>Fit</button>
+          <button type="button" aria-label="Fit selection" disabled={selectedObjects.length === 0} onClick={fitSelection}>Selection</button>
           <button type="button" aria-label="Zoom out" onClick={() => zoomTo(world.viewport.zoom / 1.2)}>−</button>
           <span>{Math.round(world.viewport.zoom * 100)}%</span>
           <button type="button" aria-label="Zoom in" onClick={() => zoomTo(world.viewport.zoom * 1.2)}>+</button>
