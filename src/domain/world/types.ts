@@ -65,6 +65,13 @@ export type ReconstructionDraft = {
   uncertainObjectIds: string[]
   auditSummary: string
 }
+export type AgentPresenceState = {
+  visible: boolean
+  x: number
+  y: number
+  label: string
+  action: string
+}
 export type WorldOperation =
   | { type: 'put'; object: WorldObject }
   | { type: 'remove'; id: string }

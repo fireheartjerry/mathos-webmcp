@@ -61,6 +61,7 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
 export default function WorldObjectView({
   object,
   selected,
+  agentCommit,
   previewOffset,
   world,
   run,
@@ -69,6 +70,7 @@ export default function WorldObjectView({
 }: {
   object: WorldObject
   selected: boolean
+  agentCommit?: boolean
   previewOffset?: { x: number; y: number }
   world: WorldState
   run: (action: WorldAction) => void
@@ -87,7 +89,7 @@ export default function WorldObjectView({
   }
   return (
     <div
-      className={`world-object kind-${object.kind}${selected ? ' is-selected' : ''}`}
+      className={`world-object kind-${object.kind}${selected ? ' is-selected' : ''}${agentCommit ? ' is-agent-commit' : ''}`}
       data-object-id={object.id}
       data-author={object.author}
       aria-hidden={object.opacity <= 0.02}

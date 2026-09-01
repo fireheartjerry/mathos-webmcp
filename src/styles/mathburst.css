@@ -111,6 +111,46 @@ button {
   box-shadow: 0 0 0 3px rgba(141, 224, 166, 0.12);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reconstruct-trigger,
+.reset-trigger {
+  height: 30px;
+  padding: 0 10px;
+  color: var(--ivory);
+  background: transparent;
+  border: 1px solid #45443f;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.reconstruct-trigger {
+  color: #fff;
+  background: var(--agent);
+  border-color: var(--agent);
+}
+
+.reconstruct-trigger:disabled {
+  color: #aaa79d;
+  background: #2b2b27;
+  border-color: #3a3933;
+  cursor: default;
+}
+
+.reset-trigger:hover,
+.reset-trigger:focus-visible {
+  color: #fff;
+  border-color: var(--ivory);
+  outline: none;
+}
+
 .tool-rail {
   grid-column: 1;
   grid-row: 2;
@@ -294,6 +334,16 @@ button {
   background: var(--agent);
   border: 2px solid var(--ivory);
   pointer-events: none;
+}
+
+.world-object.is-agent-commit {
+  z-index: 18;
+  animation: agent-commit 320ms ease-out both;
+}
+
+@keyframes agent-commit {
+  0% { box-shadow: 0 0 0 2px var(--agent), 0 0 0 12px rgba(124, 92, 255, 0.26); }
+  100% { box-shadow: 0 0 0 1px rgba(124, 92, 255, 0); }
 }
 
 .kind-text p {
@@ -766,6 +816,382 @@ button {
   pointer-events: none;
 }
 
+.tutor-overlay {
+  position: absolute;
+  left: 430px;
+  top: 392px;
+  z-index: 22;
+  width: 275px;
+  pointer-events: auto;
+}
+
+.tutor-attempt-panel {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  color: var(--ink);
+  background: rgba(251, 249, 243, 0.97);
+  border: 1px solid var(--ink);
+  box-shadow: 6px 7px 0 rgba(23, 23, 19, 0.1);
+}
+
+.tutor-attempt-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.tutor-attempt-panel header span { color: var(--agent); }
+.tutor-attempt-panel header b { color: var(--muted); }
+
+.tutor-attempt-panel label {
+  font: 15px/1.1 'STIX Two Text', serif;
+  font-weight: 700;
+}
+
+.tutor-attempt-panel input {
+  height: 36px;
+  min-width: 0;
+  padding: 0 9px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid rgba(23, 23, 19, 0.36);
+  outline: none;
+  font: 12px/1 'Fira Code', monospace;
+}
+
+.tutor-attempt-panel input:focus { border-color: var(--agent); }
+
+.attempt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.attempt-actions button {
+  height: 31px;
+  color: var(--paper);
+  background: var(--ink);
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.attempt-actions button:last-child { background: var(--agent); }
+.attempt-actions button:disabled { opacity: 0.34; cursor: default; }
+
+.tutor-attempt-panel p {
+  margin: 0;
+  color: #b14231;
+  font: 9px/1.35 'Fira Code', monospace;
+}
+
+.reconstruction-panel {
+  position: fixed;
+  right: 18px;
+  top: 74px;
+  z-index: 85;
+  width: 360px;
+  padding: 16px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 12px 14px 0 rgba(23, 23, 19, 0.13);
+}
+
+.reconstruction-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid rgba(23, 23, 19, 0.2);
+}
+
+.reconstruction-panel > header span {
+  color: var(--agent);
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reconstruction-panel h2 {
+  margin: 5px 0 0;
+  font: 24px/1 'STIX Two Text', serif;
+}
+
+.reconstruction-panel > header > b {
+  padding: 6px 7px;
+  color: var(--paper);
+  background: var(--ink);
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.reconstruction-stack {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.reconstruction-object {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f1eee5;
+  border-left: 3px solid var(--agent);
+}
+
+.reconstruction-object > span,
+.reconstruction-object > i {
+  color: var(--muted);
+  font: 7px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  font-style: normal;
+}
+
+.reconstruction-object > div {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reconstruction-object > i {
+  color: var(--agent);
+  padding: 4px 5px;
+  border: 1px solid rgba(124, 92, 255, 0.35);
+}
+
+.reconstruction-object.is-uncertain {
+  border-left-color: #f05f44;
+  background: #faece7;
+}
+
+.reconstruction-object.is-uncertain > i { color: #b14231; border-color: rgba(177, 66, 49, 0.32); }
+
+.audit-result {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 9px;
+  align-items: start;
+  padding: 10px;
+  background: #faece7;
+  border: 1px solid rgba(177, 66, 49, 0.18);
+}
+
+.audit-result > i {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #f05f44;
+  border-radius: 50%;
+  font: 12px/1 'Fira Code', monospace;
+  font-style: normal;
+}
+
+.audit-result p {
+  margin: 0;
+  color: #6c4942;
+  font: 8px/1.45 'Fira Code', monospace;
+}
+
+.audit-result p b { display: block; color: var(--ink); margin-bottom: 2px; }
+.audit-result.is-passed { background: #e6f4e8; border-color: rgba(44, 120, 65, 0.18); }
+.audit-result.is-passed > i { background: #2f9952; }
+.audit-result.is-passed p { color: #3c6e49; }
+
+.reconstruction-panel footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.reconstruction-panel footer button {
+  min-height: 36px;
+  padding: 0 11px;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.audit-button,
+.approve-button {
+  flex: 1;
+  color: #fff;
+  background: var(--agent);
+}
+
+.approve-button { background: #2f9952; }
+.reject-button { color: var(--ink); background: transparent; border: 1px solid rgba(23, 23, 19, 0.26); }
+.reconstruction-panel footer button:disabled { opacity: 0.45; }
+
+.reconstruction-panel > small {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  font: 7px/1.4 'Fira Code', monospace;
+}
+
+.agent-presence {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 150;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.agent-presence svg {
+  width: 27px;
+  height: 33px;
+  filter: drop-shadow(2px 3px 0 rgba(23, 23, 19, 0.18));
+}
+
+.agent-presence svg path { fill: var(--agent); stroke: var(--paper); stroke-width: 1.4; }
+
+.agent-presence > div {
+  max-width: 210px;
+  display: grid;
+  gap: 3px;
+  margin-top: 20px;
+  padding: 7px 8px;
+  color: #fff;
+  background: var(--agent);
+  box-shadow: 5px 6px 0 rgba(23, 23, 19, 0.12);
+}
+
+.agent-presence b {
+  font: 9px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.agent-presence span {
+  font: 8px/1.25 'Fira Code', monospace;
+  opacity: 0.88;
+}
+
+.activity-rail {
+  position: fixed;
+  right: 18px;
+  bottom: 64px;
+  z-index: 70;
+  width: 300px;
+  color: var(--ink);
+  background: rgba(251, 249, 243, 0.96);
+  border: 1px solid var(--ink);
+  box-shadow: 8px 9px 0 rgba(23, 23, 19, 0.1);
+}
+
+.activity-rail > header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  min-height: 37px;
+  background: var(--ink);
+}
+
+.activity-toggle,
+.activity-undo {
+  color: var(--paper);
+  background: transparent;
+  font: 8px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.activity-toggle b {
+  min-width: 17px;
+  padding: 3px;
+  color: var(--ink);
+  background: var(--paper);
+  text-align: center;
+}
+
+.activity-toggle i { margin-left: auto; color: #8e8b81; font-style: normal; }
+.activity-undo { padding: 0 11px; border-left: 1px solid #45443f; }
+.activity-undo:hover { background: var(--agent); }
+.activity-undo:disabled { color: #5f5d56; cursor: default; }
+
+.activity-list {
+  max-height: 236px;
+  overflow: hidden;
+}
+
+.activity-list > p {
+  margin: 0;
+  padding: 13px;
+  color: var(--muted);
+  font: 8px/1.35 'Fira Code', monospace;
+}
+
+.activity-item {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border-top: 1px solid rgba(23, 23, 19, 0.1);
+}
+
+.source-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.source-dot.is-agent { background: var(--agent); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.12); }
+
+.activity-item > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.activity-item b {
+  overflow: hidden;
+  font: 8px/1.2 'Fira Code', monospace;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.activity-item span,
+.activity-item time {
+  color: var(--muted);
+  font: 7px/1 'Fira Code', monospace;
+  text-transform: uppercase;
+}
+
+.activity-item time { white-space: nowrap; }
+.activity-rail.is-collapsed { width: 220px; }
+.activity-rail.is-compact { width: 260px; }
+.activity-rail.is-compact .activity-list { max-height: 39px; }
+.activity-rail.is-compact .activity-item:not(:first-child) { display: none; }
+
 .object-context {
   position: fixed;
   left: calc(50% + 29px);
@@ -931,10 +1357,16 @@ button {
 @media (max-width: 900px) {
   .world-header { grid-template-columns: 190px 1fr; }
   .world-status { display: none; }
+  .reset-trigger { display: none; }
   .object-context button:nth-of-type(1),
   .object-context button:nth-of-type(2),
   .object-context button:nth-of-type(4),
   .object-context button:nth-of-type(5) { display: none; }
+}
+
+@media (max-width: 1040px) {
+  .activity-rail:not(.is-collapsed) { width: 260px; }
+  .reconstruction-panel { right: 12px; width: 340px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadWorld, saveWorld } from '../domain/world/persistence'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld } from '../domain/world/seed'
+import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import { findDependentIds } from '../domain/world/dependencies'
+import {
+  approveReconstruction,
+  auditReconstruction,
+  proposeReconstruction,
+  rejectReconstruction,
+} from '../domain/world/reconstruction'
 import {
   buildDeleteOperations,
   buildDuplicateOperations,
@@ -12,7 +18,10 @@ import {
   expandTargetIds,
   unionBounds,
 } from '../domain/world/operations'
-import type { WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
+import type { AgentPresenceState, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
+import ActivityRail from './ActivityRail'
+import AgentPresence from './AgentPresence'
+import ReconstructionPanel from './ReconstructionPanel'
 import ToolRail from './ToolRail'
 import type { ToolMode } from './ToolRail'
 import WorldCanvas from './WorldCanvas'
@@ -24,6 +33,44 @@ const humanAction = (summary: string, operations: WorldOperation[]): WorldAction
   operations,
 })
 
+const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: 'Tutor', action: '' }
+
+function demoReconstruction(audited: boolean): WorldObject[] {
+  return [
+    {
+      id: HERO_EQUATION_ID,
+      kind: 'equation',
+      latex: '\\int x e^x\\,dx',
+      color: '#171713',
+      bounds: { x: 430, y: 156, width: 275, height: 72 },
+      rotation: 0,
+      author: 'agent',
+      opacity: 1,
+    },
+    {
+      id: 'recon_prompt',
+      kind: 'text',
+      text: 'Evaluate the integral, then explain the geometry.',
+      color: '#171713',
+      fontSize: 17,
+      bounds: { x: 438, y: 242, width: 260, height: 50 },
+      rotation: 0,
+      author: 'agent',
+      opacity: 1,
+    },
+    {
+      id: 'recon_work',
+      kind: 'equation',
+      latex: audited ? 'xe^x-e^x+C' : 'xe^x-e^x x+C',
+      color: audited ? '#171713' : '#f05f44',
+      bounds: { x: 430, y: 308, width: 275, height: 62 },
+      rotation: 0,
+      author: 'agent',
+      opacity: 1,
+    },
+  ]
+}
+
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const [hydrated, setHydrated] = useState(false)
@@ -31,6 +78,11 @@ export default function MathburstWorkspace() {
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
   const [editorMatrix, setEditorMatrix] = useState<[[number, number], [number, number]] | null>(null)
+  const [presence, setPresence] = useState<AgentPresenceState>(quietPresence)
+  const [agentCommitIds, setAgentCommitIds] = useState<string[]>([])
+  const [agentBusy, setAgentBusy] = useState(false)
+  const [nextStep, setNextStep] = useState('')
+  const [attemptFeedback, setAttemptFeedback] = useState('')
 
   useEffect(() => {
     const stored = loadWorld()
@@ -46,9 +98,125 @@ export default function MathburstWorkspace() {
     setWorld((current) => dispatchWorldAction(current, action))
   }, [])
 
+  const runAgent = useCallback((action: WorldAction, targetIds: string[] = []) => {
+    if (agentBusy) return
+    const target = targetIds.map((id) => world.objects[id]).find(Boolean)
+    const x = target
+      ? 58 + world.viewport.x + (target.bounds.x + target.bounds.width / 2) * world.viewport.zoom
+      : Math.min(window.innerWidth - 260, 920)
+    const y = target
+      ? 54 + world.viewport.y + (target.bounds.y + target.bounds.height / 2) * world.viewport.zoom
+      : 240
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    setAgentBusy(true)
+    if (reduceMotion) {
+      run(action)
+      setAgentCommitIds(targetIds)
+      window.setTimeout(() => {
+        setAgentCommitIds([])
+        setAgentBusy(false)
+      }, 120)
+      return
+    }
+
+    setPresence({ visible: true, x, y, label: 'Tutor', action: action.summary })
+    window.setTimeout(() => {
+      run(action)
+      setAgentCommitIds(targetIds)
+      window.setTimeout(() => {
+        setPresence(quietPresence)
+        setAgentCommitIds([])
+        setAgentBusy(false)
+      }, 320)
+    }, 180)
+  }, [agentBusy, run, world.objects, world.viewport])
+
   const history = useCallback((direction: 'undo' | 'redo') => {
     setWorld((current) => stepWorldHistory(current, direction, 'human'))
   }, [])
+
+  const startReconstruction = () => {
+    runAgent(
+      proposeReconstruction(SOURCE_IMAGE_ID, demoReconstruction(false), ['recon_work']),
+      [SOURCE_IMAGE_ID],
+    )
+  }
+
+  const auditCurrentReconstruction = () => {
+    if (!world.reconstruction) return
+    runAgent(
+      auditReconstruction(
+        world.reconstruction,
+        'Matched every symbol back to the photograph. Removed the duplicated x after the second integral.',
+        demoReconstruction(true),
+        [],
+      ),
+      [SOURCE_IMAGE_ID],
+    )
+  }
+
+  const acceptReconstruction = () => {
+    if (!world.reconstruction) return
+    run(approveReconstruction(world))
+  }
+
+  const submitAttempt = () => {
+    const attempts = world.session.attempts + 1
+    run(humanAction('Checked a calculus step', [{
+      type: 'session',
+      patch: {
+        attempts,
+        currentMisconception: 'integration-by-parts-differential',
+      },
+    }]))
+    setAttemptFeedback(attempts === 1
+      ? 'Not quite. Write du before carrying the term forward.'
+      : 'Still stuck symbolically. Ask Tutor for another representation.')
+  }
+
+  const requestTutorHelp = () => {
+    if (world.session.attempts < 2 || world.session.helpShown.includes('linked-integrand-graph')) return
+    const equation = world.objects.eq_integrand
+    const graph = world.objects[HERO_GRAPH_ID]
+    if (equation?.kind !== 'equation' || graph?.kind !== 'graph') return
+    const note: WorldObject = {
+      id: 'tutor_question',
+      kind: 'text',
+      text: 'What changes when you differentiate u?',
+      color: '#171713',
+      fontSize: 25,
+      bounds: { x: 750, y: 505, width: 235, height: 88 },
+      rotation: 0,
+      author: 'agent',
+      opacity: 1,
+    }
+    const action: WorldAction = {
+      id: crypto.randomUUID(),
+      source: 'agent',
+      summary: 'Switched the problem into a linked graph',
+      operations: [
+        { type: 'put', object: { ...equation, opacity: 1 } },
+        { type: 'put', object: { ...graph, opacity: 1 } },
+        { type: 'put', object: note },
+        { type: 'session', patch: { helpShown: [...world.session.helpShown, 'linked-integrand-graph'] } },
+        { type: 'select', ids: [graph.id] },
+      ],
+    }
+    runAgent(action, [graph.id, equation.id, note.id])
+  }
+
+  const resetDemo = () => {
+    setWorld(createSeedWorld())
+    setMode('select')
+    setEditorId(null)
+    setEditorMatrix(null)
+    setPresence(quietPresence)
+    setAgentCommitIds([])
+    setAgentBusy(false)
+    setNextStep('')
+    setAttemptFeedback('')
+  }
 
   const groupSelection = useCallback(() => {
     if (world.selection.length < 2) return
@@ -194,7 +362,18 @@ export default function MathburstWorkspace() {
       <header className="world-header">
         <div className="wordmark"><span>∫</span> Mathburst</div>
         <div className="world-title"><b>Integration by parts</b><span>/</span><em>shared mathematical world</em></div>
-        <div className="world-status"><i /> local session · saved</div>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="reconstruct-trigger"
+            disabled={agentBusy || Boolean(world.reconstruction) || world.session.reconstructionStatus === 'approved'}
+            onClick={startReconstruction}
+          >
+            {world.session.reconstructionStatus === 'approved' ? '✓ live scene' : 'Reconstruct photo'}
+          </button>
+          <button type="button" className="reset-trigger" onClick={resetDemo}>Reset demo</button>
+          <div className="world-status"><i /> local session · saved</div>
+        </div>
       </header>
 
       <ToolRail
@@ -207,7 +386,55 @@ export default function MathburstWorkspace() {
         onDelete={deleteSelection}
       />
 
-      <WorldCanvas world={world} mode={mode} run={run} onEditObject={openEditor} />
+      <WorldCanvas
+        world={world}
+        mode={mode}
+        run={run}
+        onEditObject={openEditor}
+        agentCommitIds={agentCommitIds}
+        tutorOverlay={world.session.reconstructionStatus === 'approved' ? (
+          <section className="tutor-attempt-panel" aria-label="Try the next calculus step">
+            <header><span>02 · Your turn</span><b>{world.session.attempts} attempts</b></header>
+            <label htmlFor="next-step-input">My next step</label>
+            <input
+              id="next-step-input"
+              value={nextStep}
+              placeholder="Write the next symbolic step…"
+              onChange={(event) => setNextStep(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && nextStep.trim()) submitAttempt() }}
+            />
+            <div className="attempt-actions">
+              <button type="button" disabled={!nextStep.trim()} onClick={submitAttempt}>Check step</button>
+              <button
+                type="button"
+                disabled={world.session.attempts < 2 || agentBusy || world.session.helpShown.includes('linked-integrand-graph')}
+                onClick={requestTutorHelp}
+              >
+                {world.session.helpShown.includes('linked-integrand-graph') ? 'Graph linked ✓' : 'Ask Tutor'}
+              </button>
+            </div>
+            {attemptFeedback && <p>{attemptFeedback}</p>}
+          </section>
+        ) : null}
+      />
+
+      {world.reconstruction && (
+        <ReconstructionPanel
+          draft={world.reconstruction}
+          status={world.session.reconstructionStatus}
+          busy={agentBusy}
+          onAudit={auditCurrentReconstruction}
+          onApprove={acceptReconstruction}
+          onReject={() => run(rejectReconstruction())}
+        />
+      )}
+
+      <ActivityRail
+        activity={world.activity}
+        onUndo={() => history('undo')}
+        compact={world.session.helpShown.includes('linked-integrand-graph')}
+      />
+      <AgentPresence presence={presence} />
 
       {selectedObjects.length > 0 && (
         <div className="object-context" aria-label="Selected object actions">

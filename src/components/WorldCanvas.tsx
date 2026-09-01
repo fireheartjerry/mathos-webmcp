@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { ChangeEvent, PointerEvent as ReactPointerEvent, WheelEvent } from 'react'
+import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
@@ -24,11 +24,15 @@ export default function WorldCanvas({
   mode,
   run,
   onEditObject,
+  agentCommitIds = [],
+  tutorOverlay,
 }: {
   world: WorldState
   mode: ToolMode
   run: (action: WorldAction) => void
   onEditObject: (id: string) => void
+  agentCommitIds?: string[]
+  tutorOverlay?: ReactNode
 }) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -358,6 +362,7 @@ export default function WorldCanvas({
               key={id}
               object={object}
               selected={world.selection.includes(id)}
+              agentCommit={agentCommitIds.includes(id)}
               previewOffset={offset}
               world={world}
               run={run}
@@ -366,6 +371,7 @@ export default function WorldCanvas({
             />
           )
         })}
+        {tutorOverlay && <div className="tutor-overlay" onPointerDown={(event) => event.stopPropagation()}>{tutorOverlay}</div>}
         {inkPreview && previewBounds && (
           <svg
             className="ink-preview"
