@@ -44,16 +44,25 @@ const canonicalSceneViewports = (projectId: ProjectId): Partial<Record<SceneId, 
   getScenesForProject(projectId).map((scene) => [scene.id, getViewportForScene(scene.id)]),
 ) as Partial<Record<SceneId, Viewport>>
 
+const normalizeStartScene = (templateId: ProjectId | null, startScene: CatalogSceneId): CatalogSceneId => {
+  if (!templateId) return 'overview'
+  const ownScenes = getScenesForProject(templateId)
+  return ownScenes.some((scene) => scene.id === startScene) ? startScene : ownScenes[0].id
+}
+
 /** Normalize optional camera bookmarks without mutating the persisted project. */
 const parseSceneViewports = (
   value: unknown,
   startScene: CatalogSceneId,
   fallback: Viewport,
+  allowedSceneIds: readonly SceneId[],
 ): Partial<Record<SceneId, Viewport>> => {
   const sceneViewports: Partial<Record<SceneId, Viewport>> = {}
   if (isRecord(value)) {
     for (const [sceneId, viewport] of Object.entries(value)) {
-      if (isSceneId(sceneId) && isViewport(viewport)) sceneViewports[sceneId] = cloneViewport(viewport)
+      if (isSceneId(sceneId) && allowedSceneIds.includes(sceneId) && isViewport(viewport)) {
+        sceneViewports[sceneId] = cloneViewport(viewport)
+      }
     }
   }
   if (startScene !== 'overview' && !sceneViewports[startScene]) {
@@ -140,6 +149,14 @@ const BUILT_IN_PROJECTS: LibraryProject[] = PROJECTS.map((project, index) => ({
   world: createProjectWorld(canonicalSeed, project.id, project.title),
 }))
 
+export type ProjectLibraryLoadResult = {
+  projects: LibraryProject[]
+  /** True when storage was absent or fully parsed and migrated. */
+  ok: boolean
+  /** True when raw storage was present but could not be trusted for repair. */
+  needsRepair: boolean
+}
+
 const parseProject = (value: unknown): LibraryProject | null => {
   if (!isRecord(value)) return null
   const project = value as Partial<LibraryProject>
@@ -155,9 +172,13 @@ const parseProject = (value: unknown): LibraryProject | null => {
     && (project.deletedAt === null || typeof project.deletedAt === 'number'))) return null
   const world = migrateWorld(project.world)
   if (!world) return null
+  const templateId = project.templateId as ProjectId | null
+  const startScene = normalizeStartScene(templateId, project.startScene)
+  const allowedSceneIds = templateId ? getScenesForProject(templateId).map((scene) => scene.id) : []
   return {
     ...(project as LibraryProject),
-    sceneViewports: parseSceneViewports(project.sceneViewports, project.startScene, world.viewport),
+    startScene,
+    sceneViewports: parseSceneViewports(project.sceneViewports, startScene, world.viewport, allowedSceneIds),
     world,
   }
 }
@@ -170,13 +191,18 @@ export function createDefaultProjectLibrary(): LibraryProject[] {
   }))
 }
 
-/** Merge stored state with the four canonical projects so app updates never orphan them. */
-export function loadProjectLibrary(): LibraryProject[] {
+/** Merge stored state with canonical projects without writing or deleting raw storage. */
+export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY) ?? 'null')
-    const stored = Array.isArray(parsed)
-      ? parsed.map(parseProject).filter((project): project is LibraryProject => project !== null)
-      : []
+    const raw = localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)
+    if (raw === null) return { projects: createDefaultProjectLibrary(), ok: true, needsRepair: false }
+
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }
+    }
+    const parsedProjects = parsed.map(parseProject)
+    const stored = parsedProjects.filter((project): project is LibraryProject => project !== null)
     const storedById = new Map(stored.map((project) => [project.id, project]))
     const builtIns = BUILT_IN_PROJECTS.map((project) => {
       const saved = storedById.get(project.id)
@@ -201,10 +227,16 @@ export function loadProjectLibrary(): LibraryProject[] {
           }
     })
     const userProjects = stored.filter((project) => project.kind === 'user')
-    return [...builtIns, ...userProjects]
+    const needsRepair = parsedProjects.some((project) => project === null)
+    return { projects: [...builtIns, ...userProjects], ok: !needsRepair, needsRepair }
   } catch {
-    return createDefaultProjectLibrary()
+    return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }
   }
+}
+
+/** Backwards-compatible project-only loader. */
+export function loadProjectLibrary(): LibraryProject[] {
+  return loadProjectLibraryResult().projects
 }
 
 export function saveProjectLibrary(projects: LibraryProject[]) {

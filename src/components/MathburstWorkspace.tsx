@@ -12,7 +12,7 @@ import {
   createDefaultProjectLibrary,
   createProjectWorld,
   createUserProject,
-  loadProjectLibrary,
+  loadProjectLibraryResult,
   saveProjectLibrary,
   type LibraryProject,
 } from '../domain/world/library'
@@ -131,6 +131,7 @@ export default function MathburstWorkspace() {
   const [activeDocumentId, setActiveDocumentId] = useState<'main' | string>('main')
   const activeDocumentIdRef = useRef<'main' | string>('main')
   const [hydrated, setHydrated] = useState(false)
+  const libraryStorageNeedsRepairRef = useRef(false)
   const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
@@ -160,6 +161,12 @@ export default function MathburstWorkspace() {
     })
   }, [])
 
+  // A user action that intentionally repairs a project is allowed to replace
+  // malformed raw storage. Passive hydration/world effects stay blocked.
+  const markLibraryStorageRepaired = useCallback(() => {
+    libraryStorageNeedsRepairRef.current = false
+  }, [])
+
   const activeLibraryProject = activeDocumentId === 'main'
     ? null
     : libraryProjects.find((project) => project.id === activeDocumentId) ?? null
@@ -168,7 +175,9 @@ export default function MathburstWorkspace() {
   useEffect(() => {
     const samples = loadHandwritingSamples()
     handwritingSamplesRef.current = samples
-    const storedLibrary = loadProjectLibrary().map((project) => ({
+    const libraryResult = loadProjectLibraryResult()
+    libraryStorageNeedsRepairRef.current = libraryResult.needsRepair
+    const storedLibrary = libraryResult.projects.map((project) => ({
       ...project,
       world: applyCapturedOpeningAttempt(project.world, samples),
     }))
@@ -198,7 +207,7 @@ export default function MathburstWorkspace() {
   }, [activeDocumentId, hydrated, updateLibraryProjects, world])
 
   useEffect(() => {
-    if (hydrated) saveProjectLibrary(libraryProjects)
+    if (hydrated && !libraryStorageNeedsRepairRef.current) saveProjectLibrary(libraryProjects)
   }, [hydrated, libraryProjects])
 
   useEffect(() => {
@@ -412,29 +421,34 @@ export default function MathburstWorkspace() {
       ? template ?? createProjectWorld(createSeedWorld(), templateId)
       : createBlankWorld(title)
     const project = createUserProject(title, templateId, sourceWorld)
+    markLibraryStorageRepaired()
     updateLibraryProjects((projects) => [...projects, project])
     openLibraryProject(project)
-  }, [openLibraryProject, updateLibraryProjects])
+  }, [markLibraryStorageRepaired, openLibraryProject, updateLibraryProjects])
 
   const duplicateLibraryProject = useCallback((project: LibraryProject) => {
     const duplicate = createUserProject(`${project.title} copy`, project.templateId, cloneWorld(project.world))
+    markLibraryStorageRepaired()
     updateLibraryProjects((projects) => [...projects, duplicate])
-  }, [updateLibraryProjects])
+  }, [markLibraryStorageRepaired, updateLibraryProjects])
 
   const trashLibraryProject = useCallback((project: LibraryProject) => {
+    markLibraryStorageRepaired()
     updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === project.id
       ? { ...candidate, deletedAt: Date.now(), updatedAt: Date.now() }
       : candidate))
-  }, [updateLibraryProjects])
+  }, [markLibraryStorageRepaired, updateLibraryProjects])
 
   const restoreLibraryProject = useCallback((project: LibraryProject) => {
+    markLibraryStorageRepaired()
     updateLibraryProjects((projects) => projects.map((candidate) => candidate.id === project.id
       ? { ...candidate, deletedAt: null, updatedAt: Date.now() }
       : candidate))
-  }, [updateLibraryProjects])
+  }, [markLibraryStorageRepaired, updateLibraryProjects])
 
   const deleteLibraryProjectForever = useCallback((project: LibraryProject) => {
     if (project.kind !== 'user') return
+    markLibraryStorageRepaired()
     updateLibraryProjects((projects) => projects.filter((candidate) => candidate.id !== project.id))
     if (activeDocumentIdRef.current === project.id) {
       activeDocumentIdRef.current = 'main'
@@ -442,7 +456,7 @@ export default function MathburstWorkspace() {
       worldRef.current = mainWorldRef.current
       setWorld(mainWorldRef.current)
     }
-  }, [updateLibraryProjects])
+  }, [markLibraryStorageRepaired, updateLibraryProjects])
 
   const bridge = useMemo<WorldBridge>(() => ({
     getWorld: () => worldRef.current,
@@ -798,6 +812,7 @@ export default function MathburstWorkspace() {
     worldRef.current = centered
     setWorld(centered)
     if (personalProject) {
+      markLibraryStorageRepaired()
       updateLibraryProjects((projects) => projects.map((project) => project.id === personalProject.id
         ? { ...project, world: centered, updatedAt: Date.now() }
         : project))
