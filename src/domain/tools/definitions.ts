@@ -405,8 +405,8 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const args = values(input, ['direction']); if (args.direction !== 'undo' && args.direction !== 'redo') throw new Error('direction must be undo or redo.'); return bridge.runHistory(args.direction)
   })
 
-  const setViewport = tool('set_viewport', 'Set the world viewport', 'Pan and zoom the learner to a world region.', schema({ viewport: schema({ x: { type: 'number' }, y: { type: 'number' }, zoom: { type: 'number', exclusiveMinimum: 0 } }, ['x', 'y', 'zoom']) }, ['viewport']), false, async (input) => {
-    const args = values(input, ['viewport']); if (!isRecord(args.viewport) || typeof args.viewport.x !== 'number' || typeof args.viewport.y !== 'number' || typeof args.viewport.zoom !== 'number' || !finite(args.viewport.x, args.viewport.y, args.viewport.zoom) || args.viewport.zoom <= 0) throw new Error('viewport must contain finite x, y and positive zoom.')
+    const setViewport = tool('set_viewport', 'Set the world viewport', 'Pan and zoom the learner to a world region.', schema({ viewport: schema({ x: { type: 'number' }, y: { type: 'number' }, zoom: { type: 'number', minimum: 0.25, maximum: 2.5 } }, ['x', 'y', 'zoom']) }, ['viewport']), false, async (input) => {
+      const args = values(input, ['viewport']); if (!isRecord(args.viewport) || typeof args.viewport.x !== 'number' || typeof args.viewport.y !== 'number' || typeof args.viewport.zoom !== 'number' || !finite(args.viewport.x, args.viewport.y, args.viewport.zoom) || args.viewport.zoom < 0.25 || args.viewport.zoom > 2.5) throw new Error('viewport must contain finite x, y and zoom between 0.25 and 2.5.')
     return bridge.runAgentAction(action('Changed the viewport', [{ type: 'viewport', viewport: args.viewport as Viewport }]))
   })
 
