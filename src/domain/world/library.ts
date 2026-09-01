@@ -182,7 +182,12 @@ export type ProjectLibraryLoadResult = {
   needsRepair: boolean
 }
 
-const parseProject = (value: unknown): LibraryProject | null => {
+type ParsedProject = {
+  project: LibraryProject
+  needsRepair: boolean
+}
+
+const parseProject = (value: unknown): ParsedProject | null => {
   if (!isRecord(value)) return null
   const project = value as Partial<LibraryProject>
   if (!(isSafeLibraryId(project.id)
@@ -198,18 +203,29 @@ const parseProject = (value: unknown): LibraryProject | null => {
   if (project.kind === 'built-in'
     && (project.templateId === null || project.id !== project.templateId
       || !PROJECTS.some((candidate) => candidate.id === project.templateId))) return null
+  if (project.kind === 'user' && PROJECTS.some((candidate) => candidate.id === project.id)) return null
   const world = migrateWorld(project.world)
   if (!world) return null
   const templateId = project.templateId as ProjectId | null
   const startScene = normalizeStartScene(templateId, project.startScene)
   const allowedSceneIds = templateId ? getScenesForProject(templateId).map((scene) => scene.id) : []
+  let needsRepair = startScene !== project.startScene
+  if (project.sceneViewports !== undefined) {
+    if (!isRecord(project.sceneViewports)) return null
+    for (const sceneId of Object.keys(project.sceneViewports)) {
+      if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) needsRepair = true
+    }
+  }
   const sceneViewports = parseSceneViewports(project.sceneViewports, startScene, world.viewport, allowedSceneIds)
   if (!sceneViewports) return null
   return {
-    ...(project as LibraryProject),
-    startScene,
-    sceneViewports,
-    world,
+    needsRepair,
+    project: {
+      ...(project as LibraryProject),
+      startScene,
+      sceneViewports,
+      world,
+    },
   }
 }
 
@@ -232,7 +248,18 @@ export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
       return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }
     }
     const parsedProjects = parsed.map(parseProject)
-    const stored = parsedProjects.filter((project): project is LibraryProject => project !== null)
+    const stored: LibraryProject[] = []
+    const storedIds = new Set<string>()
+    let duplicateIds = false
+    for (const parsedProject of parsedProjects) {
+      if (!parsedProject) continue
+      if (storedIds.has(parsedProject.project.id)) {
+        duplicateIds = true
+        continue
+      }
+      storedIds.add(parsedProject.project.id)
+      stored.push(parsedProject.project)
+    }
     const storedById = new Map(stored.map((project) => [project.id, project]))
     const builtIns = BUILT_IN_PROJECTS.map((project) => {
       const saved = storedById.get(project.id)
@@ -257,7 +284,9 @@ export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
           }
     })
     const userProjects = stored.filter((project) => project.kind === 'user')
-    const needsRepair = parsedProjects.some((project) => project === null)
+    const needsRepair = duplicateIds || parsedProjects.some((parsedProject) => (
+      parsedProject === null || parsedProject.needsRepair
+    ))
     return { projects: [...builtIns, ...userProjects], ok: !needsRepair, needsRepair }
   } catch {
     return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }

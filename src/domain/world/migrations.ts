@@ -558,6 +558,90 @@ const isReconstructionDraft = (value: unknown): boolean => isRecord(value)
 const isObjectArray = (value: unknown, predicate: (item: unknown) => boolean): value is unknown[] => Array.isArray(value)
   && value.every(predicate)
 
+const POINT_PRIMITIVE_KINDS = new Set(['point', 'midpoint', 'intersection', 'homothety', 'similarity'])
+const DIRECTION_PRIMITIVE_KINDS = new Set(['line', 'segment', 'perpendicular', 'parallel'])
+
+const hasObjectKind = (objects: UnknownRecord, id: string, kind: string): boolean => {
+  const candidate = hasOwn(objects, id) ? objects[id] : undefined
+  return isRecord(candidate) && candidate.kind === kind
+}
+
+const isGeometryDependenciesValid = (value: UnknownRecord): boolean => {
+  if (!Array.isArray(value.primitives)) return false
+  const primitives = value.primitives.filter(isRecord)
+  if (primitives.length !== value.primitives.length) return false
+
+  const primitiveKinds = new Map<string, string>()
+  for (const primitive of primitives) {
+    if (!isSafeIdentifier(primitive.id) || typeof primitive.kind !== 'string' || primitiveKinds.has(primitive.id)) return false
+    primitiveKinds.set(primitive.id, primitive.kind)
+  }
+  const hasKind = (id: unknown, kinds: Set<string>): boolean => (
+    isSafeIdentifier(id) && kinds.has(primitiveKinds.get(id) ?? '')
+  )
+  const hasPoints = (ids: unknown): boolean => isSafeIdArray(ids) && ids.every((id) => hasKind(id, POINT_PRIMITIVE_KINDS))
+  const hasDirections = (ids: unknown): boolean => isSafeIdArray(ids) && ids.every((id) => hasKind(id, DIRECTION_PRIMITIVE_KINDS))
+
+  for (const primitive of primitives) {
+    switch (primitive.kind) {
+      case 'point':
+        break
+      case 'segment':
+        if (!hasPoints([primitive.from, primitive.to])) return false
+        break
+      case 'line':
+        if (!hasPoints(primitive.through)) return false
+        break
+      case 'circle':
+        if (!hasPoints([primitive.center, primitive.through])) return false
+        break
+      case 'polygon':
+        if (!hasPoints(primitive.points)) return false
+        break
+      case 'midpoint':
+        if (!hasPoints(primitive.of)) return false
+        break
+      case 'perpendicular':
+      case 'parallel':
+        if (!hasPoints([primitive.through]) || !hasDirections([primitive.to])) return false
+        break
+      case 'intersection':
+        if (!hasDirections(primitive.lines)) return false
+        break
+      case 'angle':
+        if (!hasPoints([primitive.a, primitive.vertex, primitive.b])) return false
+        break
+      case 'homothety':
+      case 'similarity':
+        if (!hasPoints([primitive.center, primitive.source])) return false
+        break
+      default:
+        return false
+    }
+  }
+  return true
+}
+
+const isWorldDependenciesValid = (objects: UnknownRecord): boolean => {
+  for (const object of Object.values(objects)) {
+    if (!isWorldObject(object)) return false
+    if ((object.kind === 'frame' || object.kind === 'group')
+      && !object.childIds.every((id) => hasOwn(objects, id))) return false
+    if (object.kind === 'matrix'
+      && !object.sourceIds.every((id) => hasObjectKind(objects, id, 'arrow'))) return false
+    if (object.kind === 'graph'
+      && (!hasOwn(objects, object.equationId) || !isEquationObject(objects[object.equationId]))) return false
+    if (object.kind === 'geometry' && !isGeometryDependenciesValid(object)) return false
+    if (object.kind === 'training'
+      && !hasObjectKind(objects, object.linkedAttentionId, 'attention')) return false
+    if (object.kind === 'numberTheory' && object.linkedSimplexId !== undefined
+      && !hasObjectKind(objects, object.linkedSimplexId, 'simplex')) return false
+    if (object.kind === 'barycentric' && object.linkedAttentionId !== undefined
+      && !hasObjectKind(objects, object.linkedAttentionId, 'attention')) return false
+  }
+  return true
+}
+
 const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
   if (!isWorldObjectStore(value.objects)
     || !isSafeIdArray(value.order)
@@ -574,10 +658,8 @@ const isWorldStore = (value: UnknownRecord, version: 1 | 2): boolean => {
   if (!isSafeIdArray(order)
     || !isSafeIdArray(selection)
     || !order.every((id) => hasOwn(objects, id))
-    || !selection.every((id) => hasOwn(objects, id))) return false
-  for (const object of Object.values(objects)) {
-    if (isGraphObject(object) && !isEquationObject(objects[object.equationId])) return false
-  }
+    || !selection.every((id) => hasOwn(objects, id))
+    || !isWorldDependenciesValid(objects)) return false
 
   if (version === 1) {
     // v1 did not define semantic stores, but preserve and validate an
