@@ -4,18 +4,18 @@
 
 Mathburst is an AI-native math whiteboard for tutoring. A problem can begin as a photograph and become editable equations, reactive graphs, dynamic geometry, matrices, diagrams, notes, and freehand work. The learner and the external tutor do not trade screenshots or disconnected chat messages: they act inside the same world.
 
-**Live app:** [mathos-second-try.fireheartjerry.chatgpt.site](https://mathos-second-try.fireheartjerry.chatgpt.site)
+**Local app:** run `pnpm dev`, then open `http://localhost:3000`.
 
 ![Mathburst — a shared mathematical world](public/og.png)
 
 ## The 60-second judge path
 
-1. Open the app. Press **Reconstruct photo**, then **AI double-check**, then **Approve clean conversion**. The photographed calculus becomes clean, selectable math.
-2. Enter any attempted next step twice and press **Check step** after each. Press **Ask Tutor**. The tutor switches representation by creating a graph linked to the live equation instead of dumping an answer into chat.
+1. Open **Gamma Lab → Recurrence Clinic**. Press **Reconstruct photo**, **AI double-check**, then **Approve clean conversion**.
+2. Open **Area Becomes Probability** and adjust the live bound. The normalized Gamma area, three bin masses, and `log mass → softmax` bridge update together.
 3. Open **WebMCP · 18/18**. The inspector shows the exact page tools an external agent receives; every **Run** button invokes the same tool handler.
-4. Press **2** for Olympiad Geometry. Drag point A or B and watch the dependent homothety and tangent circles recompute.
-5. Press **3** for Matrix Space. Double-click the matrix, change a value, and commit it; the transformed grid and vectors update.
-6. Press **Undo**. Human and tutor actions share one attributed, reversible history.
+4. Visit **Tiny Transformer → Train From Scratch** and press **TRAIN 1 STEP**. The deterministic numerical-gradient update changes a visible parameter, lowers loss, and raises target probability.
+5. Visit **Olympiad Geometry → Homothety & Spiral Similarity**, then **Simplex → Ramanujan**. Drag the geometry, rotate the simplex, vary the lattice denominator, and inspect the finite partition lanes.
+6. Open **Director Review** to browse and edit all thirteen cinematic keyframes. Press **Undo** from the workspace; human and tutor actions share one attributed, reversible history.
 
 That is the whole thesis in one minute: the page owns the mathematical state and the agent gains precise control of it through WebMCP.
 
@@ -29,13 +29,20 @@ Most AI tutoring is a chat beside a dead document. Mathburst makes the document 
 - Mathematics stays semantic. Graphs depend on equations, constructions depend on points, and matrices transform linked vectors.
 - Reconstruction is the only approval gate. Ordinary tutor edits land directly, exactly like human edits, and remain attributed and undoable.
 
-## Three mathematical worlds
+## Four saved projects, eight connected scenes
 
-**Calculus — the complete tutoring path.** A photographed integration-by-parts derivation is reconstructed into editable objects, audited against its source, and approved. Repeated symbolic difficulty triggers a linked graph and a diagnostic tutor question. Editing the source equation changes the visualization.
+Mathburst ships with four saved projects that are viewport bookmarks inside one persistent world. Switching projects never swaps reducers or loses edits.
 
-**Olympiad geometry — the frontier proof.** A declarative homothety and external-tangency construction recomputes from draggable points. It is a real live construction, not a flattened illustration.
+- **Gamma Lab:** Recurrence Clinic → Area Becomes Probability. A photographed integration-by-parts derivation becomes a normalized Gamma density with draggable area and exact bin masses.
+- **Tiny Transformer:** Attention Geometry → Train From Scratch. Gamma log-masses initialize attention, then a tiny one-head model performs an honest numerical-gradient step.
+- **Olympiad Geometry:** Attention Becomes Barycentrics → Homothety & Spiral Similarity. Attention weights become an exact triangle point and survive a live similarity transform.
+- **Simplex → Ramanujan:** Tetrahedral Probability → Partition Observatory. Four normalized weights lift into a projected simplex, quantize into a lattice, and unfold into finite partition coefficients.
 
-**Linear algebra — the second frontier proof.** An editable 2×2 matrix transforms the coordinate plane and linked vectors in place.
+The scenes form one connective tissue: normalized mass becomes attention, attention becomes affine geometry, affine weights become a simplex lattice, and the lattice opens onto partition arithmetic. Every displayed invariant is computed from serializable scene state.
+
+## Director Review
+
+Director Review contains thirteen editable keyframes mapped across the eight scenes. Each card exposes its target objects, camera framing, clean preview, transition preview, and approval state. Review metadata stays separate from learner history; changing a target or camera revokes approval.
 
 ## The complete WebMCP surface
 
@@ -51,7 +58,7 @@ Mathburst registers exactly eighteen discoverable page tools.
 | `inspect_math` | `step_history` |  |
 |  | `set_viewport` |  |
 
-The surface is compact without being narrow. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
+The surface is compact without being narrow. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplexes, number theory, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
 
 Every tool returns a small success/failure envelope. Every mutation compiles into canonical operations, enters the same reducer as a human gesture, recomputes direct dependencies, records authorship, and becomes undoable.
 
@@ -118,7 +125,7 @@ pnpm typecheck
 pnpm build
 ```
 
-There is intentionally no automated-test or CI/CD surface. This repository is a challenge-period hackathon build optimized for the deterministic demo path.
+There is intentionally no automated-test or CI/CD surface. This repository is a challenge-period hackathon MVP optimized for the deterministic judge path.
 
 ## Enable WebMCP
 
@@ -139,12 +146,12 @@ The inspector remains available when `document.modelContext` is absent, so the f
 
 ## Scope, deliberately
 
-This is an ambitious hackathon instrument, not a production SaaS application. It is one local document for one learner and one external tutor. There are no accounts, cloud sync, multiplayer servers, cross-session learner profiles, generalized OCR, or production infrastructure. Calculus is the polished end-to-end story; geometry and matrices are real, focused frontier scenes.
+This is an ambitious hackathon instrument, not a production SaaS application. It is one local document for one learner and one external tutor. There are no accounts, cloud sync, multiplayer servers, cross-session learner profiles, generalized OCR, or production infrastructure. The submitted product is the four-project, eight-scene mathematical world; video production and deployment are outside this repository-completion scope.
 
 The project was built during the 2026 WebMCP Challenge submission period. The repository previously contained a different challenge-period prototype called **Second Try**; the final Mathburst pivot replaced its product model, interface, WebMCP surface, demo, and public story. The exact boundary is documented in [PROVENANCE.md](PROVENANCE.md), and Git history preserves the evolution.
 
 ## Stack and licence
 
-React 19, TypeScript, Vinext/Next app router, SVG/HTML, KaTeX, CortexJS Compute Engine, browser `localStorage`, WebMCP, ChatGPT Sites, and Remotion for the demo video.
+React 19, TypeScript, Vinext/Next app router, SVG/HTML, KaTeX, CortexJS Compute Engine, browser `localStorage`, and WebMCP.
 
 Licensed under the [MIT Licence](LICENSE).
