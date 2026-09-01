@@ -1,3 +1,4 @@
+import { migrateWorld } from './migrations'
 import type { WorldState } from './types'
 
 export const STORAGE_KEY = 'mathburst.world.v5'
@@ -5,9 +6,7 @@ export const STORAGE_KEY = 'mathburst.world.v5'
 export function loadWorld(): WorldState | null {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
-    return value && typeof value === 'object' && 'version' in value && value.version === 1
-      ? value as WorldState
-      : null
+    return migrateWorld(value)
   } catch {
     return null
   }

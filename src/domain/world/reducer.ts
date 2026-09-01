@@ -1,6 +1,7 @@
 import type { WorldAction, WorldOperation, WorldState } from './types'
 
 const finite = (...values: number[]) => values.every(Number.isFinite)
+const clone = <T>(value: T): T => structuredClone(value)
 
 export function validateWorldAction(_state: WorldState, action: WorldAction): string | null {
   if (action.operations.length === 0) return 'An action needs at least one operation.'
@@ -51,32 +52,32 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
       }
     } else if (operation.type === 'putEntity') {
       const previous = next.entities[operation.entity.id]
-      inverse.unshift(previous ? { type: 'putEntity', entity: previous } : { type: 'removeEntity', id: operation.entity.id })
-      next.entities[operation.entity.id] = operation.entity
+      inverse.unshift(previous ? { type: 'putEntity', entity: clone(previous) } : { type: 'removeEntity', id: operation.entity.id })
+      next.entities[operation.entity.id] = clone(operation.entity)
     } else if (operation.type === 'removeEntity') {
       const previous = next.entities[operation.id]
       if (previous) {
-        inverse.unshift({ type: 'putEntity', entity: previous })
+        inverse.unshift({ type: 'putEntity', entity: clone(previous) })
         delete next.entities[operation.id]
       }
     } else if (operation.type === 'putBinding') {
       const previous = next.bindings[operation.binding.id]
-      inverse.unshift(previous ? { type: 'putBinding', binding: previous } : { type: 'removeBinding', id: operation.binding.id })
-      next.bindings[operation.binding.id] = operation.binding
+      inverse.unshift(previous ? { type: 'putBinding', binding: clone(previous) } : { type: 'removeBinding', id: operation.binding.id })
+      next.bindings[operation.binding.id] = clone(operation.binding)
     } else if (operation.type === 'removeBinding') {
       const previous = next.bindings[operation.id]
       if (previous) {
-        inverse.unshift({ type: 'putBinding', binding: previous })
+        inverse.unshift({ type: 'putBinding', binding: clone(previous) })
         delete next.bindings[operation.id]
       }
     } else if (operation.type === 'putTimeline') {
       const previous = next.timelines[operation.timeline.id]
-      inverse.unshift(previous ? { type: 'putTimeline', timeline: previous } : { type: 'removeTimeline', id: operation.timeline.id })
-      next.timelines[operation.timeline.id] = operation.timeline
+      inverse.unshift(previous ? { type: 'putTimeline', timeline: clone(previous) } : { type: 'removeTimeline', id: operation.timeline.id })
+      next.timelines[operation.timeline.id] = clone(operation.timeline)
     } else if (operation.type === 'removeTimeline') {
       const previous = next.timelines[operation.id]
       if (previous) {
-        inverse.unshift({ type: 'putTimeline', timeline: previous })
+        inverse.unshift({ type: 'putTimeline', timeline: clone(previous) })
         delete next.timelines[operation.id]
       }
     } else if (operation.type === 'select') {
@@ -103,10 +104,11 @@ function applyOperations(state: WorldState, operations: WorldOperation[]) {
 }
 
 export function dispatchWorldAction(state: WorldState, action: WorldAction): WorldState {
-  const error = validateWorldAction(state, action)
+  const acceptedAction = clone(action)
+  const error = validateWorldAction(state, acceptedAction)
   if (error) throw new Error(error)
-  const { next, inverse } = applyOperations(state, action.operations)
-  const commit = { action, inverse, at: Date.now() }
+  const { next, inverse } = applyOperations(state, acceptedAction.operations)
+  const commit = { action: acceptedAction, inverse, at: Date.now() }
   return {
     ...next,
     history: [...state.history, commit],

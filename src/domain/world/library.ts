@@ -1,4 +1,5 @@
 import { createSeedWorld } from './seed'
+import { migrateWorld } from './migrations'
 import { PROJECTS, getScenesForProject, type CatalogSceneId, type ProjectId } from './projects'
 import type { Bounds, WorldObject, WorldState } from './types'
 
@@ -75,14 +76,11 @@ const BUILT_IN_PROJECTS: LibraryProject[] = PROJECTS.map((project, index) => ({
   world: createProjectWorld(canonicalSeed, project.id, project.title),
 }))
 
-const isWorld = (value: unknown): value is WorldState => Boolean(
-  value && typeof value === 'object' && 'version' in value && value.version === 1,
-)
-
-const isProject = (value: unknown): value is LibraryProject => {
-  if (!value || typeof value !== 'object') return false
+const parseProject = (value: unknown): LibraryProject | null => {
+  if (!value || typeof value !== 'object') return null
   const project = value as Partial<LibraryProject>
-  return typeof project.id === 'string'
+  const world = migrateWorld(project.world)
+  if (!(typeof project.id === 'string'
     && typeof project.title === 'string'
     && typeof project.description === 'string'
     && (project.templateId === null || PROJECTS.some((candidate) => candidate.id === project.templateId))
@@ -90,7 +88,8 @@ const isProject = (value: unknown): value is LibraryProject => {
     && typeof project.createdAt === 'number'
     && typeof project.updatedAt === 'number'
     && (project.deletedAt === null || typeof project.deletedAt === 'number')
-    && isWorld(project.world)
+    && world)) return null
+  return { ...(project as LibraryProject), world }
 }
 
 export function createDefaultProjectLibrary(): LibraryProject[] {
@@ -101,7 +100,9 @@ export function createDefaultProjectLibrary(): LibraryProject[] {
 export function loadProjectLibrary(): LibraryProject[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY) ?? 'null')
-    const stored = Array.isArray(parsed) ? parsed.filter(isProject) : []
+    const stored = Array.isArray(parsed)
+      ? parsed.map(parseProject).filter((project): project is LibraryProject => project !== null)
+      : []
     const storedById = new Map(stored.map((project) => [project.id, project]))
     const builtIns = BUILT_IN_PROJECTS.map((project) => {
       const saved = storedById.get(project.id)
