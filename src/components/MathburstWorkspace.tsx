@@ -500,8 +500,17 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       })
     })
     observer.observe(element)
+    // Film mode and the project route both write a camera during startup, after
+    // the first pass. One late settle guarantees the scene is framed however
+    // that race resolves.
+    const settle = window.setTimeout(() => {
+      canvasMetricsRef.current = null
+      const rect = element.getBoundingClientRect()
+      if (rect.width > 1 && rect.height > 1) reframe(rect.width, rect.height)
+    }, 420)
     return () => {
       if (frame !== null) cancelAnimationFrame(frame)
+      window.clearTimeout(settle)
       observer.disconnect()
     }
   }, [galleryOpen, hydrated, persistActiveViewport])
