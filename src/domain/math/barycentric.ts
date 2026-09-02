@@ -151,3 +151,36 @@ export function similarityCombinationInvariant(
 export function distance(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
+
+/** Weights of `point`, clipped to the closed simplex so a dragged P never leaves the triangle. */
+export function clampWeightsToSimplex(weights: readonly number[]): BarycentricWeights {
+  return normalizeBarycentricWeights(weights)
+}
+
+/** Nearest in-triangle position (in barycentric terms) for a point that may be dragged outside. */
+export function clampPointToTriangle(point: Point, vertices: Triangle): Point {
+  return pointFromWeights(vertices, clampWeightsToSimplex(triangleAreas(point, vertices).weights))
+}
+
+/**
+ * Set one weight exactly and spread the remainder over the other two in their
+ * existing ratio, so a typed or slid α is honoured rather than renormalised away.
+ */
+export function setWeightKeepingRatio(weights: readonly number[], index: number, value: number): BarycentricWeights {
+  const current = normalizeBarycentricWeights(weights)
+  const target = Math.max(0, Math.min(1, Number.isFinite(value) ? value : current[index] ?? 0))
+  const rest = 1 - target
+  const others = [0, 1, 2].filter((candidate) => candidate !== index)
+  const othersTotal = others.reduce((sum, candidate) => sum + current[candidate], 0)
+  const next: BarycentricWeights = [...current]
+  next[index] = target
+  for (const candidate of others) {
+    next[candidate] = othersTotal <= EPSILON ? rest / others.length : (current[candidate] / othersTotal) * rest
+  }
+  return next
+}
+
+/** `[a : b : c]` with a fixed number of decimals, for commit summaries and readouts. */
+export function formatWeightTriple(weights: readonly number[], digits = 2): string {
+  return `[${weights.map((weight) => weight.toFixed(digits)).join(' : ')}]`
+}

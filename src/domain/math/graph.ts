@@ -126,3 +126,78 @@ export function detectGraphParameters(latex: string): string[] {
   }
   return [...found].sort()
 }
+
+// ---------------------------------------------------------------------------
+// Fixed-grid sampling, so two curves (or one curve before and after a change)
+// can be blended point-for-point at the same x positions.
+// ---------------------------------------------------------------------------
+
+/** The x of grid index `index` when `[min, max]` is split into `steps` intervals. */
+export const gridX = (xDomain: [number, number], steps: number, index: number): number =>
+  xDomain[0] + ((xDomain[1] - xDomain[0]) * index) / steps
+
+/**
+ * `steps + 1` y values on an even x grid; NaN where the expression is
+ * undefined so the array length never depends on the function.
+ */
+export function sampleGraphGrid(
+  latex: string,
+  xDomain: [number, number],
+  parameters: Record<string, number> = {},
+  steps = 180,
+): number[] {
+  return Array.from({ length: steps + 1 }, (_, index) => evaluateLatexAt(latex, gridX(xDomain, steps, index), parameters) ?? Number.NaN)
+}
+
+/** Pairs grid y values with their x positions, dropping the undefined ones. */
+export function gridPoints(xDomain: [number, number], ys: readonly number[]): Point[] {
+  const steps = Math.max(1, ys.length - 1)
+  const points: Point[] = []
+  ys.forEach((y, index) => { if (Number.isFinite(y)) points.push({ x: gridX(xDomain, steps, index), y }) })
+  return points
+}
+
+/** Scale a domain about `focus` by `factor` (>1 zooms out), keeping the focus fixed. */
+export function zoomDomain(domain: [number, number], focus: number, factor: number, minSpan = 1e-3, maxSpan = 1e6): [number, number] {
+  const span = (domain[1] - domain[0]) * factor
+  if (!(span >= minSpan) || span > maxSpan) return domain
+  const t = (focus - domain[0]) / (domain[1] - domain[0])
+  const min = focus - t * span
+  return [Number(min.toFixed(3)), Number((min + span).toFixed(3))]
+}
+
+/** Shift a domain by `delta` in its own units. */
+export const panDomain = (domain: [number, number], delta: number): [number, number] =>
+  [Number((domain[0] + delta).toFixed(3)), Number((domain[1] + delta).toFixed(3))]
+
+// ---------------------------------------------------------------------------
+// Label placement inside a plot rectangle. Widths are estimates from the mono
+// metrics; the caller supplies the candidates in order of preference.
+// ---------------------------------------------------------------------------
+
+export type LabelBox = { x: number; y: number; width: number; height: number }
+
+/** Approximate advance width of mono text at `fontSize` px (Fira Code ≈ 0.6em per glyph). */
+export const monoWidth = (text: string, fontSize: number): number => [...text].length * fontSize * 0.6
+
+export const boxesOverlap = (a: LabelBox, b: LabelBox, gap = 2): boolean =>
+  a.x < b.x + b.width + gap && a.x + a.width + gap > b.x && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y
+
+const boxInside = (box: LabelBox, within: LabelBox): boolean =>
+  box.x >= within.x && box.y >= within.y && box.x + box.width <= within.x + within.width && box.y + box.height <= within.y + within.height
+
+/**
+ * First candidate that lies inside `within` and clears every obstacle; when
+ * none does, the first candidate is clamped into `within` instead.
+ */
+export function placeLabel(candidates: LabelBox[], obstacles: LabelBox[], within: LabelBox): LabelBox {
+  for (const candidate of candidates) {
+    if (boxInside(candidate, within) && !obstacles.some((obstacle) => boxesOverlap(candidate, obstacle))) return candidate
+  }
+  const first = candidates[0]
+  return {
+    ...first,
+    x: Math.min(Math.max(first.x, within.x), within.x + within.width - first.width),
+    y: Math.min(Math.max(first.y, within.y), within.y + within.height - first.height),
+  }
+}

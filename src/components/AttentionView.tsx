@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { evaluateTinyModel } from '../domain/math/transformer'
 import { logMasses } from '../domain/math/probability'
 import type {
@@ -13,11 +13,12 @@ import type {
   WorldState,
 } from '../domain/world/types'
 import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import '../styles/reveal.css'
+import '../styles/attention.css'
 
 type Props = { object: AttentionObject; world: WorldState; run: (action: WorldAction) => void }
 type MatrixKey = 'wq' | 'wk' | 'wv'
-type CellDraft = { key: MatrixKey; row: number; column: number; value: string }
 
 const fmt = (value: number, digits = 3) => value.toFixed(digits)
 const short = (value: number, digits = 2) => Number(value.toFixed(digits)).toString()
@@ -25,14 +26,17 @@ const humanAction = (summary: string, operations: WorldAction['operations']): Wo
   id: crypto.randomUUID(), source: 'human', summary, operations,
 })
 
-/** The one matrix cell the film edits: W_Q[1,1]. */
+/** The one matrix cell the film edits: W_Q[0][0]. */
 export const HERO_CELL = { key: 'wq' as MatrixKey, row: 0, column: 0 }
 const MATRIX_LABELS: Record<MatrixKey, string> = { wq: 'W_Q', wk: 'W_K', wv: 'W_V' }
+const MATRIX_SUBSCRIPT: Record<MatrixKey, string> = { wq: 'Q', wk: 'K', wv: 'V' }
+const TEMPERATURE_RANGE = { min: 0.2, max: 3, step: 0.05 }
+const FLASH_MS = 600
 
 // Plane geometry: one unit is PLANE_SCALE pixels, origin near the lower-left.
-const PLANE = { width: 392, height: 296 }
-const PLANE_SCALE = 150
-const ORIGIN = { x: 64, y: 244 }
+const PLANE = { width: 392, height: 190 }
+const PLANE_SCALE = 120
+const ORIGIN = { x: 60, y: 154 }
 const toPlane = (vector: Vector2) => ({ x: ORIGIN.x + vector[0] * PLANE_SCALE, y: ORIGIN.y - vector[1] * PLANE_SCALE })
 const angleOf = (vector: Vector2) => Math.atan2(-vector[1], vector[0])
 
@@ -51,24 +55,129 @@ function arcPath(from: Vector2, to: Vector2, radius: number) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Shared editing primitives (TrainingView imports these too).
+// ---------------------------------------------------------------------------
+
+/**
+ * True for `ms` after `key` changes. Drives the `.is-changed` flash, so a cell
+ * lights whether a human typed into it or an agent tool put a new value.
+ */
+export function useFlash(key: string | number, ms = FLASH_MS): boolean {
+  const [on, setOn] = useState(false)
+  const previous = useRef(key)
+  useEffect(() => {
+    if (previous.current === key) return
+    previous.current = key
+    setOn(true)
+    const timer = window.setTimeout(() => setOn(false), ms)
+    return () => window.clearTimeout(timer)
+  }, [key, ms])
+  return on
+}
+
+type EditableNumberProps = {
+  value: number
+  onCommit: (value: number) => void
+  label: string
+  min?: number
+  max?: number
+  step?: number
+  digits?: number
+  className?: string
+  demoTarget?: string
+  style?: CSSProperties
+}
+
+/**
+ * Inline numeric field. Local draft while typing; a single commit on Enter or
+ * blur, guarded by a ref so Enter followed by blur cannot commit twice.
+ * Escape drops the draft. Out-of-range values clamp instead of failing.
+ */
+export function EditableNumber({ value, onCommit, label, min, max, step = 0.01, digits = 2, className, demoTarget, style }: EditableNumberProps) {
+  const [draft, setDraftState] = useState<string | null>(null)
+  const draftRef = useRef<string | null>(null)
+  const setDraft = (next: string | null) => { draftRef.current = next; setDraftState(next) }
+  const changed = useFlash(value)
+
+  const commit = () => {
+    const pending = draftRef.current
+    if (pending === null) return
+    setDraft(null)
+    if (pending.trim() === '') return
+    let next = Number(pending)
+    if (!Number.isFinite(next)) return
+    if (min !== undefined) next = Math.max(min, next)
+    if (max !== undefined) next = Math.min(max, next)
+    if (Math.abs(next - value) < 1e-12) return
+    onCommit(next)
+  }
+  const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') { event.preventDefault(); commit() }
+    if (event.key === 'Escape') { event.preventDefault(); setDraft(null); event.currentTarget.blur() }
+  }
+
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      step={step}
+      min={min}
+      max={max}
+      aria-label={label}
+      data-demo-target={demoTarget}
+      className={`editable-number${className ? ` ${className}` : ''}${changed ? ' is-changed' : ''}`}
+      style={style}
+      value={draft ?? short(value, digits)}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={onKey}
+    />
+  )
+}
+
+/** Tag for a read-only value that is recomputed from the editable inputs. */
+export const Derived = () => <i className="derived-tag" title="Recomputed from the inputs; not editable">derived</i>
+
+// ---------------------------------------------------------------------------
+
 export default function AttentionView({ object, world, run }: Props) {
-  const [draft, setDraftState] = useState<CellDraft | null>(null)
-  // The draft also lives in a ref so an Enter commit followed by blur in the
-  // same tick cannot commit the same edit twice.
-  const draftRef = useRef<CellDraft | null>(null)
-  const setDraft = (next: CellDraft | null) => { draftRef.current = next; setDraftState(next) }
   const [heroActive, setHeroActive] = useState(false)
   const heroTimerRef = useRef<number | null>(null)
+  const [temperatureDraft, setTemperatureDraft] = useState<number | null>(null)
+  const temperature = temperatureDraft ?? object.temperature
+  const tokens = object.model.tokens
+  const queryIndex = Math.max(0, Math.min(2, object.model.queryIndex))
+  const targetIndex = Math.max(0, Math.min(2, object.model.targetIndex))
+
   const pass = useMemo(
-    () => evaluateTinyModel(object.model, object.bridgeMasses, object.temperature),
-    [object.model, object.bridgeMasses, object.temperature],
+    () => evaluateTinyModel(object.model, object.bridgeMasses, temperature),
+    [object.model, object.bridgeMasses, temperature],
   )
   const logs = useMemo(() => logMasses(object.bridgeMasses), [object.bridgeMasses])
-  const queryIndex = Math.max(0, Math.min(2, object.model.queryIndex))
   const query = pass.queries[queryIndex]
   const dots = pass.keys.map((key) => (query[0] * key[0] + query[1] * key[1]) / Math.sqrt(2))
   const markerId = `attention-arrow-${object.id}`
   const contextMarkerId = `attention-context-${object.id}`
+
+  // ---- glide every live number: plane geometry, weights, scores, readouts ----
+  const geometry = useTweenedNumbers(
+    [...object.model.embeddings.flat(), ...query, ...pass.keys.flat(), ...pass.values.flat(), ...pass.context],
+    280,
+  )
+  const pair = (offset: number): Vector2 => [geometry[offset], geometry[offset + 1]]
+  const embeddingsT = [pair(0), pair(2), pair(4)]
+  const queryT = pair(6)
+  const keysT = [pair(8), pair(10), pair(12)]
+  const valuesT = [pair(14), pair(16), pair(18)]
+  const contextT = pair(20)
+  const weightsT = useTweenedNumbers(pass.attentionWeights, 240)
+  const scoresT = useTweenedNumbers([...dots, ...logs, ...pass.scores], 240)
+  const probabilitiesT = useTweenedNumbers(pass.probabilities, 240)
+  const lossT = useTweenedNumber(pass.loss, 240)
+  const targetProbabilityT = useTweenedNumber(pass.targetProbability, 240)
+  const weightSumT = weightsT.reduce((sum, weight) => sum + weight, 0)
+  const strongest = pass.attentionWeights.indexOf(Math.max(...pass.attentionWeights))
 
   // ---- staged reveal: matrix rows → score columns and softmax bars → readouts --
   const p = revealProgress(object)
@@ -76,12 +185,27 @@ export default function AttentionView({ object, world, run }: Props) {
   const headerT = revealStage(p, 0, 0.15)
   const rowT = (row: number) => revealStage(p, row * 0.2, row * 0.2 + 0.2)
   const planeT = revealStage(p, 0, 0.2)
+  const tokenT = (index: number) => revealStage(p, 0.2 + index * 0.05, 0.35 + index * 0.05)
+  const controlT = revealStage(p, 0.3, 0.45)
   const vectorT = revealStage(p, 0.1, 0.5)
   const arcT = revealStage(p, 0.4, 0.6)
   const columnT = (column: number) => revealStage(p, 0.4 + column * 0.1, 0.5 + column * 0.1)
   const barT = (index: number) => revealItem(revealStage(p, 0.4, 0.8), index, 3, 0.6)
   const readoutT = revealStage(p, 0.8, 1)
+  const footerT = revealStage(p, 0.9, 1)
   const grow = (tip: { x: number; y: number }) => revealLerp(ORIGIN, tip, vectorT)
+
+  // The hero causality sweep plays whenever W_Q[0][0] changes, whoever changed it.
+  const heroValue = object.model[HERO_CELL.key][HERO_CELL.row][HERO_CELL.column]
+  const heroPrevious = useRef(heroValue)
+  useEffect(() => {
+    if (heroPrevious.current === heroValue) return
+    heroPrevious.current = heroValue
+    if (heroTimerRef.current !== null) window.clearTimeout(heroTimerRef.current)
+    setHeroActive(true)
+    heroTimerRef.current = window.setTimeout(() => setHeroActive(false), 1900)
+    return () => { if (heroTimerRef.current !== null) window.clearTimeout(heroTimerRef.current) }
+  }, [heroValue])
 
   const commit = (next: AttentionObject, summary: string) => {
     const nextPass = evaluateTinyModel(next.model, next.bridgeMasses, next.temperature)
@@ -106,47 +230,52 @@ export default function AttentionView({ object, world, run }: Props) {
     ]))
   }
 
-  const commitCell = (cell: CellDraft) => {
-    if (!draftRef.current) return
-    setDraft(null)
-    const value = Number(cell.value)
-    if (!Number.isFinite(value)) return
-    if (Math.abs(object.model[cell.key][cell.row][cell.column] - value) < 1e-12) return
+  const commitCell = (key: MatrixKey, row: number, column: number, value: number) => {
     const model: TinyModelState = structuredClone(object.model)
-    model[cell.key][cell.row][cell.column] = value
-    commit({ ...object, model }, `Edited ${MATRIX_LABELS[cell.key].replace('_', '')}[${cell.row + 1},${cell.column + 1}] to ${short(value)}`)
-    if (cell.key === HERO_CELL.key && cell.row === HERO_CELL.row && cell.column === HERO_CELL.column) {
-      if (heroTimerRef.current !== null) window.clearTimeout(heroTimerRef.current)
-      setHeroActive(true)
-      heroTimerRef.current = window.setTimeout(() => setHeroActive(false), 1900)
-    }
+    model[key][row][column] = value
+    commit({ ...object, model }, `Edited ${MATRIX_LABELS[key]}[${row}][${column}] to ${short(value)}`)
   }
-
-  const onCellKey = (event: KeyboardEvent<HTMLInputElement>, cell: CellDraft) => {
-    if (event.key === 'Enter') { event.preventDefault(); commitCell(cell) }
-    if (event.key === 'Escape') setDraft(null)
+  const commitEmbedding = (token: number, axis: number, value: number) => {
+    const model: TinyModelState = structuredClone(object.model)
+    model.embeddings[token][axis] = value
+    commit({ ...object, model }, `Edited e${subscript(token)}[${axis}] to ${short(value)}`)
   }
+  const chooseQuery = (index: number) => {
+    if (index === queryIndex) return
+    commit({ ...object, model: { ...structuredClone(object.model), queryIndex: index } }, `Chose ${tokens[index]} as the query`)
+  }
+  const chooseTarget = (index: number) => {
+    if (index === targetIndex) return
+    commit({ ...object, model: { ...structuredClone(object.model), targetIndex: index } }, `Chose ${tokens[index]} as the target`)
+  }
+  const commitTemperature = (value: number) => {
+    const clamped = Math.min(TEMPERATURE_RANGE.max, Math.max(TEMPERATURE_RANGE.min, value))
+    if (Math.abs(clamped - object.temperature) < 1e-9) return
+    commit({ ...object, temperature: clamped }, `Set temperature to ${short(clamped)}`)
+  }
+  const settleSlider = () => {
+    const pending = temperatureDraft
+    if (pending === null) return
+    setTemperatureDraft(null)
+    commitTemperature(pending)
+  }
+  const temperatureFlash = useFlash(object.temperature)
 
   const matrix = (key: MatrixKey) => (
     <fieldset className={`attention-matrix is-${key}`} data-hero-path={key === HERO_CELL.key ? 'cell' : undefined}>
-      <legend>{key === 'wq' ? 'W' : key === 'wk' ? 'W' : 'W'}<sub>{key === 'wq' ? 'Q' : key === 'wk' ? 'K' : 'V'}</sub></legend>
+      <legend>W<sub>{MATRIX_SUBSCRIPT[key]}</sub></legend>
       <div className="attention-matrix-grid">
         {object.model[key].map((row, rowIndex) => row.map((value, columnIndex) => {
           const isHero = key === HERO_CELL.key && rowIndex === HERO_CELL.row && columnIndex === HERO_CELL.column
-          const editing = draft && draft.key === key && draft.row === rowIndex && draft.column === columnIndex
           return (
-            <input
+            <EditableNumber
               key={`${rowIndex}-${columnIndex}`}
-              style={revealing ? { opacity: rowT(rowIndex) } : undefined}
+              value={value}
+              label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
               className={isHero ? 'is-hero' : undefined}
-              data-demo-target={isHero ? 'attention-matrix-cell' : undefined}
-              aria-label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
-              type="number"
-              step="0.01"
-              value={editing ? draft.value : short(value)}
-              onChange={(event) => setDraft({ key, row: rowIndex, column: columnIndex, value: event.target.value })}
-              onBlur={() => { const pending = draftRef.current; if (pending && pending.key === key && pending.row === rowIndex && pending.column === columnIndex) commitCell(pending) }}
-              onKeyDown={(event) => onCellKey(event, { key, row: rowIndex, column: columnIndex, value: editing ? draft.value : event.currentTarget.value })}
+              demoTarget={isHero ? 'attention-matrix-cell' : undefined}
+              style={revealing ? { opacity: rowT(rowIndex) } : undefined}
+              onCommit={(next) => commitCell(key, rowIndex, columnIndex, next)}
             />
           )
         }))}
@@ -154,111 +283,195 @@ export default function AttentionView({ object, world, run }: Props) {
     </fieldset>
   )
 
-  const arcs = pass.keys.map((key, index) => arcPath(query, key, 30 + index * 13))
+  const arcs = keysT.map((key, index) => arcPath(queryT, key, 30 + index * 13))
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
     <section className={`attention-view reveal-root${heroActive ? ' is-hero-active' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
       <header className="attention-header reveal-fade" style={{ opacity: headerT }}>
-        <div><span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span><h3>Attention is a weighted sum</h3></div>
-        <span className="attention-truth">softmax over q·kⱼ/√2 + log wⱼ · not a frontier model</span>
+        <div className="attention-heading">
+          <span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span>
+          <h3>Attention is a weighted sum</h3>
+        </div>
+        <div className="attention-meta">
+          <span>softmax over (q·kⱼ/√2 + log wⱼ) / T</span>
+          <b>T = {short(temperature)} · query {tokens[queryIndex]} · target {tokens[targetIndex]}</b>
+        </div>
       </header>
 
-      <div className="attention-plane-wrap">
-        <svg className="attention-plane" viewBox={`0 0 ${PLANE.width} ${PLANE.height}`} aria-label="Query, key and value vectors with attention angles">
-          <defs>
-            <marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
-            <marker id={contextMarkerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
-          </defs>
-          <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
-          <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} pathLength={1} style={revealDash(planeT)} />
-          <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 34} y2={12} pathLength={1} style={revealDash(planeT)} />
-          <text className="attention-plane-kicker" x={12} y={16} style={{ opacity: planeT }}>KEYS k = W_K e · QUERY q = W_Q e</text>
-          {arcs.map((arc, index) => (
-            <g key={`arc-${index}`} className={`attention-arc${index === pass.attentionWeights.indexOf(Math.max(...pass.attentionWeights)) ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
-              <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
-              <text x={arc.label.x} y={arc.label.y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
-            </g>
-          ))}
-          {vectorT > 0 && pass.values.map((value, index) => {
-            const tip = grow(toPlane(value))
-            return <line key={`v-${index}`} className="attention-value-vector" x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} />
-          })}
-          {vectorT > 0 && pass.keys.map((key, index) => {
-            const tip = grow(toPlane(key))
-            return (
-              <g key={`k-${index}`} className="attention-key-vector">
-                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                <text x={tip.x + 6} y={tip.y - 6} style={{ opacity: vectorT }}>k{index}</text>
+      <div className="attention-body">
+        <div className="attention-plane-wrap">
+          <svg className="attention-plane" viewBox={`0 0 ${PLANE.width} ${PLANE.height}`} aria-label="Query, key and value vectors with attention angles">
+            <defs>
+              <marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
+              <marker id={contextMarkerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
+            </defs>
+            <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
+            <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} pathLength={1} style={revealDash(planeT)} />
+            <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 26} y2={12} pathLength={1} style={revealDash(planeT)} />
+            <text className="attention-plane-kicker" x={12} y={16} style={{ opacity: planeT }}>KEYS k = W_K e · QUERY q = W_Q e · DERIVED</text>
+            {arcs.map((arc, index) => (
+              <g key={`arc-${index}`} className={`attention-arc${index === strongest ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
+                <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
+                <text x={arc.label.x} y={arc.label.y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
               </g>
-            )
-          })}
-          {vectorT > 0 && (() => {
-            const tip = grow(toPlane(pass.context))
-            return (
-              <g className="attention-context-vector" data-hero-path="context">
-                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
-                <text x={tip.x + 7} y={tip.y + 14} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
-              </g>
-            )
-          })()}
-          {vectorT > 0 && (() => {
-            const tip = grow(toPlane(query))
-            return (
-              <g className="attention-query-vector" data-hero-path="query">
-                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                <text x={tip.x + 7} y={tip.y - 8} style={{ opacity: vectorT }}>q = W_Q e{queryIndex}</text>
-              </g>
-            )
-          })()}
-          {object.model.embeddings.map((embedding, index) => {
-            const at = toPlane(embedding)
-            return (
-              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === object.model.targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
-                <circle cx={at.x} cy={at.y} r="4" />
-                <text x={at.x + 7} y={at.y + 4}>e{index} · {object.model.tokens[index]}</text>
-              </g>
-            )
-          })}
-        </svg>
-        <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
-          {pass.attentionWeights.map((weight, index) => (
-            <div key={index} className={`attention-ribbon${index === object.model.targetIndex ? ' is-target' : ''}`} style={{ opacity: revealStage(p, 0.35, 0.45) }}>
-              <span>α{index} · {object.model.tokens[index]}</span>
-              <i><em style={{ width: `${(weight * 100 * barT(index)).toFixed(2)}%` }} /></i>
-              <b>{fmt(weight * barT(index))}</b>
+            ))}
+            {vectorT > 0 && valuesT.map((value, index) => {
+              const tip = grow(toPlane(value))
+              return <line key={`v-${index}`} className="attention-value-vector" x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} />
+            })}
+            {vectorT > 0 && keysT.map((key, index) => {
+              const tip = grow(toPlane(key))
+              return (
+                <g key={`k-${index}`} className="attention-key-vector">
+                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
+                  <text x={tip.x + 6} y={tip.y - 6} style={{ opacity: vectorT }}>k{subscript(index)}</text>
+                </g>
+              )
+            })}
+            {vectorT > 0 && (() => {
+              const tip = grow(toPlane(contextT))
+              return (
+                <g className="attention-context-vector" data-hero-path="context">
+                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
+                  <text x={tip.x + 7} y={tip.y + 14} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
+                </g>
+              )
+            })()}
+            {vectorT > 0 && (() => {
+              const tip = grow(toPlane(queryT))
+              return (
+                <g className="attention-query-vector" data-hero-path="query">
+                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
+                  <text x={tip.x + 7} y={tip.y - 8} style={{ opacity: vectorT }}>q = W_Q e{subscript(queryIndex)}</text>
+                </g>
+              )
+            })()}
+            {embeddingsT.map((embedding, index) => {
+              const at = toPlane(embedding)
+              return (
+                <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
+                  <circle cx={at.x} cy={at.y} r="4" />
+                  <text x={at.x + 7} y={at.y + 4}>e{subscript(index)} · {tokens[index]}</text>
+                </g>
+              )
+            })}
+          </svg>
+
+          <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
+            <div className="attention-section-heading" style={{ opacity: revealStage(p, 0.35, 0.45) }}><span className="attention-kicker">SOFTMAX WEIGHTS α</span><Derived /><b>Σ α = {fmt(weightSumT * revealStage(p, 0.75, 0.85))}</b></div>
+            {weightsT.map((weight, index) => (
+              <div key={index} className={`attention-ribbon${index === targetIndex ? ' is-target' : ''}${index === strongest ? ' is-strongest' : ''}`} style={{ opacity: revealStage(p, 0.35, 0.45) }}>
+                <span>α{subscript(index)} · {tokens[index]}</span>
+                <i><em style={{ width: `${(Math.max(0, weight) * 100 * barT(index)).toFixed(2)}%` }} /></i>
+                <b>{fmt(weight * barT(index))}</b>
+              </div>
+            ))}
+          </div>
+
+          <div className="attention-tokens" role="radiogroup" aria-label="Tokens and embeddings; pick one as the query">
+            <div className="attention-section-heading" style={{ opacity: tokenT(0) }}><span className="attention-kicker">EMBEDDINGS e · CLICK A TOKEN TO QUERY</span><span className="attention-editable-tag">editable</span></div>
+            {object.model.embeddings.map((embedding, index) => (
+              <div key={index} className={`attention-token${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: tokenT(index) }}>
+                <button type="button" role="radio" aria-checked={index === queryIndex} onClick={() => chooseQuery(index)} title={`Make ${tokens[index]} the query`}>
+                  <i aria-hidden="true" /><span>e{subscript(index)} · {tokens[index]}</span>
+                </button>
+                <EditableNumber value={embedding[0]} label={`Embedding ${tokens[index]} x`} onCommit={(next) => commitEmbedding(index, 0, next)} />
+                <EditableNumber value={embedding[1]} label={`Embedding ${tokens[index]} y`} onCommit={(next) => commitEmbedding(index, 1, next)} />
+                <small>{index === queryIndex && index === targetIndex ? 'query · target' : index === queryIndex ? 'query' : index === targetIndex ? 'target' : ''}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="attention-side">
+          <div className="attention-matrices">{matrix('wq')}{matrix('wk')}{matrix('wv')}</div>
+
+          <div className="attention-controls reveal-fade" style={{ opacity: controlT }}>
+            <div className="attention-temperature">
+              <span className="attention-kicker">TEMPERATURE T</span>
+              <input
+                type="range"
+                min={TEMPERATURE_RANGE.min}
+                max={TEMPERATURE_RANGE.max}
+                step={TEMPERATURE_RANGE.step}
+                value={temperature}
+                aria-label="Temperature slider"
+                onChange={(event) => setTemperatureDraft(Number(event.target.value))}
+                onPointerUp={settleSlider}
+                onKeyUp={settleSlider}
+                onBlur={settleSlider}
+              />
+              <EditableNumber
+                value={object.temperature}
+                min={TEMPERATURE_RANGE.min}
+                max={TEMPERATURE_RANGE.max}
+                step={TEMPERATURE_RANGE.step}
+                label="Temperature value"
+                className={temperatureFlash ? 'is-changed' : undefined}
+                onCommit={commitTemperature}
+              />
             </div>
-          ))}
-          <small style={{ opacity: revealStage(p, 0.75, 0.85) }}>Σ α = {fmt(pass.attentionWeights.reduce((sum, weight) => sum + weight, 0))}</small>
+            <div className="attention-target" role="radiogroup" aria-label="Target token">
+              <span className="attention-kicker">TARGET</span>
+              <div>
+                {tokens.map((token, index) => (
+                  <button key={index} type="button" role="radio" aria-checked={index === targetIndex} className={index === targetIndex ? 'is-on' : undefined} onClick={() => chooseTarget(index)}>{token}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="attention-scores">
+          <div className="attention-section-heading" style={{ opacity: revealStage(p, 0.35, 0.45) }}><span className="attention-kicker">SCORES → SOFTMAX</span><Derived /></div>
+          <table className="attention-score-table" aria-label="Scores and softmax weights">
+            <thead style={{ opacity: revealStage(p, 0.35, 0.45) }}>
+              <tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">÷ T</th><th scope="col">αⱼ</th></tr>
+            </thead>
+            <tbody>
+              {pass.scores.map((_, index) => (
+                <tr key={index} className={index === queryIndex ? 'is-query' : undefined} data-hero-path={index === targetIndex ? 'score' : undefined}>
+                  <th scope="row" style={{ opacity: revealStage(p, 0.35, 0.45) }}>{tokens[index]}</th>
+                  <td style={{ opacity: columnT(0) }}>{fmt(scoresT[index])}</td>
+                  <td style={{ opacity: columnT(1) }}>{fmt(scoresT[3 + index])}</td>
+                  <td style={{ opacity: columnT(2) }}>{fmt(scoresT[6 + index])}</td>
+                  <td className="is-weight" style={{ opacity: columnT(3) }}>{fmt(weightsT[index] * barT(index))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+
+          <div className="attention-readout reveal-fade" style={{ opacity: readoutT }}>
+            <div className="attention-readout-left">
+              <div className="attention-context">
+                <span className="attention-kicker">CONTEXT c <Derived /></span>
+                <strong>[{fmt(contextT[0] * readoutT)}, {fmt(contextT[1] * readoutT)}]</strong>
+              </div>
+              <div className="attention-loss" data-hero-path="loss">
+                <span className="attention-kicker">LOSS <Derived /></span>
+                <strong>{fmt(lossT * readoutT)}</strong>
+                <span>−log p(target), p = {fmt(targetProbabilityT * readoutT)}</span>
+              </div>
+            </div>
+            <div className="attention-probability-list">
+              <span className="attention-kicker">NEXT TOKEN p <Derived /></span>
+              {probabilitiesT.map((probability, index) => (
+                <div className={`attention-probability${index === targetIndex ? ' is-target' : ''}`} key={index} data-hero-path={index === targetIndex ? 'target' : undefined}>
+                  <i>{tokens[index]}</i><em><b style={{ width: `${(Math.max(0, probability) * 100 * readoutT).toFixed(2)}%` }} /></em><strong>{fmt(probability * readoutT)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="attention-side">
-        <div className="attention-matrices">{matrix('wq')}{matrix('wk')}{matrix('wv')}</div>
-        <table className="attention-score-table" aria-label="Scores and softmax weights">
-          <thead style={{ opacity: revealStage(p, 0.35, 0.45) }}><tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">score</th><th scope="col">αⱼ</th></tr></thead>
-          <tbody>
-            {pass.scores.map((score, index) => (
-              <tr key={index} className={index === queryIndex ? 'is-query' : undefined} data-hero-path={index === object.model.targetIndex ? 'score' : undefined}>
-                <th scope="row" style={{ opacity: revealStage(p, 0.35, 0.45) }}>{object.model.tokens[index]}</th>
-                <td style={{ opacity: columnT(0) }}>{fmt(dots[index])}</td>
-                <td style={{ opacity: columnT(1) }}>{fmt(logs[index])}</td>
-                <td style={{ opacity: columnT(2) }}>{fmt(score)}</td>
-                <td className="is-weight" style={{ opacity: columnT(3) }}>{fmt(pass.attentionWeights[index] * barT(index))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="attention-readout reveal-fade" style={{ opacity: readoutT }}>
-          <div><small>CONTEXT c</small><strong>[{pass.context.map((value) => fmt(value * readoutT)).join(', ')}]</strong></div>
-          <div className="attention-probability-list"><small>NEXT TOKEN · W_out c + b → softmax</small>{pass.probabilities.map((probability, index) => (
-            <span className={index === object.model.targetIndex ? 'is-target' : ''} key={index} data-hero-path={index === object.model.targetIndex ? 'target' : undefined}>
-              <i>{object.model.tokens[index]}</i><em><b style={{ width: `${(probability * 100 * readoutT).toFixed(2)}%` }} /></em><strong>{fmt(probability * readoutT)}</strong>
-            </span>
-          ))}</div>
-          <div className="attention-loss" data-hero-path="loss"><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss * readoutT)}</strong><span>−log p(target) · p = {fmt(pass.targetProbability * readoutT)}</span></div>
-        </div>
-      </div>
+      <footer className="attention-footnote" style={{ opacity: footerT }}>
+        weights, embeddings, temperature and the query/target choice are yours · everything tagged derived is recomputed on every edit · a tiny transformer, not a frontier model
+      </footer>
     </section>
   )
 }
+
+const SUBSCRIPTS = ['₀', '₁', '₂']
+function subscript(index: number) { return SUBSCRIPTS[index] ?? String(index) }

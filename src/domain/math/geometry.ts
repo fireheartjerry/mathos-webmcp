@@ -316,3 +316,32 @@ export function uniquePrimitiveId(primitives: GeometryPrimitive[], base: string)
     if (!taken.has(candidate)) return candidate
   }
 }
+
+/** Lock a dragged point to the dominant axis of its travel (Shift-drag): the other axis keeps the start value. */
+export function constrainToAxis(start: Point, cursor: Point): Point {
+  const dx = cursor.x - start.x
+  const dy = cursor.y - start.y
+  return Math.abs(dx) >= Math.abs(dy) ? { x: cursor.x, y: start.y } : { x: start.x, y: cursor.y }
+}
+
+/**
+ * Ids of point-like primitives that appeared, or free points whose position
+ * changed, between two primitive lists. Hidden helper points are ignored.
+ */
+export function changedPointIds(previous: GeometryPrimitive[], next: GeometryPrimitive[]): string[] {
+  const before = new Map(previous.map((primitive) => [primitive.id, primitive]))
+  const changed: string[] = []
+  for (const primitive of next) {
+    if (!isPointLike(primitive)) continue
+    if (primitive.kind === 'point' && primitive.hidden) continue
+    const earlier = before.get(primitive.id)
+    if (!earlier) { changed.push(primitive.id); continue }
+    if (primitive.kind === 'point' && earlier.kind === 'point' && (earlier.at.x !== primitive.at.x || earlier.at.y !== primitive.at.y)) changed.push(primitive.id)
+  }
+  return changed
+}
+
+/** Stable key of every free point position plus every primitive id, for change detection. */
+export function primitivesKey(primitives: GeometryPrimitive[]): string {
+  return primitives.map((primitive) => primitive.kind === 'point' ? `${primitive.id}@${primitive.at.x},${primitive.at.y}` : primitive.id).join(';')
+}

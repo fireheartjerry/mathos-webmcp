@@ -1,14 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
   RAY_PREFIX,
+  changedPointIds,
+  constrainToAxis,
   dependentIds,
   isLineLike,
   isPointLike,
   isRayId,
   nextPointLabel,
+  primitivesKey,
   resolveGeometry,
   spiralSimilarityParameters,
   uniquePrimitiveId,
@@ -18,6 +21,7 @@ import type { GeometryObject, GeometryPrimitive, GraphObject, MatrixObject, Poin
 import GeometryToolbar, { GEOMETRY_TOOLS } from './GeometryToolbar'
 import type { GeometryTool } from './GeometryToolbar'
 import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { useTweenedNumbers } from './useTweenedNumber'
 import '../styles/geometry.css'
 import '../styles/reveal.css'
 
@@ -30,6 +34,17 @@ const humanPut = (summary: string, object: GraphObject | GeometryObject | Matrix
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 const RAY_LENGTH = 1200
+const POINT_TWEEN_MS = 320
+const ENTER_MS = 260
+const PULSE_MS = 700
+
+/** Figure accents: the same four inks the rest of Mathburst draws with. */
+const ACCENTS: Array<{ id: string; label: string; value: string }> = [
+  { id: 'graphite', label: 'graphite', value: '#171713' },
+  { id: 'purple', label: 'purple', value: '#7c5cff' },
+  { id: 'teal', label: 'teal', value: '#2f8f88' },
+  { id: 'orange', label: 'orange', value: '#d46b4c' },
+]
 
 /** Ids a primitive is built from; base points reference nothing. */
 function primitiveRefs(primitive: GeometryPrimitive): string[] {
@@ -139,14 +154,45 @@ const polygonArea = (points: Point[]) => Math.abs(points.reduce((sum, point, ind
 
 type PendingItem = { id: string; role: 'point' | 'line' }
 type DragState =
-  | { mode: 'point'; id: string; pointerId: number }
+  | { mode: 'point'; id: string; pointerId: number; start: Point }
   | { mode: 'shape'; id: string; pointerId: number; origin: Point; starts: Record<string, Point> }
+type Pulse = { id: string; at: number }
 
 const POINT_TOOL_ARITY: Partial<Record<GeometryTool, number>> = {
   segment: 2, line: 2, ray: 2, circle: 2, midpoint: 2, homothety: 2, angle: 3,
 }
 const LINE_THEN_POINT_TOOLS: GeometryTool[] = ['perpendicular', 'parallel']
 const CONSTRUCTION_TOOLS: GeometryTool[] = ['point', 'segment', 'line', 'ray', 'circle', 'polygon', 'midpoint', 'perpendicular', 'parallel', 'intersection', 'angle', 'homothety']
+
+/** Point-like primitives are the ones that carry an editable label. */
+const hasLabel = (primitive: GeometryPrimitive) => isPointLike(primitive)
+
+/**
+ * Ids that appeared since the previous render, for the draw-in animation.
+ * Computed synchronously so a new primitive never paints un-animated first;
+ * a timeout re-renders once to drop the class after the animation.
+ */
+function useEnteringIds(primitives: GeometryPrimitive[], enabled: boolean): Set<string> {
+  const knownRef = useRef<Set<string> | null>(null)
+  const enteredRef = useRef<Map<string, number>>(new Map())
+  const [, setTick] = useState(0)
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const ids = primitives.map((primitive) => primitive.id)
+  if (knownRef.current === null) knownRef.current = new Set(ids)
+  else {
+    const known = knownRef.current
+    for (const id of ids) if (!known.has(id)) { if (enabled) enteredRef.current.set(id, now); known.add(id) }
+    for (const id of Array.from(known)) if (!ids.includes(id)) { known.delete(id); enteredRef.current.delete(id) }
+  }
+  const entering = new Set<string>()
+  for (const [id, at] of enteredRef.current) if (now - at < ENTER_MS + 140) entering.add(id)
+  useEffect(() => {
+    if (!entering.size) return
+    const timer = window.setTimeout(() => setTick((value) => value + 1), ENTER_MS + 160)
+    return () => window.clearTimeout(timer)
+  })
+  return entering
+}
 
 export default function LiveGeometry({
   object,
@@ -165,14 +211,67 @@ export default function LiveGeometry({
   const [showCoordinates, setShowCoordinates] = useState(false)
   const [cursor, setCursor] = useState<Point | null>(null)
   const [dragging, setDraggingState] = useState<DragState | null>(null)
+  const [editingLabel, setEditingLabel] = useState<string | null>(null)
+  const [pulses, setPulses] = useState<Pulse[]>([])
   const draggingRef = useRef<DragState | null>(null)
   const movedRef = useRef(false)
   const activeRef = useRef(false)
   const lastPolygonClickRef = useRef<{ id: string; created: boolean } | null>(null)
   const setDragging = (next: DragState | null) => { draggingRef.current = next; setDraggingState(next) }
 
+  // ---- staged reveal: primitives draw in dependency order from drawProgress --
+  const p = revealProgress(object)
+  const revealing = p < 1
+
+  // ---- change bookkeeping: local commits vs. changes that arrived from a tool --
+  const pointsKey = primitivesKey(object.primitives)
+  const localKeyRef = useRef<string | null>(null)
+  const snapKeyRef = useRef<string | null>(null)
+  const seenRef = useRef<{ key: string; primitives: GeometryPrimitive[] }>({ key: pointsKey, primitives: object.primitives })
+  const tweenMs = snapKeyRef.current === pointsKey ? 0 : POINT_TWEEN_MS
+
+  useEffect(() => {
+    const seen = seenRef.current
+    if (seen.key === pointsKey) return
+    seenRef.current = { key: pointsKey, primitives: object.primitives }
+    if (localKeyRef.current === pointsKey || revealing) return
+    const changed = changedPointIds(seen.primitives, object.primitives)
+    if (!changed.length) return
+    const now = Date.now()
+    setPulses((current) => {
+      const live = current.filter((pulse) => now - pulse.at < PULSE_MS)
+      const fresh = changed.filter((id) => !live.some((pulse) => pulse.id === id))
+      return fresh.length ? [...live, ...fresh.map((id) => ({ id, at: now }))] : live
+    })
+  }, [pointsKey, object.primitives, revealing])
+
+  const submit = (summary: string, next: GeometryPrimitive[], snap = false) => {
+    const key = primitivesKey(next)
+    localKeyRef.current = key
+    if (snap) snapKeyRef.current = key
+    run(humanPut(summary, { ...object, primitives: next }))
+  }
+
+  // ---- tweened base points: a tool-set point glides and everything built on it follows --
+  const basePoints = object.primitives.filter((primitive): primitive is Extract<GeometryPrimitive, { kind: 'point' }> => primitive.kind === 'point')
+  const baseFlat = basePoints.flatMap((point) => [point.at.x, point.at.y])
+  const tweenedFlat = useTweenedNumbers(baseFlat, revealing ? 0 : tweenMs)
+  const shownFlat = tweenMs === 0 || revealing || tweenedFlat.length !== baseFlat.length ? baseFlat : tweenedFlat
+  const tweenedPrimitives = useMemo(() => {
+    let index = 0
+    return object.primitives.map((primitive) => {
+      if (primitive.kind !== 'point') return primitive
+      const at = { x: shownFlat[index], y: shownFlat[index + 1] }
+      index += 2
+      return at.x === primitive.at.x && at.y === primitive.at.y ? primitive : { ...primitive, at }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [object.primitives, shownFlat.join(',')])
+
+  const entering = useEnteringIds(object.primitives, !revealing)
+
   const isConstructing = CONSTRUCTION_TOOLS.includes(tool)
-  const allPrimitives = draft.length ? [...object.primitives, ...draft] : object.primitives
+  const allPrimitives = draft.length ? [...tweenedPrimitives, ...draft] : tweenedPrimitives
   const primitives = cursor && dragging ? withDrag(allPrimitives, dragging, cursor) : allPrimitives
   const resolved = resolveGeometry(primitives)
   const width = Math.max(220, object.bounds.width)
@@ -182,9 +281,6 @@ export default function LiveGeometry({
   const pointAt = (id: string) => resolved.points.find((point) => point.id === id)?.point ?? null
   const pendingIds = new Set(pending.map((item) => item.id))
 
-  // ---- staged reveal: primitives draw in dependency order from drawProgress --
-  const p = revealProgress(object)
-  const revealing = p < 1
   const order = useMemo(() => revealOrder(object.primitives), [object.primitives])
   const orderIndex = useMemo(() => new Map(order.map((id, index) => [id, index])), [order])
   const drawT = (id: string) => {
@@ -199,6 +295,7 @@ export default function LiveGeometry({
     setToolState(next)
     setPending([])
     setDraft([])
+    setEditingLabel(null)
     lastPolygonClickRef.current = null
     if (next !== 'move') setSelected(null)
   }
@@ -253,21 +350,22 @@ export default function LiveGeometry({
   const round = (point: Point): Point => ({ x: Math.round(point.x * 10) / 10, y: Math.round(point.y * 10) / 10 })
 
   const commit = (summary: string, next: GeometryPrimitive[]) => {
-    run(humanPut(summary, { ...object, primitives: next }))
+    submit(summary, next)
     setPending([])
     setDraft([])
     lastPolygonClickRef.current = null
   }
 
-  // ---- Move tool: point drag (unchanged behaviour) and whole-shape drag ----
+  // ---- Move tool: point drag (Shift locks an axis) and whole-shape drag ----
 
   const beginDrag = (event: ReactPointerEvent<SVGElement>, id: string) => {
     if (event.button !== 0) return
     event.preventDefault()
     event.stopPropagation()
-    svgRef.current?.setPointerCapture(event.pointerId)
+    try { svgRef.current?.setPointerCapture(event.pointerId) } catch { /* synthetic or already-captured pointer */ }
     movedRef.current = false
-    setDragging({ mode: 'point', id, pointerId: event.pointerId })
+    const start = object.primitives.find((candidate) => candidate.id === id)
+    setDragging({ mode: 'point', id, pointerId: event.pointerId, start: start?.kind === 'point' ? start.at : localPoint(event) })
     setCursor(localPoint(event))
   }
 
@@ -284,10 +382,15 @@ export default function LiveGeometry({
     setSelected(id)
     if (!Object.keys(starts).length) return
     event.preventDefault()
-    svgRef.current?.setPointerCapture(event.pointerId)
+    try { svgRef.current?.setPointerCapture(event.pointerId) } catch { /* synthetic or already-captured pointer */ }
     movedRef.current = false
     setDragging({ mode: 'shape', id, pointerId: event.pointerId, origin: localPoint(event), starts })
     setCursor(localPoint(event))
+  }
+
+  const dragCursor = (event: { clientX: number; clientY: number; shiftKey: boolean }, active: DragState): Point => {
+    const raw = localPoint(event)
+    return active.mode === 'point' && event.shiftKey ? constrainToAxis(active.start, raw) : raw
   }
 
   const moveDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -299,21 +402,21 @@ export default function LiveGeometry({
     if (active.pointerId !== event.pointerId) return
     event.stopPropagation()
     movedRef.current = true
-    setCursor(localPoint(event))
+    setCursor(dragCursor(event, active))
   }
 
   const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
     const active = draggingRef.current
     if (!active || active.pointerId !== event.pointerId) return
     event.stopPropagation()
-    const point = localPoint(event)
+    const point = dragCursor(event, active)
     if (movedRef.current) {
-      const updated: GeometryObject = { ...object, primitives: withDrag(object.primitives, active, point) }
+      const next = withDrag(object.primitives, active, point)
       if (active.mode === 'point') {
-        run(humanPut(`Moved ${active.id}; every dependent mark recomputed`, updated))
+        submit(`Moved ${active.id}; every dependent mark recomputed`, next, true)
       } else {
         const primitive = object.primitives.find((candidate) => candidate.id === active.id)
-        run(humanPut(`Moved ${primitive ? describe(primitive, object.primitives) : active.id}`, updated))
+        submit(`Moved ${primitive ? describe(primitive, object.primitives) : active.id}`, next, true)
       }
     } else if (active.mode === 'point') {
       setSelected(active.id)
@@ -333,6 +436,24 @@ export default function LiveGeometry({
     const summary = `Deleted ${describe(primitive, object.primitives)}${dependents ? ` and ${dependents} dependent mark${dependents === 1 ? '' : 's'}` : ''}`
     setSelected(null)
     commit(summary, object.primitives.filter((candidate) => !removed.has(candidate.id)))
+  }
+
+  // ---- Labels and accent ----
+
+  const renameLabel = (id: string, label: string) => {
+    setEditingLabel(null)
+    const primitive = object.primitives.find((candidate) => candidate.id === id)
+    if (!primitive || !hasLabel(primitive)) return
+    const trimmed = label.trim()
+    const previous = ('label' in primitive && primitive.label) || primitive.id
+    if (!trimmed || trimmed === previous) return
+    const next = object.primitives.map((candidate) => candidate.id === id ? { ...candidate, label: trimmed } as GeometryPrimitive : candidate)
+    submit(`Renamed point ${previous} to ${trimmed}`, next)
+  }
+
+  const setAccent = (accent: { label: string; value: string }) => {
+    if (object.accent === accent.value) return
+    run(humanPut(`Set figure accent to ${accent.label}`, { ...object, accent: accent.value }))
   }
 
   // ---- Construction clicks ----
@@ -370,6 +491,9 @@ export default function LiveGeometry({
     commit(`Added ${describe(primitive, next)}`, next)
   }
 
+  /** The committed figure plus any draft points, with true (untweened) positions, for commits. */
+  const committedList = () => draft.length ? [...object.primitives, ...draft] : object.primitives
+
   const handleConstructClick = (event: ReactMouseEvent<SVGSVGElement>) => {
     if (!isConstructing && tool !== 'delete') return
     if (event.button !== 0) return
@@ -378,6 +502,7 @@ export default function LiveGeometry({
     const target = event.target instanceof Element ? event.target.closest('[data-primitive-id]') : null
     const hitId = target?.getAttribute('data-primitive-id') ?? null
     const hit = hitId ? allPrimitives.find((candidate) => candidate.id === hitId) ?? null : null
+    const list = committedList()
 
     if (tool === 'delete') {
       if (hit && object.primitives.some((candidate) => candidate.id === hit.id)) deletePrimitive(hit.id)
@@ -389,11 +514,11 @@ export default function LiveGeometry({
         // The first click of a double-click already added a vertex at this spot; drop it and close.
         const last = lastPolygonClickRef.current
         const vertices = pending.filter((item, index) => !(last?.created && index === pending.length - 1 && item.id === last.id))
-        const list = last?.created ? [...object.primitives, ...draft.filter((item) => item.id !== last.id)] : allPrimitives
-        if (vertices.length >= 3) closePolygon(vertices.map((item) => item.id), list)
+        const source = last?.created ? [...object.primitives, ...draft.filter((item) => item.id !== last.id)] : list
+        if (vertices.length >= 3) closePolygon(vertices.map((item) => item.id), source)
         return
       }
-      if (hit && pending.length >= 3 && hit.id === pending[0].id) { closePolygon(pending.map((item) => item.id), allPrimitives); return }
+      if (hit && pending.length >= 3 && hit.id === pending[0].id) { closePolygon(pending.map((item) => item.id), list); return }
       if (hit && pendingIds.has(hit.id)) return
       const acquired = acquirePoint(at, hit)
       lastPolygonClickRef.current = acquired
@@ -417,8 +542,8 @@ export default function LiveGeometry({
       if (next.length < 2) { setPending(next); return }
       const label = nextPointLabel(usedNames())
       const primitive: GeometryPrimitive = { kind: 'intersection', id: label, lines: [next[0].id, next[1].id], label }
-      const list = [...allPrimitives, primitive]
-      commit(`Added ${describe(primitive, list)}`, list)
+      const full = [...list, primitive]
+      commit(`Added ${describe(primitive, full)}`, full)
       return
     }
 
@@ -429,12 +554,12 @@ export default function LiveGeometry({
         return
       }
       const acquired = acquirePoint(at, hit)
-      const list = acquired.created
-        ? [...allPrimitives, { kind: 'point', id: acquired.id, at: round(at), label: acquired.id, draggable: true } as GeometryPrimitive]
-        : allPrimitives
+      const source = acquired.created
+        ? [...list, { kind: 'point', id: acquired.id, at: round(at), label: acquired.id, draggable: true } as GeometryPrimitive]
+        : list
       const kind = tool === 'perpendicular' ? 'perpendicular' : 'parallel'
-      const primitive: GeometryPrimitive = { kind, id: uniquePrimitiveId(list, `${kind}-${nameOf(acquired.id, list)}-${line.id}`), through: acquired.id, to: line.id }
-      const next = [...list, primitive]
+      const primitive: GeometryPrimitive = { kind, id: uniquePrimitiveId(source, `${kind}-${nameOf(acquired.id, source)}-${line.id}`), through: acquired.id, to: line.id }
+      const next = [...source, primitive]
       commit(`Added ${describe(primitive, next)}`, next)
       return
     }
@@ -445,10 +570,10 @@ export default function LiveGeometry({
     const acquired = acquirePoint(at, hit)
     const next = [...pending, { id: acquired.id, role: 'point' as const }]
     if (next.length < arity) { setPending(next); return }
-    const list = acquired.created
-      ? [...allPrimitives, { kind: 'point', id: acquired.id, at: round(at), label: acquired.id, draggable: true } as GeometryPrimitive]
-      : allPrimitives
-    finishPointTool(next.map((item) => item.id), list)
+    const source = acquired.created
+      ? [...list, { kind: 'point', id: acquired.id, at: round(at), label: acquired.id, draggable: true } as GeometryPrimitive]
+      : list
+    finishPointTool(next.map((item) => item.id), source)
   }
 
   const closePolygon = (ids: string[], list: GeometryPrimitive[]) => {
@@ -482,6 +607,7 @@ export default function LiveGeometry({
     if (target?.matches?.('input, textarea, [contenteditable="true"]')) return
     if (event.ctrlKey || event.metaKey || event.altKey) return
     if (event.key === 'Escape') {
+      if (editingLabel) { setEditingLabel(null); event.stopPropagation(); return }
       if (pending.length || draft.length) { cancelPending(); event.stopPropagation(); return }
       if (selected) { setSelected(null); event.stopPropagation(); return }
       if (tool !== 'move') { setTool('move'); event.stopPropagation() }
@@ -516,7 +642,8 @@ export default function LiveGeometry({
   else if (tool === 'intersection' && pending.length) hint = 'now click the second line or segment'
 
   const selectedPrimitive = selected ? object.primitives.find((candidate) => candidate.id === selected) ?? null : null
-  const selectionChip = selectedPrimitive ? measurementFor(selectedPrimitive, resolved, describe(selectedPrimitive, object.primitives)) : null
+  const measure = selectedPrimitive ? measurementFor(selectedPrimitive, resolved, describe(selectedPrimitive, object.primitives)) : null
+  const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel'].includes(selectedPrimitive.kind) : false
 
   const previews = isConstructing && cursor ? renderPreview(tool, pending, cursor, pointAt, resolved) : null
 
@@ -525,17 +652,23 @@ export default function LiveGeometry({
     const primitive = object.primitives.find((candidate) => candidate.id === id)
     if (primitive?.kind !== 'point' || !Number.isFinite(value) || primitive.at[axis] === value) return
     const at = { ...primitive.at, [axis]: value }
-    const updated: GeometryObject = { ...object, primitives: object.primitives.map((candidate) => candidate.id === id ? { ...candidate, at } as GeometryPrimitive : candidate) }
-    run(humanPut(`Set ${nameOf(id, object.primitives)} to (${at.x}, ${at.y})`, updated))
+    submit(`Set ${nameOf(id, object.primitives)} to (${at.x}, ${at.y})`, object.primitives.map((candidate) => candidate.id === id ? { ...candidate, at } as GeometryPrimitive : candidate))
   }
 
+  const visiblePoints = resolved.points.filter((point) => !point.hidden)
+  const markCount = object.primitives.filter((primitive) => !(primitive.kind === 'point')).length
+  const activePulses = pulses.map((pulse) => ({ ...pulse, point: pointAt(pulse.id) })).filter((pulse): pulse is Pulse & { point: Point } => Boolean(pulse.point))
+  const editingPoint = editingLabel ? resolved.points.find((point) => point.id === editingLabel) ?? null : null
+
   const rootClass = ['live-geometry', 'has-toolbar', 'reveal-root', revealing ? 'is-revealing' : '', tool === 'move' ? 'is-moving' : tool === 'delete' ? 'is-deleting' : 'is-constructing'].filter(Boolean).join(' ')
+  const rootStyle: CSSProperties = { ...(revealing ? { opacity: object.opacity } : {}), '--accent': object.accent || '#7c5cff' } as CSSProperties
+  const enteringClass = (id: string) => entering.has(id) ? ' is-entering' : ''
 
   return (
     <div
       ref={rootRef}
       className={rootClass}
-      style={revealing ? { opacity: object.opacity } : undefined}
+      style={rootStyle}
       tabIndex={-1}
       onPointerEnter={() => { activeRef.current = true }}
       onPointerLeave={() => { activeRef.current = rootRef.current?.contains(document.activeElement) ?? false; if (isConstructing && !draggingRef.current) setCursor(null) }}
@@ -543,6 +676,16 @@ export default function LiveGeometry({
       onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node | null)) activeRef.current = rootRef.current?.matches(':hover') ?? false }}
       onKeyDown={onRootKeyDown}
     >
+      <header className="geometry-header" style={{ opacity: kickerT }}>
+        <div className="geometry-heading">
+          <span className="geometry-kicker">Dynamic geometry</span>
+          <h3>Homothety · Spiral similarity</h3>
+        </div>
+        <div className="geometry-meta">
+          <b>{visiblePoints.length} points · {markCount} marks</b>
+          <small>{tool === 'move' ? (selectedPrimitive ? describe(selectedPrimitive, object.primitives) : 'move · click to select') : `${activeTool.label.toLowerCase()} tool`}</small>
+        </div>
+      </header>
       <GeometryToolbar
         tool={tool}
         onSelect={setTool}
@@ -552,109 +695,163 @@ export default function LiveGeometry({
         onToggleCoordinates={() => setShowCoordinates((value) => !value)}
         hint={hint}
       />
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${width} ${height}`}
-        aria-label="Dynamic geometry construction"
-        data-canvas-control={isConstructing || tool === 'delete' ? 'true' : undefined}
-        onPointerDown={handleSvgPointerDown}
-        onPointerMove={moveDrag}
-        onPointerUp={finishDrag}
-        onPointerCancel={finishDrag}
-        onClick={tool === 'move' ? handleMoveSelect : handleConstructClick}
-      >
-        <rect className="geometry-paper" width={width} height={height} />
-        <text className="geometry-kicker" x="18" y="20" style={{ opacity: kickerT }}>HOMOTHETY · SPIRAL SIMILARITY</text>
-        {resolved.polygons.map((polygon) => {
-          const t = drawT(polygon.id)
-          if (t <= 0) return null
-          return (
-            <polygon
-              key={polygon.id}
-              className={`geometry-polygon is-${polygon.id}${selected === polygon.id ? ' is-selected' : ''}`}
-              points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')}
-              pathLength={1}
-              style={t < 1 ? { ...revealDash(t), fillOpacity: t } : undefined}
-              data-primitive-id={polygon.id}
-              data-canvas-handle="true"
-              onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, polygon.id) : undefined}
-            />
-          )
-        })}
-        {resolved.circles.map((circle) => {
-          const t = drawT(circle.id)
-          if (t <= 0) return null
-          return <g key={circle.id}>
-            <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
-            <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
-          </g>
-        })}
-        {resolved.lines.map((line) => {
-          const t = drawT(line.id)
-          if (t <= 0) return null
-          const ends = lineEndpoints(line)
-          return <g key={line.id}>
-            <line className={`geometry-line is-${line.id}${selected === line.id ? ' is-selected' : ''}${pendingIds.has(line.id) ? ' is-pending' : ''}`} {...ends} pathLength={1} style={revealDash(t)} />
-            <line className="geometry-hit" {...ends} data-primitive-id={line.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, line.id) : undefined} />
-          </g>
-        })}
-        {resolved.segments.map((segment) => {
-          const t = drawT(segment.id)
-          if (t <= 0) return null
-          return <g key={segment.id}>
-            <line className={`geometry-segment is-${segment.id}${selected === segment.id ? ' is-selected' : ''}${pendingIds.has(segment.id) ? ' is-pending' : ''}`} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} pathLength={1} style={revealDash(t)} />
-            <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
-          </g>
-        })}
-        {resolved.angles.map((angle) => {
-          const t = drawT(angle.id)
-          if (t <= 0) return null
-          const arc = angleArc(angle)
-          return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
-            <path className="geometry-angle" d={arc.path} pathLength={1} style={revealDash(t)} />
-            <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
-            <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={{ opacity: t }}>{angle.degrees.toFixed(1)}°</text>
-          </g>
-        })}
-        {previews}
-        {resolved.points.filter((point) => !point.hidden).map((point) => {
-          const t = drawT(point.id)
-          if (t <= 0) return null
-          const radius = point.draggable ? 6 : 4.5
-          return <g key={point.id} className={`geometry-point-group is-${point.id}`}>
-            {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
+      <div className="geometry-stage">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          aria-label="Dynamic geometry construction"
+          data-canvas-control={isConstructing || tool === 'delete' ? 'true' : undefined}
+          onPointerDown={handleSvgPointerDown}
+          onPointerMove={moveDrag}
+          onPointerUp={finishDrag}
+          onPointerCancel={finishDrag}
+          onClick={tool === 'move' ? handleMoveSelect : handleConstructClick}
+        >
+          <rect className="geometry-paper" width={width} height={height} />
+          {resolved.polygons.map((polygon) => {
+            const t = drawT(polygon.id)
+            if (t <= 0) return null
+            return (
+              <polygon
+                key={polygon.id}
+                className={`geometry-polygon is-${polygon.id}${selected === polygon.id ? ' is-selected' : ''}${enteringClass(polygon.id)}`}
+                points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')}
+                pathLength={1}
+                style={t < 1 ? { ...revealDash(t), fillOpacity: t } : undefined}
+                data-primitive-id={polygon.id}
+                data-canvas-handle="true"
+                onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, polygon.id) : undefined}
+              />
+            )
+          })}
+          {resolved.circles.map((circle) => {
+            const t = drawT(circle.id)
+            if (t <= 0) return null
+            return <g key={circle.id}>
+              <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}${enteringClass(circle.id)}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
+              <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
+            </g>
+          })}
+          {resolved.lines.map((line) => {
+            const t = drawT(line.id)
+            if (t <= 0) return null
+            const ends = lineEndpoints(line)
+            return <g key={line.id}>
+              <line className={`geometry-line is-${line.id}${selected === line.id ? ' is-selected' : ''}${pendingIds.has(line.id) ? ' is-pending' : ''}${enteringClass(line.id)}`} {...ends} pathLength={1} style={revealDash(t)} />
+              <line className="geometry-hit" {...ends} data-primitive-id={line.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, line.id) : undefined} />
+            </g>
+          })}
+          {resolved.segments.map((segment) => {
+            const t = drawT(segment.id)
+            if (t <= 0) return null
+            return <g key={segment.id}>
+              <line className={`geometry-segment is-${segment.id}${selected === segment.id ? ' is-selected' : ''}${pendingIds.has(segment.id) ? ' is-pending' : ''}${enteringClass(segment.id)}`} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} pathLength={1} style={revealDash(t)} />
+              <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
+            </g>
+          })}
+          {resolved.angles.map((angle) => {
+            const t = drawT(angle.id)
+            if (t <= 0) return null
+            const arc = angleArc(angle)
+            return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
+              <path className={`geometry-angle${enteringClass(angle.id)}`} d={arc.path} pathLength={1} style={revealDash(t)} />
+              <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
+              <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={{ opacity: t }}>{angle.degrees.toFixed(1)}°</text>
+            </g>
+          })}
+          {previews}
+          {activePulses.map((pulse) => (
             <circle
-              className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
-              data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
-              data-canvas-handle={point.draggable ? 'true' : undefined}
-              data-primitive-id={point.id}
-              cx={point.point.x}
-              cy={point.point.y}
-              r={radius * (0.25 + 0.75 * t)}
-              onPointerDown={tool === 'move' && point.draggable ? (event) => beginDrag(event, point.id) : undefined}
+              key={`pulse-${pulse.id}-${pulse.at}`}
+              className="geometry-agent-pulse"
+              cx={pulse.point.x}
+              cy={pulse.point.y}
+              r={13}
+              onAnimationEnd={() => setPulses((current) => current.filter((candidate) => candidate !== pulse && !(candidate.id === pulse.id && candidate.at === pulse.at)))}
             />
-            {point.label && <text className={`geometry-label${showLabels ? '' : ' is-hidden'}`} x={point.point.x + 9} y={point.point.y - 9} style={{ opacity: t }}>{point.label}</text>}
-          </g>
-        })}
-      </svg>
-      {selectionChip && <span className="geometry-selection-chip" data-canvas-control="true"><small>{selectionChip.label}</small><b>{selectionChip.value}</b></span>}
-      {showCoordinates && (
-        <div className="geometry-coordinates" data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
-          <h4>Coordinates</h4>
-          {freePoints.map((point) => (
-            <div key={`${point.id}-${point.at.x}-${point.at.y}`} className="geometry-coordinate-row">
-              <b>{point.label ?? point.id}</b>
-              <CoordinateField value={point.at.x} label={`${point.label ?? point.id} x`} onCommit={(value) => setCoordinate(point.id, 'x', value)} />
-              <CoordinateField value={point.at.y} label={`${point.label ?? point.id} y`} onCommit={(value) => setCoordinate(point.id, 'y', value)} />
-            </div>
           ))}
-          {!freePoints.length && <p>No free points yet.</p>}
-        </div>
-      )}
-      <div className={`geometry-legend reveal-fade${hasSpiral ? ' has-spiral' : ''}`} style={{ opacity: legendT }}>
+          {visiblePoints.map((point) => {
+            const t = drawT(point.id)
+            if (t <= 0) return null
+            const radius = point.draggable ? 6 : 4.5
+            const isEditing = editingLabel === point.id
+            return <g key={point.id} className={`geometry-point-group is-${point.id}${enteringClass(point.id)}`}>
+              {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
+              <circle
+                className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
+                data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
+                data-canvas-handle={point.draggable ? 'true' : undefined}
+                data-primitive-id={point.id}
+                cx={point.point.x}
+                cy={point.point.y}
+                r={radius * (0.25 + 0.75 * t)}
+                onPointerDown={tool === 'move' && point.draggable ? (event) => beginDrag(event, point.id) : undefined}
+              />
+              {point.label && !isEditing && (
+                <text
+                  className={`geometry-label${showLabels ? '' : ' is-hidden'}${tool === 'move' ? ' is-editable' : ''}`}
+                  data-canvas-control={tool === 'move' ? 'true' : undefined}
+                  x={point.point.x + 9}
+                  y={point.point.y - 9}
+                  style={{ opacity: t }}
+                  onDoubleClick={tool === 'move' ? (event) => { event.stopPropagation(); setEditingLabel(point.id) } : undefined}
+                >
+                  {point.label}
+                  {tool === 'move' && <title>Double-click to rename</title>}
+                </text>
+              )}
+            </g>
+          })}
+          {editingPoint && (
+            <foreignObject x={editingPoint.point.x + 4} y={editingPoint.point.y - 26} width={96} height={30}>
+              <LabelEditor value={editingPoint.label ?? editingPoint.id} onCommit={(label) => renameLabel(editingPoint.id, label)} onCancel={() => setEditingLabel(null)} />
+            </foreignObject>
+          )}
+        </svg>
+        {measure && selectedPrimitive && (
+          <div className="geometry-measure" data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
+            <small>measure</small>
+            <span className="geometry-measure-name">{measure.label}</span>
+            <b>{measure.value}</b>
+            {selectionIsStroke && (
+              <div className="geometry-measure-style" role="group" aria-label="Figure accent">
+                <small>figure accent</small>
+                <div className="geometry-swatches">
+                  {ACCENTS.map((accent) => (
+                    <button
+                      key={accent.id}
+                      type="button"
+                      className={`geometry-swatch is-${accent.id}${(object.accent || '#7c5cff').toLowerCase() === accent.value ? ' is-active' : ''}`}
+                      style={{ '--swatch': accent.value } as CSSProperties}
+                      aria-label={`${accent.label} accent`}
+                      aria-pressed={(object.accent || '#7c5cff').toLowerCase() === accent.value}
+                      title={`${accent.label} — colours the construction marks of this figure`}
+                      onClick={() => setAccent(accent)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {showCoordinates && (
+          <div className="geometry-coordinates" data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
+            <h4>Coordinates</h4>
+            {freePoints.map((point) => (
+              <div key={`${point.id}-${point.at.x}-${point.at.y}`} className="geometry-coordinate-row">
+                <b>{point.label ?? point.id}</b>
+                <CoordinateField value={point.at.x} label={`${point.label ?? point.id} x`} onCommit={(value) => setCoordinate(point.id, 'x', value)} />
+                <CoordinateField value={point.at.y} label={`${point.label ?? point.id} y`} onCommit={(value) => setCoordinate(point.id, 'y', value)} />
+              </div>
+            ))}
+            {!freePoints.length && <p>No free points yet.</p>}
+          </div>
+        )}
+      </div>
+      <footer className={`geometry-legend reveal-fade${hasSpiral ? ' has-spiral' : ''}`} style={{ opacity: legendT }}>
         {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
         <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
-      </div>
+      </footer>
     </div>
   )
 }
@@ -693,11 +890,14 @@ function measurementFor(primitive: GeometryPrimitive, resolved: ResolvedGeometry
   const segment = resolved.segments.find((candidate) => candidate.id === id)
   if (segment) return { label: description, value: `length ${distance(segment.from, segment.to).toFixed(1)}` }
   const circle = resolved.circles.find((candidate) => candidate.id === id)
-  if (circle) return { label: description, value: `radius ${circle.radius.toFixed(1)}` }
+  if (circle) return { label: description, value: `radius ${circle.radius.toFixed(1)} · circumference ${(2 * Math.PI * circle.radius).toFixed(1)}` }
   const angle = resolved.angles.find((candidate) => candidate.id === id)
   if (angle) return { label: description, value: `${angle.degrees.toFixed(1)}°` }
   const polygon = resolved.polygons.find((candidate) => candidate.id === id)
-  if (polygon) return { label: description, value: `area ${polygonArea(polygon.points).toFixed(0)}` }
+  if (polygon) {
+    const perimeter = polygon.points.reduce((sum, point, index) => sum + distance(point, polygon.points[(index + 1) % polygon.points.length]), 0)
+    return { label: description, value: `area ${polygonArea(polygon.points).toFixed(0)} · perimeter ${perimeter.toFixed(1)}` }
+  }
   const line = resolved.lines.find((candidate) => candidate.id === id)
   if (line) {
     const degrees = Math.atan2(-line.direction.y, line.direction.x) * 180 / Math.PI
@@ -765,6 +965,36 @@ function CoordinateField({ value, label, onCommit }: { value: number; label: str
       onChange={(event) => setText(event.target.value)}
       onBlur={submit}
       onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); (event.target as HTMLInputElement).blur() } event.stopPropagation() }}
+    />
+  )
+}
+
+function LabelEditor({ value, onCommit, onCancel }: { value: string; onCommit: (value: string) => void; onCancel: () => void }) {
+  const [text, setText] = useState(value)
+  const doneRef = useRef(false)
+  const finish = (commit: boolean) => {
+    if (doneRef.current) return
+    doneRef.current = true
+    if (commit) onCommit(text)
+    else onCancel()
+  }
+  return (
+    <input
+      className="geometry-label-editor"
+      data-canvas-control="true"
+      autoFocus
+      maxLength={8}
+      aria-label={`Rename point ${value}`}
+      value={text}
+      onFocus={(event) => event.target.select()}
+      onChange={(event) => setText(event.target.value)}
+      onKeyDown={(event) => {
+        event.stopPropagation()
+        if (event.key === 'Enter') { event.preventDefault(); finish(true) }
+        if (event.key === 'Escape') finish(false)
+      }}
+      onBlur={() => finish(true)}
+      onPointerDown={(event) => event.stopPropagation()}
     />
   )
 }

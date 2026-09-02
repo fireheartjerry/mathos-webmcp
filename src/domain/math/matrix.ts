@@ -94,3 +94,49 @@ export const transformVectors = (object: MatrixObject, world: WorldState) => obj
   const vector = { x: source.to.x - source.from.x, y: source.to.y - source.from.y }
   return [{ id, source: vector, transformed: applyMatrix(object.values, vector) }]
 })
+
+// ---------------------------------------------------------------------------
+// Editing operations and the eigen-structure the 2×2 plane draws.
+// ---------------------------------------------------------------------------
+
+export const roundMatrix = (values: MatrixValues, digits = 3): MatrixValues =>
+  values.map((row) => row.map((value) => Number(value.toFixed(digits))))
+
+export const scaleMatrix = (values: MatrixValues, k: number): MatrixValues =>
+  roundMatrix(values.map((row) => row.map((value) => value * k)))
+
+/** Counter-clockwise rotation by `degrees` as a 2×2 matrix. */
+export const rotationMatrix = (degrees: number): MatrixValues => {
+  const radians = (degrees * Math.PI) / 180
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  return [[cos, -sin], [sin, cos]]
+}
+
+/** R(θ)·A: rotates the image of a 2×2 map by θ degrees. */
+export const rotateMatrix2x2 = (values: MatrixValues, degrees: number): MatrixValues =>
+  roundMatrix(multiplyMatrices(rotationMatrix(degrees), values))
+
+/** Whether a·b is defined, without throwing. */
+export const canMultiply = (a: MatrixValues, b: MatrixValues): boolean =>
+  matrixDimensions(a).columns === matrixDimensions(b).rows && matrixDimensions(b).columns > 0
+
+/**
+ * Real eigenpairs of a 2×2 matrix, larger eigenvalue first, each with a unit
+ * eigenvector; null when the eigenvalues are complex or the matrix is not 2×2.
+ */
+export const eigenpairs2x2 = (values: MatrixValues): Array<{ value: number; vector: Point }> | null => {
+  const eigenvalues = eigenvalues2x2(values)
+  if (!eigenvalues) return null
+  const [a, b] = values[0]
+  const [c, d] = values[1]
+  return eigenvalues.map((value, index) => {
+    let vector: Point
+    if (Math.abs(b) > 1e-9) vector = { x: b, y: value - a }
+    else if (Math.abs(c) > 1e-9) vector = { x: value - d, y: c }
+    // Diagonal: the axes are the eigenvectors, the larger entry's axis first.
+    else vector = (index === 0) === (a >= d) ? { x: 1, y: 0 } : { x: 0, y: 1 }
+    const length = Math.hypot(vector.x, vector.y) || 1
+    return { value, vector: { x: vector.x / length, y: vector.y / length } }
+  })
+}

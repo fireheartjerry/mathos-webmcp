@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
 
 export type GeometryTool =
@@ -30,7 +31,7 @@ export type GeometryToolDefinition = {
 const dot = (x: number, y: number, r = 1.6) => <circle cx={x} cy={y} r={r} fill="currentColor" stroke="none" />
 
 export const GEOMETRY_TOOLS: GeometryToolDefinition[] = [
-  { id: 'move', label: 'Move', key: 'M', hint: 'drag points or shapes · click to select', icon: <><path d="M4 2.5 12 8l-3.6.9 2 4.4-1.7.8-2-4.4L4 12z" /></> },
+  { id: 'move', label: 'Move', key: 'M', hint: 'drag points or shapes · click to select · shift-drag locks an axis', icon: <><path d="M4 2.5 12 8l-3.6.9 2 4.4-1.7.8-2-4.4L4 12z" /></> },
   { id: 'point', label: 'Point', key: 'P', hint: 'click empty space to place a point', icon: <>{dot(8, 8, 2.3)}</> },
   { id: 'segment', label: 'Segment', key: 'S', hint: 'click two points', icon: <><path d="M3.5 12.5 12.5 3.5" />{dot(3.5, 12.5)}{dot(12.5, 3.5)}</> },
   { id: 'line', label: 'Line', key: 'L', hint: 'click two points', icon: <><path d="M1.5 14.5 14.5 1.5" />{dot(5.5, 10.5)}{dot(10.5, 5.5)}</> },
@@ -48,6 +49,18 @@ export const GEOMETRY_TOOLS: GeometryToolDefinition[] = [
 
 const stopForLeftClicks = (event: ReactPointerEvent<HTMLElement>) => { if (event.button !== 2) event.stopPropagation() }
 
+/** Pixel budget of the toolbar row, mirrored by geometry.css. */
+const TOOL_SLOT = 23
+const HORIZONTAL_PADDING = 12
+const DIVIDER = 7
+const TOGGLE_SLOTS = 2
+const HINT_MIN_WIDTH = 132
+const HINT_BREAKPOINT = 640
+
+/**
+ * One row, never two: tools that do not fit at the measured width move into a
+ * "⋯ more" menu. The hint yields its space first (and hides below 640px).
+ */
 export default function GeometryToolbar({
   tool,
   onSelect,
@@ -65,9 +78,47 @@ export default function GeometryToolbar({
   onToggleCoordinates: () => void
   hint: string
 }) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState<number>(Number.POSITIVE_INFINITY)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useLayoutEffect(() => {
+    const element = rootRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const measure = () => setWidth(element.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (event: PointerEvent) => {
+      if (menuRef.current?.contains(event.target as Node)) return
+      if (rootRef.current?.querySelector('.geometry-tool.is-more')?.contains(event.target as Node)) return
+      setMenuOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('pointerdown', close, true)
+    window.addEventListener('keydown', escape, true)
+    return () => { window.removeEventListener('pointerdown', close, true); window.removeEventListener('keydown', escape, true) }
+  }, [menuOpen])
+
+  const compact = Number.isFinite(width) && width < HINT_BREAKPOINT
+  const reserved = HORIZONTAL_PADDING + DIVIDER + TOGGLE_SLOTS * TOOL_SLOT + (compact ? 0 : HINT_MIN_WIDTH)
+  let visibleCount = Number.isFinite(width) ? Math.floor((width - reserved) / TOOL_SLOT) : GEOMETRY_TOOLS.length
+  if (visibleCount < GEOMETRY_TOOLS.length) visibleCount = Math.max(1, visibleCount - 1) // keep a slot for the ⋯ button
+  const visible = GEOMETRY_TOOLS.slice(0, visibleCount)
+  const overflow = GEOMETRY_TOOLS.slice(visibleCount)
+  const overflowActive = overflow.some((definition) => definition.id === tool)
+
+  const select = (next: GeometryTool) => { setMenuOpen(false); onSelect(next) }
+
   return (
-    <div className="geometry-toolbar" role="toolbar" aria-label="Construction tools" data-canvas-control="true" onPointerDown={stopForLeftClicks}>
-      {GEOMETRY_TOOLS.map((definition) => (
+    <div ref={rootRef} className={`geometry-toolbar${compact ? ' is-compact' : ''}`} role="toolbar" aria-label="Construction tools" data-canvas-control="true" onPointerDown={stopForLeftClicks}>
+      {visible.map((definition) => (
         <button
           key={definition.id}
           type="button"
@@ -75,11 +126,44 @@ export default function GeometryToolbar({
           aria-pressed={tool === definition.id}
           aria-label={definition.label}
           title={`${definition.label} (${definition.key}) — ${definition.hint}`}
-          onClick={() => onSelect(definition.id)}
+          onClick={() => select(definition.id)}
         >
           <svg viewBox="0 0 16 16" aria-hidden="true">{definition.icon}</svg>
         </button>
       ))}
+      {overflow.length > 0 && (
+        <span className="geometry-toolbar-more">
+          <button
+            type="button"
+            className={`geometry-tool is-more${overflowActive ? ' is-holding-active' : ''}`}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label={`More tools (${overflow.length})`}
+            title="More tools"
+            onClick={() => setMenuOpen((value) => !value)}
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">{dot(3.5, 8, 1.5)}{dot(8, 8, 1.5)}{dot(12.5, 8, 1.5)}</svg>
+          </button>
+          {menuOpen && (
+            <div ref={menuRef} className="geometry-toolbar-menu" role="menu" aria-label="More tools">
+              {overflow.map((definition) => (
+                <button
+                  key={definition.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={tool === definition.id}
+                  className={`geometry-menu-item${tool === definition.id ? ' is-active' : ''}`}
+                  onClick={() => select(definition.id)}
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">{definition.icon}</svg>
+                  <span>{definition.label}</span>
+                  <kbd>{definition.key}</kbd>
+                </button>
+              ))}
+            </div>
+          )}
+        </span>
+      )}
       <span className="geometry-toolbar-divider" aria-hidden="true" />
       <button
         type="button"

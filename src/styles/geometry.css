@@ -1,35 +1,105 @@
-/* GeoGebra-style construction chrome for the geometry widget. Quiet, 1px, no gradients. */
+/* ---------------------------------------------------------------------------
+   Geometry card: header / toolbar / stage / footer. Quiet, 1px, no gradients.
+   Row heights are fixed so the stage takes exactly what is left; the SVG keeps
+   the object's viewBox and scales uniformly inside the stage.
+   Two-class selectors win over cinematic.css regardless of stylesheet order.
+   --------------------------------------------------------------------------- */
 
 .live-geometry.has-toolbar {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 36px 28px minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
   outline: none;
+  container-type: inline-size;
+  --accent: var(--purple, #7c5cff);
 }
 
-.live-geometry.has-toolbar > svg {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto;
-  touch-action: none;
-}
-
-.live-geometry.has-toolbar.is-constructing > svg { cursor: crosshair; }
-.live-geometry.has-toolbar.is-deleting > svg { cursor: not-allowed; }
-
-/* Toolbar: one row that wraps rather than spilling past the widget edge. */
-.geometry-toolbar {
-  flex: none;
+/* ---- Header ---------------------------------------------------------------- */
+.live-geometry.has-toolbar .geometry-header {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.live-geometry.has-toolbar .geometry-heading { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+
+.live-geometry.has-toolbar .geometry-kicker {
+  flex: none;
+  color: var(--muted, #7a776d);
+  font: 500 10.5px/1 var(--mono, 'Fira Code', monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.live-geometry.has-toolbar .geometry-heading h3 {
+  margin: 0;
+  min-width: 0;
+  color: var(--graphite, #171713);
+  font: 500 16px/1 var(--serif, 'STIX Two Text', serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-geometry.has-toolbar .geometry-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 auto;
+  text-align: right;
+}
+
+.live-geometry.has-toolbar .geometry-meta b {
+  flex: none;
+  color: var(--graphite, #171713);
+  font: 600 11px/1 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.live-geometry.has-toolbar .geometry-meta small {
+  min-width: 0;
+  max-width: 220px;
+  color: var(--muted, #7a776d);
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Toolbar: one row, never two; overflow goes into the ⋯ menu ------------- */
+.geometry-toolbar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 1px;
-  padding: 4px 6px 3px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  box-sizing: border-box;
   background: var(--paper, #fbf9f3);
   border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
   cursor: default;
 }
 
 .geometry-tool {
+  flex: none;
   display: inline-grid;
   place-items: center;
   width: 22px;
@@ -42,6 +112,7 @@
   border-radius: 4px;
   cursor: pointer;
   appearance: none;
+  transition: background-color 120ms var(--ease-out, ease-out), border-color 120ms var(--ease-out, ease-out);
 }
 
 .geometry-tool:hover { border-color: var(--line, rgba(23, 23, 19, 0.16)); }
@@ -49,6 +120,8 @@
 .geometry-tool[aria-pressed='true'] { color: var(--paper, #fbf9f3); background: var(--graphite, #171713); border-color: var(--graphite, #171713); }
 .geometry-tool.is-toggle[aria-pressed='true'] { color: var(--graphite, #171713); background: var(--purple-soft, rgba(124, 92, 255, 0.12)); border-color: var(--purple, #7c5cff); }
 .geometry-tool.is-delete[aria-pressed='true'] { background: #b3402a; border-color: #b3402a; }
+.geometry-tool.is-more[aria-expanded='true'] { border-color: var(--line, rgba(23, 23, 19, 0.16)); background: #f2f0e9; }
+.geometry-tool.is-more.is-holding-active { color: var(--paper, #fbf9f3); background: var(--graphite, #171713); border-color: var(--graphite, #171713); }
 
 .geometry-tool svg {
   width: 14px;
@@ -60,7 +133,53 @@
   stroke-linejoin: round;
 }
 
+.geometry-toolbar-more { position: relative; flex: none; display: inline-flex; }
+
+.geometry-toolbar-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 6;
+  display: grid;
+  gap: 1px;
+  min-width: 168px;
+  padding: 4px;
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(23, 23, 19, 0.12);
+  animation: geometry-menu-in 160ms var(--ease-out, ease-out) both;
+}
+
+@keyframes geometry-menu-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+.geometry-menu-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding: 0 8px 0 6px;
+  color: var(--graphite, #171713);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font: 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: left;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.geometry-menu-item:hover, .geometry-menu-item:focus-visible { background: #f2f0e9; outline: none; }
+.geometry-menu-item.is-active { color: var(--paper, #fbf9f3); background: var(--graphite, #171713); }
+.geometry-menu-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.geometry-menu-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.geometry-menu-item kbd { color: var(--muted, #7a776d); font: 11px/1 var(--mono, 'Fira Code', monospace); }
+.geometry-menu-item.is-active kbd { color: rgba(251, 249, 243, 0.7); }
+
 .geometry-toolbar-divider {
+  flex: none;
   width: 1px;
   height: 14px;
   margin: 0 3px;
@@ -72,7 +191,7 @@
   min-width: 0;
   margin-left: 4px;
   color: var(--muted, #7a776d);
-  font: 10px/1.2 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
@@ -80,6 +199,44 @@
   text-overflow: ellipsis;
   text-align: right;
 }
+
+.geometry-toolbar.is-compact .geometry-toolbar-hint { display: none; }
+@container (max-width: 639px) { .geometry-toolbar-hint { display: none; } }
+
+/* ---- Stage ------------------------------------------------------------------ */
+.live-geometry.has-toolbar .geometry-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--paper, #fbf9f3);
+}
+
+.live-geometry.has-toolbar .geometry-stage > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.live-geometry.has-toolbar.is-constructing .geometry-stage > svg { cursor: crosshair; }
+.live-geometry.has-toolbar.is-deleting .geometry-stage > svg { cursor: not-allowed; }
+
+/* Figure accent: the Tutor's construction marks take the object's accent (purple by default). */
+.live-geometry.has-toolbar .geometry-angle { stroke: var(--accent); }
+.live-geometry.has-toolbar .geometry-angle-label { fill: var(--accent); }
+.live-geometry.has-toolbar .geometry-point.is-spiral-center { fill: var(--accent); }
+.live-geometry.has-toolbar .geometry-point-group.is-S .geometry-label,
+.live-geometry.has-toolbar .geometry-point-group.is-S-A .geometry-label,
+.live-geometry.has-toolbar .geometry-point-group.is-S-B .geometry-label,
+.live-geometry.has-toolbar .geometry-point-group.is-S-C .geometry-label { fill: var(--accent); }
+.live-geometry.has-toolbar .geometry-polygon.is-spiral-triangle { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 6%, transparent); }
+.live-geometry.has-toolbar .geometry-segment.is-spiral-ray-A,
+.live-geometry.has-toolbar .geometry-segment.is-spiral-ray-B,
+.live-geometry.has-toolbar .geometry-segment.is-spiral-ray-A2,
+.live-geometry.has-toolbar .geometry-segment.is-spiral-ray-B2 { stroke: var(--accent); }
+.live-geometry.has-toolbar .geometry-readout.is-tutor { border-left-color: var(--accent); }
+.live-geometry.has-toolbar .geometry-readout.is-tutor b { color: var(--accent); }
 
 /* Invisible wide strokes so 1px lines are clickable. */
 .geometry-hit {
@@ -96,7 +253,25 @@
 .live-geometry.is-deleting .geometry-polygon,
 .live-geometry.is-deleting .geometry-point { cursor: not-allowed; }
 
-/* Pending / selected marks. */
+/* Labels: double-click to rename while the move tool is active. */
+.live-geometry.has-toolbar .geometry-label.is-editable { pointer-events: auto; cursor: text; }
+.live-geometry.has-toolbar .geometry-label.is-editable:hover { fill: var(--purple, #7c5cff); }
+.live-geometry .geometry-label.is-hidden { display: none; }
+
+.geometry-label-editor {
+  width: 100%;
+  height: 100%;
+  padding: 0 6px;
+  box-sizing: border-box;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--purple, #7c5cff);
+  border-radius: 4px;
+  font: 600 15px/1 var(--serif, 'STIX Two Text', serif);
+  outline: none;
+}
+
+/* Pending / selected marks. The selection ring and stroke pulse once on selection. */
 .geometry-ring {
   fill: none;
   stroke: var(--purple, #7c5cff);
@@ -106,15 +281,72 @@
   vector-effect: non-scaling-stroke;
 }
 
-.geometry-ring.is-selected { stroke-dasharray: none; stroke: var(--graphite, #171713); }
+.geometry-ring.is-selected {
+  stroke-dasharray: none;
+  stroke: var(--graphite, #171713);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: geometry-ring-pulse 520ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+@keyframes geometry-ring-pulse {
+  0% { transform: scale(0.6); opacity: 0; }
+  45% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
 
 .geometry-segment.is-selected,
 .geometry-line.is-selected,
-.geometry-circle.is-selected { stroke: var(--purple, #7c5cff); stroke-width: 2; }
-.geometry-polygon.is-selected { stroke: var(--purple, #7c5cff); fill: rgba(124, 92, 255, 0.1); }
-.geometry-angle-group.is-selected .geometry-angle { stroke-width: 3; }
+.geometry-circle.is-selected { stroke: var(--purple, #7c5cff); stroke-width: 2; animation: geometry-stroke-pulse 520ms var(--ease-out, ease-out) both; }
+.geometry-polygon.is-selected { stroke: var(--purple, #7c5cff); fill: rgba(124, 92, 255, 0.1); animation: geometry-stroke-pulse 520ms var(--ease-out, ease-out) both; }
+.geometry-angle-group.is-selected .geometry-angle { stroke-width: 3; animation: geometry-stroke-pulse 520ms var(--ease-out, ease-out) both; }
 .geometry-segment.is-pending,
 .geometry-line.is-pending { stroke: var(--purple, #7c5cff); }
+
+@keyframes geometry-stroke-pulse {
+  0% { stroke-width: 2; stroke-opacity: 0.6; }
+  40% { stroke-width: 5; stroke-opacity: 1; }
+  100% { stroke-width: 2; stroke-opacity: 1; }
+}
+
+/* New primitives draw in along their length; new points scale up. */
+.geometry-segment.is-entering,
+.geometry-line.is-entering,
+.geometry-circle.is-entering,
+.geometry-polygon.is-entering,
+.geometry-angle.is-entering { animation: geometry-draw-in 260ms var(--ease-out, ease-out) both; }
+
+@keyframes geometry-draw-in {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+
+.geometry-point-group.is-entering .geometry-point {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: geometry-point-enter 260ms var(--ease-out, ease-out) both;
+}
+
+.geometry-point-group.is-entering .geometry-label { animation: geometry-label-enter 260ms 80ms var(--ease-out, ease-out) both; }
+
+@keyframes geometry-point-enter { from { transform: scale(0.2); } to { transform: scale(1); } }
+@keyframes geometry-label-enter { from { opacity: 0; } to { opacity: 1; } }
+
+/* Purple pulse for a point the Tutor moved or added: the film sees what the tool touched. */
+.geometry-agent-pulse {
+  fill: none;
+  stroke: var(--purple, #7c5cff);
+  stroke-width: 2;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: geometry-agent-pulse 700ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+@keyframes geometry-agent-pulse {
+  0% { opacity: 0.9; transform: scale(0.35); stroke-width: 3; }
+  100% { opacity: 0; transform: scale(1.7); stroke-width: 1; }
+}
 
 /* Live preview of the primitive under construction. */
 .geometry-preview {
@@ -131,37 +363,63 @@
   stroke-dasharray: none;
 }
 
-.live-geometry .geometry-label.is-hidden { display: none; }
-
-/* Measurement chip for the selected primitive, kept out of the legend grid. */
-.geometry-selection-chip {
+/* Measure panel for the selected primitive, bottom-left of the stage. */
+.geometry-measure {
   position: absolute;
-  left: 14px;
-  bottom: 52px;
-  display: inline-grid;
-  gap: 2px;
-  padding: 4px 8px;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  max-width: min(320px, calc(100% - 24px));
+  padding: 8px 10px;
+  box-sizing: border-box;
   color: var(--graphite, #171713);
-  background: rgba(251, 249, 243, 0.94);
+  background: rgba(251, 249, 243, 0.96);
   border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
   border-left: 2px solid var(--graphite, #171713);
-  border-radius: 3px;
+  border-radius: 4px;
   font: 11px/1.2 var(--mono, 'Fira Code', monospace);
-  pointer-events: none;
+  animation: geometry-panel-in 200ms var(--ease-out, ease-out) both;
 }
 
-.geometry-selection-chip small { color: var(--muted, #7a776d); font-size: 10px; }
-.geometry-selection-chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+@keyframes geometry-panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.geometry-measure > small { color: var(--muted, #7a776d); font: 500 10.5px/1 var(--mono, 'Fira Code', monospace); letter-spacing: 0.08em; text-transform: uppercase; }
+.geometry-measure-name { font: 500 13px/1.15 var(--serif, 'STIX Two Text', serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.geometry-measure > b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.geometry-measure-style { display: grid; gap: 4px; margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16)); }
+.geometry-measure-style small { color: var(--muted, #7a776d); font-size: 11px; }
+.geometry-swatches { display: flex; gap: 6px; }
+
+.geometry-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: var(--swatch);
+  border: 2px solid var(--paper, #fbf9f3);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line, rgba(23, 23, 19, 0.16));
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out, ease-out), box-shadow 140ms var(--ease-out, ease-out);
+}
+
+.geometry-swatch:hover { transform: scale(1.12); }
+.geometry-swatch.is-active { box-shadow: 0 0 0 1.5px var(--graphite, #171713); }
+.geometry-swatch:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--purple, #7c5cff); }
 
 /* Coordinates side panel. */
 .geometry-coordinates {
   position: absolute;
-  top: 36px;
+  top: 8px;
   right: 8px;
-  bottom: 46px;
+  bottom: 8px;
+  z-index: 2;
   width: 150px;
   overflow: auto;
   padding: 6px 8px;
+  box-sizing: border-box;
   color: var(--graphite, #171713);
   background: rgba(251, 249, 243, 0.96);
   border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
@@ -172,12 +430,12 @@
 .geometry-coordinates h4 {
   margin: 0 0 4px;
   color: var(--muted, #7a776d);
-  font: 500 10px/1 var(--mono, 'Fira Code', monospace);
+  font: 500 10.5px/1 var(--mono, 'Fira Code', monospace);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.geometry-coordinates p { margin: 4px 0 0; color: var(--muted, #7a776d); font-size: 10px; }
+.geometry-coordinates p { margin: 4px 0 0; color: var(--muted, #7a776d); font-size: 11px; }
 
 .geometry-coordinate-row {
   display: grid;
@@ -187,12 +445,13 @@
   margin: 2px 0;
 }
 
-.geometry-coordinate-row b { font: 600 12px/1 var(--serif, 'STIX Two Text', serif); }
+.geometry-coordinate-row b { font: 600 12px/1 var(--serif, 'STIX Two Text', serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .geometry-coordinate-row input {
   width: 100%;
   min-width: 0;
   padding: 2px 4px;
+  box-sizing: border-box;
   color: var(--graphite, #171713);
   background: var(--paper, #fbf9f3);
   border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
@@ -204,3 +463,61 @@
 .geometry-coordinate-row input:focus { outline: none; border-color: var(--purple, #7c5cff); }
 .geometry-coordinate-row input::-webkit-outer-spin-button,
 .geometry-coordinate-row input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+
+/* ---- Footer: readouts and the one-line hint ------------------------------- */
+.live-geometry.has-toolbar .geometry-legend {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  color: var(--muted, #7a776d);
+  background: var(--paper, #fbf9f3);
+  border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  text-transform: none;
+  pointer-events: none;
+}
+
+.live-geometry.has-toolbar .geometry-legend.has-spiral { gap: 10px; }
+.live-geometry.has-toolbar .geometry-legend i { display: none; }
+
+.live-geometry.has-toolbar .geometry-readout {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 0 0 6px;
+  background: transparent;
+  border-left: 2px solid var(--teal, #2f8f88);
+  white-space: nowrap;
+}
+
+.live-geometry.has-toolbar .geometry-readout small { color: var(--muted, #7a776d); font-size: 11px; }
+.live-geometry.has-toolbar .geometry-readout b { color: var(--graphite, #171713); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.live-geometry.has-toolbar .geometry-legend em {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  color: var(--muted, #7a776d);
+  font: 11px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-style: normal;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geometry-ring.is-selected,
+  .geometry-segment.is-selected, .geometry-line.is-selected, .geometry-circle.is-selected, .geometry-polygon.is-selected,
+  .geometry-angle-group.is-selected .geometry-angle,
+  .geometry-segment.is-entering, .geometry-line.is-entering, .geometry-circle.is-entering, .geometry-polygon.is-entering, .geometry-angle.is-entering,
+  .geometry-point-group.is-entering .geometry-point, .geometry-point-group.is-entering .geometry-label,
+  .geometry-measure, .geometry-toolbar-menu { animation: none; }
+  .geometry-agent-pulse { animation-duration: 1ms; }
+}

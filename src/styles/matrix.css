@@ -1,56 +1,183 @@
-/* Matrix editor + view. Graphite ink, purple accent, ivory paper, 1px lines, tabular numbers. */
+/* ---------------------------------------------------------------------------
+   Matrix editor + plane. Graphite ink, purple accent, teal for the eigen
+   structure, ivory paper, 1px lines, tabular numbers. Anatomy: a 34px
+   header (kicker · title · operations · dims), then the body — for a 2×2 the
+   plane on the left and the dark editing panel on the right; otherwise a
+   centred bracketed grid with its readouts. Everything clips at the widget.
+   --------------------------------------------------------------------------- */
 
 .matrix-widget {
   display: grid;
-  grid-template-rows: 30px minmax(0, 1fr);
+  grid-template-rows: 34px minmax(0, 1fr);
+  position: relative;
   width: 100%;
   height: 100%;
+  min-width: 0;
   overflow: hidden;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--mono, 'Fira Code', ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  background: var(--paper);
+  color: var(--graphite, var(--ink, #171713));
+  background: var(--paper, #fbf9f3);
 }
+
+/* ---- Header ---- */
 
 .matrix-toolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 30px;
-  padding: 0 8px;
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  height: 34px;
+  min-width: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
   overflow: hidden;
   white-space: nowrap;
 }
 
+.matrix-kicker-text {
+  flex: 0 0 auto;
+  color: var(--muted, #7a776d);
+  font: 500 10.5px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matrix-title {
+  flex: 0 0 auto;
+  color: var(--graphite, #171713);
+  font: 500 16px/1 var(--serif, 'STIX Two Text', Georgia, serif);
+  font-style: italic;
+}
+
+/* Operations scroll sideways in a narrow frame rather than wrapping or spilling. */
+.matrix-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.matrix-actions::-webkit-scrollbar { display: none; }
+
 .matrix-toolbar button {
-  height: 20px;
+  flex: 0 0 auto;
+  height: 22px;
   padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 0;
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
   background: transparent;
-  color: var(--ink);
-  font: 11px/1 'Fira Code', monospace;
+  color: var(--graphite, #171713);
+  font: 11px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
   letter-spacing: 0.02em;
   cursor: pointer;
 }
 
-.matrix-toolbar button:hover:not(:disabled) { border-color: var(--ink); }
-.matrix-toolbar button:active:not(:disabled) { background: var(--agent-soft); }
-.matrix-toolbar button:disabled { color: var(--muted); opacity: 0.55; cursor: default; }
-.matrix-toolbar button:focus-visible { outline: 1px solid var(--agent); outline-offset: 1px; }
+.matrix-toolbar button:hover:not(:disabled) { border-color: var(--graphite, #171713); }
+.matrix-toolbar button:active:not(:disabled),
+.matrix-toolbar button.is-open { background: var(--purple-soft, rgba(124, 92, 255, 0.12)); border-color: var(--purple, #7c5cff); color: var(--purple, #7c5cff); }
+.matrix-toolbar button:disabled { color: var(--muted, #7a776d); opacity: 0.55; cursor: default; }
+.matrix-toolbar button:focus-visible { outline: 1px solid var(--purple, #7c5cff); outline-offset: 1px; }
 
 .matrix-toolbar .matrix-dims {
+  flex: 0 0 auto;
   margin-left: auto;
-  color: var(--muted);
+  color: var(--muted, #7a776d);
   font-size: 11px;
 }
+
+/* ---- Operation popover (×B, ×k, θ) under the header ---- */
+
+.matrix-popover {
+  position: absolute;
+  top: 38px;
+  right: 8px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  max-width: calc(100% - 16px);
+  padding: 8px;
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line-strong, rgba(23, 23, 19, 0.34));
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(23, 23, 19, 0.12);
+  font: 11px/1.2 var(--mono, 'Fira Code', ui-monospace, monospace);
+  color: var(--graphite, #171713);
+}
+
+.matrix-popover-head,
+.matrix-popover-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted, #7a776d);
+  white-space: nowrap;
+}
+
+.matrix-popover-size { display: inline-flex; gap: 4px; }
+
+.matrix-popover-grid {
+  display: grid;
+  gap: 4px 6px;
+  justify-content: start;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.matrix-popover input {
+  box-sizing: border-box;
+  width: 46px;
+  height: 22px;
+  padding: 0 4px;
+  color: var(--graphite, #171713);
+  background: #fff;
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  font: 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.matrix-popover input::-webkit-outer-spin-button,
+.matrix-popover input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.matrix-popover input:focus { outline: none; border-color: var(--purple, #7c5cff); box-shadow: 0 0 0 2px var(--purple-soft, rgba(124, 92, 255, 0.12)); }
+.matrix-popover-row input { width: 64px; }
+
+.matrix-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.matrix-popover button {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  background: transparent;
+  color: var(--graphite, #171713);
+  font: 11px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  cursor: pointer;
+}
+
+.matrix-popover button:hover:not(:disabled) { border-color: var(--graphite, #171713); }
+.matrix-popover button:disabled { opacity: 0.5; cursor: default; }
+.matrix-popover button.is-primary { color: var(--paper, #fbf9f3); background: var(--purple, #7c5cff); border-color: var(--purple, #7c5cff); }
+.matrix-popover button:focus-visible { outline: 1px solid var(--purple, #7c5cff); outline-offset: 1px; }
 
 /* ---- 2×2: plane on the left, editable panel on the right ---- */
 
 .matrix-body {
   position: relative;
   display: flex;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -60,6 +187,7 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .matrix-plot > svg {
@@ -68,35 +196,81 @@
   height: 100%;
 }
 
+.matrix-plot .matrix-kicker {
+  fill: var(--muted, #7a776d);
+  font: 500 10.5px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .matrix-basis-handle {
-  fill: var(--paper);
-  stroke: var(--agent);
+  fill: var(--paper, #fbf9f3);
+  stroke: var(--purple, var(--agent, #7c5cff));
   stroke-width: 2;
   cursor: grab;
   vector-effect: non-scaling-stroke;
+  transition: r 160ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .matrix-basis-handle:hover,
 .matrix-basis-handle.is-dragging {
-  fill: var(--agent-soft);
+  fill: var(--purple-soft, var(--agent-soft, #e7e0ff));
   stroke-width: 2.6;
+  r: 7.5;
 }
 
 .matrix-basis-handle.is-dragging { cursor: grabbing; }
 
 .matrix-basis-vector {
-  stroke: var(--agent);
+  stroke: var(--purple, var(--agent, #7c5cff));
   stroke-width: 1.4;
   stroke-dasharray: 2 3;
   vector-effect: non-scaling-stroke;
 }
 
-.matrix-basis-label {
-  fill: var(--agent);
-  font-family: 'Fira Code', monospace;
+.matrix-basis-label,
+.matrix-vector-label {
+  font-family: var(--mono, 'Fira Code', ui-monospace, monospace);
   font-size: 11px;
-  font-weight: 700;
   pointer-events: none;
+}
+
+.matrix-basis-label {
+  fill: var(--purple, var(--agent, #7c5cff));
+  font-weight: 700;
+}
+
+/* Eigenlines: teal, through the origin, labelled with their eigenvalue. */
+.matrix-eigen line {
+  stroke: var(--teal, #2f8f88);
+  stroke-width: 1.2;
+  stroke-dasharray: 6 4;
+  opacity: 0.85;
+  vector-effect: non-scaling-stroke;
+}
+
+.matrix-eigen text {
+  fill: var(--teal, #2f8f88);
+  font: 600 11px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.matrix-plot .matrix-key {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  right: 12px;
+  bottom: 10px;
+  max-width: calc(100% - 24px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matrix-key em {
+  color: var(--teal, #2f8f88);
+  font-style: normal;
 }
 
 .matrix-side {
@@ -104,10 +278,11 @@
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 10px 12px;
+  min-width: 0;
+  padding: 12px;
   overflow: hidden;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--graphite, var(--ink, #171713));
+  color: var(--paper, #fbf9f3);
 }
 
 .matrix-side .matrix-name {
@@ -115,35 +290,38 @@
   font-size: 12px;
 }
 
-.matrix-side .matrix-facts { color: var(--paper); }
-.matrix-side .matrix-facts b { color: var(--agent-soft); }
+.matrix-side .matrix-facts { color: var(--paper, #fbf9f3); }
+.matrix-side .matrix-facts b { color: #c9bcff; }
 .matrix-side .matrix-facts small { color: #8c8980; }
 
 .matrix-side .matrix-grid {
-  border-color: var(--paper);
+  border-color: var(--paper, #fbf9f3);
 }
 
 .matrix-side .matrix-grid::before,
 .matrix-side .matrix-grid::after {
-  border-color: var(--paper);
+  border-color: var(--paper, #fbf9f3);
 }
 
 .matrix-side .matrix-grid input {
-  color: var(--paper);
+  color: var(--paper, #fbf9f3);
   border-bottom-color: rgba(251, 249, 243, 0.32);
 }
 
 .matrix-side .matrix-grid input:focus {
-  border-bottom-color: var(--agent);
+  border-bottom-color: var(--purple, #7c5cff);
   background: rgba(124, 92, 255, 0.18);
 }
 
 .matrix-side em {
   color: #8c8980;
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---- other dimensions: centred grid with readouts ---- */
@@ -152,14 +330,22 @@
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
   overflow: hidden;
 }
 
 .matrix-centre .matrix-name {
-  color: var(--muted);
+  color: var(--muted, #7a776d);
   font-size: 12px;
+}
+
+.matrix-centre .matrix-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
 }
 
 /* Bracketed grid: 1px side rails with short serifs drawn by pseudo-elements. */
@@ -168,8 +354,8 @@
   display: grid;
   gap: 4px 6px;
   padding: 6px 10px;
-  border-left: 1px solid var(--ink);
-  border-right: 1px solid var(--ink);
+  border-left: 1px solid var(--graphite, var(--ink, #171713));
+  border-right: 1px solid var(--graphite, var(--ink, #171713));
   max-width: 100%;
 }
 
@@ -182,8 +368,8 @@
   height: 6px;
   border-left: 0;
   border-right: 0;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
+  border-top: 1px solid var(--graphite, var(--ink, #171713));
+  border-bottom: 1px solid var(--graphite, var(--ink, #171713));
   pointer-events: none;
 }
 
@@ -210,11 +396,11 @@
   height: 24px;
   padding: 0 2px;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
   border-radius: 0;
   background: transparent;
-  color: var(--ink);
-  font: 13px/1 'Fira Code', monospace;
+  color: var(--graphite, var(--ink, #171713));
+  font: 13px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
   text-align: center;
   -moz-appearance: textfield;
@@ -229,8 +415,18 @@
 
 .matrix-grid input:focus {
   outline: none;
-  border-bottom-color: var(--agent);
-  background: var(--agent-soft);
+  border-bottom-color: var(--purple, #7c5cff);
+  background: var(--purple-soft, rgba(124, 92, 255, 0.12));
+}
+
+/* A committed change — typed, dragged, nudged or sent by an agent — flashes purple for 600 ms. */
+@keyframes matrix-cell-flash {
+  0% { background-color: rgba(124, 92, 255, 0.45); border-bottom-color: var(--purple, #7c5cff); box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.35); }
+  100% { background-color: transparent; box-shadow: 0 0 0 0 transparent; }
+}
+
+.matrix-grid input.is-flash {
+  animation: matrix-cell-flash 600ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 .matrix-facts {
@@ -241,13 +437,19 @@
   text-align: left;
 }
 
+.matrix-facts span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .matrix-facts b {
-  color: var(--agent);
+  color: var(--purple, var(--agent, #7c5cff));
   font-weight: 700;
 }
 
 .matrix-facts small {
-  color: var(--muted);
+  color: var(--muted, #7a776d);
   font-size: 11px;
 }
 
@@ -260,7 +462,7 @@
   padding: 0;
   list-style: none;
   font-size: 11px;
-  color: var(--ink);
+  color: var(--graphite, var(--ink, #171713));
 }
 
-.matrix-column-list li span { color: var(--muted); }
+.matrix-column-list li span { color: var(--muted, #7a776d); }

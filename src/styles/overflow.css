@@ -6,6 +6,7 @@
 
 .live-graph,
 .gamma-probability-view,
+.matrix-plane,
 .math-equation-object,
 .world-object > :not(.author-pip):not(.tutor-overlay) {
   overflow: hidden;
@@ -25,4 +26,15 @@
   display: block;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Widget chrome never grows past its column; long values ellipsise instead. */
+.live-graph .graph-header,
+.live-graph .graph-footer,
+.gamma-probability-view .gamma-header,
+.gamma-probability-view .gamma-footer,
+.matrix-plane .matrix-toolbar,
+.matrix-plane .matrix-side {
+  min-width: 0;
+  max-width: 100%;
 }

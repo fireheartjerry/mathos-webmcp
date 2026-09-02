@@ -228,16 +228,24 @@ const applyGradient = (model: TinyModelState, g: TransformerGradients, rate: num
   return next
 }
 
-/** One honest numerical-gradient update with deterministic loss/probability backtracking. */
+/** Learning rate the backtracking search starts from when the caller gives none. */
+export const DEFAULT_LEARNING_RATE = 0.35
+
+/**
+ * One honest numerical-gradient update with deterministic loss/probability
+ * backtracking. `initialRate` is where the line search starts (halved up to
+ * 14 times until both the loss falls and the target probability rises).
+ */
 export function trainOneStep(
   model: TinyModelState,
   bridgeMasses?: readonly number[],
   temperature = 1,
+  initialRate = DEFAULT_LEARNING_RATE,
 ): TrainStepResult {
   const before = evaluateTinyModel(model, bridgeMasses, temperature)
   const gradients = centralNumericalGradient(model, 1e-4, bridgeMasses, temperature)
   const norm = gradientNorm(gradients)
-  let rate = 0.35
+  let rate = Number.isFinite(initialRate) && initialRate > 0 ? initialRate : DEFAULT_LEARNING_RATE
   let candidate = model
   let after = before
   let accepted = false

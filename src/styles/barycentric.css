@@ -1,0 +1,367 @@
+/* ---------------------------------------------------------------------------
+   Barycentric card anatomy: header / body (stage + side) / footer.
+   Row heights mirror HEADER_HEIGHT, FOOTER_HEIGHT and SIDE_WIDTH in
+   BarycentricView.tsx so the SVG viewBox is exactly 1:1 with its pixels.
+   Selectors carry two classes so they win over cinematic.css regardless of
+   stylesheet order.
+   --------------------------------------------------------------------------- */
+
+.barycentric-view.barycentric-card {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr) 32px;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--paper, #fbf9f3);
+  color: var(--graphite, #171713);
+  font-family: var(--mono, 'Fira Code', monospace);
+}
+
+/* ---- Header ---------------------------------------------------------------- */
+.barycentric-card .barycentric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.barycentric-card .barycentric-heading { display: grid; gap: 3px; min-width: 0; }
+
+.barycentric-card .barycentric-kicker {
+  color: var(--muted, #7a776d);
+  font: 500 10.5px/1 var(--mono, 'Fira Code', monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barycentric-card .barycentric-heading h3 {
+  margin: 0;
+  font: 500 17px/1 var(--serif, 'STIX Two Text', serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barycentric-card .barycentric-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 0;
+  flex: none;
+  text-align: right;
+}
+
+.barycentric-card .barycentric-meta b {
+  font: 600 12px/1 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barycentric-card .barycentric-meta small {
+  color: var(--muted, #7a776d);
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barycentric-card .barycentric-meta small.is-linked { color: var(--purple, #7c5cff); }
+
+/* ---- Body ------------------------------------------------------------------ */
+.barycentric-card .barycentric-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 214px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.barycentric-card .barycentric-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.barycentric-card .barycentric-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.barycentric-card .barycentric-vertex-label.is-editable { pointer-events: auto; cursor: text; }
+.barycentric-card .barycentric-vertex-label.is-editable:hover { fill: var(--purple, #7c5cff); }
+
+.barycentric-label-editor {
+  width: 100%;
+  height: 100%;
+  padding: 0 6px;
+  box-sizing: border-box;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--purple, #7c5cff);
+  border-radius: 4px;
+  font: 600 13px/1 var(--serif, 'STIX Two Text', serif);
+  outline: none;
+}
+
+/* Purple pulse for a point the Tutor moved; the ring expands once and fades. */
+.barycentric-agent-pulse {
+  fill: none;
+  stroke: var(--purple, #7c5cff);
+  stroke-width: 2;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: barycentric-agent-pulse 700ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+@keyframes barycentric-agent-pulse {
+  0% { opacity: 0.9; transform: scale(0.35); stroke-width: 3; }
+  100% { opacity: 0; transform: scale(1.6); stroke-width: 1; }
+}
+
+/* ---- Side panel ------------------------------------------------------------ */
+.barycentric-card .barycentric-side {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 16px 12px 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-left: 0;
+}
+
+.barycentric-card .barycentric-weight-grid {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f7f5ee;
+  border-radius: 6px;
+}
+
+.barycentric-card .barycentric-weight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 60px;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.barycentric-card .barycentric-weight-name {
+  color: var(--muted, #7a776d);
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barycentric-card .barycentric-weight-field {
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  font: 600 12px/1 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.barycentric-card .barycentric-weight-field::-webkit-outer-spin-button,
+.barycentric-card .barycentric-weight-field::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.barycentric-card .barycentric-weight-field:focus { outline: none; border-color: var(--purple, #7c5cff); }
+.barycentric-card .barycentric-weight.is-0 .barycentric-weight-field { color: var(--purple, #7c5cff); }
+.barycentric-card .barycentric-weight.is-1 .barycentric-weight-field { color: var(--teal, #2f8f88); }
+.barycentric-card .barycentric-weight.is-2 .barycentric-weight-field { color: var(--orange, #d46b4c); }
+
+/* Sliders: custom track whose fill follows the tweened weight, so it glides. */
+.barycentric-card .barycentric-slider {
+  --slider-color: var(--graphite, #171713);
+  --fill: 0%;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  background: transparent;
+  cursor: ew-resize;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.barycentric-card .barycentric-weight.is-0 .barycentric-slider { --slider-color: var(--purple, #7c5cff); }
+.barycentric-card .barycentric-weight.is-1 .barycentric-slider { --slider-color: var(--teal, #2f8f88); }
+.barycentric-card .barycentric-weight.is-2 .barycentric-slider { --slider-color: var(--orange, #d46b4c); }
+
+.barycentric-card .barycentric-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--slider-color) 0, var(--slider-color) var(--fill), rgba(23, 23, 19, 0.14) var(--fill), rgba(23, 23, 19, 0.14) 100%);
+}
+
+.barycentric-card .barycentric-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(23, 23, 19, 0.14);
+}
+
+.barycentric-card .barycentric-slider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--slider-color); }
+
+.barycentric-card .barycentric-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--paper, #fbf9f3);
+  border: 2px solid var(--slider-color);
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.barycentric-card .barycentric-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper, #fbf9f3);
+  border: 2px solid var(--slider-color);
+  box-sizing: border-box;
+}
+
+.barycentric-card .barycentric-slider:focus-visible { outline: none; }
+.barycentric-card .barycentric-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--purple-soft, rgba(124, 92, 255, 0.12)); }
+
+.barycentric-card .barycentric-actions { display: grid; gap: 4px; }
+
+.barycentric-card .barycentric-actions button {
+  height: 28px;
+  min-width: 0;
+  padding: 0 10px;
+  color: var(--graphite, #171713);
+  background: transparent;
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 6px;
+  font: 500 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out, ease-out), color 160ms var(--ease-out, ease-out);
+}
+
+.barycentric-card .barycentric-actions button:first-child { color: #fff; background: var(--graphite, #171713); border-color: var(--graphite, #171713); }
+.barycentric-card .barycentric-actions button:hover:not(:disabled) { border-color: var(--purple, #7c5cff); }
+.barycentric-card .barycentric-actions button:disabled { color: var(--muted, #7a776d); cursor: default; }
+.barycentric-card .barycentric-actions button.is-linked { color: var(--purple, #7c5cff); border-color: var(--purple, #7c5cff); }
+
+/* Collapsible vertex coordinates. */
+.barycentric-card .barycentric-coordinates { display: grid; gap: 4px; min-width: 0; }
+
+.barycentric-card .barycentric-coordinates-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 2px;
+  color: var(--muted, #7a776d);
+  background: transparent;
+  border: 0;
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.barycentric-card .barycentric-coordinates-toggle:hover { color: var(--graphite, #171713); }
+.barycentric-card .barycentric-coordinates-toggle span { width: 10px; font-size: 11px; }
+
+.barycentric-card .barycentric-coordinate-rows { display: grid; gap: 4px; }
+
+.barycentric-card .barycentric-coordinate-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.barycentric-card .barycentric-coordinate-row b {
+  font: 600 12px/1 var(--serif, 'STIX Two Text', serif);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barycentric-card .barycentric-coordinate-row input {
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.barycentric-card .barycentric-coordinate-row input::-webkit-outer-spin-button,
+.barycentric-card .barycentric-coordinate-row input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.barycentric-card .barycentric-coordinate-row input:focus { outline: none; border-color: var(--purple, #7c5cff); }
+
+/* ---- Footer ---------------------------------------------------------------- */
+.barycentric-card .barycentric-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.barycentric-card .barycentric-areas {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: none;
+  color: var(--muted, #7a776d);
+  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barycentric-card .barycentric-areas small { font-size: 11px; }
+.barycentric-card .barycentric-areas code { color: var(--graphite, #171713); font: inherit; }
+.barycentric-card .barycentric-areas em { color: var(--purple, #7c5cff); font: inherit; font-style: normal; }
+
+.barycentric-card .barycentric-invariant {
+  margin: 0;
+  min-width: 0;
+  color: var(--muted, #7a776d);
+  font: 11px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barycentric-agent-pulse { animation-duration: 1ms; }
+}
