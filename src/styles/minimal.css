@@ -1,449 +1,57 @@
-/* The product shell is intentionally quiet. Mathematical content gets the stage. */
-:root {
-  --ink: #16150f;
-  --ivory: #fafaf7;
-  --paper: #fff;
-  --muted: #706f69;
-  --line: rgba(22, 21, 15, .13);
-  --agent: #6558e8;
-  --agent-soft: #eeecff;
-}
+/* ---------------------------------------------------------------------------
+   Reduction pass: one fact, one place.
+   The application chrome itself is defined once, in mathburst.css. This file
+   keeps only the decisions that remove things, so the reasons stay next to
+   the rule that enforces them.
+   --------------------------------------------------------------------------- */
 
-.mathburst-app { grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: 54px minmax(0, 1fr); background: var(--ivory); }
-.world-header { grid-template-columns: 176px minmax(0, 1fr) auto; gap: 18px; min-width: 0; padding: 0 18px; color: var(--ink); background: var(--ivory); border-bottom: 1px solid var(--line); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.wordmark { gap: 9px; color: var(--ink); font: 600 16px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.02em; }
-.wordmark > span { width: auto; height: auto; color: inherit; background: transparent; font-size: inherit; }
-.wordmark:hover, .wordmark:focus-visible { color: var(--agent); }
-.wordmark:focus-visible { outline: 2px solid var(--agent); outline-offset: 4px; }
-.wordmark:focus-visible > span { box-shadow: none; }
-.brand-mark { width: 20px; height: 20px; color: var(--ink); stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; }
-.world-title { justify-content: flex-start; gap: 8px; color: var(--ink); font: 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.world-title b { font-weight: 600; }
-.world-title span, .world-title em { color: #aaa9a3; }
-.world-title em { overflow: hidden; text-overflow: ellipsis; }
-.header-actions { gap: 6px; }
+/* With a project open the scene name was rendering three times at once — the
+   header title, the canvas badge, and the navigator's active tab. The navigator
+   is the only interactive one, so it keeps the job. */
+.problem-breadcrumb { display: none; }
+.world-title { display: none; }
+
+/* Never actionable, never changes — pure ambient text. */
+.world-status { display: none; }
+.gallery-header-count { display: none; }
+.project-gallery-eyebrow { display: none; }
+
+/* The active tool is already lit in the rail; a permanent instruction is noise. */
+.canvas-mode { display: none; }
+
+/* The storyboard review is a production surface, not a product one. */
 .director-trigger { display: none; }
-.reconstruct-trigger, .reset-trigger { height: 28px; padding: 0 10px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; font-size: 11px; }
-.reconstruct-trigger { color: #fff; background: var(--ink); border-color: var(--ink); }
-.reconstruct-trigger:disabled { color: #aaa; background: #f0f0ed; border-color: var(--line); }
-.reset-trigger:hover, .reset-trigger:focus-visible { color: var(--ink); border-color: var(--ink); }
-.gallery-header-count { color: var(--muted); }
-.gallery-header-count b { color: var(--ink); }
-.world-status { color: var(--muted); font-size: 11px; }
-.world-status i { width: 6px; height: 6px; box-shadow: none; }
 
-.tool-rail { gap: 2px; padding: 7px 4px 8px; overflow: auto; color: var(--ink); background: var(--ivory); border-right: 1px solid var(--line); scrollbar-width: none; }
-.tool-rail::-webkit-scrollbar { display: none; }
-.rail-mark { display: none; }
-.rail-tools { gap: 1px; }
-.rail-actions { margin-top: auto; }
-.rail-divider { width: 24px; margin: 4px 0; background: var(--line); }
-.rail-button { width: 34px; height: 32px; color: #686761; border: 0; border-radius: 6px; }
-.rail-button:hover, .rail-button:focus-visible { color: var(--ink); background: #efefeb; outline: none; }
-.rail-button.is-active { color: #fff; background: var(--ink); }
-.rail-glyph { width: 17px; height: 17px; }
-.rail-tooltip { left: 42px; display: flex; align-items: center; gap: 12px; padding: 7px 9px; color: #fff; background: var(--ink); border: 0; border-radius: 6px; box-shadow: 0 5px 18px rgba(0,0,0,.14); font: 12px/1 'Fira Code', monospace; }
-.rail-tooltip kbd { color: #aaa9a3; font: inherit; }
-
-.world-canvas { background-color: var(--ivory); background-image: none; }
-.world-canvas[data-panning='true'] { cursor: grabbing !important; }
-.problem-breadcrumb { top: 16px; left: 16px; gap: 8px; padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; font-size: 12px; }
-.problem-breadcrumb span { padding: 3px 4px; border-radius: 4px; }
-.canvas-mode { opacity: .68; border-radius: 6px; box-shadow: none; }
-.author-pip { display: none; }
-.kind-frame { border-color: var(--line); background: transparent; }
-.frame-label { top: -29px; min-width: 0; height: 28px; padding: 0 9px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); font: 500 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.frame-label small { display: none; }
-.world-canvas:not([data-director-mode='true']) .world-object[data-object-id='attention_bridge_label'],
-.world-canvas:not([data-director-mode='true']) .world-object[data-object-id='training_truth_label'] { display: none; }
-.activity-rail { display: none; }
-.webmcp-launcher { left: 50%; right: auto; top: 10px; transform: translateX(-50%); }
-.webmcp-inspector-trigger { height: 34px; gap: 10px; padding: 0 5px 0 12px; color: #fff; background: var(--agent); border: 1px solid var(--agent); border-radius: 7px; font: 600 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.01em; text-transform: none; }
-.webmcp-inspector-trigger:hover, .webmcp-inspector-trigger:focus-visible, .webmcp-inspector-trigger[aria-expanded='true'] { background: #5546e0; border-color: #5546e0; }
-.webmcp-inspector-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-.webmcp-inspector-trigger i { width: 6px; height: 6px; background: #fff; box-shadow: none; }
-.webmcp-inspector-trigger b { font-weight: 600; }
-.webmcp-inspector-trigger em { gap: 6px; padding-left: 10px; border-left-color: rgba(255,255,255,.26); font-weight: 400; opacity: .82; }
-.webmcp-inspector-trigger em strong { font-weight: 600; opacity: 1; }
-.webmcp-inspector-trigger u { width: 22px; height: 24px; border-radius: 5px; background: rgba(255,255,255,.15); font: 500 11px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.zoom-controls { right: 12px; bottom: 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; box-shadow: none; }
-.zoom-controls button { width: 28px; height: 26px; }
-.zoom-controls button:hover { color: #fff; background: var(--ink); }
-.zoom-controls span { min-width: 46px; }
-.object-context { color: var(--ink); background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 26px rgba(24,24,23,.1); }
-.object-context span { color: var(--muted); }
-.object-context button:hover, .object-context button:focus-visible { color: #fff; background: var(--ink); }
-
-.personal-project-navigator { left: 56px; right: 74px; bottom: 10px; height: 42px; grid-template-columns: 92px minmax(150px,.5fr) minmax(250px,1fr); overflow: hidden; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.personal-project-navigator button { color: inherit; }
-.personal-project-home { gap: 7px; color: var(--muted) !important; background: transparent; border-right: 1px solid var(--line); font-size: 13px; text-transform: none; }
-.personal-project-home:hover, .personal-project-home:focus-visible { color: var(--ink) !important; background: #f1f1ed; outline: none; }
-.personal-project-home svg { width: 15px; height: 15px; }
-.personal-project-identity { gap: 0; padding: 0 13px; border-right: 1px solid var(--line); }
-.personal-project-identity small { display: none; }
-.personal-project-identity strong { color: var(--ink); font: 600 12px/1.25 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.personal-project-scenes { gap: 0; background: transparent; border-right: 1px solid var(--line); }
-.personal-project-scenes button, .personal-project-scenes > span { gap: 8px; padding: 0 12px; color: var(--muted); background: transparent; border-right: 1px solid var(--line); font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.personal-project-scenes button:last-child { border-right: 0; }
-.personal-project-scenes button b, .personal-project-scenes > span b { color: #aaa9a3; }
-.personal-project-scenes button[aria-pressed='true'] { color: #fff; background: var(--ink); }
-.personal-project-scenes button[aria-pressed='true'] b { color: #aaa9a3; }
-.personal-project-proof { display: none; }
-.personal-project-proof svg { width: 12px; height: 12px; color: #3f9a5a; }
-.personal-project-proof i, .personal-project-proof b { display: none; }
-
-.project-gallery { background: var(--ivory); border: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.project-gallery::before { display: none; }
-.project-gallery-shell { width: min(1220px, calc(100vw - 140px)); padding: 54px 0 72px; }
-.project-gallery-hero { align-items: center; gap: 32px; padding-bottom: 38px; }
-.project-gallery-eyebrow { color: var(--muted); font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: .08em; }
-.project-gallery-hero h1 { max-width: none; margin: 18px 0 10px; font: 300 clamp(52px,5.4vw,78px)/.98 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.055em; }
-.project-gallery-hero p { max-width: 540px; color: var(--muted); font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.new-project-button { min-width: 132px; height: 40px; gap: 8px; padding: 0 15px; background: var(--ink); border-color: var(--ink); border-radius: 8px; box-shadow: none; font: 500 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-transform: none; letter-spacing: 0; transition: background 160ms ease; }
-.new-project-button svg { width: 15px; height: 15px; }
-.new-project-button:hover, .new-project-button:focus-visible { transform: none; background: #302f29; box-shadow: none; outline: none; }
-.project-gallery-toolbar { min-height: 46px; border-top: 0; border-color: var(--line); }
-.project-gallery-toolbar button { min-width: 104px; padding: 0 0; margin-right: 28px; color: var(--muted); border-right: 0; border-bottom: 1px solid transparent; font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-transform: none; }
-.project-gallery-toolbar button[aria-selected='true'] { color: var(--ink); background: transparent; border-bottom-color: var(--ink); }
-.project-gallery-toolbar button[aria-selected='true'] b { color: var(--ink); }
-.project-gallery-toolbar > span { display: none; }
-.project-gallery-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding-top: 18px; }
-.library-card { min-height: 238px; grid-template-rows: 28px minmax(0,1fr) auto 38px; background: #fff; border-color: var(--line); border-radius: 10px; box-shadow: none; transition: border-color 160ms ease; }
-.library-card::before { display: none; }
-.library-card:hover { transform: none; border-color: rgba(22,21,15,.4); box-shadow: none; }
-.library-card.is-personal { border-style: solid; }
-.library-card > header { display: flex; padding: 3px 15px 0; border-color: var(--line); font: 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.library-card > header span { color: var(--muted); }
-.library-card > header em, .library-card > header i { display: none; }
-.library-card-open { grid-template-columns: 82px minmax(0,1fr); grid-template-rows: 1fr; align-items: center; gap: 19px; padding: 15px; }
-.library-card-glyph { justify-content: start; color: var(--ink); background: transparent; border: 0; border-radius: 0; font-size: clamp(30px,3vw,44px); }
-.library-card-copy { gap: 6px; }
-.library-card-copy small { display: none; }
-.library-card-copy strong { font: 500 24px/1.05 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.035em; }
-.library-card-copy > span { max-width: 380px; color: var(--muted); font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.library-card-scenes { min-height: 32px; gap: 14px; padding: 5px 15px; border-color: var(--line); }
-.library-card-scenes span { position: relative; padding: 0; color: var(--muted); background: transparent; font: 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.library-card-scenes span + span::before { content: '·'; position: absolute; left: -8px; }
-.library-card > footer { border-color: var(--line); }
-.library-card > footer button { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); border-color: var(--line); font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-transform: none; }
-.library-card > footer button svg { width: 12px; height: 12px; }
-.library-card > footer button:hover, .library-card > footer button:focus-visible { color: var(--ink); background: #efefeb; }
-.library-card > footer .library-restore { color: var(--ink); background: #efefeb; }
-.library-add-card { min-height: 238px; border-color: var(--line); border-style: solid; border-radius: 10px; }
-.library-add-card > svg { width: 30px; height: 30px; color: var(--muted); stroke-width: 1.35; }
-.library-add-card strong { font: 500 17px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-.library-add-card small { font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-transform: none; }
-.library-add-card:hover, .library-add-card:focus-visible { background: #fff; border-color: rgba(24,24,23,.34); }
-.project-gallery-empty { border-color: var(--line); }
-.project-gallery-empty > svg { width: 48px; height: 48px; color: var(--muted); stroke-width: 1.25; }
-.project-creator { border-color: var(--line); border-radius: 12px; box-shadow: 0 20px 70px rgba(0,0,0,.2); }
-.project-creator > header { color: var(--ink); background: #fff; border-bottom: 1px solid var(--line); }
-.project-creator > header span { color: var(--muted); }
-.project-creator > header button { color: var(--muted); background: transparent; border: 0; }
-.project-creator > header button svg { width: 18px; height: 18px; }
-.project-creator > input { border-color: var(--line); border-radius: 7px; }
-.project-template-grid button { background: var(--ivory); border-radius: 8px; }
-.project-template-grid button > b { border-radius: 6px; }
-.project-creator > footer { border-color: var(--line); }
-.project-creator > footer button { border-color: var(--line); border-radius: 7px; }
-.project-creator > footer .project-create-submit { background: var(--ink); border-color: var(--ink); }
-
-/* One-head transformer: dense mathematics, stripped of decorative chrome. */
+/* ---------------------------------------------------------------------------
+   One-head transformer: dense mathematics, stripped of decorative chrome.
+   Base rules for the attention widget; cinematic.css refines them.
+   --------------------------------------------------------------------------- */
 .kind-attention,
 .kind-training,
 .kind-barycentric,
 .kind-simplex,
 .kind-numberTheory { border-color: var(--line); box-shadow: none; }
-.attention-view { display: grid; grid-template-rows: 34px minmax(0,1fr) 78px; gap: 7px; padding: 9px; overflow: hidden; background: var(--paper); }
+.attention-view { display: grid; grid-template-rows: 34px minmax(0, 1fr) 78px; gap: 8px; padding: 8px; overflow: hidden; background: var(--paper); }
 .attention-header { min-width: 0; }
 .attention-header h3 { margin: 2px 0 0; font-size: 16px; }
-.attention-live { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
-.attention-live i { width: 6px; height: 6px; border-radius: 50%; background: #49a969; }
-.attention-workbench { min-height: 0; display: grid; grid-template-columns: 1fr 1.05fr 1.08fr; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.attention-panel { min-width: 0; min-height: 0; overflow: hidden; padding: 8px 10px; background: transparent; border: 0; border-left: 1px solid var(--line); border-radius: 0; }
-.attention-panel:first-child { border-left: 0; }
-.attention-panel > header { height: 18px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
-.attention-panel > header span { color: var(--agent); }
-.attention-panel > header b { color: var(--ink); font-weight: 500; }
-.attention-token-editor-list { display: grid; gap: 3px; }
-.attention-token-editor { min-width: 0; display: grid; gap: 3px; padding: 4px 0 5px; background: transparent; border-bottom: 1px solid var(--line); border-radius: 0; }
-.attention-token-name { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 5px; }
-.attention-token-name > input { min-width: 0; height: 22px; padding: 0 5px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 4px; font: 600 11px/1 'Fira Code', monospace; }
-.attention-token-name > span { color: var(--agent); font-size: 9px; text-transform: uppercase; }
-.attention-vector-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-.attention-vector-inputs label { min-width: 0; display: grid; grid-template-columns: 12px 1fr; align-items: center; color: var(--muted); font-size: 9px; }
-.attention-vector-inputs input, .attention-matrix-grid input, .attention-classifier-grid input, .attention-bias-grid input { min-width: 0; width: 100%; height: 20px; box-sizing: border-box; padding: 0; text-align: center; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 3px; font: 10px/1 'Fira Code', monospace; text-align: center; }
-.attention-token-editor input:focus, .attention-parameter-panel input:focus, .attention-control-panel select:focus { border-color: var(--agent); outline: 1px solid var(--agent); }
-.attention-derived-vectors { min-width: 0; display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; }
-.attention-derived-vectors span { overflow: hidden; color: var(--muted); font-size: 9px; white-space: nowrap; text-overflow: ellipsis; }
-.attention-derived-vectors i { color: var(--agent); font-style: normal; }
-.attention-matrices { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; padding: 0; border: 0; background: transparent; }
-.attention-matrix, .attention-output-head fieldset { min-width: 0; margin: 0; padding: 3px; border: 1px solid var(--line); border-radius: 4px; }
-.attention-matrix legend, .attention-output-head legend { padding: 0 3px; color: var(--muted); font-size: 9px; }
-.attention-matrix-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 2px; padding: 0; border: 0; }
-.attention-matrix-grid input { height: 20px; background: #fff; outline: 0; }
-.attention-output-head { display: grid; grid-template-columns: 1.35fr .65fr; gap: 4px; margin-top: 5px; }
-.attention-classifier-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
-.attention-bias-grid { display: grid; gap: 2px; }
-.attention-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.attention-selects label, .attention-temperature, .attention-priors label { display: grid; gap: 3px; color: var(--muted); font-size: 9px; }
-.attention-selects select { min-width: 0; height: 21px; padding: 0 3px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 4px; font: 10px/1 'Fira Code', monospace; }
-.attention-temperature { margin-top: 5px; }
-.attention-temperature > span, .attention-priors label > span { display: flex; justify-content: space-between; }
-.attention-temperature input, .attention-priors input { width: 100%; height: 10px; accent-color: var(--agent); }
-.attention-priors { display: grid; gap: 2px; margin-top: 5px; }
-.attention-subheading { color: var(--muted); font-size: 9px; text-transform: uppercase; }
-.attention-score-list { display: grid; gap: 2px; margin-top: 4px; }
-.attention-score-list > div { display: grid; grid-template-columns: 32px 28px 1fr 27px; align-items: center; gap: 3px; color: var(--muted); font-size: 9px; }
-.attention-score-list code, .attention-score-list b { color: var(--ink); font-size: 9px; }
-.attention-score-list > div > i { height: 5px; overflow: hidden; background: #e9e9e4; border-radius: 3px; }
-.attention-score-list > div > i em { display: block; height: 100%; background: var(--agent); }
-.attention-readout { min-width: 0; display: grid; grid-template-columns: .72fr .72fr 1.5fr .62fr; gap: 5px; }
+.attention-matrix-grid input { min-width: 0; width: 100%; height: 20px; box-sizing: border-box; padding: 0; color: var(--graphite); background: #fff; border: 1px solid var(--line); border-radius: 4px; font: 10px/1 var(--mono); text-align: center; }
+.attention-matrices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 0; border: 0; background: transparent; }
+.attention-matrix { min-width: 0; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 4px; }
+.attention-matrix legend { padding: 0 4px; color: var(--muted); font-size: 9px; }
+.attention-matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 0; border: 0; }
+.attention-readout { min-width: 0; display: grid; grid-template-columns: 0.72fr 0.72fr 1.5fr 0.62fr; gap: 4px; }
 .attention-readout > div { min-width: 0; display: grid; align-content: center; gap: 4px; padding: 6px 8px; background: transparent; border: 0; border-left: 1px solid var(--line); border-radius: 0; }
 .attention-readout > div:first-child { border-left: 0; }
-.attention-readout small { color: var(--muted); font-size: 9px; letter-spacing: .04em; }
-.attention-readout > div > strong { color: var(--ink); font-size: 12px; }
-.attention-readout code { overflow: hidden; color: var(--ink); font-size: 10px; text-overflow: ellipsis; }
-.attention-probability-list { grid-template-columns: repeat(3,1fr); align-items: center; }
+.attention-readout small { color: var(--muted); font-size: 9px; letter-spacing: 0.04em; }
+.attention-readout > div > strong { color: var(--graphite); font-size: 12px; }
+.attention-readout code { overflow: hidden; color: var(--graphite); font-size: 10px; text-overflow: ellipsis; }
+.attention-probability-list { grid-template-columns: repeat(3, 1fr); align-items: center; }
 .attention-probability-list > small { grid-column: 1 / -1; }
 .attention-probability-list > span { min-width: 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 4px; padding: 0; color: var(--muted); background: transparent; font-size: 9px; }
 .attention-probability-list > span > i { overflow: hidden; font-style: normal; text-overflow: ellipsis; }
-.attention-probability-list > span > em { grid-column: 1 / -1; height: 4px; overflow: hidden; background: #e9e9e4; border-radius: 3px; }
-.attention-probability-list > span > em b { display: block; height: 100%; background: #aaa9a3; }
+.attention-probability-list > span > em { grid-column: 1 / -1; height: 4px; overflow: hidden; background: var(--chip); border-radius: 3px; }
+.attention-probability-list > span > em b { display: block; height: 100%; background: var(--line-strong); }
 .attention-probability-list > span > strong { font-size: 9px; }
-.attention-probability-list > span.is-target { color: var(--agent); background: transparent; }
-.attention-probability-list > span.is-target > em b { background: var(--agent); }
-.attention-loss strong { color: var(--agent) !important; font-size: 17px !important; }
+.attention-probability-list > span.is-target { color: var(--purple); background: transparent; }
+.attention-probability-list > span.is-target > em b { background: var(--purple); }
 .attention-loss span { color: var(--muted); font-size: 9px; }
-
-@media (max-width: 1050px) {
-  .world-header { grid-template-columns: 150px minmax(0,1fr) auto; }
-  .world-status { display: none; }
-  .personal-project-navigator { right: 58px; grid-template-columns: 96px minmax(140px,.6fr) minmax(250px,1fr); }
-  .personal-project-proof { display: none; }
-  .project-gallery-shell { width: calc(100vw - 72px); }
-  .project-gallery-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-}
-
-@media (max-width: 720px) {
-  .mathburst-app { grid-template-columns: 44px minmax(0,1fr); }
-  .world-header { grid-template-columns: 126px minmax(0,1fr); padding: 0 10px; }
-  .world-title { justify-content: flex-end; }
-  .header-actions { display: none; }
-  .tool-rail { padding-inline: 4px; }
-  .rail-button { width: 34px; }
-  .personal-project-navigator { left: 54px; right: 8px; grid-template-columns: 92px 1fr; }
-  .personal-project-scenes, .personal-project-proof { display: none; }
-  .project-gallery-shell { width: calc(100vw - 32px); padding-top: 34px; }
-  .project-gallery-hero { grid-template-columns: 1fr; align-items: start; }
-  .project-gallery-grid { grid-template-columns: 1fr; }
-  .project-gallery-toolbar > span { display: none; }
-}
-
-/* The launcher sits in the header centre; shorten it before it can reach the title. */
-@media (max-width: 1180px) {
-  .webmcp-inspector-trigger em span { display: none; }
-}
-
-@media (max-width: 940px) {
-  .webmcp-inspector-trigger em { display: none; }
-}
-
-/* ---------------------------------------------------------------------------
-   Reduction pass: one fact, one place.
-   With a project open the scene name was rendering three times at once — the
-   header title, the canvas badge, and the navigator's active tab. The navigator
-   is the only one of the three that is interactive, so it keeps the job and the
-   other two go. Ambient, non-actionable chrome goes with them.
-   --------------------------------------------------------------------------- */
-
-/* Third copy of the scene name, plus an "interactive" label that never changes. */
-.problem-breadcrumb { display: none; }
-
-/* Second copy. With a project open the navigator names project and scene; on the
-   gallery the page's own "Projects." hero does. Either way the header title is a
-   duplicate, so it goes in both states rather than only one. */
-.world-title { display: none; }
-
-/* Never actionable, never changes — it was pure ambient text. */
-.world-status { display: none; }
-
-/* The active tool is already lit in the rail; a permanent instruction is noise. */
-.canvas-mode { display: none; }
-
-/* One primary action per screen. Reset is secondary: no chrome until reached for. */
-.reset-trigger { color: var(--muted); background: transparent; border-color: transparent; }
-.reset-trigger:hover, .reset-trigger:focus-visible { color: var(--ink); border-color: var(--line); }
-
-/* Let the tool rail sit on the page ground instead of inside its own panel. */
-.world-rail { background: transparent; border-right: 0; }
-
-/* Zoom is a utility, not a feature: quiet until used. */
-.zoom-controls { background: transparent; border-color: transparent; opacity: .5; transition: opacity 140ms ease-out, border-color 140ms ease-out; }
-.zoom-controls:hover, .zoom-controls:focus-within { background: var(--paper); border-color: var(--line); opacity: 1; }
-
-@media (prefers-reduced-motion: reduce) {
-  .zoom-controls { transition: none; }
-}
-
-/* The navigator was the loudest surface on screen — a full-bleed bar with a
-   solid black active tab, competing with the mathematics it frames. Shrink it
-   to its content and mark the active scene rather than filling it. */
-.personal-project-navigator {
-  left: 56px;
-  right: auto;
-  width: max-content;
-  max-width: calc(100vw - 130px);
-  grid-template-columns: auto auto minmax(0, auto);
-}
-.personal-project-scenes button[aria-pressed='true'] {
-  color: var(--ink);
-  background: transparent;
-  box-shadow: inset 0 -2px 0 var(--ink);
-}
-.personal-project-scenes button[aria-pressed='true'] b { color: var(--muted); }
-
-/* Internal rules did more separating than the content needed. */
-.personal-project-scenes button, .personal-project-scenes > span { border-right: 0; }
-.personal-project-identity { border-right: 0; }
-
-/* ---------------------------------------------------------------------------
-   Decoration pass: labels that name nothing.
-   The card ordinal ("01") numbers cards that are already in a visible order,
-   and the scene chip row repeats what the description just said. Both are
-   removed; the card keeps glyph, title, description and its two actions.
-   Hidden here rather than in ProjectGallery.tsx because a concurrent agent is
-   working in the components — the markup can be deleted later, nothing breaks.
-   --------------------------------------------------------------------------- */
-.library-card { min-height: 190px; grid-template-rows: minmax(0, 1fr) auto; }
-.library-card > header { display: none; }
-.library-card-scenes { display: none; }
-
-/* ---------------------------------------------------------------------------
-   Tool rail: names on demand.
-   Fourteen unlabelled glyphs meant hovering each one to learn the board. The
-   rail now widens on hover or keyboard focus to show the names, and a pin at
-   the foot keeps it open. It is fixed rather than a grid item so expanding
-   overlays the canvas instead of reflowing the world underneath it.
-   --------------------------------------------------------------------------- */
-.tool-rail {
-  position: fixed;
-  left: 0;
-  top: 54px;
-  bottom: 0;
-  width: 44px;
-  align-items: stretch;
-  padding: 9px 5px 10px;
-  overflow: hidden;
-  background: var(--ivory);
-  border-right: 1px solid transparent;
-  transition: width 180ms cubic-bezier(.22, .61, .36, 1), background 180ms ease-out, border-color 180ms ease-out;
-}
-
-.tool-rail:hover,
-.tool-rail:has(:focus-visible),
-.tool-rail.is-pinned {
-  width: 188px;
-  background: var(--paper);
-  border-right-color: var(--line);
-}
-
-/* Expanded, the rail reaches the width of the bottom bar; end its content above it. */
-.tool-rail:hover,
-.tool-rail:has(:focus-visible) { padding-bottom: 62px; }
-
-/* Pinned is a layout choice, so it reserves its own space instead of overlaying. */
-.mathburst-app:has(.tool-rail.is-pinned) { grid-template-columns: 188px minmax(0, 1fr); }
-
-.rail-tools { gap: 1px; }
-.rail-divider { width: auto; margin: 5px 6px; }
-
-.rail-button {
-  width: auto;
-  height: 32px;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: center;
-  justify-items: start;
-  padding: 0;
-  border-radius: 6px;
-}
-
-.rail-glyph { justify-self: center; }
-
-.rail-label {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 10px;
-  overflow: hidden;
-  color: inherit;
-  font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 120ms ease-out;
-}
-
-.tool-rail:hover .rail-label,
-.tool-rail:has(:focus-visible) .rail-label,
-.tool-rail.is-pinned .rail-label { opacity: 1; }
-
-.rail-label kbd {
-  margin-left: auto;
-  color: #a3a29c;
-  font: 11px/1 'Fira Code', monospace;
-}
-
-.rail-button.is-active .rail-label kbd { color: rgba(255, 255, 255, .65); }
-
-/* The tooltip is the collapsed-state affordance only; the labels replace it. */
-.tool-rail:hover .rail-tooltip,
-.tool-rail:has(:focus-visible) .rail-tooltip,
-.tool-rail.is-pinned .rail-tooltip { display: none; }
-
-.rail-pin { color: var(--muted); }
-.rail-pin .rail-label { font-size: 12px; }
-
-/* Pinned reserves space, so the bottom bar clears the rail instead of covering it. */
-.mathburst-app:has(.tool-rail.is-pinned) .personal-project-navigator { left: 200px; }
-.mathburst-app:has(.tool-rail.is-pinned) .problem-breadcrumb { left: 204px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .tool-rail, .rail-label { transition: none; }
-}
-
-/* Same species as the card ordinal: a made-up index and a count the tab row
-   ("Projects 4") already gives. The page title says where you are. */
-.project-gallery-eyebrow { display: none; }
-.gallery-header-count { display: none; }
-
-/* ---------------------------------------------------------------------------
-   Gallery hero and card actions.
-   The title now uses STIX Two Text — the same face the mathematics on the
-   canvas is set in — so the page opens in the product's own voice instead of
-   the system UI font. The lede says what the app is and counts nothing.
-   --------------------------------------------------------------------------- */
-.project-gallery-hero h1 {
-  font: 400 clamp(52px, 5.4vw, 76px)/1 'STIX Two Text', Georgia, serif;
-  letter-spacing: -.02em;
-}
-
-.project-gallery-lede {
-  max-width: 46ch;
-  color: var(--muted);
-  font: 15px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-/* Removing the card's header and scenes rows left the footer row sized by its
-   text alone, so the actions became a thin strip. Give them a real target. */
-.library-card > footer button {
-  min-height: 46px;
-  padding: 0 14px;
-  gap: 8px;
-  font: 13px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.library-card > footer button svg { width: 15px; height: 15px; }

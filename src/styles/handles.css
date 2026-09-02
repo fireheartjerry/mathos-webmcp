@@ -1,16 +1,42 @@
-/* Selection frame, resize/rotate handles and node editors. Every dimension is
-   multiplied by --hs (1 / viewport zoom) so handles stay a constant screen size
-   while living inside the scaled world-stage. Graphite for the human, purple
-   only for Tutor-authored objects. */
+/* ---------------------------------------------------------------------------
+   Canvas object layer: entrance motion, one selection language, object
+   presentation (text, equation, image, shape, arrow, frame, group), ink,
+   the eraser ring, the film cursor and the cinematic bridge.
+
+   Handle dimensions are multiplied by --hs (1 / viewport zoom) so they keep a
+   constant screen size while living inside the scaled world-stage. Graphite
+   is the human, purple is the Tutor and hover focus.
+
+   Selectors are prefixed with .world-canvas / .mathburst-app / .cinematic-bridge
+   so they outrank the base rules in mathburst.css, minimal.css and
+   cinematic.css regardless of stylesheet order.
+   --------------------------------------------------------------------------- */
 
 .world-stage {
   --hs: 1;
-  --handle-ink: #171713;
-  --handle-agent: #7c5cff;
+  --handle-ink: var(--graphite, #171713);
+  --handle-agent: var(--purple, #7c5cff);
   --handle-paper: #fffdf8;
+  --handle-ease: var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-/* The per-object selection outline follows the same 1px-screen rule outside Director review. */
+/* ---- Entrance --------------------------------------------------------------
+   WorldObjectView writes transform/opacity through --enter-scale/--enter-opacity
+   and flips data-entered false -> entering -> true after mount. Only the
+   'entering' frame carries a transition, so live rotate/resize previews never
+   lag behind the pointer. */
+.world-canvas .world-object[data-entered='false'] {
+  --enter-scale: 0.97;
+  --enter-opacity: 0;
+}
+
+.world-canvas .world-object[data-entered='entering'] {
+  transition: opacity 220ms var(--handle-ease), transform 220ms var(--handle-ease);
+}
+
+/* ---- Selection ------------------------------------------------------------ */
+
+/* Per-object outline: 1px graphite at screen width, no offset, no glow. */
 .world-canvas[data-director-mode='false'] .world-object.is-selected::after {
   inset: 0;
   border: calc(1px * var(--hs)) solid var(--handle-ink);
@@ -23,6 +49,51 @@
 
 .world-canvas[data-director-mode='false'] .world-object.is-selected::before {
   display: none;
+}
+
+/* Children of a selected group or frame: a quiet dashed purple hint. */
+.world-canvas .world-object.is-group-child::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: calc(1px * var(--hs)) dashed rgba(124, 92, 255, 0.5);
+  pointer-events: none;
+}
+
+.world-canvas .world-object.is-group-child.is-selected::after {
+  border-style: solid;
+}
+
+/* Body cursor in the select tool. */
+.world-canvas.mode-select .world-object { cursor: move; }
+.world-canvas.mode-select .world-object.is-locked { cursor: default; }
+.world-canvas.mode-select .world-object.kind-frame,
+.world-canvas.mode-select .world-object.kind-group { cursor: default; }
+.world-canvas.mode-select .world-object.kind-frame.is-selected,
+.world-canvas.mode-select .world-object.kind-group.is-selected { cursor: move; }
+
+/* Locked objects: a small padlock at the top-right, handles suppressed by the canvas. */
+.world-canvas .lock-glyph {
+  position: absolute;
+  right: calc(4px * var(--hs));
+  top: calc(4px * var(--hs));
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: calc(16px * var(--hs));
+  height: calc(16px * var(--hs));
+  background: rgba(251, 249, 243, 0.92);
+  border: calc(1px * var(--hs)) solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: calc(4px * var(--hs));
+  pointer-events: none;
+}
+
+.world-canvas .lock-glyph svg {
+  width: calc(10px * var(--hs));
+  height: calc(10px * var(--hs));
+  fill: var(--muted, #7a776d);
+  stroke: var(--muted, #7a776d);
+  stroke-width: 1.2;
 }
 
 .selection-frame {
@@ -38,6 +109,10 @@
   border-color: var(--handle-agent);
 }
 
+.selection-frame.is-multi {
+  border-style: dashed;
+}
+
 .selection-handle {
   position: absolute;
   z-index: 41;
@@ -47,11 +122,18 @@
   background: var(--handle-paper);
   border: calc(1px * var(--hs)) solid var(--handle-ink);
   transform: translate(-50%, -50%);
+  transition: transform 120ms var(--handle-ease), border-color 120ms var(--handle-ease);
   pointer-events: auto;
   touch-action: none;
 }
 
 .selection-frame.is-agent .selection-handle {
+  border-color: var(--handle-agent);
+}
+
+.selection-handle:hover,
+.selection-handle:active {
+  transform: translate(-50%, -50%) scale(1.15);
   border-color: var(--handle-agent);
 }
 
@@ -64,12 +146,13 @@
 .selection-handle[data-handle='ne'],
 .selection-handle[data-handle='sw'] { cursor: nesw-resize; }
 
+/* Rotate: a 14px leader rising from the top edge to an 11px circle. */
 .selection-rotate-leader {
   position: absolute;
   left: 50%;
-  top: calc(-18px * var(--hs));
+  top: calc(-14px * var(--hs));
   width: calc(1px * var(--hs));
-  height: calc(18px * var(--hs));
+  height: calc(14px * var(--hs));
   background: var(--handle-ink);
   transform: translateX(-50%);
   pointer-events: none;
@@ -81,12 +164,16 @@
 
 .selection-handle[data-handle='rotate'] {
   left: 50%;
-  top: calc(-23px * var(--hs));
+  top: calc(-19px * var(--hs));
   width: calc(11px * var(--hs));
   height: calc(11px * var(--hs));
   border-radius: 50%;
   cursor: grab;
 }
+
+.selection-handle[data-handle='rotate']:active { cursor: grabbing; }
+
+/* ---- Node editor (arrows, polygons, freeform) ---------------------------- */
 
 .node-editor {
   position: absolute;
@@ -99,12 +186,13 @@
   position: absolute;
   z-index: 43;
   box-sizing: border-box;
-  width: calc(9px * var(--hs));
-  height: calc(9px * var(--hs));
+  width: calc(8px * var(--hs));
+  height: calc(8px * var(--hs));
   background: var(--handle-paper);
   border: calc(1px * var(--hs)) solid var(--handle-ink);
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  transition: transform 120ms var(--handle-ease), border-color 120ms var(--handle-ease);
   cursor: move;
   pointer-events: auto;
   touch-action: none;
@@ -114,9 +202,15 @@
   border-color: var(--handle-agent);
 }
 
+.node-handle:hover,
+.node-handle:active {
+  transform: translate(-50%, -50%) scale(1.15);
+  border-color: var(--handle-agent);
+}
+
 .node-handle.is-midpoint {
-  width: calc(7px * var(--hs));
-  height: calc(7px * var(--hs));
+  width: calc(6px * var(--hs));
+  height: calc(6px * var(--hs));
   border-radius: 0;
   background: transparent;
   border-style: dashed;
@@ -127,23 +221,196 @@
   border-radius: 0;
 }
 
+/* ---- Text ----------------------------------------------------------------- */
+
+.world-canvas .world-object.kind-text p {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 8px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+}
+
+.world-canvas .world-object.kind-text p.is-handwritten {
+  font-family: 'Segoe Print', 'Bradley Hand', 'Caveat', 'Comic Sans MS', cursive;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  transform: none;
+  text-shadow: none;
+}
+
+/* ---- Equation ------------------------------------------------------------- */
+
+.world-canvas .world-object.kind-equation {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.world-canvas .world-object.kind-equation > .equation-fit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.world-canvas .world-object.kind-equation .equation-fit-inner {
+  flex: none;
+  width: max-content;
+  max-width: none;
+  transform: scale(var(--eq-scale, 1));
+  transform-origin: center;
+}
+
+.world-canvas .world-object.kind-equation .equation-fit-inner .math-equation-object {
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+}
+
+.world-canvas .world-object.kind-equation .equation-fit-inner .katex-display {
+  margin: 0;
+  overflow: visible;
+  max-width: none;
+}
+
+.world-canvas .world-object.kind-equation .equation-fit-inner .math.math-display {
+  display: block;
+  max-width: none;
+}
+
+/* ---- Image ---------------------------------------------------------------- */
+
+.world-canvas .world-object.kind-image > img {
+  object-fit: contain;
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+/* ---- Shapes and arrows ---------------------------------------------------- */
+
+.world-canvas .world-object.kind-shape > svg,
+.world-canvas .world-object.kind-arrow > svg,
+.world-canvas .world-object.kind-ink > svg {
+  overflow: visible;
+}
+
+/* The head is drawn at the tip in user units and scaled by 1/zoom to keep one
+   screen size, like the non-scaling 2.5px shaft. */
+.world-canvas .world-object.kind-arrow .arrow-head {
+  transform: scale(var(--hs, 1));
+  transform-box: view-box;
+}
+
+/* ---- Frame and group ------------------------------------------------------ */
+
+.world-canvas .world-object.kind-frame {
+  border: 1px solid var(--line-strong, rgba(23, 23, 19, 0.34));
+  border-radius: 9px;
+  background: rgba(251, 249, 243, 0.34);
+}
+
+.world-canvas .world-object.kind-frame.is-selected::after {
+  border-radius: 9px;
+}
+
+.world-canvas .world-object.kind-group {
+  border: 1px dashed var(--purple, #7c5cff);
+  border-radius: 9px;
+  background: rgba(124, 92, 255, 0.025);
+}
+
+.world-canvas .world-object.kind-group.is-selected::after {
+  border-radius: 9px;
+}
+
+/* Kicker-style labels sit inside the top-left corner. */
+.world-canvas .world-object.kind-frame .frame-label,
+.world-canvas .world-object.kind-group .group-label {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 22px;
+  padding: 0 8px;
+  color: var(--muted, #7a776d);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line-strong, rgba(23, 23, 19, 0.34));
+  border-radius: 6px;
+  font: 500 10.5px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.world-canvas .world-object.kind-group .group-label {
+  color: var(--purple, #7c5cff);
+  border-color: rgba(124, 92, 255, 0.5);
+}
+
+.world-canvas .world-object.kind-frame .frame-label small {
+  display: inline;
+  color: var(--muted, #7a776d);
+  font: 400 10.5px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
 /* Frame titles are editable in place; the label is otherwise click-through. */
-.frame-label span {
+.world-canvas .frame-label span {
   pointer-events: auto;
   cursor: text;
 }
 
-.frame-title-input {
+.world-canvas .frame-title-input {
   width: 160px;
-  height: 22px;
+  height: 18px;
   padding: 0 4px;
-  color: var(--ivory, #fbf8f1);
+  color: var(--graphite, #171713);
   background: transparent;
-  border: 1px solid #a9a69c;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong, rgba(23, 23, 19, 0.34));
   border-radius: 0;
   font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   outline: none;
   pointer-events: auto;
+}
+
+/* ---- Ink and eraser ------------------------------------------------------- */
+
+.world-canvas .ink-outline {
+  fill-rule: nonzero;
+}
+
+.world-canvas.mode-eraser { cursor: none; }
+
+.world-canvas .eraser-cursor {
+  position: absolute;
+  z-index: 60;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--graphite, #171713);
+  border-radius: 50%;
+  background: rgba(251, 249, 243, 0.55);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* Live construction previews for polygon and freeform shapes. */
@@ -157,4 +424,102 @@
 .path-preview .path-preview-node {
   fill: var(--handle-paper);
   stroke: var(--handle-ink);
+}
+
+/* ---- Film cursor ---------------------------------------------------------- */
+
+.mathburst-app .film-cursor {
+  width: 20px;
+  height: 20px;
+}
+
+.mathburst-app .film-cursor svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgba(23, 23, 19, 0.28)) drop-shadow(0 0 1px rgba(23, 23, 19, 0.18));
+}
+
+.mathburst-app .film-cursor svg path {
+  fill: var(--graphite, #171713);
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+
+.mathburst-app .film-cursor.is-pressed svg {
+  transform: scale(0.94);
+  transform-origin: 3px 2px;
+}
+
+.mathburst-app .film-cursor i {
+  position: absolute;
+  left: -8px;
+  top: -9px;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--purple, #7c5cff);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.45);
+}
+
+.mathburst-app .film-cursor.is-pressed i {
+  animation: film-click 260ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+@keyframes film-click {
+  0% { opacity: 0.85; transform: scale(0.45); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* ---- Cinematic bridge ----------------------------------------------------- */
+
+.cinematic-bridge .bridge-segment {
+  fill: none;
+  stroke: var(--graphite, #171713);
+  stroke-width: calc(2px * var(--bridge-size, 1));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cinematic-bridge .bridge-segment.is-focus {
+  stroke: var(--purple, #7c5cff);
+  stroke-width: calc(3px * var(--bridge-size, 1));
+}
+
+.cinematic-bridge .bridge-caption-plate {
+  fill: var(--paper, #fbf9f3);
+  stroke: var(--line, rgba(23, 23, 19, 0.16));
+  stroke-width: 1;
+}
+
+.cinematic-bridge .bridge-caption text {
+  fill: var(--graphite, #171713);
+  font: 500 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+}
+
+.cinematic-bridge .bridge-caption .bridge-caption-endpoints {
+  fill: var(--muted, #7a776d);
+  font: 400 11px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+}
+
+/* ---- Reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .world-canvas .world-object[data-entered='false'] {
+    --enter-scale: 1;
+    --enter-opacity: 1;
+  }
+  .world-canvas .world-object[data-entered='entering'],
+  .selection-handle,
+  .node-handle {
+    transition: none;
+  }
+  .mathburst-app .film-cursor.is-pressed i {
+    animation: none;
+  }
 }

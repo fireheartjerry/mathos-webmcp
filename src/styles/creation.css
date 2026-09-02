@@ -1,31 +1,83 @@
+/* Creation popover: anchored inside the canvas at the click point. */
 .creation-popover {
   position: absolute;
-  z-index: 30;
-  width: 240px;
+  z-index: var(--z-canvas-overlay);
+  width: 260px;
   max-width: calc(100% - 24px);
   max-height: calc(100% - 24px);
   overflow: auto;
-  padding: 13px;
-  color: #171713;
-  background: #fffdf6;
-  border: 1px solid rgba(23, 23, 19, .18);
-  border-radius: 12px;
-  box-shadow: 0 14px 38px rgba(23, 23, 19, .17);
-  font-family: 'Fira Code', monospace;
+  padding: 16px;
+  color: var(--graphite);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: var(--shadow-panel);
+  font-family: var(--system);
+  animation: chrome-in-up 180ms var(--ease-out) both;
 }
 
-.creation-popover-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.creation-popover-kicker { color: #7c5cff; font-size: 9px; letter-spacing: .11em; text-transform: uppercase; }
-.creation-popover h2 { margin: 4px 0 0; font: 600 15px/1.1 'STIX Two Text', Georgia, serif; }
-.creation-popover p { margin: 5px 0 0; color: #706e64; font: 10px/1.35 'Fira Code', monospace; }
-.creation-popover-close { padding: 0 2px; color: #706e64; background: transparent; border: 0; font-size: 20px; line-height: 1; cursor: pointer; }
-.creation-popover-options { display: grid; gap: 6px; margin-top: 12px; }
-.creation-option { display: grid; gap: 2px; padding: 8px 9px; color: #171713; text-align: left; background: #f4f0e6; border: 1px solid transparent; border-radius: 7px; cursor: pointer; }
-.creation-option:hover:not(:disabled), .creation-option:focus-visible { border-color: #7c5cff; outline: none; }
-.creation-option:disabled { color: #979388; cursor: not-allowed; opacity: .78; }
-.creation-option span { font: 600 11px/1.2 'Fira Code', monospace; }
-.creation-option small { color: #706e64; font: 9px/1.2 'Fira Code', monospace; }
-.creation-option:disabled small { color: #aaa69b; }
-.creation-popover-cancel { width: 100%; margin-top: 10px; padding: 6px; color: #706e64; background: transparent; border: 1px solid rgba(23, 23, 19, .14); border-radius: 6px; font: 10px 'Fira Code', monospace; cursor: pointer; }
-.creation-popover-cancel:hover, .creation-popover-cancel:focus-visible { color: #171713; border-color: #7c5cff; outline: none; }
-.creation-popover kbd { padding: 1px 4px; border: 1px solid rgba(23, 23, 19, .14); border-radius: 3px; font: 9px 'Fira Code', monospace; }
+.creation-popover-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.creation-popover-header > div { min-width: 0; }
+.creation-popover-kicker { color: var(--purple); font: 500 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.creation-popover h2 { margin: 4px 0 0; font: 600 16px/1.2 var(--serif); }
+.creation-popover p { margin: 4px 0 0; color: var(--muted); font: 12px/1.4 var(--system); }
+.creation-popover-close {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font: 18px/1 var(--system);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.creation-popover-close:hover { color: var(--graphite); background: var(--chip); }
+.creation-popover-close:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+.creation-popover-options { display: grid; gap: 4px; margin-top: 12px; }
+.creation-option {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 12px;
+  color: var(--graphite);
+  background: var(--ivory);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.creation-option:hover:not(:disabled) { border-color: var(--graphite); }
+.creation-option:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+.creation-option:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.7; }
+.creation-option span { overflow: hidden; font: 500 13px/1.25 var(--system); white-space: nowrap; text-overflow: ellipsis; }
+.creation-option small { overflow: hidden; color: var(--muted); font: 11px/1.3 var(--system); white-space: nowrap; text-overflow: ellipsis; }
+.creation-popover-cancel {
+  width: 100%;
+  height: 28px;
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: 500 12px/1 var(--system);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.creation-popover-cancel:hover { color: var(--graphite); border-color: var(--graphite); }
+.creation-popover-cancel:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+.creation-popover kbd { padding: 1px 4px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; font: 11px/1.2 var(--mono); }
+
+@media (prefers-reduced-motion: reduce) {
+  .creation-popover { animation: none; }
+  .creation-option, .creation-popover-close, .creation-popover-cancel { transition: none; }
+}

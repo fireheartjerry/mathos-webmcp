@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
+import type { ChangeEvent, CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import {
   boundsCenter,
   buildResizeObjects,
@@ -24,7 +24,8 @@ import NodeEditor from './canvas/NodeEditor'
 import type { NodeRef } from './canvas/NodeEditor'
 import SelectionHandles from './canvas/SelectionHandles'
 import type { SelectionHandleId } from './canvas/SelectionHandles'
-import { isCanvasControlTarget, useCanvasInputRouter } from './canvas/useCanvasInputRouter'
+import { isCanvasControlTarget, isCanvasHandleTarget, useCanvasInputRouter } from './canvas/useCanvasInputRouter'
+import { variableWidthInkPath } from './canvas/inkGeometry'
 import CreationPopover from './creation/CreationPopover'
 import { matrixCreationOptions, shapeCreationOptions, type MatrixCreationOption, type ShapeCreationOption } from './creation/toolOptions'
 import WorldObjectView, { smoothStrokePath } from './WorldObjectView'
@@ -32,7 +33,8 @@ import '../styles/handles.css'
 
 type Gesture =
   | { kind: 'pan'; pointerId: number; client: Point; viewport: Viewport }
-  | { kind: 'drag'; pointerId: number; start: Point; ids: string[] }
+  | { kind: 'drag'; pointerId: number; start: Point; startClient: Point; ids: string[]; started: boolean; delta: Point }
+  | { kind: 'erase'; pointerId: number; erased: Set<string> }
   | { kind: 'ink'; pointerId: number; points: Point[]; highlighter: boolean }
   | { kind: 'freeform'; pointerId: number; points: Point[] }
   | {
@@ -65,6 +67,18 @@ const SHAPE_STROKE = '#171713'
 const SHAPE_PADDING = 6
 const FREEFORM_CLOSE_DISTANCE = 12
 const ROTATE_SNAP_DEGREES = 15
+/** Screen pixels a pointer must travel before a press becomes a move. */
+const DRAG_THRESHOLD = 3
+/** Arrow-key nudges within this window are one commit. */
+const NUDGE_SETTLE_MS = 360
+const PEN_WIDTH = 3
+const PEN_COLOR = '#171713'
+const HIGHLIGHTER_WIDTH = 18
+const HIGHLIGHTER_COLOR = '#7c5cff'
+const HIGHLIGHTER_OPACITY = 0.34
+
+const isEditableTarget = (target: EventTarget | null) =>
+  target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"], [contenteditable="true"] *')
 
 const makeAction = (summary: string, operations: WorldAction['operations']): WorldAction => ({
   id: crypto.randomUUID(),
@@ -167,6 +181,8 @@ export default function WorldCanvas({
   const [pathDraft, setPathDraft] = useState<PathDraft | null>(null)
   const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
   const [creationPopover, setCreationPopover] = useState<CreationPopoverState | null>(null)
+  const [eraserPoint, setEraserPoint] = useState<Point | null>(null)
+  const nudgeRef = useRef<{ ids: string[]; delta: Point; timer: number | null } | null>(null)
   const effectiveViewport = directorMode && directorViewport ? directorViewport : world.viewport
   const effectiveSelection = directorMode ? directorSelection : world.selection
   const routeInput = useCanvasInputRouter(mode)
@@ -287,6 +303,24 @@ export default function WorldCanvas({
   /* Creation                                                                */
   /* ---------------------------------------------------------------------- */
 
+  /** An empty text object at `point`, opened for editing. Commits 'Created text'. */
+  const createTextAt = (point: Point) => {
+    const id = crypto.randomUUID()
+    const object: WorldObject = {
+      id,
+      kind: 'text',
+      text: '',
+      color: '#171713',
+      fontSize: 24,
+      bounds: { x: point.x, y: point.y, width: 230, height: 72 },
+      rotation: 0,
+      author: 'human',
+      opacity: 1,
+    }
+    run(makeAction('Created text', [{ type: 'put', object }, { type: 'select', ids: [id] }]))
+    onEditObject(id, object)
+  }
+
   const createAt = (point: Point, anchor = point, option?: CreationOptionId) => {
     if (mode === 'shape' && !option) {
       if (armedShapeRef.current === 'freeform') return
@@ -364,7 +398,8 @@ export default function WorldCanvas({
     }
 
     if (mode === 'text') {
-      object = { ...base, kind: 'text', text: '', color: '#171713', fontSize: 24, bounds: { x: point.x, y: point.y, width: 230, height: 72 } }
+      createTextAt(point)
+      return
     } else if (mode === 'equation') {
       object = { ...base, kind: 'equation', entityId: `entity:${id}`, latex: '', color: '#171713', bounds: { x: point.x, y: point.y, width: 230, height: 78 } }
     } else if (mode === 'shape') {
@@ -393,7 +428,7 @@ export default function WorldCanvas({
       { type: 'select', ids: [id] },
     ]
     run(makeAction(`Created ${object.kind}`, operations))
-    if (object.kind === 'text' || object.kind === 'equation') onEditObject(id, object)
+    if (object.kind === 'equation') onEditObject(id, object)
   }
 
   /* ---------------------------------------------------------------------- */
@@ -429,6 +464,11 @@ export default function WorldCanvas({
       return
     }
 
+    if (mode === 'eraser') {
+      startErase(event)
+      return
+    }
+
     if (mode === 'shape' && armedShapeRef.current === 'freeform') {
       startFreeform(event)
       return
@@ -452,8 +492,36 @@ export default function WorldCanvas({
     createAt(point, { x: event.clientX - rect.left, y: event.clientY - rect.top })
   }
 
-  const handleCanvasDoubleClick = () => {
-    if (polygonDraft) finishPolygon(polygonDraft)
+  const handleCanvasDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (polygonDraft) {
+      finishPolygon(polygonDraft)
+      return
+    }
+    // Double-click on empty canvas with the select tool starts a text object there.
+    if (mode !== 'select' || directorMode) return
+    const target = event.target instanceof Element ? event.target : null
+    if (!target || isCanvasControlTarget(target) || isCanvasHandleTarget(target)) return
+    if (target !== canvasRef.current && !target.classList.contains('world-stage')) return
+    event.preventDefault()
+    createTextAt(screenToWorld(event.clientX, event.clientY))
+  }
+
+  /** Eraser: removes whole ink strokes under the pointer while it is down. */
+  const eraseAt = (gesture: Extract<Gesture, { kind: 'erase' }>, clientX: number, clientY: number) => {
+    const element = document.elementFromPoint(clientX, clientY)
+    const objectId = element?.closest('[data-object-id]')?.getAttribute('data-object-id')
+    if (!objectId || gesture.erased.has(objectId)) return
+    const object = world.objects[objectId]
+    if (!object || object.kind !== 'ink' || object.locked) return
+    gesture.erased.add(objectId)
+    run(makeAction('Erased ink', [{ type: 'remove', id: objectId }]))
+  }
+
+  const startErase = (event: ReactPointerEvent) => {
+    const gesture: Gesture = { kind: 'erase', pointerId: event.pointerId, erased: new Set() }
+    gestureRef.current = gesture
+    eraseAt(gesture, event.clientX, event.clientY)
+    capture(event.pointerId)
   }
 
   const handleCanvasPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -500,8 +568,8 @@ export default function WorldCanvas({
     if (mode !== 'select' && mode !== 'eraser') return
     event.stopPropagation()
 
-    if (mode === 'eraser' && object.kind === 'ink') {
-      run(makeAction('Erased ink', [{ type: 'remove', id }]))
+    if (mode === 'eraser') {
+      startErase(event)
       return
     }
     if (mode !== 'select' || object.locked) return
@@ -520,11 +588,78 @@ export default function WorldCanvas({
       kind: 'drag',
       pointerId: event.pointerId,
       start: screenToWorld(event.clientX, event.clientY),
+      startClient: { x: event.clientX, y: event.clientY },
       ids,
+      started: false,
+      delta: { x: 0, y: 0 },
     }
-    setDragPreview({ ids, delta: { x: 0, y: 0 } })
     capture(event.pointerId)
   }
+
+  /* ---------------------------------------------------------------------- */
+  /* Keyboard: arrow-key nudges and Escape                                   */
+  /* ---------------------------------------------------------------------- */
+
+  // Delete/Backspace and Ctrl+D are bound by the workspace; only the canvas-
+  // local keys live here. Latest state is read through refs so the listener
+  // is registered once.
+  const keyStateRef = useRef({ world, mode, directorMode, effectiveSelection, creationPopover, pathDraft, run })
+  keyStateRef.current = { world, mode, directorMode, effectiveSelection, creationPopover, pathDraft, run }
+
+  const commitNudge = useCallback(() => {
+    const nudge = nudgeRef.current
+    if (!nudge) return
+    nudgeRef.current = null
+    if (nudge.timer !== null) window.clearTimeout(nudge.timer)
+    setDragPreview(null)
+    if (Math.hypot(nudge.delta.x, nudge.delta.y) < 0.5) return
+    const { world: currentWorld, run: currentRun } = keyStateRef.current
+    currentRun(makeAction('Nudged objects', buildTransformOperations(currentWorld, nudge.ids, { translate: nudge.delta })))
+  }, [])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return
+      const state = keyStateRef.current
+      if (state.directorMode) return
+
+      if (event.key === 'Escape') {
+        if (state.pathDraft) return // the polygon draft owns Escape while it is open
+        if (state.creationPopover) { setCreationPopover(null); return }
+        if (gestureRef.current) return
+        if (state.effectiveSelection.length === 0) return
+        event.preventDefault()
+        state.run(makeAction('Cleared selection', [{ type: 'select', ids: [] }]))
+        return
+      }
+
+      const step = event.key === 'ArrowLeft' ? { x: -1, y: 0 }
+        : event.key === 'ArrowRight' ? { x: 1, y: 0 }
+          : event.key === 'ArrowUp' ? { x: 0, y: -1 }
+            : event.key === 'ArrowDown' ? { x: 0, y: 1 }
+              : null
+      if (!step || gestureRef.current || state.pathDraft) return
+      const ids = nudgeRef.current?.ids
+        ?? expandTargetIds(state.world, state.effectiveSelection).filter((id) => !state.world.objects[id]?.locked)
+      if (ids.length === 0) return
+      event.preventDefault()
+      const amount = event.shiftKey ? 10 : 1
+      const previous = nudgeRef.current?.delta ?? { x: 0, y: 0 }
+      const delta = { x: previous.x + step.x * amount, y: previous.y + step.y * amount }
+      if (nudgeRef.current?.timer) window.clearTimeout(nudgeRef.current.timer)
+      nudgeRef.current = { ids, delta, timer: window.setTimeout(commitNudge, NUDGE_SETTLE_MS) }
+      setDragPreview({ ids, delta })
+    }
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key.startsWith('Arrow') && nudgeRef.current) commitNudge()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [commitNudge])
 
   /* ---------------------------------------------------------------------- */
   /* Handle gestures: resize, rotate, node                                   */
@@ -604,12 +739,21 @@ export default function WorldCanvas({
   /* ---------------------------------------------------------------------- */
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'eraser') {
+      const rect = canvasRef.current!.getBoundingClientRect()
+      setEraserPoint({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+    }
     const gesture = gestureRef.current
     if (!gesture) {
       if (polygonDraft) setPathDraft({ ...polygonDraft, cursor: screenToWorld(event.clientX, event.clientY) })
       return
     }
     if (gesture.pointerId !== event.pointerId) return
+
+    if (gesture.kind === 'erase') {
+      eraseAt(gesture, event.clientX, event.clientY)
+      return
+    }
 
     if (gesture.kind === 'pan') {
       setViewportPreview({
@@ -622,7 +766,19 @@ export default function WorldCanvas({
 
     const point = screenToWorld(event.clientX, event.clientY)
     if (gesture.kind === 'drag') {
-      setDragPreview({ ids: gesture.ids, delta: { x: point.x - gesture.start.x, y: point.y - gesture.start.y } })
+      // A press only becomes a move after 3 screen pixels; Shift locks the
+      // move to whichever axis the pointer has travelled further along.
+      if (!gesture.started) {
+        if (Math.hypot(event.clientX - gesture.startClient.x, event.clientY - gesture.startClient.y) < DRAG_THRESHOLD) return
+        gesture.started = true
+      }
+      const delta = { x: point.x - gesture.start.x, y: point.y - gesture.start.y }
+      if (event.shiftKey) {
+        if (Math.abs(delta.x) >= Math.abs(delta.y)) delta.y = 0
+        else delta.x = 0
+      }
+      gesture.delta = delta
+      setDragPreview({ ids: gesture.ids, delta })
       return
     }
 
@@ -668,8 +824,12 @@ export default function WorldCanvas({
         else run(makeAction('Panned the world', [{ type: 'viewport', viewport: viewportPreview }]))
       }
       setViewportPreview(null)
+    } else if (gesture.kind === 'erase') {
+      // Each erased stroke was already committed as its own 'Erased ink'.
     } else if (gesture.kind === 'drag') {
-      const delta = dragPreview?.delta ?? { x: 0, y: 0 }
+      // Read the delta from the gesture itself: state may not have re-rendered
+      // between the last move and the release.
+      const delta = gesture.started ? gesture.delta : { x: 0, y: 0 }
       if (Math.hypot(delta.x, delta.y) > 0.5) {
         if (directorMode) onDirectorTransform?.(gesture.ids, delta)
         else run(makeAction('Moved objects', buildTransformOperations(world, gesture.ids, { translate: delta })))
@@ -724,16 +884,20 @@ export default function WorldCanvas({
         const top = Math.min(...points.map((point) => point.y)) - padding
         const right = Math.max(...points.map((point) => point.x)) + padding
         const bottom = Math.max(...points.map((point) => point.y)) + padding
+        const local = points.map((point) => ({ x: point.x - left, y: point.y - top }))
+        // Pen strokes are captured into `strokes` (velocity-thinned at render);
+        // the highlighter keeps its flat, legacy single-stroke width.
         const object: WorldObject = {
           id: crypto.randomUUID(),
           kind: 'ink',
-          points: points.map((point) => ({ x: point.x - left, y: point.y - top })),
-          color: gesture.highlighter ? '#7c5cff' : '#171713',
-          width: gesture.highlighter ? 18 : 3,
+          points: local,
+          ...(gesture.highlighter ? {} : { strokes: [{ points: local }] }),
+          color: gesture.highlighter ? HIGHLIGHTER_COLOR : PEN_COLOR,
+          width: gesture.highlighter ? HIGHLIGHTER_WIDTH : PEN_WIDTH,
           bounds: { x: left, y: top, width: Math.max(8, right - left), height: Math.max(8, bottom - top) },
           rotation: 0,
           author: 'human',
-          opacity: gesture.highlighter ? 0.34 : 1,
+          opacity: gesture.highlighter ? HIGHLIGHTER_OPACITY : 1,
         }
         run(makeAction(gesture.highlighter ? 'Highlighted' : 'Drew ink', [{ type: 'put', object }]))
       }
@@ -837,6 +1001,13 @@ export default function WorldCanvas({
     : null
   const showHandles = Boolean(frame) && !inkPreview && !pathDraft
 
+  // Children of a selected group or frame get a subtle secondary highlight.
+  const groupChildIds = new Set<string>()
+  effectiveSelection.forEach((id) => {
+    const object = world.objects[id]
+    if (object && (object.kind === 'group' || object.kind === 'frame')) object.childIds.forEach((childId) => groupChildIds.add(childId))
+  })
+
   const stageStyle = {
     transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
     '--hs': 1 / viewport.zoom,
@@ -868,6 +1039,7 @@ export default function WorldCanvas({
       onPointerMove={handlePointerMove}
       onPointerUp={finishGesture}
       onPointerCancel={finishGesture}
+      onPointerLeave={() => setEraserPoint(null)}
       onDoubleClick={handleCanvasDoubleClick}
       onWheel={handleWheel}
       onContextMenu={(event) => event.preventDefault()}
@@ -886,6 +1058,7 @@ export default function WorldCanvas({
               object={object}
               selected={effectiveSelection.includes(id)}
               agentCommit={agentCommitIds.includes(id)}
+              groupChild={groupChildIds.has(id) && !effectiveSelection.includes(id)}
               previewOffset={offset}
               world={world}
               run={run}
@@ -900,6 +1073,7 @@ export default function WorldCanvas({
             bounds={frame.bounds}
             rotation={frame.rotation}
             agent={frame.agent}
+            multi={handleDisplayObjects.length > 1}
             onHandlePointerDown={handleSelectionHandlePointerDown}
           />
         )}
@@ -922,15 +1096,24 @@ export default function WorldCanvas({
             }}
             viewBox={`0 0 ${Math.max(24, previewBounds.right - previewBounds.left + 24)} ${Math.max(24, previewBounds.bottom - previewBounds.top + 24)}`}
           >
-            <polyline
-              points={inkPreview.points.map((point) => `${point.x - previewBounds.left + 12},${point.y - previewBounds.top + 12}`).join(' ')}
-              fill="none"
-              stroke={inkPreview.highlighter ? '#7c5cff' : '#171713'}
-              strokeOpacity={inkPreview.highlighter ? 0.34 : 1}
-              strokeWidth={inkPreview.highlighter ? 18 : 3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            {inkPreview.highlighter ? (
+              <polyline
+                points={inkPreview.points.map((point) => `${point.x - previewBounds.left + 12},${point.y - previewBounds.top + 12}`).join(' ')}
+                fill="none"
+                stroke={HIGHLIGHTER_COLOR}
+                strokeOpacity={HIGHLIGHTER_OPACITY}
+                strokeWidth={HIGHLIGHTER_WIDTH}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : (
+              <path
+                className="ink-outline"
+                d={variableWidthInkPath(inkPreview.points.map((point) => ({ x: point.x - previewBounds.left + 12, y: point.y - previewBounds.top + 12 })), PEN_WIDTH)}
+                fill={PEN_COLOR}
+                stroke="none"
+              />
+            )}
           </svg>
         )}
         {pathDraft && draftBounds && (
@@ -988,6 +1171,7 @@ export default function WorldCanvas({
           </svg>
         )}
       </div>
+      {mode === 'eraser' && eraserPoint && <div className="eraser-cursor" style={{ left: eraserPoint.x, top: eraserPoint.y }} aria-hidden="true" />}
       {directorMode && <div className="director-safe-frame" aria-hidden="true"><span>title safe · 7%</span></div>}
       <div className="canvas-mode">
         <b>{mode}</b>

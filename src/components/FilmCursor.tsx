@@ -1,11 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import '../styles/handles.css'
 
 /**
  * A rendered pointer for the film capture. Tab capture does not include the
  * OS cursor, so the page draws one at the real pointer position. It reads
  * pointer events only; it never generates them.
+ *
+ * The arrow is 20px tall with its tip at the pointer; a click pulses a 22px
+ * ring from the tip for 260 ms (styles in handles.css).
  */
 export default function FilmCursor() {
   const [state, setState] = useState({ x: -100, y: -100, visible: false, pressed: false })
@@ -29,11 +33,13 @@ export default function FilmCursor() {
   return (
     <div
       className={`film-cursor${state.visible ? ' is-visible' : ''}${state.pressed ? ' is-pressed' : ''}`}
-      style={{ transform: `translate(${state.x - 2}px, ${state.y - 2}px)` }}
+      style={{ transform: `translate(${state.x - 3}px, ${state.y - 2}px)` }}
       aria-hidden="true"
     >
       <i />
-      <svg viewBox="0 0 22 30"><path d="M2 2 L2 23 L7.5 18.2 L11.2 27 L15.2 25.3 L11.6 16.8 L19 16.4 Z" /></svg>
+      <svg viewBox="0 0 20 20">
+        <path d="M3 2 L3 16.6 L6.8 13.2 L9.3 18.6 L12 17.4 L9.6 12.2 L14.6 12 Z" />
+      </svg>
     </div>
   )
 }

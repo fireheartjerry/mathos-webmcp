@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { handwritingSampleToInk, loadHandwritingSamples } from '../domain/world/handwriting'
 import type { FrameObject, ShapeObject, WorldAction, WorldObject, WorldState } from '../domain/world/types'
@@ -9,7 +9,67 @@ import NumberTheoryView from './NumberTheoryView'
 import SimplexView from './SimplexView'
 import TrainingView from './TrainingView'
 import { isCanvasControlTarget } from './canvas/useCanvasInputRouter'
+import { variableWidthInkPath } from './canvas/inkGeometry'
 import '../styles/handles.css'
+
+/** Default graphite drifts to a blue-black when text is presented as handwriting. */
+const HANDWRITING_INK = '#22243a'
+const ARROW_HEAD_LENGTH = 11
+const ARROW_HEAD_WIDTH = 9
+
+const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** Ink drawn by hand with the pen tool is rendered as a filled, velocity-thinned outline. */
+function usesVelocityInk(object: Extract<WorldObject, { kind: 'ink' }>, progress: number | undefined): boolean {
+  return object.author === 'human' && object.strokeScale === undefined && object.width < 10 && progress === undefined
+}
+
+/**
+ * Centres typeset math and scales it down (never clips) when it outgrows the
+ * bounds, so an agent-resized equation stays crisp and whole.
+ */
+function EquationFit({ children }: { children: ReactNode }) {
+  const outerRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return
+    const measure = () => {
+      const availableWidth = outer.clientWidth - 16
+      const availableHeight = outer.clientHeight - 8
+      const width = inner.offsetWidth
+      const height = inner.offsetHeight
+      if (!width || !height || availableWidth <= 0 || availableHeight <= 0) return
+      const next = Math.min(1, availableWidth / width, availableHeight / height)
+      setScale((current) => (Math.abs(current - next) < 0.005 ? current : next))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(outer)
+    observer.observe(inner)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={outerRef} className="equation-fit" style={{ '--eq-scale': scale } as CSSProperties}>
+      <div ref={innerRef} className="equation-fit-inner">{children}</div>
+    </div>
+  )
+}
+
+function LockGlyph() {
+  return (
+    <span className="lock-glyph" role="img" aria-label="Locked">
+      <svg viewBox="0 0 12 12" aria-hidden="true">
+        <rect x="2" y="5.5" width="8" height="5.5" rx="1" />
+        <path d="M4 5.5 V3.8 a2 2 0 0 1 4 0 V5.5" fill="none" />
+      </svg>
+    </span>
+  )
+}
 
 export function smoothStrokePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return ''
@@ -156,6 +216,15 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
         // Multi-stroke reveal: the fraction is spread over strokes in order, so
         // earlier strokes finish before later ones begin.
         const strokeCount = strokes.length
+        if (usesVelocityInk(object, progress)) {
+          return (
+            <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+              {strokes.map((stroke, index) => (
+                <path key={`${object.id}-ink-${index}`} className="ink-outline" d={variableWidthInkPath(stroke.points, object.width)} fill={object.color} stroke="none" />
+              ))}
+            </svg>
+          )
+        }
         return (
           <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
             {strokes.map((stroke, index) => {
@@ -180,8 +249,11 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
           </svg>
         )
       }
-    case 'text':
-      return <p className={object.presentation === 'handwritten' ? 'is-handwritten' : undefined} style={{ color: object.color, fontSize: object.fontSize, textAlign: object.textAlign ?? 'left', width: '100%' }}>{object.text}</p>
+    case 'text': {
+      const handwritten = object.presentation === 'handwritten'
+      const color = handwritten && object.color.toLowerCase() === '#171713' ? HANDWRITING_INK : object.color
+      return <p className={handwritten ? 'is-handwritten' : undefined} style={{ color, fontSize: object.fontSize, textAlign: object.textAlign ?? 'left', width: '100%' }}>{object.text}</p>
+    }
     case 'image': {
       if (object.src === 'handwriting://opening-attempt') {
         const preview = handwritingSampleToInk(loadHandwritingSamples(), 'opening-attempt', {
@@ -209,19 +281,23 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
     case 'shape':
       return shapeContents(object, width, height, progress)
     case 'arrow': {
-      const markerId = `arrow-${object.id}`
+      // The head is a plain polygon at the tip, scaled by --hs in CSS so it keeps
+      // one screen size at any zoom, matching the non-scaling 2.5px shaft.
+      const angle = Math.atan2(object.to.y - object.from.y, object.to.x - object.from.x)
+      const tip = object.to
+      const base = { x: tip.x - Math.cos(angle) * ARROW_HEAD_LENGTH, y: tip.y - Math.sin(angle) * ARROW_HEAD_LENGTH }
+      const nx = -Math.sin(angle) * (ARROW_HEAD_WIDTH / 2)
+      const ny = Math.cos(angle) * (ARROW_HEAD_WIDTH / 2)
+      const head = `${tip.x},${tip.y} ${base.x + nx},${base.y + ny} ${base.x - nx},${base.y - ny}`
       return (
         <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill={object.color} />
-            </marker>
-          </defs>
-          <line x1={object.from.x} y1={object.from.y} x2={object.to.x} y2={object.to.y} stroke={object.color} strokeWidth="2.5" markerEnd={`url(#${markerId})`} vectorEffect="non-scaling-stroke" />
+          <line x1={object.from.x} y1={object.from.y} x2={tip.x} y2={tip.y} stroke={object.color} strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <polygon className="arrow-head" points={head} fill={object.color} style={{ transformOrigin: `${tip.x}px ${tip.y}px` }} />
         </svg>
       )
     }
     case 'equation':
+      return <EquationFit><MathObjectView object={object} world={world} run={run} /></EquationFit>
     case 'graph':
     case 'geometry':
     case 'matrix':
@@ -247,6 +323,7 @@ export default function WorldObjectView({
   object,
   selected,
   agentCommit,
+  groupChild,
   previewOffset,
   world,
   run,
@@ -256,6 +333,8 @@ export default function WorldObjectView({
   object: WorldObject
   selected: boolean
   agentCommit?: boolean
+  /** A child of a selected group or frame; highlighted subtly. */
+  groupChild?: boolean
   previewOffset?: { x: number; y: number }
   world: WorldState
   run: (action: WorldAction) => void
@@ -263,25 +342,54 @@ export default function WorldObjectView({
   onDoubleClick: (id: string) => void
 }) {
   const offset = previewOffset ?? { x: 0, y: 0 }
+  // Entrance: mounted at scale .97 / opacity 0, released on the next frame and
+  // transitioned for 220 ms (see handles.css). Transform and opacity only, so
+  // nothing reflows. Reduced motion skips straight to the resting state.
+  const [entered, setEntered] = useState<'false' | 'entering' | 'true'>(() => (reduceMotion() ? 'true' : 'false'))
+  useEffect(() => {
+    if (reduceMotion()) return
+    let settle: number | undefined
+    const frame = window.requestAnimationFrame(() => {
+      setEntered('entering')
+      settle = window.setTimeout(() => setEntered('true'), 260)
+    })
+    // Runs once per mount; the cleanup only fires on unmount so the settle
+    // timer is never cancelled by the state change it follows.
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (settle !== undefined) window.clearTimeout(settle)
+    }
+  }, [])
   // Path-like kinds reveal by stroke length (see objectContents); everything
   // else fades in with drawProgress.
   const progress = drawFraction(object)
   const revealsByStroke = object.kind === 'ink' || (object.kind === 'shape' && (object.shape === 'polygon' || object.shape === 'freeform'))
   const opacity = progress !== undefined && !revealsByStroke ? object.opacity * progress : object.opacity
-  const style: CSSProperties = {
+  const style = {
     left: object.bounds.x + offset.x,
     top: object.bounds.y + offset.y,
     width: object.bounds.width,
     height: object.bounds.height,
-    transform: `rotate(${object.rotation}deg)`,
-    opacity,
+    '--obj-rotation': `${object.rotation}deg`,
+    '--obj-opacity': opacity,
+    transform: 'rotate(var(--obj-rotation)) scale(var(--enter-scale, 1))',
+    opacity: 'calc(var(--obj-opacity) * var(--enter-opacity, 1))',
     pointerEvents: object.opacity <= 0.02 ? 'none' : undefined,
-  }
+  } as CSSProperties
+  const className = [
+    'world-object',
+    `kind-${object.kind}`,
+    selected ? 'is-selected' : '',
+    agentCommit ? 'is-agent-commit' : '',
+    groupChild ? 'is-group-child' : '',
+    object.locked ? 'is-locked' : '',
+  ].filter(Boolean).join(' ')
   return (
     <div
-      className={`world-object kind-${object.kind}${selected ? ' is-selected' : ''}${agentCommit ? ' is-agent-commit' : ''}`}
+      className={className}
       data-object-id={object.id}
       data-author={object.author}
+      data-entered={entered}
       aria-hidden={object.opacity <= 0.02}
       style={style}
       onPointerDown={(event) => onPointerDown(event, object.id)}
@@ -291,6 +399,7 @@ export default function WorldObjectView({
       }}
     >
       {objectContents(object, world, run)}
+      {object.locked && <LockGlyph />}
       {object.author === 'agent' && <span className="author-pip" aria-label="Created by the Tutor">Tutor</span>}
     </div>
   )

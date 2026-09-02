@@ -155,3 +155,34 @@ export function verifyRamanujanFive(cutoff: number): RamanujanVerification {
 
 export const verifyRamanujanCongruence = verifyRamanujanFive
 export const ramanujanVerification = verifyRamanujanFive
+
+export type RamanujanCheck = {
+  n: number
+  value: number
+  residue: number
+  applies: boolean
+  modulo: number
+  quotient: number
+  holds: boolean
+}
+
+/**
+ * Check one coefficient against p(5k + 4) ≡ 0 (mod 5). `applies` is false
+ * off the n ≡ 4 lane, where the theorem says nothing; `holds` is only ever a
+ * finite observation about this one value.
+ */
+export function ramanujanCheck(n: number, value: number): RamanujanCheck {
+  const index = Math.max(0, Math.floor(Number.isFinite(n) ? n : 0))
+  const safeValue = Number.isFinite(value) ? Math.round(value) : 0
+  const residue = index % 5
+  const modulo = safeValue % 5
+  return {
+    n: index,
+    value: safeValue,
+    residue,
+    applies: residue === 4,
+    modulo,
+    quotient: Math.floor(safeValue / 5),
+    holds: residue === 4 && modulo === 0,
+  }
+}

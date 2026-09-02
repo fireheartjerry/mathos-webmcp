@@ -19,22 +19,24 @@ const RESIZE_HANDLES: { id: ResizeHandle; left: string; top: string }[] = [
 /**
  * Selection frame with eight resize handles and a rotate handle. Lives inside the
  * world-stage so it follows the object; the stage's --hs variable keeps handle
- * sizes constant on screen.
+ * sizes constant on screen. A multi-selection draws a dashed union frame.
  */
 export default function SelectionHandles({
   bounds,
   rotation,
   agent,
+  multi = false,
   onHandlePointerDown,
 }: {
   bounds: Bounds
   rotation: number
   agent: boolean
+  multi?: boolean
   onHandlePointerDown: (handle: SelectionHandleId, event: ReactPointerEvent<HTMLDivElement>) => void
 }) {
   return (
     <div
-      className={`selection-frame${agent ? ' is-agent' : ''}`}
+      className={`selection-frame${agent ? ' is-agent' : ''}${multi ? ' is-multi' : ''}`}
       style={{
         left: bounds.x,
         top: bounds.y,

@@ -176,3 +176,74 @@ export function pascalRecurrence(N: number, dimension = 3): PascalRecurrence {
 }
 
 export const inductionData = pascalRecurrence
+
+// ---------------------------------------------------------------------------
+// Section-plane helpers for direct manipulation of P in the projected view.
+// ---------------------------------------------------------------------------
+
+/** Vertices of the triangle cut by the plane δ = t (the face ABC slides toward D). */
+export function sectionTriangle(vertices: Tetrahedron, t: number): [Vec3, Vec3, Vec3] {
+  const amount = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0))
+  const apex = vertices[3]
+  const slide = (vertex: Vec3): Vec3 => ({
+    x: vertex.x * (1 - amount) + apex.x * amount,
+    y: vertex.y * (1 - amount) + apex.y * amount,
+    z: vertex.z * (1 - amount) + apex.z * amount,
+  })
+  return [slide(vertices[0]), slide(vertices[1]), slide(vertices[2])]
+}
+
+/**
+ * Signed-area barycentric coordinates of a screen point against a projected
+ * triangle. A degenerate triangle returns the centroid.
+ */
+export function barycentric2D(point: Point, triangle: readonly [Point, Point, Point]): [number, number, number] {
+  const [a, b, c] = triangle
+  const area = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)
+  if (Math.abs(area) < 1e-9) return [1 / 3, 1 / 3, 1 / 3]
+  const u = ((b.x - point.x) * (c.y - point.y) - (c.x - point.x) * (b.y - point.y)) / area
+  const v = ((c.x - point.x) * (a.y - point.y) - (a.x - point.x) * (c.y - point.y)) / area
+  return [u, v, 1 - u - v]
+}
+
+/** Nearest valid barycentric triple: negatives clamp to the edge and the rest renormalise. */
+export function clampBarycentric(weights: readonly [number, number, number]): [number, number, number] {
+  const clamped = weights.map((weight) => (Number.isFinite(weight) && weight > 0 ? weight : 0)) as [number, number, number]
+  const total = clamped[0] + clamped[1] + clamped[2]
+  if (total <= 1e-12) return [1 / 3, 1 / 3, 1 / 3]
+  return [clamped[0] / total, clamped[1] / total, clamped[2] / total]
+}
+
+/** Four simplex weights from barycentrics on the section plane δ = t. */
+export function weightsOnSection(barycentric: readonly [number, number, number], t: number): SimplexWeights {
+  const delta = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0))
+  const [u, v, w] = clampBarycentric(barycentric)
+  return [u * (1 - delta), v * (1 - delta), w * (1 - delta), delta]
+}
+
+/**
+ * Screen point → nearest valid weights on the section plane δ = t of a
+ * projected tetrahedron. The projection is perspective, so the 2-D
+ * barycentrics are a close (not exact) inverse; good enough to keep P under
+ * the pointer.
+ */
+export function weightsFromScreenOnSection(
+  point: Point,
+  vertices: Tetrahedron,
+  t: number,
+  rotation: EulerRotation,
+  options: ProjectionOptions = {},
+): SimplexWeights {
+  const triangle = sectionTriangle(vertices, t).map((vertex) => rotateAndProject(vertex, rotation, options)) as [Point, Point, Point]
+  return weightsOnSection(barycentric2D(point, triangle), t)
+}
+
+/** Wrap an angle into (−π, π]. */
+export function wrapAngle(angle: number): number {
+  if (!Number.isFinite(angle)) return 0
+  const twoPi = Math.PI * 2
+  let wrapped = angle % twoPi
+  if (wrapped > Math.PI) wrapped -= twoPi
+  if (wrapped <= -Math.PI) wrapped += twoPi
+  return wrapped
+}

@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { BridgeTransition } from '../domain/demo/shotContract'
 import type { Point } from '../domain/world/types'
+import '../styles/handles.css'
 
 /**
  * A presentational match transition. It reads screen anchors and a few
@@ -210,6 +211,9 @@ export default function CinematicBridge({
   const scale = size * (1 + 0.35 * Math.sin(Math.PI * t))
   const toScreen = (point: Point): string => `${(position.x + point.x * scale).toFixed(1)},${(position.y + point.y * scale).toFixed(1)}`
   const captionOpacity = Math.sin(Math.PI * t)
+  // Captions are mono 12px on a paper plate; Fira Code advances ~7.2px per glyph.
+  const endpointsLabel = `${endpoints.sourceLabel} → ${endpoints.targetLabel}`
+  const plateWidth = Math.max(frame.caption.length, endpointsLabel.length) * 7.2 + 28
 
   return (
     <svg className="cinematic-bridge" aria-hidden="true" style={{ '--bridge-size': size } as CSSProperties}>
@@ -222,8 +226,9 @@ export default function CinematicBridge({
         return <circle key={index} className={`bridge-dot is-${dot.role}`} cx={x} cy={y} r={(dot.role === 'focus' ? 4.5 : 2.6) * size} />
       })}
       <g className="bridge-caption" style={{ opacity: captionOpacity }} transform={`translate(${position.x.toFixed(1)}, ${(position.y + 78 * scale).toFixed(1)}) scale(${size.toFixed(2)})`}>
+        <rect className="bridge-caption-plate" x={-plateWidth / 2} y={-17} width={plateWidth} height={42} rx={6} />
         <text textAnchor="middle">{frame.caption}</text>
-        <text className="bridge-caption-endpoints" textAnchor="middle" y="18">{endpoints.sourceLabel} → {endpoints.targetLabel}</text>
+        <text className="bridge-caption-endpoints" textAnchor="middle" y="17">{endpointsLabel}</text>
       </g>
     </svg>
   )

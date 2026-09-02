@@ -1,108 +1,110 @@
-/* Animation timeline sidebar: quiet paper panel, 1px lines, mono captions. */
+/* Animation timeline panel: quiet paper panel, 1px lines, mono captions.
+   Third item of the bottom-right column: zoom (34px), activity rail (at most
+   252px), then timelines. Steps left with the column through --right-inset. */
 
 .animation-panel {
-  --anim-ink: #171713;
-  --anim-paper: #fbf9f3;
-  --anim-ivory: #f4f0e6;
-  --anim-muted: #7a776d;
-  --anim-line: rgba(23, 23, 19, 0.16);
-  --anim-line-strong: rgba(23, 23, 19, 0.34);
-  --anim-purple: #7c5cff;
-  --anim-purple-soft: rgba(124, 92, 255, 0.12);
-  --anim-mono: 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace;
-  width: 268px;
-  max-height: 46vh;
+  position: fixed;
+  right: var(--right-inset);
+  bottom: calc(58px + 252px + 12px);
+  z-index: var(--z-panel);
+  width: var(--activity-w);
+  max-height: calc(100vh - var(--header-h) - 12px - 322px);
   display: flex;
   flex-direction: column;
-  color: var(--anim-ink);
-  background: rgba(251, 249, 243, 0.96);
-  border: 1px solid var(--anim-line);
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(23, 23, 19, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 12px;
   overflow: hidden;
+  color: var(--graphite);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: var(--shadow-panel);
+  font: 12px/1.3 var(--system);
+  animation: chrome-in-up 220ms var(--ease-out) both;
 }
 
 .animation-panel-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding: 9px 12px 8px;
-  border-bottom: 1px solid var(--anim-line);
-  font-size: 11px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 500 10.5px/1 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.animation-panel-head b { font-family: var(--anim-mono); font-weight: 500; font-size: 11px; color: var(--anim-muted); letter-spacing: 0; text-transform: none; }
+.animation-panel-head b { color: var(--muted); font: 500 11px/1 var(--mono); letter-spacing: 0; text-transform: none; }
 
-.animation-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.animation-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; }
 
 .animation-row {
-  padding: 9px 12px 8px;
-  border-bottom: 1px solid var(--anim-line);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
   outline: none;
-  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 160ms var(--ease-out);
 }
 .animation-row:last-child { border-bottom: none; }
-.animation-row:focus-visible { background: var(--anim-purple-soft); box-shadow: inset 2px 0 0 var(--anim-purple); }
-.animation-row.is-playing .animation-name { color: var(--anim-purple); }
+.animation-row:focus-visible { background: var(--purple-soft); box-shadow: inset 2px 0 0 var(--purple); }
+.animation-row.is-playing .animation-name { color: var(--purple); }
 
 .animation-row-head { display: flex; align-items: center; gap: 8px; }
 
 .animation-play {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  color: var(--anim-ink);
+  color: var(--graphite);
   background: transparent;
-  border: 1px solid var(--anim-line-strong);
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
   cursor: pointer;
-  transition: border-color 160ms, background-color 160ms, color 160ms;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out);
 }
 .animation-play svg { width: 10px; height: 10px; fill: currentColor; }
-.animation-play:hover { border-color: var(--anim-ink); }
-.animation-row.is-playing .animation-play { color: var(--anim-ivory); background: var(--anim-purple); border-color: var(--anim-purple); }
+.animation-play:hover { border-color: var(--graphite); }
+.animation-play:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+.animation-row.is-playing .animation-play { color: #fff; background: var(--purple); border-color: var(--purple); }
 
-.animation-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.animation-clock { flex: none; font-family: var(--anim-mono); font-size: 10.5px; color: var(--anim-muted); font-variant-numeric: tabular-nums; }
+.animation-name { flex: 1; min-width: 0; overflow: hidden; font: 500 13px/1.2 var(--system); text-overflow: ellipsis; white-space: nowrap; }
+.animation-clock { flex: none; color: var(--muted); font: 11px/1 var(--mono); font-variant-numeric: tabular-nums; }
 
 .animation-scrubber {
   --progress: 0%;
   display: block;
   width: 100%;
-  height: 14px;
-  margin: 6px 0 4px;
+  height: 16px;
+  margin: 4px 0;
   background: transparent;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
 }
-.animation-scrubber:focus { outline: none; }
+.animation-scrubber:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; border-radius: 4px; }
+/* A hard-stop two-colour track is the only way to paint played/unplayed on a native range. */
 .animation-scrubber::-webkit-slider-runnable-track {
   height: 1px;
-  background: linear-gradient(to right, var(--anim-purple) var(--progress), var(--anim-line-strong) var(--progress));
+  background: linear-gradient(to right, var(--purple) var(--progress), var(--line-strong) var(--progress));
 }
-.animation-scrubber::-moz-range-track { height: 1px; background: var(--anim-line-strong); }
-.animation-scrubber::-moz-range-progress { height: 1px; background: var(--anim-purple); }
+.animation-scrubber::-moz-range-track { height: 1px; background: var(--line-strong); }
+.animation-scrubber::-moz-range-progress { height: 1px; background: var(--purple); }
 .animation-scrubber::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 9px;
-  height: 9px;
-  margin-top: -4px;
-  background: var(--anim-paper);
-  border: 1px solid var(--anim-ink);
+  width: 10px;
+  height: 10px;
+  margin-top: -4.5px;
+  background: var(--paper);
+  border: 1px solid var(--graphite);
   border-radius: 50%;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 120ms var(--ease-out), border-color 120ms var(--ease-out);
 }
-.animation-scrubber::-moz-range-thumb { width: 9px; height: 9px; background: var(--anim-paper); border: 1px solid var(--anim-ink); border-radius: 50%; }
-.animation-scrubber:hover::-webkit-slider-thumb, .animation-scrubber:focus-visible::-webkit-slider-thumb { transform: scale(1.3); border-color: var(--anim-purple); }
-.animation-scrubber:focus-visible::-moz-range-thumb { border-color: var(--anim-purple); }
+.animation-scrubber::-moz-range-thumb { width: 10px; height: 10px; background: var(--paper); border: 1px solid var(--graphite); border-radius: 50%; }
+.animation-scrubber:hover::-webkit-slider-thumb, .animation-scrubber:focus-visible::-webkit-slider-thumb { transform: scale(1.3); border-color: var(--purple); }
+.animation-scrubber:focus-visible::-moz-range-thumb { border-color: var(--purple); }
 
 .animation-row-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 
@@ -112,32 +114,33 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  font-family: var(--anim-mono);
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--anim-muted);
+  color: var(--muted);
+  font: 11px/1.5 var(--mono);
 }
 .animation-tracks li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.animation-tracks li::before { content: '·'; margin-right: 5px; color: var(--anim-line-strong); }
+.animation-tracks li::before { content: '\00B7'; margin-right: 6px; color: var(--line-strong); }
 .animation-tracks li.is-empty { font-style: italic; }
 .animation-tracks li.is-empty::before { content: none; }
 
 .animation-actions { flex: none; display: flex; gap: 4px; }
 .animation-chip {
-  padding: 2px 7px;
-  font: 500 10px var(--anim-mono);
-  color: var(--anim-muted);
+  height: 22px;
+  padding: 0 8px;
+  color: var(--muted);
   background: transparent;
-  border: 1px solid var(--anim-line);
-  border-radius: 999px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 500 11px/1 var(--mono);
   cursor: pointer;
-  transition: color 120ms, border-color 120ms, background-color 120ms;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
 }
-.animation-chip:hover:not(:disabled) { color: var(--anim-ink); border-color: var(--anim-line-strong); }
+.animation-chip:hover:not(:disabled) { color: var(--graphite); border-color: var(--graphite); }
+.animation-chip:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .animation-chip:disabled { opacity: 0.45; cursor: default; }
-.animation-chip.is-on { color: var(--anim-purple); border-color: var(--anim-purple); background: var(--anim-purple-soft); }
-.animation-chip.is-danger:hover { color: #d46b4c; border-color: #d46b4c; }
+.animation-chip.is-on { color: var(--purple); background: var(--purple-soft); border-color: var(--purple); }
+.animation-chip.is-danger:hover:not(:disabled) { color: var(--orange); border-color: var(--orange); }
 
 @media (prefers-reduced-motion: reduce) {
+  .animation-panel { animation: none; }
   .animation-row, .animation-play, .animation-chip, .animation-scrubber::-webkit-slider-thumb { transition: none; }
 }

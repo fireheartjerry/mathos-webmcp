@@ -1,0 +1,226 @@
+/* ---------------------------------------------------------------------------
+   Shared anatomy for the two dark "field" cards: the projected simplex and
+   the partition observatory. Header (kicker + title + meta), body, footer;
+   everything clipped at the root, every child min-width 0, tabular mono
+   numbers, nothing under 11px except the 10.5px kickers.
+   --------------------------------------------------------------------------- */
+
+.lattice-card,
+.simplex-view.lattice-card,
+.number-theory-view.lattice-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: var(--field-ink);
+  background: var(--field);
+  font: 11px/1.3 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.lattice-card *, .lattice-card *::before, .lattice-card *::after { box-sizing: border-box; min-width: 0; }
+
+.lattice-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-height: 34px; }
+.lattice-head-text { display: grid; gap: 4px; min-width: 0; }
+.lattice-kicker { color: var(--field-muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-title { margin: 0; color: var(--field-ink); font: 500 15px/1.15 var(--serif); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-meta { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; padding-top: 2px; color: var(--field-muted); font: 11px/1 var(--mono); white-space: nowrap; }
+.lattice-meta b { color: var(--field-ink); font-weight: 600; }
+.lattice-meta i { font-style: normal; opacity: 0.5; }
+.lattice-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; color: var(--field-muted); font: 11px/1.3 var(--mono); }
+.lattice-foot-text { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-foot-text b { color: #6fcfc7; font-size: 13px; }
+.lattice-foot-text small { font-size: 11px; color: var(--field-muted); }
+.lattice-foot-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+/* ---- controls ------------------------------------------------------------------ */
+.lattice-card .lattice-num {
+  width: 50px;
+  height: 20px;
+  padding: 0 5px;
+  margin: 0;
+  color: var(--field-ink);
+  background: var(--field-paper);
+  border: 1px solid var(--field-line);
+  border-radius: 4px;
+  font: 600 11px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  outline: none;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.lattice-card .lattice-num::-webkit-outer-spin-button, .lattice-card .lattice-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.lattice-card .lattice-num:focus { border-color: var(--purple); box-shadow: 0 0 0 2px var(--purple-soft); }
+.lattice-card .lattice-btn {
+  height: 22px;
+  padding: 0 8px;
+  color: var(--field-ink);
+  background: transparent;
+  border: 1px solid var(--field-line);
+  border-radius: 4px;
+  font: 11px/1 var(--mono);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+.lattice-card .lattice-btn:hover { border-color: rgba(244, 240, 230, 0.4); }
+.lattice-card .lattice-btn.is-on { color: #c9bbff; background: var(--purple-soft); border-color: rgba(124, 92, 255, 0.6); }
+.lattice-card .lattice-btn.is-teal.is-on { color: #8fdcd5; background: rgba(47, 143, 136, 0.18); border-color: rgba(79, 180, 172, 0.6); }
+.lattice-card .lattice-btn:disabled { opacity: 0.4; cursor: default; }
+.lattice-stepper { display: inline-flex; align-items: center; gap: 4px; }
+.lattice-stepper .lattice-btn { width: 22px; padding: 0; }
+.lattice-stepper .lattice-num { width: 40px; }
+
+/* label · slider · number, one line each */
+.lattice-card .lattice-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 50px;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 1px 3px;
+  border-radius: 4px;
+  color: var(--field-muted);
+  font: 11px/1 var(--mono);
+  text-transform: none;
+}
+.lattice-card .lattice-field input { grid-column: auto; }
+.lattice-card .lattice-field > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-card .lattice-field > span b { color: var(--field-ink); font-weight: 600; }
+.lattice-card .lattice-field input[type='range'] { width: 100%; height: 10px; margin: 0; accent-color: rgba(244, 240, 230, 0.7); }
+.lattice-card .lattice-field.is-hero > span { color: #c9bbff; }
+.lattice-card .lattice-field.is-hero input[type='range'] { accent-color: var(--purple); }
+.lattice-card .lattice-field.is-teal input[type='range'] { accent-color: #4fb4ac; }
+.lattice-card .lattice-field.is-purple input[type='range'] { accent-color: var(--purple); }
+
+/* ---- agent parity: a value set by a tool, not by a local drag ------------------ */
+.lattice-card .is-agent-set { animation: lattice-agent-flash 700ms var(--ease-out) both; }
+@keyframes lattice-agent-flash {
+  0% { box-shadow: inset 0 0 0 100px rgba(124, 92, 255, 0.55), 0 0 0 0 rgba(124, 92, 255, 0.7); }
+  35% { box-shadow: inset 0 0 0 100px rgba(124, 92, 255, 0.3), 0 0 0 3px rgba(124, 92, 255, 0.55); }
+  100% { box-shadow: inset 0 0 0 100px rgba(124, 92, 255, 0), 0 0 0 0 rgba(124, 92, 255, 0); }
+}
+.lattice-card .simplex-lattice-point.is-agent-set, .lattice-card .simplex-interior-point.is-agent-set { animation: lattice-agent-mark 700ms var(--ease-out) both; }
+@keyframes lattice-agent-mark { 0% { stroke: var(--purple); stroke-width: 9; } 100% { stroke-width: 3; } }
+
+/* ---- simplex --------------------------------------------------------------------- */
+.simplex-view.lattice-card { grid-template-columns: minmax(0, 1fr); }
+.simplex-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 10px; min-height: 0; }
+.simplex-plot { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--field-paper); border-radius: 6px; touch-action: none; cursor: grab; }
+.simplex-plot.is-orbiting { cursor: grabbing; }
+.simplex-plot .simplex-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.simplex-plot .simplex-orbit-hint { position: absolute; left: 10px; bottom: 8px; color: var(--field-muted); font: 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; pointer-events: none; opacity: 0.7; }
+
+.lattice-card .simplex-edge { stroke-dasharray: 1; stroke-dashoffset: 0; animation: simplex-edge-draw 640ms var(--ease-out) both; }
+@keyframes simplex-edge-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.lattice-card .simplex-lattice-point { transform-box: fill-box; transform-origin: center; animation: lattice-pop 360ms var(--ease-out) both; transition: r 200ms var(--ease-out), fill 200ms var(--ease-out); }
+@keyframes lattice-pop { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
+.lattice-card .simplex-section { transition: fill 300ms var(--ease-out); }
+.lattice-card .simplex-point-hit { fill: transparent; cursor: grab; }
+.simplex-plot.is-moving-point, .simplex-plot.is-moving-point .simplex-point-hit { cursor: grabbing; }
+.lattice-card .simplex-interior-point { transition: r 160ms var(--ease-out), fill 200ms var(--ease-out), stroke 200ms var(--ease-out); }
+.lattice-card .simplex-interior-label { font: 11px/1 var(--mono); }
+.lattice-card .simplex-section-label { font: 11px/1 var(--mono); letter-spacing: 0; }
+.lattice-card .simplex-section-vertex { font: 11px/1 var(--mono); }
+
+.lattice-card .simplex-side { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.sx-weights { display: grid; gap: 5px; padding: 8px; background: var(--field-paper); border-radius: 6px; }
+.sx-weights-sum { display: flex; justify-content: space-between; padding: 2px 3px 0; color: var(--field-muted); font: 11px/1 var(--mono); }
+.sx-weights-sum b { color: var(--field-ink); font-weight: 600; }
+.sx-section { display: grid; gap: 6px; padding: 8px; background: var(--field-paper); border-radius: 6px; }
+.sx-section p { margin: 0; padding: 0 3px; color: var(--field-muted); font: 11px/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: color 200ms var(--ease-out); }
+.sx-section p.is-active { color: #8fdcd5; }
+.sx-orbit { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 3px; color: var(--field-muted); font: 11px/1 var(--mono); white-space: nowrap; }
+.sx-orbit b { color: var(--field-ink); font-weight: 600; }
+
+/* ---- partitions ------------------------------------------------------------------ */
+.number-theory-view.lattice-card { grid-template-rows: auto minmax(0, 1fr) auto; }
+.nt-body { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; min-height: 0; }
+.nt-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.lattice-card .nt-controls .lattice-field { grid-template-columns: auto 72px 44px; width: auto; }
+.lattice-card .nt-controls .lattice-field .lattice-num { width: 44px; }
+
+.lattice-card .number-theory-chain { display: grid; grid-template-columns: minmax(0, 1.1fr) auto minmax(0, 1.1fr) auto minmax(0, 1.3fr) 96px; align-items: stretch; gap: 6px; min-height: 84px; }
+.lattice-card .number-theory-step { padding: 6px 9px; }
+.lattice-card .number-theory-step small, .lattice-card .number-theory-step em { font-size: 11px; line-height: 1.25; white-space: normal; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lattice-card .number-theory-product small, .lattice-card .number-theory-product em { -webkit-line-clamp: 1; }
+.lattice-card .number-theory-step strong { font: 600 13px/1.15 var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-card .number-theory-arrow { font-size: 11px; }
+.lattice-card .number-theory-product .katex { font-size: 0.82em; }
+.lattice-card .number-theory-product .katex-display { margin: 0; overflow: hidden; }
+
+.lattice-card .coefficient-strip { display: grid; grid-template-columns: minmax(0, 1fr) 176px; gap: 8px; align-items: stretch; min-height: 46px; }
+.coefficient-scroller { position: relative; min-width: 0; overflow: hidden; border-radius: 4px; }
+.coefficient-scroller::before, .coefficient-scroller::after { content: ''; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 200ms var(--ease-out); }
+.coefficient-scroller::before { left: 0; background: linear-gradient(90deg, var(--field), rgba(23, 23, 22, 0)); }
+.coefficient-scroller::after { right: 0; background: linear-gradient(270deg, var(--field), rgba(23, 23, 22, 0)); }
+.coefficient-scroller[data-fade-left='true']::before { opacity: 1; }
+.coefficient-scroller[data-fade-right='true']::after { opacity: 1; }
+.coefficient-track { position: relative; display: flex; gap: 3px; height: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
+.coefficient-track::-webkit-scrollbar { display: none; }
+.lattice-card .coefficient-cell {
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  color: var(--field-muted);
+  background: var(--field-paper);
+  border: 0;
+  border-radius: 4px;
+  font: 11px/1 var(--mono);
+  cursor: pointer;
+  animation: none;
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+.lattice-card .coefficient-cell small { font-size: 11px; }
+.lattice-card .coefficient-cell b { color: var(--field-ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lattice-card .coefficient-cell:hover { background: rgba(244, 240, 230, 0.1); }
+.lattice-card .coefficient-cell.is-lane-four { box-shadow: inset 0 -2px 0 var(--purple); }
+.lattice-card .coefficient-cell.is-selected { color: #e9e2ff; background: var(--purple); box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.5); transform: translateY(-1px); }
+.lattice-card .coefficient-cell.is-selected b { color: #fff; }
+.lattice-card .coefficient-cell.is-new { animation: coefficient-slide 360ms var(--ease-out) both; }
+@keyframes coefficient-slide { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+.coefficient-readout { display: grid; align-content: center; justify-items: end; gap: 3px; padding: 2px 8px; color: var(--field-muted); font: 11px/1 var(--mono); text-align: right; border-radius: 4px; }
+.coefficient-readout > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.coefficient-readout b { color: var(--field-ink); font-size: 16px; font-weight: 600; }
+.coefficient-readout .is-holds { color: #6fcfc7; }
+.coefficient-readout .is-fails { color: var(--orange); }
+.coefficient-readout .is-silent { color: var(--field-muted); }
+
+.lattice-card .residue-observatory { min-height: 0; overflow: hidden; }
+.lattice-card .residue-lanes { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 3px; height: 100%; min-height: 0; }
+.lattice-card .residue-lane { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 6px; min-height: 0; padding: 0 6px; border-radius: 4px; overflow: hidden; transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.lattice-card .residue-lane-label { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-card .residue-lane-values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; min-width: 0; overflow: hidden; }
+.lattice-card .residue-lane-values > span { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 2px 6px; overflow: hidden; white-space: nowrap; background: var(--field-paper); border-radius: 3px; font: 11px/1 var(--mono); animation: none; transition: box-shadow 200ms var(--ease-out); }
+.lattice-card .residue-lane-values > span > * { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lattice-card .residue-lane-values small { font-size: 11px; }
+.lattice-card .residue-lane-values b { font-size: 11px; font-weight: 600; }
+.lattice-card .residue-lane.is-dense .residue-lane-values small { display: none; }
+.lattice-card .residue-lane.is-verifying { background: rgba(47, 143, 136, 0.16); box-shadow: inset 2px 0 0 #4fb4ac; }
+.lattice-card .residue-lane.is-verifying .residue-lane-label { color: #8fdcd5; }
+.lattice-card .residue-lane-values > span.is-verified-cell { box-shadow: 0 0 0 1px #4fb4ac; }
+.lattice-card .residue-lane-values > span.is-selected-cell { box-shadow: 0 0 0 1px var(--purple); }
+
+.lattice-card .ramanujan-reveal { padding: 5px 10px; animation: theorem-rise 320ms var(--ease-out) both; }
+.lattice-card .ramanujan-statement h4 { font-size: 15px; }
+.lattice-card .math-object-kicker { font-size: 10.5px; letter-spacing: 0.08em; }
+.lattice-card .ramanujan-evidence b { font-size: 10.5px; }
+.lattice-card .ramanujan-evidence span { font-size: 11px; }
+.lattice-card .ramanujan-evidence small { font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lattice-card .ramanujan-reveal button { height: 22px; font-size: 11px; }
+.lattice-card .ramanujan-tease { min-height: 34px; padding: 0 12px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: border-color 160ms var(--ease-out); }
+.lattice-card .ramanujan-tease span { flex: 0 0 auto; }
+@keyframes theorem-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lattice-card .simplex-edge, .lattice-card .simplex-lattice-point, .lattice-card .coefficient-cell.is-new, .lattice-card .ramanujan-reveal, .lattice-card .is-agent-set { animation: none; }
+  .lattice-card .coefficient-cell, .lattice-card .residue-lane, .lattice-card .simplex-section { transition: none; }
+}

@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    Mathburst agent effects: the visible evidence that the Tutor (a WebMCP
-   agent) is acting in the shared world. Purple #7c5cff throughout, 1px/3px
-   lines, no gradients. Imported by AgentAura.tsx and AgentActivation.tsx.
+   agent) is acting in the shared world. Purple throughout, 1px/3px lines,
+   no gradients. Imported by AgentAura.tsx and AgentActivation.tsx.
 
    Classes the workspace must set:
      .world-object.is-agent-commit        set for ~320 ms on objects the agent changed
@@ -11,36 +11,29 @@
      .agent-activation …                  AgentActivation (fixed, canvas inset)
    --------------------------------------------------------------------------- */
 
-:root {
-  --ae-header: 54px;
-  --ae-rail: 58px;
-  --ae-purple: var(--purple, #7c5cff);
-  --ae-mono: var(--mono, 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace);
-}
-
 /* ---- Per-call purple flash (the agent just changed this object) --------- */
 
 .world-canvas .world-object.is-agent-commit {
-  animation: agent-commit-ring 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both, agent-commit-tint 900ms ease-out both;
+  animation: agent-commit-ring 900ms var(--ease-out) both, agent-commit-tint 900ms ease-out both;
 }
 @keyframes agent-commit-ring {
-  0% { box-shadow: 0 0 0 3px var(--ae-purple), 0 0 0 3px var(--ae-purple); }
-  35% { box-shadow: 0 0 0 3px var(--ae-purple), 0 0 0 10px rgba(124, 92, 255, 0.35); }
+  0% { box-shadow: 0 0 0 3px var(--purple), 0 0 0 3px var(--purple); }
+  35% { box-shadow: 0 0 0 3px var(--purple), 0 0 0 10px rgba(124, 92, 255, 0.35); }
   100% { box-shadow: 0 0 0 3px rgba(124, 92, 255, 0), 0 0 0 18px rgba(124, 92, 255, 0); }
 }
 @keyframes agent-commit-tint {
-  0% { background-color: rgba(124, 92, 255, 0.10); }
+  0% { background-color: rgba(124, 92, 255, 0.1); }
   60% { background-color: rgba(124, 92, 255, 0.06); }
   100% { background-color: rgba(124, 92, 255, 0); }
 }
 
 /* Tutor authorship pip, legible at 720p. */
 .world-object[data-author='agent'] > .author-pip {
+  top: -24px;
   padding: 4px 8px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0.03em;
-  top: -24px;
 }
 .world-object[data-author='agent'].is-agent-commit > .author-pip { opacity: 1; }
 
@@ -48,10 +41,10 @@
 
 .agent-aura {
   position: fixed;
-  z-index: 106;
+  z-index: var(--z-overlay);
   box-sizing: border-box;
   border-radius: 6px;
-  outline: 2px solid var(--ae-purple);
+  outline: 2px solid var(--purple);
   outline-offset: 0;
   box-shadow: 0 0 24px rgba(124, 92, 255, 0.45), inset 0 0 0 1px rgba(124, 92, 255, 0.35);
   background: rgba(124, 92, 255, 0.05);
@@ -67,14 +60,17 @@
   position: absolute;
   left: -2px;
   bottom: calc(100% + 8px);
+  max-width: 320px;
+  overflow: hidden;
   padding: 5px 8px;
   color: #fff;
-  background: var(--ae-purple);
+  background: var(--purple);
   border-radius: 4px;
-  font: 500 12px/1 var(--ae-mono);
+  font: 500 12px/1 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .agent-aura-label::after {
   content: '';
@@ -82,7 +78,7 @@
   left: 10px;
   top: 100%;
   border: 5px solid transparent;
-  border-top-color: var(--ae-purple);
+  border-top-color: var(--purple);
   border-bottom: 0;
 }
 
@@ -92,11 +88,11 @@
   --ae-sweep: 900ms;      /* perimeter travel */
   --ae-veil: 500ms;       /* veil fade, starts when the perimeter closes */
   position: fixed;
-  top: var(--ae-header);
-  left: var(--ae-rail);
+  top: var(--header-h);
+  left: var(--rail-w);
   right: 0;
   bottom: 0;
-  z-index: 107;
+  z-index: var(--z-overlay);
   overflow: hidden;
   pointer-events: none;
 }
@@ -106,7 +102,7 @@
 .agent-activation-bar {
   position: absolute;
   display: block;
-  background: var(--ae-purple);
+  background: var(--purple);
   animation-timing-function: linear, ease-out;
   animation-fill-mode: both, both;
   animation-duration: calc(var(--ae-sweep) / 4), var(--ae-veil);
@@ -123,7 +119,7 @@
   position: absolute;
   inset: 0;
   display: block;
-  background: var(--ae-purple);
+  background: var(--purple);
   opacity: 0;
   animation: agent-veil var(--ae-veil) ease-out var(--ae-sweep) both;
 }
@@ -132,7 +128,7 @@
 /* ---- Reduced motion ----------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .world-canvas .world-object.is-agent-commit { animation: none; box-shadow: 0 0 0 3px var(--ae-purple); background-color: rgba(124, 92, 255, 0.10); }
+  .world-canvas .world-object.is-agent-commit { animation: none; box-shadow: 0 0 0 3px var(--purple); background-color: rgba(124, 92, 255, 0.1); }
   .agent-aura { animation: none; }
   .agent-activation-bar { animation: none; transform: none; opacity: 0.6; }
   .agent-activation-veil { animation: none; opacity: 0.12; }
