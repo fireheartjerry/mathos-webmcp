@@ -29,7 +29,9 @@ OUT = ROOT / 'video/public/film'
 SR = 48_000
 
 
-def write_wav(path: Path, stereo: np.ndarray) -> None:
+def write_wav(path: Path, stereo: np.ndarray, peak_db: float = -6.0) -> None:
+    peak = float(np.max(np.abs(stereo))) or 1.0
+    stereo = stereo * (10 ** (peak_db / 20)) / peak
     clipped = np.clip(stereo, -1.0, 1.0)
     data = (clipped * 32767).astype('<i2')
     with wave.open(str(path), 'wb') as handle:
@@ -150,7 +152,7 @@ def main() -> None:
     total = float(timeline['seconds']) + 0.5
     OUT.mkdir(parents=True, exist_ok=True)
     write_wav(OUT / 'music.wav', music(timeline, int(manifest['music'].get('seed', 7)), total))
-    write_wav(OUT / 'sfx.wav', sfx(timeline, total))
+    write_wav(OUT / 'sfx.wav', sfx(timeline, total), peak_db=-12.0)
     print(f'wrote music.wav and sfx.wav for {total:.1f}s; {sum(1 for e in timeline["events"] if e["kind"] in ("human", "tutor"))} commit ticks')
 
 

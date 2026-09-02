@@ -18,7 +18,7 @@ import { connectPage, launchChrome, wait } from './chrome.mjs'
 const ROOT = resolve('.')
 const MANIFEST = JSON.parse(readFileSync(resolve(ROOT, 'video/film.manifest.json'), 'utf8'))
 const FRAMES = resolve(ROOT, '.film/frames')
-const OUT_DIR = resolve(ROOT, 'video/public/film')
+const OUT_DIR = resolve(ROOT, process.env.FILM_OUT ?? 'video/public/film')
 const CAPTURE = resolve(OUT_DIR, 'capture.mp4')
 const TIMELINE = resolve(OUT_DIR, 'timeline.json')
 const { width: WIDTH, height: HEIGHT, fps: FPS } = MANIFEST.output

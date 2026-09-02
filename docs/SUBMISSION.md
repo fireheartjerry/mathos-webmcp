@@ -15,7 +15,7 @@ Deadline: **September 3, 2026 at 1:00 PM Pacific Time**
 - [x] Director Review exposes thirteen editable keyframes across the eight scenes.
 - [x] `pnpm typecheck` and `pnpm build` pass.
 
-This document describes the product repository only. Deployment, public hosting, and video production are intentionally not claimed here; they are separate submission-owner steps.
+The submission film lives at `video/out/mathburst-final.mp4` (2560×1440, 60 fps, under 2:42) and is reproduced from source by `docs/video/FILM_REPRODUCTION.md`. Every frame of it is the real product performing the thirteen Director frames; narration describes only what is on screen. Deployment and public hosting remain separate submission-owner steps.
 
 Source: <https://github.com/fireheartjerry/mathos-webmcp>
 
@@ -75,9 +75,22 @@ The eight-scene mathematical spine makes the ambition concrete: one WebMCP comma
 
 Do not claim general OCR, long-term memory, multiplayer, cloud sync, or production readiness. They are not part of this submission.
 
+## Feature list
+
+- One canvas, one reducer: pen, highlighter, text, LaTeX equations, images, shapes, arrows, frames, groups, layers, transforms, and global undo/redo, with every object carrying its author.
+- Photograph reconstruction as a three-state agent workflow: propose, audit, approve, with the source ink staying linked to the semantic equations it produced.
+- Gamma density with a draggable CDF bound, a live shape parameter, three tail-owning probability bins, and the explicit mass → log-mass → softmax bridge.
+- A one-head tiny transformer with an editable W_Q/W_K/W_V path, a vector plane with angle arcs, softmax ribbons, and an honest deterministic gradient step whose sparkline records every step.
+- Barycentric coordinates linked to the attention weights, with a draggable point and a draggable vertex proving the affine invariant.
+- An Olympiad construction: homothety with tangent circles, plus a spiral-similarity centre computed from four points that survives dragging the source.
+- A projected tetrahedral probability simplex with a ratio-preserving weight slider, a section plane that recovers the barycentric triangle, and the Pascal lattice count.
+- A finite Euler-product partition observatory that verifies p(5n+4) ≡ 0 (mod 5) for the computed range and labels the general statement as a theorem.
+- Exactly eighteen WebMCP tools across six families, an inspector that runs the registered handlers, attached trace chips, and Tutor attribution in the shared history.
+- Director review: thirteen editable frames, deterministic cues and Tutor beats, camera bookmarks per canvas size, product-side match transitions, and a film mode for capture.
+
 ## Final owner actions
 
 1. If submission requires hosting, publish this repository separately and verify the resulting URL.
-2. If submission requires a video, create and upload it separately after product review.
+2. Upload `video/out/mathburst-final.mp4` and paste its public URL into the form.
 3. Flip the repository to public when ready.
 4. Paste the fields from [DEVPOST_FORM.md](DEVPOST_FORM.md).

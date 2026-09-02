@@ -23,9 +23,9 @@ webmcp, typescript, react, next.js, vinext, vite, svg, katex, cortex-js-compute-
 ## Try it out
 
 ```text
-Local app: run pnpm dev and open http://localhost:3000
+Local app: run pnpm dev --port 3400 and open http://localhost:3400
 Source: https://github.com/fireheartjerry/mathos-webmcp
-Video: separate submission-owner step after product review
+Video: video/out/mathburst-final.mp4 (upload, then paste the public URL here)
 ```
 
 ## Themes
@@ -36,9 +36,9 @@ Select **Web** and **Machine Learning / AI**.
 
 Upload `public/og.png` first. It is the real Mathburst interface at 1200×630 and works as the card thumbnail. Add a final calculus reconstruction screenshot and one geometry/matrix montage frame only if the form benefits from more than one image.
 
-## Video (separate submission-owner step)
+## Video
 
-The product repository does not claim a completed video. If the challenge form requires one, create it after reviewing the finished product and paste its public URL into the form.
+The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, under 2:42, one continuous take of the real product with narration that describes only visible behaviour. Upload it and paste the public URL into the form. Rebuild instructions: `docs/video/FILM_REPRODUCTION.md`.
 
 Suggested title:
 
