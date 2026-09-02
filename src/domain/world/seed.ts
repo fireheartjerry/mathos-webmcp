@@ -161,8 +161,10 @@ export function createSeedWorld(): WorldState {
   }
 
   const objects: WorldObject[] = [
+    // The reconstructed equation is created by the approved reconstruction,
+    // never pre-seeded: a draft may only propose ids the world does not hold.
     frame(OPENING_FRAME_ID, 'Gamma Function · Gamma Recurrence', [
-      'opening_prompt', OPENING_ATTEMPT_ID, SOURCE_IMAGE_ID, HERO_EQUATION_ID,
+      'opening_prompt', OPENING_ATTEMPT_ID, SOURCE_IMAGE_ID,
     ], -860, 70, 820, 650),
     {
       id: 'opening_prompt',
@@ -196,16 +198,6 @@ export function createSeedWorld(): WorldState {
       rotation: -1.2,
       author: 'human',
       opacity: 1,
-    },
-    {
-      id: HERO_EQUATION_ID,
-      kind: 'equation',
-      latex: '\\Gamma\\!\\left(\\tfrac92\\right)=\\int_0^{\\infty}x^{7/2}e^{-x}\\,dx=\\tfrac72\\,\\Gamma\\!\\left(\\tfrac72\\right)',
-      color: '#171713',
-      bounds: { x: -590, y: 548, width: 500, height: 62 },
-      rotation: 0,
-      author: 'human',
-      opacity: 0,
     },
 
     frame('gamma_probability_frame', 'Gamma Function · Gamma Density', [

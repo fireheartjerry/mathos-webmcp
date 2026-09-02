@@ -59,6 +59,8 @@ export type PreparedCue = {
 export type CueContext = {
   samples: Record<string, HandwritingSample>
   activeProject: ProjectId | null
+  /** Live attention weights read from the transformer project at Director time. */
+  attentionWeights?: [number, number, number]
 }
 
 /** Ids of the exact Tutor marks created by the opening annotation commit. */
@@ -182,7 +184,6 @@ const correctionStep = (samples: Record<string, HandwritingSample>): CueThunk =>
     ...(frame && !frame.childIds.includes(OPENING_CORRECTION_ID)
       ? [{ type: 'put' as const, object: { ...frame, childIds: [...frame.childIds, OPENING_CORRECTION_ID] } }]
       : []),
-    { type: 'select', ids: [OPENING_CORRECTION_ID] },
   ])
 }
 
@@ -248,7 +249,7 @@ const gammaAreaStep: CueThunk = (world) => {
   if (!graph) return null
   const rest = gammaRestState(graph)
   if (sameJson(graph, rest)) return null
-  return human('Returned the density to its approved frame', [{ type: 'put', object: rest }, { type: 'select', ids: [graph.id] }])
+  return human('Returned the density to its approved frame', [{ type: 'put', object: rest }])
 }
 
 const GAMMA_TUTOR_SHAPE = 5.5
@@ -338,14 +339,17 @@ const trainingTutorSteps: CueThunk[] = [
 // Shots 8–9 · barycentrics and spiral similarity
 // ---------------------------------------------------------------------------
 
-const barycentricLinkStep: CueThunk = (world) => {
+const barycentricLinkStep = (context: CueContext): CueThunk => (world) => {
   const barycentric = objectOf(world, BARYCENTRIC_ID, 'barycentric')
-  const attention = objectOf(world, barycentric?.linkedAttentionId ?? ATTENTION_ID, 'attention')
-  if (!barycentric || !attention) return null
-  const weights = evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights
+  if (!barycentric) return null
+  const attention = objectOf(world, barycentric.linkedAttentionId ?? ATTENTION_ID, 'attention')
+  const weights = attention
+    ? evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights
+    : context.attentionWeights
+  if (!weights) return null
   if (barycentric.weights.every((weight, index) => APPROXIMATELY(weight, weights[index], 1e-6))) return null
   const next: BarycentricObject = { ...barycentric, weights }
-  return human('Copied the live attention weights into the triangle', [{ type: 'put', object: next }, { type: 'select', ids: [next.id] }])
+  return human('Copied the live attention weights into the triangle', [{ type: 'put', object: next }])
 }
 
 const centroidSteps: CueThunk[] = [
@@ -409,7 +413,7 @@ const simplexRestStep: CueThunk = (world) => {
   if (!simplex) return null
   const rest: SimplexObject = { ...simplex, ...SIMPLEX_REST }
   if (sameJson(simplex, rest)) return null
-  return human('Returned the simplex to its approved frame', [{ type: 'put', object: rest }, { type: 'select', ids: [simplex.id] }])
+  return human('Returned the simplex to its approved frame', [{ type: 'put', object: rest }])
 }
 
 const simplexTutorSteps: CueThunk[] = [
@@ -435,7 +439,7 @@ const partitionRestStep: CueThunk = (world) => {
   if (!observatory) return null
   const rest: NumberTheoryObject = { ...observatory, ...PARTITION_REST }
   if (sameJson(observatory, rest)) return null
-  return human('Returned the observatory to its approved frame', [{ type: 'put', object: rest }, { type: 'select', ids: [observatory.id] }])
+  return human('Returned the observatory to its approved frame', [{ type: 'put', object: rest }])
 }
 
 const partitionRevealSteps: CueThunk[] = [
@@ -555,7 +559,7 @@ export function prepareDemoCue(id: DemoCueId, world: WorldState, context: CueCon
     case 'training-tutor-step':
       return { steps: trainingTutorSteps, selectIds: [TRAINING_ID] }
     case 'barycentric-live':
-      return { steps: [barycentricLinkStep], selectIds: [BARYCENTRIC_ID] }
+      return { steps: [barycentricLinkStep(context)], selectIds: [BARYCENTRIC_ID] }
     case 'barycentric-centroid':
       return { steps: centroidSteps, selectIds: [BARYCENTRIC_ID] }
     case 'spiral-live':

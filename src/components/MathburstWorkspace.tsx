@@ -18,6 +18,7 @@ import {
   type SceneViewport,
 } from '../domain/world/library'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
+import { migrateWorld } from '../domain/world/migrations'
 import { createSeedWorld, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
   getProjectForScene,
@@ -338,6 +339,8 @@ export default function MathburstWorkspace() {
     handwritingSamplesRef.current = samples
     const libraryResult = loadProjectLibraryResult()
     libraryStorageNeedsRepairRef.current = libraryResult.needsRepair
+    if (process.env.NODE_ENV !== 'production') Object.assign(window, { __mathburstDebug: { migrateWorld, loadProjectLibraryResult } })
+    if (libraryResult.needsRepair) console.warn('Mathburst: the stored project library is distrusted, so saving pauses until a project is reset or created.', libraryResult.reasons)
     const storedLibrary = libraryResult.projects.map((project) => ({
       ...project,
       world: applyCapturedOpeningAttempt(project.world, samples),
@@ -375,8 +378,16 @@ export default function MathburstWorkspace() {
     if (hydrated) saveDirectorReview(directorState)
   }, [directorState, hydrated])
 
+  // Selection and camera changes are not mathematical work: they apply
+  // through the same reducer but never enter history, so Undo always
+  // reverses a real commit and the activity rail only lists real commits.
   const run = useCallback((action: WorldAction) => {
-    const next = dispatchWorldAction(worldRef.current, action)
+    const transient = action.operations.every((operation) => operation.type === 'select' || operation.type === 'viewport')
+    const current = worldRef.current
+    const dispatched = dispatchWorldAction(current, action)
+    const next = transient
+      ? { ...dispatched, history: current.history, future: current.future, activity: current.activity }
+      : dispatched
     worldRef.current = next
     setWorld(next)
     if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
@@ -529,12 +540,14 @@ export default function MathburstWorkspace() {
         setWorld(next)
         if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
         setAgentCommitIds(changedIds)
-        window.requestAnimationFrame(() => resolve({
+        // Resolve on a macrotask, not an animation frame: a background tab
+        // never paints, and a cue must still finish there.
+        window.setTimeout(() => resolve({
           ok: true,
           summary: action.summary,
           changedIds,
           data: { source: 'agent' },
-        }))
+        }), 0)
         finish(reduceMotion ? 120 : 320)
       } catch (error) {
         agentBusyRef.current = false
@@ -591,7 +604,7 @@ export default function MathburstWorkspace() {
       setWorld(next)
       if (commit.action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
       setAgentCommitIds(changedIds)
-      window.requestAnimationFrame(() => resolve({ ok: true, summary, changedIds, data: { source: 'agent' } }))
+      window.setTimeout(() => resolve({ ok: true, summary, changedIds, data: { source: 'agent' } }), 0)
       window.setTimeout(() => {
         setPresence(quietPresence)
         setAgentCommitIds([])
@@ -811,7 +824,17 @@ export default function MathburstWorkspace() {
     try {
       const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
       const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
-      const prepared = prepareDemoCue(cue, worldRef.current, { samples, activeProject: project?.templateId ?? null })
+      // The barycentric act copies the transformer project's live weights once.
+      // Reading another built-in project's world is a Director-time read; the
+      // active project never gains that project's objects.
+      const transformerWorld = project?.templateId === 'tiny-transformer'
+        ? worldRef.current
+        : libraryProjectsRef.current.find((candidate) => candidate.kind === 'built-in' && candidate.id === 'tiny-transformer')?.world
+      const attention = transformerWorld?.objects.attention_mechanism
+      const attentionWeights = attention?.kind === 'attention'
+        ? evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights
+        : undefined
+      const prepared = prepareDemoCue(cue, worldRef.current, { samples, activeProject: project?.templateId ?? null, attentionWeights })
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       for (const thunk of prepared.steps) {
         const step = thunk(worldRef.current)
@@ -836,11 +859,9 @@ export default function MathburstWorkspace() {
         await waitForTutor()
         if (!reduceMotion) await sleep(tool.annotations.readOnlyHint ? 180 : 320)
       }
-      const restIds = (prepared.selectIds ?? []).filter((id) => Boolean(worldRef.current.objects[id]))
-      if (directorOpenRef.current) setDirectorSelection([])
-      else if (restIds.length && JSON.stringify(restIds) !== JSON.stringify(worldRef.current.selection)) {
-        run(humanAction('Selected object', [{ type: 'select', ids: restIds }]))
-      }
+      // Leave a clean stage: no editing chrome after a cue, in either mode.
+      setDirectorSelection([])
+      if (worldRef.current.selection.length) run(humanAction('Cleared selection', [{ type: 'select', ids: [] }]))
     } finally {
       cueRunningRef.current = null
       setCueRunning(null)

@@ -69,7 +69,6 @@ export function approveReconstruction(world: WorldState): WorldAction {
         : []),
       { type: 'session', patch: { reconstructionStatus: 'approved' } },
       { type: 'reconstruction', draft: null },
-      { type: 'select', ids: approvedIds },
     ],
   }
 }

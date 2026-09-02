@@ -142,6 +142,12 @@ export function createProjectWorld(source: WorldState, projectId: ProjectId, tit
 
   const order = source.order.filter((id) => ids.has(id))
   const objects = Object.fromEntries(order.map((id) => [id, structuredClone(source.objects[id])]))
+  for (const object of Object.values(objects)) {
+    // Cross-project references are advisory and must not survive the boundary.
+    if (object.kind === 'barycentric' && object.linkedAttentionId && objects[object.linkedAttentionId]?.kind !== 'attention') {
+      delete object.linkedAttentionId
+    }
+  }
   const retainedEntityIds = new Set<string>()
   for (const object of Object.values(objects)) {
     if ('entityId' in object && typeof object.entityId === 'string') retainedEntityIds.add(object.entityId)
@@ -195,16 +201,20 @@ export type ProjectLibraryLoadResult = {
   ok: boolean
   /** True when raw storage was present but could not be trusted for repair. */
   needsRepair: boolean
+  /** Human-readable reasons storage was distrusted, for the console. */
+  reasons: string[]
 }
 
 type ParsedProject = {
   project: LibraryProject
   needsRepair: boolean
+  reasons: string[]
 }
 
 const parseProject = (value: unknown): ParsedProject | null => {
   if (!isRecord(value)) return null
   const project = value as Partial<LibraryProject>
+  const reasons: string[] = []
   if (!(isSafeLibraryId(project.id)
     && typeof project.title === 'string'
     && typeof project.description === 'string'
@@ -225,18 +235,22 @@ const parseProject = (value: unknown): ParsedProject | null => {
   const ownedWorld = templateId ? createProjectWorld(world, templateId, project.title) : world
   const startScene = normalizeStartScene(templateId, project.startScene)
   const allowedSceneIds = templateId ? getScenesForProject(templateId).map((scene) => scene.id) : []
-  let needsRepair = startScene !== project.startScene
-  if (templateId && Object.keys(world.objects).length !== Object.keys(ownedWorld.objects).length) needsRepair = true
+  if (startScene !== project.startScene) reasons.push(`${project.id}: start scene ${String(project.startScene)} is not owned`)
+  if (templateId && Object.keys(world.objects).length !== Object.keys(ownedWorld.objects).length) {
+    const dropped = Object.keys(world.objects).filter((id) => !ownedWorld.objects[id])
+    reasons.push(`${project.id}: ${dropped.length} object(s) fall outside the project (${dropped.slice(0, 5).join(', ')})`)
+  }
   if (project.sceneViewports !== undefined) {
     if (!isRecord(project.sceneViewports)) return null
     for (const sceneId of Object.keys(project.sceneViewports)) {
-      if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) needsRepair = true
+      if (!isSceneId(sceneId) || !allowedSceneIds.includes(sceneId)) reasons.push(`${project.id}: foreign scene viewport ${sceneId}`)
     }
   }
   const sceneViewports = parseSceneViewports(project.sceneViewports, startScene, ownedWorld.viewport, allowedSceneIds)
   if (!sceneViewports) return null
   return {
-    needsRepair,
+    needsRepair: reasons.length > 0,
+    reasons,
     project: {
       ...(project as LibraryProject),
       startScene,
@@ -258,13 +272,24 @@ export function createDefaultProjectLibrary(): LibraryProject[] {
 export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
   try {
     const raw = localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)
-    if (raw === null) return { projects: createDefaultProjectLibrary(), ok: true, needsRepair: false }
+    if (raw === null) return { projects: createDefaultProjectLibrary(), ok: true, needsRepair: false, reasons: [] }
 
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) {
-      return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }
+      return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true, reasons: ['stored library is not an array'] }
     }
-    const parsedProjects = parsed.map(parseProject)
+    const unparsedReasons: string[] = []
+    const parsedProjects = parsed.map((entry) => {
+      const result = parseProject(entry)
+      if (!result) {
+        const id = isRecord(entry) && typeof entry.id === 'string' ? entry.id : '?'
+        return { result: null, reason: `${id}: stored project could not be parsed or migrated` }
+      }
+      return { result, reason: null }
+    }).map(({ result, reason }) => {
+      if (reason) unparsedReasons.push(reason)
+      return result
+    })
     const stored: LibraryProject[] = []
     const storedIds = new Set<string>()
     let duplicateIds = false
@@ -301,12 +326,15 @@ export function loadProjectLibraryResult(): ProjectLibraryLoadResult {
           }
     })
     const userProjects = stored.filter((project) => project.kind === 'user')
-    const needsRepair = duplicateIds || parsedProjects.some((parsedProject) => (
-      parsedProject === null || parsedProject.needsRepair
-    ))
-    return { projects: [...builtIns, ...userProjects], ok: !needsRepair, needsRepair }
-  } catch {
-    return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true }
+    const reasons = [
+      ...(duplicateIds ? ['duplicate project ids'] : []),
+      ...unparsedReasons,
+      ...parsedProjects.flatMap((parsedProject) => parsedProject?.reasons ?? []),
+    ]
+    const needsRepair = reasons.length > 0
+    return { projects: [...builtIns, ...userProjects], ok: !needsRepair, needsRepair, reasons }
+  } catch (error) {
+    return { projects: createDefaultProjectLibrary(), ok: false, needsRepair: true, reasons: [error instanceof Error ? error.message : 'storage unreadable'] }
   }
 }
 

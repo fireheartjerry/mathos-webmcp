@@ -25,7 +25,9 @@ export default function ActivityRail({
   }, [compact])
 
   useEffect(() => {
-    if (collapseOn) setCollapsed(true)
+    // Scene changes no longer collapse the rail: the film needs the shared
+    // history visible while the camera moves. The prop is kept for callers.
+    void collapseOn
   }, [collapseOn])
 
   const latest = activity.slice(-6).reverse()

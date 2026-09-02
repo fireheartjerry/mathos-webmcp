@@ -130,7 +130,7 @@ button {
   align-items: baseline;
   gap: 6px;
   color: #a9a69c;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: .08em;
 }
@@ -145,7 +145,7 @@ button {
   color: var(--ivory);
   background: transparent;
   border: 1px solid #45443f;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   cursor: pointer;
@@ -209,7 +209,7 @@ button {
   padding: 4px 7px;
   color: #fff;
   background: var(--agent);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -243,12 +243,12 @@ button {
 
 .director-heading { min-width: 0; }
 .director-heading h2 { margin: 5px 0 0; font: 600 19px/1 'STIX Two Text', serif; }
-.director-eyebrow { display: flex; align-items: center; gap: 7px; color: #c8c4ba; font-size: 8px; text-transform: uppercase; letter-spacing: 0.11em; }
+.director-eyebrow { display: flex; align-items: center; gap: 7px; color: #c8c4ba; font-size: 11px; text-transform: uppercase; letter-spacing: 0.11em; }
 .director-eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: #8de0a6; box-shadow: 0 0 0 3px rgba(141, 224, 166, 0.12); }
 .director-header-actions { display: flex; align-items: center; gap: 9px; }
 .director-approved-count { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 3px; color: #aaa79d; }
 .director-approved-count b { color: #fff; font-size: 14px; }
-.director-approved-count small { font-size: 7px; text-transform: uppercase; }
+.director-approved-count small { font-size: 11px; text-transform: uppercase; }
 .director-close, .director-preview-toggle { width: 30px; height: 30px; color: #d4d0c6; background: #2a2a26; border: 1px solid #4a4942; cursor: pointer; }
 .director-close { font-size: 19px; }
 .director-preview-toggle { font-size: 14px; }
@@ -268,7 +268,7 @@ button {
   background: #1b1b18;
   border: 1px solid #56534c;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   cursor: pointer;
@@ -302,16 +302,16 @@ button {
 
 .director-shot-card:hover, .director-shot-card:focus-visible { color: #fff; background: #292925; outline: none; }
 .director-shot-card.is-active { color: #fff; background: #30294d; box-shadow: inset 3px 0 0 var(--agent); }
-.director-shot-index { color: #6f6c64; font-size: 8px; }
+.director-shot-index { color: #6f6c64; font-size: 11px; }
 .director-shot-copy { min-width: 0; display: grid; gap: 4px; }
-.director-shot-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 500; }
-.director-shot-copy small { color: #858178; font-size: 7px; }
+.director-shot-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+.director-shot-copy small { color: #858178; font-size: 11px; }
 
 .director-status {
   padding: 4px 5px;
   color: #8f8b81;
   border: 1px solid #4c4b44;
-  font-size: 6px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -323,9 +323,9 @@ button {
 
 .director-detail { min-height: 0; display: flex; flex: 1; flex-direction: column; overflow-y: auto; }
 .director-shot-detail, .director-targets, .director-camera { padding: 13px 14px; border-bottom: 1px solid #383832; }
-.director-detail-meta, .director-section-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #aaa79d; font-size: 7px; text-transform: uppercase; letter-spacing: 0.08em; }
+.director-detail-meta, .director-section-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #aaa79d; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
 .director-shot-detail h3 { margin: 11px 0 6px; font: 600 23px/0.98 'STIX Two Text', serif; letter-spacing: -0.02em; }
-.director-shot-detail p { margin: 0; color: #aaa79d; font: 10px/1.45 'Fira Code', monospace; }
+.director-shot-detail p { margin: 0; color: #aaa79d; font: 13px/1.45 'Fira Code', monospace; }
 .director-section-label small { color: #69665f; }
 
 .director-target-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -338,7 +338,7 @@ button {
   color: #c9c5bb;
   background: #292925;
   border: 1px solid #4b4a43;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   cursor: pointer;
 }
 .director-target-chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--agent); }
@@ -346,8 +346,8 @@ button {
 .director-target-chip.is-selected i { background: #fff; }
 .director-target-chip.is-missing { color: #6f6c64; border-style: dashed; cursor: default; }
 .director-target-chip.is-missing i { background: #5e5b54; }
-.director-target-chip small { color: #8c887e; font-size: 6px; text-transform: uppercase; }
-.director-empty-targets { color: #77736b; font-size: 8px; }
+.director-target-chip small { color: #8c887e; font-size: 10px; text-transform: uppercase; }
+.director-empty-targets { color: #77736b; font-size: 11px; }
 
 .director-prepare {
   width: 100%;
@@ -362,9 +362,9 @@ button {
   border: 1px solid #6853dc;
   cursor: pointer;
 }
-.director-prepare span { display: flex; align-items: center; gap: 7px; font: 8px/1 'Fira Code', monospace; text-transform: uppercase; }
+.director-prepare span { display: flex; align-items: center; gap: 7px; font: 11px/1 'Fira Code', monospace; text-transform: uppercase; }
 .director-prepare span i { width: 7px; height: 7px; background: var(--agent); }
-.director-prepare small { color: #bbb2ee; font: 7px/1 'Fira Code', monospace; }
+.director-prepare small { color: #bbb2ee; font: 11px/1 'Fira Code', monospace; }
 
 .director-camera-controls { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 10px; }
 .director-dpad { display: grid; grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(3, 26px); gap: 3px; }
@@ -374,17 +374,17 @@ button {
 .director-dpad-center { color: var(--agent) !important; font-size: 20px; }
 .director-zoom-controls { display: grid; grid-template-columns: 34px auto 34px; align-items: center; gap: 7px; }
 .director-zoom-controls button { width: 34px; height: 34px; }
-.director-zoom-controls span { color: #88847b; font-size: 7px; text-transform: uppercase; }
+.director-zoom-controls span { color: #88847b; font-size: 11px; text-transform: uppercase; }
 
 .director-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: auto; padding: 12px 14px 14px; }
-.director-actions button { min-height: 36px; padding: 0 9px; font: 8px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.director-actions button { min-height: 36px; padding: 0 9px; font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 .director-secondary-action { color: #c8c4ba; background: #292925; border: 1px solid #4b4a43; }
 .director-approve-action { grid-column: 1 / -1; color: #fff; background: var(--agent); border: 1px solid var(--agent); }
 .director-approve-action:disabled { color: #8f8b81; background: #292925; border-color: #4b4a43; cursor: default; }
 .director-approve-action.is-approved:disabled { color: #b7eac5; background: #21462d; border-color: #4b8f60; }
 .director-empty-state { flex: 1; display: grid; place-content: center; justify-items: center; gap: 12px; color: #77736b; text-align: center; }
 .director-empty-state span { color: var(--agent); font-size: 24px; }
-.director-empty-state p { max-width: 220px; font-size: 9px; line-height: 1.5; }
+.director-empty-state p { max-width: 220px; font-size: 12px; line-height: 1.5; }
 
 .world-canvas[data-director-mode='true'] .canvas-mode span { visibility: hidden; }
 .world-canvas[data-director-mode='true'] .canvas-mode span::after { content: 'drag targets · hand to frame'; visibility: visible; margin-left: -80px; }
@@ -754,24 +754,24 @@ button {
 .geometry-kicker,
 .matrix-kicker {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.11em;
 }
 
 .graph-tick {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .graph-area-label {
   fill: var(--agent);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .graph-value-label {
   fill: var(--ink);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   font-weight: 700;
 }
 
@@ -791,7 +791,7 @@ button {
   padding: 3px 5px;
   color: var(--paper);
   background: var(--ink);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
 }
 
 .graph-formula .math {
@@ -807,7 +807,7 @@ button {
   grid-template-columns: 68px 1fr;
   align-items: center;
   gap: 10px;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   cursor: ew-resize;
 }
 
@@ -885,7 +885,7 @@ button {
 
 .geometry-angle-label {
   fill: #f05f44;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
 }
 
 .geometry-legend {
@@ -897,7 +897,7 @@ button {
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   pointer-events: none;
 }
@@ -944,7 +944,7 @@ button {
 
 .matrix-vector-label {
   fill: var(--agent);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -963,7 +963,7 @@ button {
 
 .matrix-name {
   color: #aaa79d;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .matrix-bracket {
@@ -979,12 +979,12 @@ button {
 
 .matrix-readout small {
   color: var(--agent-soft);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .matrix-readout em {
   color: #8c8980;
-  font-size: 7px;
+  font-size: 11px;
   font-style: normal;
   text-transform: uppercase;
 }
@@ -995,7 +995,7 @@ button {
   bottom: 13px;
   display: grid;
   gap: 4px;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
 }
 
 .matrix-key span { color: var(--muted); }
@@ -1029,7 +1029,7 @@ button {
 
 .frame-label small {
   color: #a9a69c;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
 }
 
@@ -1046,7 +1046,7 @@ button {
   padding: 4px 6px;
   color: var(--ivory);
   background: var(--agent);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1075,7 +1075,7 @@ button {
   left: 8px;
   bottom: 7px;
   color: var(--agent);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
 }
 
@@ -1107,7 +1107,7 @@ button {
   padding: 4px 5px;
   color: #fff;
   background: var(--agent);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   letter-spacing: 0.05em;
 }
 
@@ -1147,7 +1147,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -1183,7 +1183,7 @@ button {
   height: 31px;
   color: var(--paper);
   background: var(--ink);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1194,7 +1194,7 @@ button {
 .tutor-attempt-panel p {
   margin: 0;
   color: #b14231;
-  font: 9px/1.35 'Fira Code', monospace;
+  font: 12px/1.35 'Fira Code', monospace;
 }
 
 .opening-tutor-panel {
@@ -1211,7 +1211,7 @@ button {
 .opening-tutor-panel header {
   display: flex;
   justify-content: space-between;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -1222,7 +1222,7 @@ button {
   min-height: 34px;
   color: var(--paper);
   background: var(--agent);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1230,7 +1230,7 @@ button {
 .opening-tutor-panel p {
   margin: 0;
   color: var(--muted);
-  font: 8px/1.35 'Fira Code', monospace;
+  font: 11px/1.35 'Fira Code', monospace;
 }
 
 .reconstruction-panel {
@@ -1257,7 +1257,7 @@ button {
 
 .reconstruction-panel > header span {
   color: var(--agent);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1271,7 +1271,7 @@ button {
   padding: 6px 7px;
   color: var(--paper);
   background: var(--ink);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1296,17 +1296,15 @@ button {
 .reconstruction-object > span,
 .reconstruction-object > i {
   color: var(--muted);
-  font: 7px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   font-style: normal;
 }
 
 .reconstruction-object > div {
   min-width: 0;
-  overflow: hidden;
   font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.35;
 }
 
 .reconstruction-object > i {
@@ -1347,7 +1345,7 @@ button {
 .audit-result p {
   margin: 0;
   color: #6c4942;
-  font: 8px/1.45 'Fira Code', monospace;
+  font: 11px/1.45 'Fira Code', monospace;
 }
 
 .audit-result p b { display: block; color: var(--ink); margin-bottom: 2px; }
@@ -1364,7 +1362,7 @@ button {
 .reconstruction-panel footer button {
   min-height: 36px;
   padding: 0 11px;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1384,7 +1382,7 @@ button {
   display: block;
   margin-top: 10px;
   color: var(--muted);
-  font: 7px/1.4 'Fira Code', monospace;
+  font: 11px/1.4 'Fira Code', monospace;
 }
 
 .agent-presence {
@@ -1419,40 +1417,70 @@ button {
 }
 
 .agent-presence b {
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .agent-presence span {
-  font: 8px/1.25 'Fira Code', monospace;
+  font: 11px/1.25 'Fira Code', monospace;
   opacity: 0.88;
 }
 
-.webmcp-inspector-trigger {
+.webmcp-launcher {
   position: fixed;
   right: 506px;
   top: 11px;
   z-index: 105;
+  display: flex;
+  align-items: center;
+}
+
+.webmcp-inspector-trigger {
+  position: relative;
   height: 32px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  color: var(--paper);
-  background: #292925;
-  border: 1px solid #504f48;
-  font: 8px/1 'Fira Code', monospace;
+  gap: 9px;
+  padding: 0 4px 0 11px;
+  color: #fff;
+  background: var(--agent);
+  border: 1px solid var(--agent);
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   cursor: pointer;
 }
 
+.webmcp-inspector-trigger b { font-weight: 700; }
+
+.webmcp-inspector-trigger em {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 9px;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  font-style: normal;
+  opacity: 0.88;
+}
+
+.webmcp-inspector-trigger em strong { font-weight: 700; }
+
+.webmcp-inspector-trigger u {
+  width: 20px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  text-decoration: none;
+}
+
 .webmcp-inspector-trigger:hover,
 .webmcp-inspector-trigger:focus-visible,
 .webmcp-inspector-trigger[aria-expanded='true'] {
-  color: #fff;
-  border-color: var(--agent);
+  background: #6a48f5;
+  border-color: #6a48f5;
   outline: none;
 }
 
@@ -1474,7 +1502,7 @@ button {
 
 .webmcp-trace-label {
   color: var(--agent);
-  font: 7px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -1488,12 +1516,12 @@ button {
   padding: 4px 5px;
   color: var(--ink);
   background: #eeece3;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   white-space: nowrap;
 }
 .webmcp-trace-chip i { font-style: normal; color: #3c6e49; }
 .webmcp-trace-chip.is-write i { color: var(--agent); }
-.webmcp-trace-chip small { color: #3c6e49; font-size: 9px; }
+.webmcp-trace-chip small { color: #3c6e49; font-size: 12px; }
 .webmcp-trace-chip.is-running small { color: #b18a22; }
 .webmcp-trace-chip.is-error small { color: #b14231; }
 
@@ -1554,7 +1582,7 @@ button {
 
 .webmcp-inspector > header span {
   color: #aaa79d;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.09em;
 }
@@ -1590,7 +1618,7 @@ button {
   color: #3c6e49;
   background: #e6f4e8;
   border-bottom: 1px solid rgba(47, 153, 82, 0.2);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -1614,7 +1642,7 @@ button {
   padding: 11px 15px;
   color: var(--muted);
   border-bottom: 1px solid rgba(23, 23, 19, 0.14);
-  font: 9px/1.45 'Fira Code', monospace;
+  font: 12px/1.45 'Fira Code', monospace;
 }
 
 .webmcp-groups {
@@ -1646,7 +1674,7 @@ button {
 }
 
 .webmcp-groups > section > header b {
-  font: 10px/1 'Fira Code', monospace;
+  font: 13px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1654,7 +1682,7 @@ button {
 .webmcp-groups > section > header span {
   overflow: hidden;
   color: var(--muted);
-  font: 8px/1.2 'Fira Code', monospace;
+  font: 11px/1.2 'Fira Code', monospace;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1666,7 +1694,7 @@ button {
   place-items: center;
   color: var(--paper);
   background: var(--ink);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   font-style: normal;
 }
 
@@ -1687,7 +1715,7 @@ button {
   place-items: center;
   color: var(--agent);
   background: var(--agent-soft);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   font-weight: 700;
 }
 
@@ -1701,7 +1729,7 @@ button {
 
 .webmcp-tool > div b {
   overflow: hidden;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1709,7 +1737,7 @@ button {
 .webmcp-tool > div small {
   overflow: hidden;
   color: var(--muted);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1719,7 +1747,7 @@ button {
   padding: 0 9px;
   color: var(--paper);
   background: var(--ink);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1743,7 +1771,7 @@ button {
   background: var(--agent);
   border: 1px solid var(--paper);
   box-shadow: 5px 6px 0 rgba(23, 23, 19, 0.17);
-  font: 8px/1.3 'Fira Code', monospace;
+  font: 11px/1.3 'Fira Code', monospace;
 }
 
 .webmcp-message b {
@@ -1778,7 +1806,7 @@ button {
 .activity-undo {
   color: var(--paper);
   background: transparent;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1813,7 +1841,7 @@ button {
   margin: 0;
   padding: 13px;
   color: var(--muted);
-  font: 8px/1.35 'Fira Code', monospace;
+  font: 11px/1.35 'Fira Code', monospace;
 }
 
 .activity-item {
@@ -1843,7 +1871,7 @@ button {
 
 .activity-item b {
   overflow: hidden;
-  font: 8px/1.2 'Fira Code', monospace;
+  font: 11px/1.2 'Fira Code', monospace;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1851,7 +1879,7 @@ button {
 .activity-item span,
 .activity-item time {
   color: var(--muted);
-  font: 7px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
 }
 
@@ -1880,7 +1908,7 @@ button {
 .object-context span {
   padding: 0 10px;
   color: #b9b6ac;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1895,7 +1923,7 @@ button {
 
 .object-context button {
   padding: 8px 9px;
-  font: 10px/1 'Fira Code', monospace;
+  font: 13px/1 'Fira Code', monospace;
 }
 
 .object-context button:hover,
@@ -1930,7 +1958,7 @@ button {
 .zoom-controls span {
   min-width: 52px;
   text-align: center;
-  font: 10px/1 'Fira Code', monospace;
+  font: 13px/1 'Fira Code', monospace;
 }
 
 .demo-navigator {
@@ -1955,7 +1983,7 @@ button {
   padding: 0 11px 0 9px;
   color: #aaa79d;
   border-right: 1px solid #45443f;
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
@@ -1976,13 +2004,13 @@ button {
   padding: 0 10px;
   color: #bdb9ae;
   background: transparent;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   cursor: pointer;
 }
 
 .demo-navigator button b {
   color: #6f6c64;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .demo-navigator button:hover,
@@ -2011,7 +2039,7 @@ button {
   color: var(--ink);
   background: rgba(244, 240, 230, 0.92);
   border: 1px solid rgba(23, 23, 19, 0.26);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   pointer-events: none;
 }
@@ -2038,7 +2066,7 @@ button {
 .object-editor label {
   padding: 0 7px;
   color: #b9b6ac;
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
 }
 
@@ -2079,7 +2107,7 @@ button {
 .object-editor button {
   height: 36px;
   padding: 0 12px;
-  font: 10px/1 'Fira Code', monospace;
+  font: 13px/1 'Fira Code', monospace;
 }
 
 .object-editor button:first-of-type { background: var(--agent); }
@@ -2105,7 +2133,7 @@ button {
 @media (max-width: 1040px) {
   .activity-rail:not(.is-collapsed) { width: 260px; }
   .reconstruction-panel { right: 12px; width: 340px; }
-  .webmcp-inspector-trigger { right: 474px; }
+  .webmcp-launcher { right: 474px; }
   .webmcp-inspector { right: 12px; width: 400px; }
   .mathburst-app:has(.webmcp-inspector) .reconstruction-panel { right: 424px; }
   .mathburst-app:has(.webmcp-inspector) .webmcp-trace { right: 424px; }
@@ -2114,7 +2142,7 @@ button {
 }
 
 @media (max-width: 760px) {
-  .webmcp-inspector-trigger { right: 12px; }
+  .webmcp-launcher { right: 12px; }
   .webmcp-inspector { left: 74px; right: 12px; width: auto; }
   .webmcp-trace,
   .mathburst-app:has(.webmcp-inspector) .webmcp-trace { left: 74px; right: 12px; max-width: none; }
@@ -2215,7 +2243,7 @@ button {
 
 .project-gallery-eyebrow {
   color: var(--agent);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   letter-spacing: .13em;
 }
 
@@ -2245,7 +2273,7 @@ button {
   background: var(--agent);
   border: 1px solid var(--agent);
   box-shadow: 7px 7px 0 var(--ink);
-  font: 10px/1 'Fira Code', monospace;
+  font: 13px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: .06em;
   cursor: pointer;
@@ -2272,7 +2300,7 @@ button {
   color: var(--muted);
   background: transparent;
   border-right: 1px solid var(--line);
-  font: 9px/1 'Fira Code', monospace;
+  font: 12px/1 'Fira Code', monospace;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -2280,7 +2308,7 @@ button {
 .project-gallery-toolbar button[aria-selected='true'] { color: #fff; background: var(--ink); }
 .project-gallery-toolbar button[aria-selected='true'] b { color: var(--agent-soft); }
 .project-gallery-toolbar button:focus-visible { outline: 2px solid var(--agent); outline-offset: -3px; }
-.project-gallery-toolbar > span { color: var(--muted); font: 8px/1 'Fira Code', monospace; text-transform: uppercase; }
+.project-gallery-toolbar > span { color: var(--muted); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; }
 
 .project-gallery-grid {
   display: grid;
@@ -2318,7 +2346,7 @@ button {
   gap: 9px;
   padding: 4px 12px 0;
   border-bottom: 1px solid var(--line);
-  font: 7px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   text-transform: uppercase;
   letter-spacing: .06em;
 }
@@ -2351,14 +2379,14 @@ button {
   letter-spacing: -.07em;
 }
 .library-card-copy { min-width: 0; display: grid; align-content: start; gap: 8px; }
-.library-card-copy small { color: var(--library-accent); font: 7px/1 'Fira Code', monospace; letter-spacing: .08em; }
+.library-card-copy small { color: var(--library-accent); font: 11px/1 'Fira Code', monospace; letter-spacing: .08em; }
 .library-card-copy strong { overflow: hidden; font: 650 25px/.94 'STIX Two Text', serif; letter-spacing: -.035em; text-overflow: ellipsis; }
 .library-card-copy > span { color: var(--muted); font: 12px/1.4 'STIX Two Text', serif; }
 
 .library-card-scenes { min-height: 39px; display: flex; align-items: center; gap: 5px; padding: 7px 12px; border-top: 1px solid var(--line); }
-.library-card-scenes span { min-width: 0; overflow: hidden; padding: 5px 7px; color: #666258; background: #eeebe2; font: 6px/1 'Fira Code', monospace; white-space: nowrap; text-overflow: ellipsis; }
+.library-card-scenes span { min-width: 0; overflow: hidden; padding: 5px 7px; color: #666258; background: #eeebe2; font: 10px/1 'Fira Code', monospace; white-space: nowrap; text-overflow: ellipsis; }
 .library-card > footer { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); }
-.library-card > footer button { color: var(--ink); background: transparent; border-right: 1px solid var(--line); font: 7px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.library-card > footer button { color: var(--ink); background: transparent; border-right: 1px solid var(--line); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 .library-card > footer button:last-child { border-right: 0; }
 .library-card > footer button:hover, .library-card > footer button:focus-visible { color: #fff; background: var(--ink); outline: none; }
 .library-card > footer .library-restore { color: #fff; background: var(--agent); }
@@ -2379,14 +2407,14 @@ button {
 }
 .library-add-card > span { width: 72px; height: 72px; display: grid; place-items: center; color: var(--agent); border: 1px solid var(--agent); font: 34px/1 'STIX Two Text', serif; }
 .library-add-card strong { color: var(--ink); font: 600 20px/1 'STIX Two Text', serif; }
-.library-add-card small { font: 7px/1.4 'Fira Code', monospace; text-transform: uppercase; }
+.library-add-card small { font: 11px/1.4 'Fira Code', monospace; text-transform: uppercase; }
 .library-add-card:hover, .library-add-card:focus-visible { color: var(--ink); background: var(--paper); border-color: var(--agent); outline: none; }
 
 .project-gallery-empty { min-height: 390px; display: grid; place-content: center; justify-items: center; gap: 9px; text-align: center; border-bottom: 1px solid var(--ink); }
 .project-gallery-empty > span { color: var(--agent); font-size: 54px; }
 .project-gallery-empty h2 { margin: 0; font: 600 31px/1 'STIX Two Text', serif; }
 .project-gallery-empty p { margin: 0; color: var(--muted); }
-.project-gallery-empty button { margin-top: 12px; padding: 12px 18px; color: #fff; background: var(--agent); font: 8px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.project-gallery-empty button { margin-top: 12px; padding: 12px 18px; color: #fff; background: var(--agent); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 
 .project-creator-backdrop { position: fixed; inset: 0; z-index: 240; display: grid; place-items: center; padding: 24px; background: rgba(23, 23, 19, .72); }
 .project-creator {
@@ -2400,10 +2428,10 @@ button {
   animation: project-creator-in 240ms ease both;
 }
 .project-creator > header { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px 17px; color: var(--ivory); background: var(--ink); }
-.project-creator > header span { color: #aaa69c; font: 7px/1 'Fira Code', monospace; letter-spacing: .1em; }
+.project-creator > header span { color: #aaa69c; font: 11px/1 'Fira Code', monospace; letter-spacing: .1em; }
 .project-creator > header h2 { margin: 6px 0 0; font: 600 27px/1 'STIX Two Text', serif; }
 .project-creator > header button { width: 34px; height: 34px; color: #fff; background: #2c2c27; border: 1px solid #4c4b44; font-size: 20px; cursor: pointer; }
-.project-creator > label, .project-creator legend { color: var(--muted); font: 8px/1 'Fira Code', monospace; text-transform: uppercase; letter-spacing: .08em; }
+.project-creator > label, .project-creator legend { color: var(--muted); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; letter-spacing: .08em; }
 .project-creator > label { display: block; margin: 20px 22px 8px; }
 .project-creator > input { width: calc(100% - 44px); height: 48px; margin: 0 22px; padding: 0 13px; color: var(--ink); background: #fff; border: 1px solid var(--ink); font: 19px/1 'STIX Two Text', serif; }
 .project-creator > input:focus { outline: 2px solid var(--agent); outline-offset: -3px; }
@@ -2414,11 +2442,11 @@ button {
 .project-template-grid button > b { height: 44px; display: grid; place-items: center; color: var(--agent); background: var(--paper); font: 600 18px/1 'STIX Two Text', serif; }
 .project-template-grid button > span { min-width: 0; display: grid; gap: 5px; }
 .project-template-grid strong { overflow: hidden; font: 600 14px/1 'STIX Two Text', serif; white-space: nowrap; text-overflow: ellipsis; }
-.project-template-grid small { color: var(--muted); font: 6px/1 'Fira Code', monospace; text-transform: uppercase; }
+.project-template-grid small { color: var(--muted); font: 10px/1 'Fira Code', monospace; text-transform: uppercase; }
 .project-template-grid button[aria-pressed='true'] { border-color: var(--agent); box-shadow: inset 0 0 0 1px var(--agent); background: var(--agent-soft); }
 .project-template-grid button:focus-visible { outline: 2px solid var(--agent); outline-offset: 2px; }
 .project-creator > footer { display: flex; justify-content: flex-end; gap: 7px; padding: 14px 22px; border-top: 1px solid var(--ink); }
-.project-creator > footer button { min-width: 120px; height: 40px; padding: 0 15px; color: var(--ink); background: transparent; border: 1px solid var(--ink); font: 8px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.project-creator > footer button { min-width: 120px; height: 40px; padding: 0 15px; color: var(--ink); background: transparent; border: 1px solid var(--ink); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 .project-creator > footer .project-create-submit { color: #fff; background: var(--agent); border-color: var(--agent); }
 .project-creator > footer .project-create-submit:disabled { opacity: .45; cursor: default; }
 
@@ -2455,29 +2483,29 @@ button {
 
 .project-navigator button { color: inherit; background: transparent; cursor: pointer; }
 .project-navigator-topline { display: grid; border-right: 1px solid #45443f; }
-.project-navigator-label { align-self: center; padding: 0 12px; color: #aaa79d; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
-.project-overview { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-top: 1px solid #45443f; font: 9px/1 'Fira Code', monospace; }
+.project-navigator-label { align-self: center; padding: 0 12px; color: #aaa79d; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.project-overview { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-top: 1px solid #45443f; font: 12px/1 'Fira Code', monospace; }
 .project-overview b { color: #8e8a80; }
 .project-overview[aria-pressed='true'] { color: #fff; background: var(--agent); }
 .project-tabs { min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-right: 1px solid #45443f; }
 .project-tab { min-width: 0; display: grid; align-content: center; gap: 7px; padding: 0 12px; text-align: left; border-right: 1px solid #363631; }
 .project-tab:last-child { border-right: 0; }
-.project-tab-eyebrow { overflow: hidden; color: #77746b; font-size: 7px; white-space: nowrap; }
-.project-tab-title { overflow: hidden; font: 600 10px/1.1 'STIX Two Text', serif; white-space: nowrap; text-overflow: ellipsis; }
+.project-tab-eyebrow { overflow: hidden; color: #77746b; font-size: 11px; white-space: nowrap; }
+.project-tab-title { overflow: hidden; font: 600 13px/1.1 'STIX Two Text', serif; white-space: nowrap; text-overflow: ellipsis; }
 .project-tab:hover, .project-tab:focus-visible { background: #292925; outline: none; }
 .project-tab[aria-selected='true'] { box-shadow: inset 0 -3px 0 var(--project-accent); background: #262621; }
 .project-tab[aria-selected='true'] .project-tab-eyebrow { color: var(--project-accent); }
 .project-scenes { min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #45443f; border-right: 1px solid #45443f; }
 .project-scenes-context { display: none; }
 .project-scene { min-width: 0; display: flex; align-items: center; gap: 9px; padding: 0 10px; text-align: left; background: var(--ink) !important; }
-.project-scene > b { color: #747169; font-size: 7px; }
+.project-scene > b { color: #747169; font-size: 11px; }
 .project-scene > span { min-width: 0; display: grid; gap: 4px; }
-.project-scene strong { overflow: hidden; font: 9px/1 'Fira Code', monospace; white-space: nowrap; text-overflow: ellipsis; }
-.project-scene small { overflow: hidden; color: #858279; font-size: 7px; white-space: nowrap; text-overflow: ellipsis; }
+.project-scene strong { overflow: hidden; font: 12px/1 'Fira Code', monospace; white-space: nowrap; text-overflow: ellipsis; }
+.project-scene small { overflow: hidden; color: #858279; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
 .project-scene:hover, .project-scene:focus-visible { background: #292925 !important; outline: none; }
 .project-scene[aria-pressed='true'] { background: var(--agent) !important; }
 .project-scene[aria-pressed='true'] > b, .project-scene[aria-pressed='true'] small { color: #ddd5ff; }
-.project-proof { display: grid; place-items: center; padding: 0 12px; color: #9e9a91; font-size: 7px; line-height: 1.6; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
+.project-proof { display: grid; place-items: center; padding: 0 12px; color: #9e9a91; font-size: 11px; line-height: 1.6; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
 .project-proof i { color: var(--agent); font-style: normal; }
 
 .personal-project-navigator {
@@ -2496,17 +2524,17 @@ button {
   font-family: 'Fira Code', monospace;
 }
 .personal-project-navigator button { color: inherit; cursor: pointer; }
-.personal-project-home { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--agent); font: 8px/1 'Fira Code', monospace; text-transform: uppercase; }
+.personal-project-home { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--agent); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; }
 .personal-project-home span { font-size: 14px; }
 .personal-project-identity { min-width: 0; display: grid; align-content: center; gap: 6px; padding: 0 15px; border-right: 1px solid #45443f; }
-.personal-project-identity small { color: #7f7b72; font-size: 6px; letter-spacing: .08em; }
+.personal-project-identity small { color: #7f7b72; font-size: 10px; letter-spacing: .08em; }
 .personal-project-identity strong { overflow: hidden; font: 600 13px/1 'STIX Two Text', serif; white-space: nowrap; text-overflow: ellipsis; }
 .personal-project-scenes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: #45443f; border-right: 1px solid #45443f; }
-.personal-project-scenes button, .personal-project-scenes > span { display: flex; align-items: center; gap: 10px; padding: 0 14px; color: #d0ccc1; background: var(--ink); font: 8px/1 'Fira Code', monospace; }
-.personal-project-scenes button b, .personal-project-scenes > span b { color: #7d796f; font-size: 7px; }
+.personal-project-scenes button, .personal-project-scenes > span { display: flex; align-items: center; gap: 10px; padding: 0 14px; color: #d0ccc1; background: var(--ink); font: 11px/1 'Fira Code', monospace; }
+.personal-project-scenes button b, .personal-project-scenes > span b { color: #7d796f; font-size: 11px; }
 .personal-project-scenes button[aria-pressed='true'] { color: #fff; background: var(--agent); }
 .personal-project-scenes button:focus-visible { outline: 1px solid #fff; outline-offset: -3px; }
-.personal-project-proof { display: flex; align-items: center; justify-content: center; gap: 7px; color: #969289; font-size: 7px; text-transform: uppercase; }
+.personal-project-proof { display: flex; align-items: center; justify-content: center; gap: 7px; color: #969289; font-size: 11px; text-transform: uppercase; }
 .personal-project-proof i { width: 6px; height: 6px; border-radius: 50%; background: #8de0a6; }
 .personal-project-proof b { color: var(--agent); }
 
@@ -2547,7 +2575,7 @@ button {
 .barycentric-kicker,
 .simplex-kicker {
   color: var(--muted);
-  font: 8px/1 'Fira Code', monospace;
+  font: 11px/1 'Fira Code', monospace;
   letter-spacing: .1em;
 }
 
@@ -2564,76 +2592,76 @@ button {
 .gamma-mode { fill: var(--paper); stroke: #dc7654; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .gamma-bound-handle { fill: var(--agent); stroke: #fff; stroke-width: 2; cursor: ew-resize; vector-effect: non-scaling-stroke; }
 .gamma-label, .gamma-cdf-label, .gamma-mode-label, .gamma-kicker { font-family: 'Fira Code', monospace; }
-.gamma-label, .gamma-mode-label { fill: var(--muted); font-size: 8px; }
-.gamma-cdf-label { fill: var(--agent); font-size: 10px; font-weight: 700; }
+.gamma-label, .gamma-mode-label { fill: var(--muted); font-size: 11px; }
+.gamma-cdf-label { fill: var(--agent); font-size: 13px; font-weight: 700; }
 .gamma-probability-formula { position: absolute; left: 170px; top: 8px; display: flex; align-items: center; gap: 14px; font-size: 13px; }
-.gamma-probability-formula span { color: var(--muted); font-size: 8px; }
+.gamma-probability-formula span { color: var(--muted); font-size: 11px; }
 .gamma-probability-controls { position: absolute; left: 17px; bottom: 47px; display: flex; gap: 12px; padding: 5px 7px; background: rgba(251, 249, 243, .94); border: 1px solid var(--line); }
-.gamma-probability-controls label { width: 135px; display: grid; gap: 3px; color: var(--muted); font-size: 7px; text-transform: uppercase; }
+.gamma-probability-controls label { width: 135px; display: grid; gap: 3px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
 .gamma-probability-controls b { color: var(--ink); }
 .gamma-probability-controls input { width: 100%; accent-color: var(--agent); }
 .gamma-bin-strip { position: absolute; left: 17px; right: 230px; bottom: 7px; display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 5px; }
-.gamma-bin { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 6px; padding: 4px 6px; background: rgba(124, 92, 255, .08); border-left: 3px solid var(--agent); font-size: 7px; }
+.gamma-bin { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 6px; padding: 4px 6px; background: rgba(124, 92, 255, .08); border-left: 3px solid var(--agent); font-size: 11px; }
 .gamma-bin b { color: var(--ink); }
 .gamma-bin em, .gamma-bin span { color: var(--muted); font-style: normal; white-space: nowrap; }
-.gamma-bin-strip > strong { align-self: center; color: var(--agent); font-size: 8px; }
-.gamma-bridge-note { position: absolute; right: 15px; bottom: 47px; display: flex; align-items: center; gap: 6px; color: var(--ink); font: 8px/1 'Fira Code', monospace; }
+.gamma-bin-strip > strong { align-self: center; color: var(--agent); font-size: 11px; }
+.gamma-bridge-note { position: absolute; right: 15px; bottom: 47px; display: flex; align-items: center; gap: 6px; color: var(--ink); font: 11px/1 'Fira Code', monospace; }
 .gamma-bridge-note b { color: var(--agent); }
-.gamma-bridge-note em { position: absolute; right: 0; top: 15px; width: 190px; color: var(--muted); font-size: 6px; font-style: normal; text-align: right; }
+.gamma-bridge-note em { position: absolute; right: 0; top: 15px; width: 190px; color: var(--muted); font-size: 10px; font-style: normal; text-align: right; }
 
 /* One-head attention surface. */
 .attention-view, .training-view { width: 100%; height: 100%; padding: 13px 15px; box-sizing: border-box; font-family: 'Fira Code', monospace; }
 .attention-view { display: grid; grid-template-rows: 43px 103px 116px 92px 31px; gap: 6px; }
 .attention-header, .training-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .attention-header h3, .training-header h3 { margin: 4px 0 0; font: 600 18px/1 'STIX Two Text', serif; }
-.attention-header label { width: 180px; display: grid; gap: 4px; color: var(--muted); font-size: 7px; text-transform: uppercase; }
+.attention-header label { width: 180px; display: grid; gap: 4px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
 .attention-header input { width: 100%; accent-color: var(--agent); }
 .attention-token-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: 12px; }
 .attention-embeddings, .attention-matrices, .attention-flow, .attention-output { min-width: 0; padding: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, .42); }
-.attention-embeddings > small, .attention-flow small, .attention-output small, .attention-matrix > span { color: var(--muted); font-size: 7px; letter-spacing: .06em; }
-.attention-token { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(23,23,19,.08); font-size: 8px; }
+.attention-embeddings > small, .attention-flow small, .attention-output small, .attention-matrix > span { color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+.attention-token { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(23,23,19,.08); font-size: 11px; }
 .attention-token code { color: var(--muted); }
 .attention-matrices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .attention-matrix { min-width: 0; display: grid; align-content: start; gap: 5px; }
 .attention-matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 4px; border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); }
-.attention-matrix-grid b, .attention-matrix-grid input { min-width: 0; height: 22px; padding: 0; border: 0; color: var(--ink); background: transparent; font: 8px/22px 'Fira Code', monospace; text-align: center; }
+.attention-matrix-grid b, .attention-matrix-grid input { min-width: 0; height: 22px; padding: 0; border: 0; color: var(--ink); background: transparent; font: 11px/22px 'Fira Code', monospace; text-align: center; }
 .attention-matrix-grid input { background: var(--agent-soft); outline: 1px solid rgba(124,92,255,.22); }
 .attention-flow { display: grid; grid-template-columns: .72fr 1.25fr .75fr; gap: 12px; }
 .attention-score-block, .attention-ribbon-block, .attention-context { min-width: 0; display: grid; align-content: start; gap: 5px; }
-.attention-score-block > div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 8px; border-bottom: 1px solid rgba(23,23,19,.08); }
-.attention-ribbon-row { display: grid; grid-template-columns: 44px minmax(20px,1fr) 34px; align-items: center; gap: 5px; font-size: 7px; }
+.attention-score-block > div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; border-bottom: 1px solid rgba(23,23,19,.08); }
+.attention-ribbon-row { display: grid; grid-template-columns: 44px minmax(20px,1fr) 34px; align-items: center; gap: 5px; font-size: 11px; }
 .attention-ribbon-row i { max-width: 100%; height: 8px; background: var(--agent); opacity: .82; }
 .attention-context { place-content: center; text-align: center; }
 .attention-context strong { color: var(--agent); font-size: 13px; }
-.attention-output { display: grid; grid-template-columns: .7fr 1.3fr; gap: 8px 16px; font-size: 8px; }
+.attention-output { display: grid; grid-template-columns: .7fr 1.3fr; gap: 8px 16px; font-size: 11px; }
 .attention-output > div:nth-child(2) { display: flex; gap: 8px; flex-wrap: wrap; }
 .attention-output span { padding: 5px 6px; background: #eeece4; }
 .attention-output span.is-target { color: #fff; background: var(--agent); }
 .attention-output > strong { grid-column: 1 / -1; color: var(--agent); text-align: right; }
-.attention-bridge { display: grid; place-items: center; color: var(--muted); background: rgba(124,92,255,.08); font-size: 7px; }
+.attention-bridge { display: grid; place-items: center; color: var(--muted); background: rgba(124,92,255,.08); font-size: 11px; }
 .attention-bridge b { color: var(--agent); }
 
 /* Real tiny-model training. */
 .training-view { display: grid; grid-template-rows: 46px 78px 82px 106px 24px; gap: 8px; }
 .training-actions { display: flex; gap: 6px; }
-.training-actions button { height: 30px; padding: 0 11px; border: 1px solid var(--line); background: transparent; font: 8px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.training-actions button { height: 30px; padding: 0 11px; border: 1px solid var(--line); background: transparent; font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 .training-actions .training-primary { color: #fff; background: var(--agent); border-color: var(--agent); }
 .training-metrics { display: grid; grid-template-columns: .45fr .95fr 1fr 1fr; gap: 6px; }
 .training-metrics > div { display: grid; align-content: center; gap: 4px; padding: 8px; background: #efede5; border-top: 2px solid var(--ink); }
-.training-metrics small, .training-card-heading span { color: var(--muted); font-size: 7px; }
+.training-metrics small, .training-card-heading span { color: var(--muted); font-size: 11px; }
 .training-metrics strong { font-size: 17px; }
-.training-delta { color: var(--agent); font-size: 6px; }
+.training-delta { color: var(--agent); font-size: 10px; }
 .training-probabilities { display: grid; grid-template-columns: 130px repeat(3, 1fr); align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--line); }
-.training-card-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 7px; }
+.training-card-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
 .training-probabilities > .training-card-heading { display: grid; }
-.training-probability { display: grid; grid-template-columns: 42px 1fr 31px; align-items: center; gap: 5px; font-size: 7px; }
+.training-probability { display: grid; grid-template-columns: 42px 1fr 31px; align-items: center; gap: 5px; font-size: 11px; }
 .training-probability i { height: 7px; overflow: hidden; background: #e4e1d8; }
 .training-probability em { display: block; height: 100%; background: #9b978e; }
 .training-probability.is-target em { background: var(--agent); }
 .training-history { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .training-history-card { display: grid; grid-template-rows: 20px 1fr; padding: 8px; border: 1px solid var(--line); }
 .training-sparkline { width: 100%; height: 64px; overflow: visible; }
-.training-footnote { display: grid; place-items: center; color: var(--muted); background: rgba(124,92,255,.07); font-size: 7px; }
+.training-footnote { display: grid; place-items: center; color: var(--muted); background: rgba(124,92,255,.07); font-size: 11px; }
 
 /* Exact barycentric point and live subareas. */
 .barycentric-view { position: relative; width: 100%; height: 100%; font-family: 'Fira Code', monospace; }
@@ -2647,38 +2675,38 @@ button {
 .barycentric-point { fill: var(--agent); stroke: #fff; stroke-width: 2; cursor: grab; vector-effect: non-scaling-stroke; }
 .barycentric-vertex-label, .barycentric-point-label { fill: var(--ink); font: 12px/1 'STIX Two Text', serif; font-weight: 700; }
 .barycentric-kicker { fill: var(--muted); }
-.barycentric-readout { position: absolute; left: 14px; bottom: 8px; width: calc(100% - 230px); display: grid; gap: 4px; padding: 6px 8px; box-sizing: border-box; color: var(--muted); background: rgba(251,249,243,.92); border: 1px solid var(--line); font-size: 7px; }
+.barycentric-readout { position: absolute; left: 14px; bottom: 8px; width: calc(100% - 230px); display: grid; gap: 4px; padding: 6px 8px; box-sizing: border-box; color: var(--muted); background: rgba(251,249,243,.92); border: 1px solid var(--line); font-size: 11px; }
 .barycentric-weight-row { display: flex; align-items: center; gap: 11px; }
 .barycentric-weight-row b, .barycentric-weight-row strong { color: var(--agent); }
 .barycentric-area-row { display: flex; gap: 9px; }
 .barycentric-invariant { color: var(--ink); }
 .barycentric-controls { position: absolute; top: 14px; right: 12px; bottom: 12px; width: 180px; display: grid; align-content: center; gap: 10px; padding: 10px; box-sizing: border-box; color: var(--paper); background: var(--ink); }
-.barycentric-controls label { display: grid; gap: 4px; font-size: 7px; }
+.barycentric-controls label { display: grid; gap: 4px; font-size: 11px; }
 .barycentric-controls input { width: 100%; accent-color: var(--agent); }
-.barycentric-controls button { height: 27px; color: #fff; background: var(--agent); font: 7px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.barycentric-controls button { height: 27px; color: #fff; background: var(--agent); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 
 /* Projected simplex, lattice and induction. */
 .kind-simplex, .kind-numberTheory { color: #f7f3e9; background: #161619; border-color: #3d3a47; box-shadow: 10px 12px 0 rgba(23,23,19,.16); }
 .simplex-view { width: 100%; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 205px; grid-template-rows: minmax(0, 1fr) 74px; gap: 8px; padding: 10px; box-sizing: border-box; color: #f7f3e9; background: #161619; font-family: 'Fira Code', monospace; }
 .simplex-canvas { width: 100%; height: 100%; min-height: 0; grid-column: 1; grid-row: 1; }
 .simplex-paper { fill: #1e1d23; }
-.simplex-kicker, .simplex-section-label { fill: #aaa5b5; font: 8px/1 'Fira Code', monospace; }
+.simplex-kicker, .simplex-section-label { fill: #aaa5b5; font: 11px/1 'Fira Code', monospace; }
 .simplex-face { fill: rgba(124,92,255,.13); stroke: rgba(124,92,255,.45); }
 .simplex-section { fill: rgba(76,159,154,.24); stroke: #62c5bc; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .simplex-edge { stroke: rgba(244,240,230,.48); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
 .simplex-lattice-point { fill: #a795ff; opacity: .65; }
 .simplex-interior-point { fill: #f4f0e6; stroke: var(--agent); stroke-width: 3; vector-effect: non-scaling-stroke; }
-.simplex-interior-label, .simplex-vertex-label { fill: #f4f0e6; font: 9px/1 'Fira Code', monospace; }
+.simplex-interior-label, .simplex-vertex-label { fill: #f4f0e6; font: 12px/1 'Fira Code', monospace; }
 .simplex-vertex { fill: var(--agent); }
-.simplex-readout { grid-column: 1; grid-row: 2; display: grid; align-content: center; gap: 6px; padding: 7px 9px; background: #222127; font-size: 7px; }
+.simplex-readout { grid-column: 1; grid-row: 2; display: grid; align-content: center; gap: 6px; padding: 7px 9px; background: #222127; font-size: 11px; }
 .simplex-weight-row { display: flex; gap: 10px; } .simplex-weight-row b, .simplex-weight-row strong { color: #aa96ff; }
 .simplex-count-row b { color: #62c5bc; font-size: 13px; }
 .simplex-pascal-row span { color: #62c5bc; }
 .simplex-controls { grid-column: 2; grid-row: 1 / 3; display: grid; align-content: center; gap: 7px; padding: 9px; background: #222127; border: 1px solid #3a3842; }
-.simplex-controls label { display: grid; gap: 3px; color: #aaa5b5; font-size: 6px; text-transform: uppercase; }
+.simplex-controls label { display: grid; gap: 3px; color: #aaa5b5; font-size: 10px; text-transform: uppercase; }
 .simplex-controls b { color: #fff; }
 .simplex-controls input { width: 100%; accent-color: var(--agent); }
-.simplex-controls button { height: 27px; color: #fff; background: var(--agent); font: 7px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.simplex-controls button { height: 27px; color: #fff; background: var(--agent); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 
 /* Finite Euler-product observatory and honest theorem boundary. */
 .number-theory-view { width: 100%; height: 100%; display: grid; grid-template-rows: 48px 82px 88px 132px 72px; gap: 6px; padding: 10px; box-sizing: border-box; overflow: hidden; color: #f7f3e9; background: #161619; font-family: 'Fira Code', monospace; }
@@ -2686,44 +2714,44 @@ button {
 .number-theory-header h3 { margin: 3px 0 0; font: 600 17px/1 'STIX Two Text', serif; }
 .number-theory-header .math-object-kicker { color: #aaa5b5; }
 .number-theory-controls { display: flex; align-items: center; gap: 7px; }
-.number-theory-controls label { width: 112px; display: grid; grid-template-columns: 1fr auto; gap: 3px 6px; color: #aaa5b5; font-size: 6px; text-transform: uppercase; }
+.number-theory-controls label { width: 112px; display: grid; grid-template-columns: 1fr auto; gap: 3px 6px; color: #aaa5b5; font-size: 10px; text-transform: uppercase; }
 .number-theory-controls input { grid-column: 1 / -1; width: 100%; accent-color: var(--agent); }
-.number-theory-reveal { height: 28px; padding: 0 8px; color: #fff; background: var(--agent); font: 7px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
+.number-theory-reveal { height: 28px; padding: 0 8px; color: #fff; background: var(--agent); font: 11px/1 'Fira Code', monospace; text-transform: uppercase; cursor: pointer; }
 .number-theory-chain { display: grid; grid-template-columns: 1fr auto 1fr auto 1.1fr auto 1.2fr; align-items: stretch; gap: 5px; }
 .number-theory-step { min-width: 0; position: relative; display: grid; align-content: center; gap: 3px; padding: 6px 7px; color: #e8e3d9; background: #222127; border: 1px solid #34323c; }
-.number-theory-step .step-index { position: absolute; right: 5px; top: 4px; color: #696572; font-size: 6px; }
-.number-theory-step small, .number-theory-step em { overflow: hidden; color: #9994a3; font-size: 6px; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
-.number-theory-step strong { overflow: hidden; color: #fff; font-size: 8px; white-space: nowrap; text-overflow: ellipsis; }
+.number-theory-step .step-index { position: absolute; right: 5px; top: 4px; color: #696572; font-size: 10px; }
+.number-theory-step small, .number-theory-step em { min-width: 0; color: #9994a3; font-size: 10px; font-style: normal; line-height: 1.3; overflow-wrap: anywhere; }
+.number-theory-step strong { overflow: hidden; color: #fff; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
 .number-theory-product .katex { font-size: .68em; }
-.number-theory-arrow { align-self: center; color: #7967c8; font-size: 6px; white-space: nowrap; }
+.number-theory-arrow { align-self: center; color: #7967c8; font-size: 10px; white-space: nowrap; }
 .number-theory-main-grid { display: grid; grid-template-columns: 1.5fr .75fr; gap: 6px; }
 .number-theory-card { min-width: 0; padding: 7px; background: #222127; border: 1px solid #34323c; overflow: hidden; }
-.number-theory-card-heading { display: flex; justify-content: space-between; gap: 8px; color: #aaa5b5; font-size: 6px; }
+.number-theory-card-heading { display: flex; justify-content: space-between; gap: 8px; color: #aaa5b5; font-size: 10px; }
 .number-theory-card-heading strong { color: #fff; }
 .coefficient-strip { display: flex; align-items: stretch; gap: 2px; margin-top: 7px; }
-.coefficient-cell { min-width: 26px; display: grid; place-items: center; gap: 2px; padding: 4px 2px; color: #aaa5b5; background: #2c2a32; font-size: 6px; }
-.coefficient-cell b { color: #fff; font-size: 7px; }
+.coefficient-cell { min-width: 26px; display: grid; place-items: center; gap: 2px; padding: 4px 2px; color: #aaa5b5; background: #2c2a32; font-size: 10px; }
+.coefficient-cell b { color: #fff; font-size: 11px; }
 .coefficient-cell.is-selected { color: #fff; background: var(--agent); }
-.coefficient-more { align-self: center; color: #8a8594; font-size: 6px; }
-.number-theory-boundary { margin: 5px 0 0; color: #8a8594; font-size: 6px; }
+.coefficient-more { align-self: center; color: #8a8594; font-size: 10px; }
+.number-theory-boundary { margin: 5px 0 0; color: #8a8594; font-size: 10px; }
 .ferrers-diagram { min-height: 45px; display: grid; align-content: center; gap: 2px; margin-top: 5px; }
 .ferrers-row { display: flex; gap: 2px; }
 .ferrers-row i { width: 6px; height: 6px; background: #aa96ff; }
 .residue-observatory { min-height: 0; padding: 7px; background: #222127; border: 1px solid #34323c; overflow: hidden; }
 .residue-lanes { display: grid; gap: 3px; margin-top: 6px; }
 .residue-lane { display: grid; grid-template-columns: 44px 1fr; align-items: center; min-height: 16px; }
-.residue-lane-label { color: #8a8594; font-size: 6px; }
+.residue-lane-label { color: #8a8594; font-size: 10px; }
 .residue-lane-values { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
-.residue-lane-values > span { min-width: 0; display: flex; align-items: baseline; gap: 3px; padding: 3px 5px; color: #aaa5b5; background: #2c2a32; font-size: 5px; }
-.residue-lane-values b { color: #fff; font-size: 7px; }
+.residue-lane-values > span { min-width: 0; display: flex; align-items: baseline; gap: 3px; padding: 3px 5px; color: #aaa5b5; background: #2c2a32; font-size: 9px; }
+.residue-lane-values b { color: #fff; font-size: 11px; }
 .residue-lane-values i { color: #817b8c; font-style: normal; }
 .residue-lane.is-highlighted { padding: 2px 3px; background: rgba(124,92,255,.13); border-left: 2px solid var(--agent); }
 .residue-lane.is-highlighted .is-zero-mod i { color: #62c5bc; }
 .ramanujan-reveal { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 10px; padding: 7px 10px; background: #242131; border: 1px solid #59498d; overflow: hidden; }
 .ramanujan-sigil { width: 42px; height: 42px; display: grid; place-items: center; color: #161619; background: #f4f0e6; font: 700 25px/1 'STIX Two Text', serif; }
 .ramanujan-reveal h4 { margin: 1px 0; font-size: 13px; }
-.ramanujan-reveal p, .ramanujan-reveal small { margin: 0; color: #aaa5b5; font-size: 6px; }
-.ramanujan-tease { color: #fff; background: var(--agent); font: 8px/1 'Fira Code', monospace; cursor: pointer; }
+.ramanujan-reveal p, .ramanujan-reveal small { margin: 0; color: #aaa5b5; font-size: 10px; }
+.ramanujan-tease { color: #fff; background: var(--agent); font: 11px/1 'Fira Code', monospace; cursor: pointer; }
 
 .world-canvas[data-demo-scene='spiral-similarity'] .geometry-circle,
 .world-canvas[data-demo-scene='spiral-similarity'] .geometry-segment,

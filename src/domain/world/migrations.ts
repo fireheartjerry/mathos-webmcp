@@ -771,8 +771,6 @@ const isWorldDependenciesValid = (objects: UnknownRecord): boolean => {
       && !hasObjectKind(objects, object.linkedAttentionId, 'attention')) return false
     if (object.kind === 'numberTheory' && object.linkedSimplexId !== undefined
       && !hasObjectKind(objects, object.linkedSimplexId, 'simplex')) return false
-    if (object.kind === 'barycentric' && object.linkedAttentionId !== undefined
-      && !hasObjectKind(objects, object.linkedAttentionId, 'attention')) return false
   }
   return true
 }
@@ -1070,6 +1068,15 @@ export function backfillSemanticWorld(world: WorldState): WorldState {
   }
 
   normalizeBindingIds(objects, bindings)
+
+  // A barycentric card's attention link is advisory. When the head is not in
+  // this world (each project is isolated), drop the link instead of failing.
+  for (const object of Object.values(objects)) {
+    if (!isRecord(object) || object.kind !== 'barycentric') continue
+    if (typeof object.linkedAttentionId === 'string' && !hasObjectKind(objects, object.linkedAttentionId, 'attention')) {
+      delete object.linkedAttentionId
+    }
+  }
 
   return world
 }

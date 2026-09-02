@@ -39,9 +39,9 @@ export default function WebMCPTrace({
       const visible = rect.right > canvasRect.left + 24 && rect.left < canvasRect.right - 24
         && rect.bottom > canvasRect.top + 24 && rect.top < canvasRect.bottom - 24
       if (!visible) continue
-      const anchorX = Math.min(canvasRect.right - 40, Math.max(canvasRect.left + 40, rect.right - 6))
-      const anchorY = Math.min(canvasRect.bottom - 40, Math.max(canvasRect.top + 40, rect.top + 6))
-      next[event.invocationId] = { left: anchorX + 14, top: anchorY - 36, anchorX, anchorY }
+      const anchorX = Math.min(canvasRect.right - 60, Math.max(canvasRect.left + 60, rect.right - 8))
+      const anchorY = Math.min(canvasRect.bottom - 70, Math.max(canvasRect.top + 70, rect.top + 4))
+      next[event.invocationId] = { left: anchorX - 6, top: anchorY - 62, anchorX, anchorY }
     }
     setPositions((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
   }, [events, world, viewport])
@@ -70,9 +70,9 @@ export default function WebMCPTrace({
         const position = positions[event.invocationId]
         return (
           <div className={`webmcp-trace-attached is-${event.phase}`} key={event.invocationId} style={{ left: position.left, top: position.top }} aria-hidden="true">
-            <svg className="webmcp-trace-leader" width="22" height="44" viewBox="0 0 22 44">
-              <path d={`M 20 40 C 20 20 6 28 2 4`} />
-              <circle cx="2" cy="4" r="2.4" />
+            <svg className="webmcp-trace-leader" width="16" height="30" viewBox="0 0 16 30">
+              <path d="M 2 2 C 2 16 8 20 8 28" />
+              <circle cx="8" cy="28" r="2.4" />
             </svg>
             <span className={`webmcp-trace-chip is-${event.phase} ${event.readOnly ? 'is-read' : 'is-write'}`}>
               <i>{event.readOnly ? 'R' : 'W'}</i>
