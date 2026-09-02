@@ -174,7 +174,7 @@ function objectError(value: unknown): string | null {
   const id = value.id
   switch (value.kind) {
     case 'ink': return Array.isArray(value.points) && value.points.every(isPoint) && (value.strokes === undefined || (Array.isArray(value.strokes) && value.strokes.every(isStroke))) && (value.strokeScale === undefined || (typeof value.strokeScale === 'number' && Number.isFinite(value.strokeScale) && value.strokeScale > 0)) && typeof value.color === 'string' && typeof value.width === 'number' ? null : `Ink ${id} is incomplete.`
-    case 'text': return typeof value.text === 'string' && typeof value.color === 'string' && typeof value.fontSize === 'number' && (value.presentation === undefined || value.presentation === 'typed' || value.presentation === 'handwritten') ? null : `Text ${id} is incomplete.`
+    case 'text': return typeof value.text === 'string' && typeof value.color === 'string' && typeof value.fontSize === 'number' && (value.presentation === undefined || value.presentation === 'typed' || value.presentation === 'handwritten') && (value.textAlign === undefined || value.textAlign === 'left' || value.textAlign === 'center' || value.textAlign === 'right') ? null : `Text ${id} is incomplete.`
     case 'image': return typeof value.src === 'string' && typeof value.alt === 'string' ? null : `Image ${id} is incomplete.`
     case 'shape': return ['rectangle', 'ellipse', 'triangle'].includes(String(value.shape)) && typeof value.fill === 'string' && typeof value.stroke === 'string' ? null : `Shape ${id} is incomplete.`
     case 'arrow': return isPoint(value.from) && isPoint(value.to) && typeof value.color === 'string' ? null : `Arrow ${id} is incomplete.`
@@ -240,7 +240,7 @@ function requiredString(value: unknown, field: string): string {
 
 const COMMON_PATCH_FIELDS = ['bounds', 'rotation', 'opacity', 'locked']
 const KIND_PATCH_FIELDS: Record<WorldObject['kind'], string[]> = {
-  ink: ['points', 'strokes', 'strokeScale', 'color', 'width'], text: ['text', 'color', 'fontSize', 'presentation'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
+  ink: ['points', 'strokes', 'strokeScale', 'color', 'width'], text: ['text', 'color', 'fontSize', 'presentation', 'textAlign'], image: ['src', 'alt'], shape: ['shape', 'fill', 'stroke'],
   arrow: ['from', 'to', 'color'], equation: ['latex', 'color'], graph: ['equationId', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges'],
   geometry: ['primitives', 'accent'], matrix: ['values', 'sourceIds', 'accent'],
   attention: ['model', 'bridgeMasses', 'temperature'], training: ['model', 'linkedAttentionId', 'step', 'lossHistory', 'probabilityHistory', 'learningRate'],

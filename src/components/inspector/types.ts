@@ -24,6 +24,8 @@ export type ProgressiveInspectorProps = {
   onMatrixChange: (row: 0 | 1, column: 0 | 1, value: number) => void
   onPatchObject: (id: string, patch: Record<string, unknown>, summary?: string) => void
   onSemanticEdit: (edit: SemanticEdit, summary?: string) => void
+  onCommitEditor: (id: string, value: string) => void
+  onAddExpressionParameter: (objectId: string, name: string) => void
   onSave: () => void
   onCancel: () => void
 }

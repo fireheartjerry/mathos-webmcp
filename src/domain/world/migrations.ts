@@ -217,6 +217,7 @@ const isTextObject = (value: unknown): boolean => isBaseObject(value)
   && isFiniteNumber(value.fontSize)
   && value.fontSize > 0
   && (value.presentation === undefined || value.presentation === 'typed' || value.presentation === 'handwritten')
+  && (value.textAlign === undefined || value.textAlign === 'left' || value.textAlign === 'center' || value.textAlign === 'right')
 
 const isImageObject = (value: unknown): boolean => isBaseObject(value)
   && value.kind === 'image'

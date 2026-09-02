@@ -34,6 +34,8 @@ export type TextObject = BaseObject & {
   fontSize: number
   /** Optional presentation hint for authored handwriting-style text. */
   presentation?: 'typed' | 'handwritten'
+  /** Optional alignment for multiline text; legacy text defaults to left. */
+  textAlign?: 'left' | 'center' | 'right'
 }
 export type ImageObject = BaseObject & { kind: 'image'; src: string; alt: string }
 export type ShapeObject = BaseObject & {

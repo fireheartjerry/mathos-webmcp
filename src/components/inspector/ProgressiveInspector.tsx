@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { normalizeWeights } from '../../domain/math/barycentric'
+import { validateLatex } from '../../domain/semantic/expression'
 import type { WorldObject } from '../../domain/world/types'
+import EquationEditor from '../editors/EquationEditor'
+import TextEditor from '../editors/TextEditor'
 import InspectorField from './InspectorField'
 import type { InspectorFieldSpec, InspectorStatus, InspectorTab, ProgressiveInspectorProps } from './types'
 import '../../styles/inspector.css'
+import '../../styles/editors.css'
 
 const tabs: Array<{ id: InspectorTab; label: string }> = [
   { id: 'values', label: 'Values' },
@@ -297,36 +301,6 @@ function InlineRangeEditor({
   )
 }
 
-function TextEditor({
-  id,
-  value,
-  onChange,
-  onSave,
-  onCancel,
-}: {
-  id: string
-  value: string
-  onChange: (value: string) => void
-  onSave: () => void
-  onCancel: () => void
-}) {
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') onSave()
-    if (event.key === 'Escape') onCancel()
-  }
-  return (
-    <input
-      id={id}
-      autoFocus
-      type="text"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={onKeyDown}
-      aria-label="Edit value"
-    />
-  )
-}
-
 function MatrixEditor({
   matrix,
   onChange,
@@ -370,6 +344,8 @@ export default function ProgressiveInspector({
   onMatrixChange,
   onPatchObject,
   onSemanticEdit,
+  onCommitEditor,
+  onAddExpressionParameter,
   onSave,
   onCancel,
 }: ProgressiveInspectorProps) {
@@ -385,15 +361,6 @@ export default function ProgressiveInspector({
   const inputKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && isEditing) onCancel()
   }
-
-  const editableText = (label: string, value: string, status: InspectorFieldSpec['status'] = 'free'): InspectorFieldSpec => ({
-    label,
-    value,
-    status,
-    children: isEditing ? (
-      <TextEditor id={`inspector-${object.id}-${label.toLowerCase().replace(/\s+/g, '-')}`} value={editorValue} onChange={onValueChange} onSave={onSave} onCancel={onCancel} />
-    ) : undefined,
-  })
 
   const numericField = (
     label: string,
@@ -441,14 +408,42 @@ export default function ProgressiveInspector({
     switch (object.kind) {
       case 'text':
         return [
-          editableText('Content', object.text),
-          numericField('Font size', object.fontSize, 'free', (next) => ({ fontSize: next }), 'Changed text font size'),
+          {
+            label: 'Content',
+            value: object.text,
+            status: 'free',
+            children: isEditing ? (
+              <TextEditor
+                object={object}
+                value={editorValue}
+                onChange={onValueChange}
+                onSave={() => onCommitEditor(object.id, editorValue)}
+                onCancel={onCancel}
+                onPatchObject={onPatchObject}
+              />
+            ) : undefined,
+          },
           { label: 'Presentation', value: object.presentation ?? 'typed', status: 'derived' },
           { label: 'Author', value: object.author, status: 'derived' },
         ]
       case 'equation':
         return [
-          editableText('Expression', object.latex),
+          {
+            label: 'Expression',
+            value: object.latex,
+            status: 'free',
+            children: isEditing ? (
+              <EquationEditor
+                object={object}
+                value={editorValue}
+                onChange={onValueChange}
+                onSave={() => onCommitEditor(object.id, editorValue)}
+                onCancel={onCancel}
+                parameterValues={entityId && world.entities[entityId]?.kind === 'expression' ? world.entities[entityId].parameters : {}}
+                onAddParameter={(name) => onAddExpressionParameter(object.id, name)}
+              />
+            ) : undefined,
+          },
           { label: 'Semantic entity', value: entityId ?? 'local expression', status: entityId ? 'derived' : 'free' },
           { label: 'Color', value: object.color, status: 'free' },
           { label: 'Author', value: object.author, status: 'derived' },
@@ -559,7 +554,7 @@ export default function ProgressiveInspector({
       case 'ink':
         return [{ label: 'Strokes', value: `${object.strokes?.length ?? 1}`, status: 'derived' }, { label: 'Width', value: formatValue(object.width), status: 'free' }, { label: 'Color', value: object.color, status: 'free' }]
     }
-  }, [editorMatrix, editorValue, entityId, isEditing, numericField, object, onCancel, onMatrixChange, onPatchObject, onSave, onValueChange, rangeField, tupleField])
+  }, [editorMatrix, editorValue, entityId, isEditing, numericField, object, onAddExpressionParameter, onCancel, onCommitEditor, onMatrixChange, onPatchObject, onSave, onValueChange, rangeField, tupleField, world.entities])
 
   const structureFields: InspectorFieldSpec[] = [
     { label: 'Kind', value: object.kind, status: 'derived' },
@@ -604,6 +599,7 @@ export default function ProgressiveInspector({
 
   const activeTab = supportedTabs.includes(tab) ? tab : supportedTabs[0]
   const hasInlineEditors = valueFields.some((field) => Boolean(field.children))
+  const equationDraftValid = object.kind !== 'equation' || validateLatex(editorValue).valid
   const inspectorKey = object.id.replace(/[^a-zA-Z0-9_-]/g, '-')
   const activeTabId = `inspector-tab-${inspectorKey}-${activeTab}`
   const panelId = `inspector-panel-${inspectorKey}`
@@ -655,9 +651,16 @@ export default function ProgressiveInspector({
       <footer className="inspector-footer">
         {isEditing ? (
           <>
-            <button type="button" className="inspector-save" onClick={onSave}>Save</button>
+            <button
+              type="button"
+              className="inspector-save"
+              disabled={object.kind === 'equation' && !equationDraftValid}
+              onClick={() => object.kind === 'matrix' ? onSave() : onCommitEditor(object.id, editorValue)}
+            >
+              Save
+            </button>
             <button type="button" className="inspector-cancel" onClick={onCancel}>Cancel</button>
-            <span className="inspector-hint">Enter to save · Esc to cancel</span>
+            <span className="inspector-hint">Ctrl/⌘+Enter to save · Esc to cancel</span>
           </>
         ) : canEdit ? (
           <button type="button" className="inspector-edit" onClick={() => onEdit(object.id)}>Edit values</button>

@@ -31,6 +31,8 @@ import {
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
 import type { DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
 import type { SemanticEdit } from '../domain/semantic/transactions'
+import { validateLatex } from '../domain/semantic/expression'
+import type { SemanticEntity } from '../domain/semantic/types'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
@@ -320,6 +322,64 @@ export default function MathburstWorkspace() {
     const action = buildSemanticEditAction(worldRef.current, edit, 'human')
     if (summary) action.summary = summary
     run(action)
+  }, [run])
+
+  /** Commit text/equation drafts from the current world, including linked entities. */
+  const commitEditor = useCallback((id: string, value: string): boolean => {
+    const currentWorld = worldRef.current
+    const object = currentWorld.objects[id]
+    if (!object || (object.kind !== 'text' && object.kind !== 'equation')) return false
+    if (object.kind === 'equation' && !validateLatex(value).valid) return false
+
+    const updated: WorldObject = object.kind === 'text'
+      ? { ...object, text: value }
+      : { ...object, latex: value }
+    const operations: WorldOperation[] = [{ type: 'put', object: updated }]
+    if (object.kind === 'equation' && object.entityId) {
+      const entity = currentWorld.entities[object.entityId]
+      if (entity?.kind === 'expression') {
+        operations.unshift({ type: 'putEntity', entity: { ...entity, latex: value } })
+      }
+    }
+    if (object.kind === 'equation') {
+      const dependents = findDependentIds(currentWorld, [object.id])
+      if (dependents.length) operations.push({ type: 'select', ids: [object.id, ...dependents] })
+    }
+    run(humanAction(`Edited ${object.kind}`, operations))
+    setEditorId(null)
+    setEditorMatrix(null)
+    return true
+  }, [run])
+
+  /** Add one detected parameter to the canonical expression in one action. */
+  const addExpressionParameter = useCallback((objectId: string, name: string) => {
+    const currentWorld = worldRef.current
+    const object = currentWorld.objects[objectId]
+    if (!object || object.kind !== 'equation' || !name.trim()) return
+
+    const linkedEntity = object.entityId ? currentWorld.entities[object.entityId] : undefined
+    let entityId = linkedEntity?.kind === 'expression' ? linkedEntity.id : (object.entityId ?? `entity:${object.id}`)
+    if (currentWorld.entities[entityId] && currentWorld.entities[entityId].kind !== 'expression') {
+      entityId = `entity:${object.id}:expression`
+    }
+    const existing = currentWorld.entities[entityId]
+    const existingExpression = existing?.kind === 'expression' ? existing : undefined
+    if (existingExpression?.parameters && Object.prototype.hasOwnProperty.call(existingExpression.parameters, name)) return
+
+    const graphValue = Object.values(currentWorld.objects)
+      .filter((candidate): candidate is Extract<WorldObject, { kind: 'graph' }> => candidate.kind === 'graph' && candidate.equationId === object.id)
+      .map((graph) => graph.parameters?.[name])
+      .find((candidate): candidate is number => typeof candidate === 'number' && Number.isFinite(candidate))
+    const value = existingExpression?.parameters?.[name] ?? graphValue ?? 1
+    const entity: Extract<SemanticEntity, { kind: 'expression' }> = {
+      id: entityId,
+      kind: 'expression',
+      latex: existingExpression?.latex ?? object.latex,
+      parameters: { ...(existingExpression?.parameters ?? {}), [name]: value },
+    }
+    const operations: WorldOperation[] = [{ type: 'putEntity', entity }]
+    if (object.entityId !== entityId) operations.push({ type: 'put', object: { ...object, entityId } })
+    run(humanAction(`Added expression parameter ${name}`, operations))
   }, [run])
 
   const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
@@ -1123,7 +1183,7 @@ export default function MathburstWorkspace() {
     setEditorId(id)
   }, [world.objects])
 
-  const saveEditor = () => {
+  const saveMatrixEditor = () => {
     if (!editorId) return
     const currentWorld = worldRef.current
     const object = currentWorld.objects[editorId]
@@ -1132,20 +1192,9 @@ export default function MathburstWorkspace() {
       setEditorMatrix(null)
       return
     }
-    let updated: WorldObject = object
-    if (object.kind === 'text') updated = { ...object, text: editorValue }
-    if (object.kind === 'equation') {
-      updated = { ...object, latex: editorValue }
-    }
-    if (object.kind === 'matrix' && editorMatrix) updated = { ...object, values: editorMatrix }
-    const dependents = object.kind === 'equation' ? findDependentIds(currentWorld, [object.id]) : []
-    const operations: WorldOperation[] = [{ type: 'put', object: updated }]
-    if (object.kind === 'equation' && object.entityId) {
-      const entity = currentWorld.entities[object.entityId]
-      if (entity?.kind === 'expression') operations.unshift({ type: 'putEntity', entity: { ...entity, latex: editorValue } })
-    }
-    if (dependents.length) operations.push({ type: 'select', ids: [object.id, ...dependents] })
-    run(humanAction(`Edited ${object.kind}`, operations))
+    if (object.kind !== 'matrix' || !editorMatrix) return
+    const updated: WorldObject = { ...object, values: editorMatrix }
+    run(humanAction('Edited matrix', [{ type: 'put', object: updated }]))
     setEditorId(null)
     setEditorMatrix(null)
   }
@@ -1455,7 +1504,9 @@ export default function MathburstWorkspace() {
           onMatrixChange={updateMatrixCell}
           onPatchObject={patchObject}
           onSemanticEdit={applySemanticEdit}
-          onSave={saveEditor}
+          onCommitEditor={commitEditor}
+          onAddExpressionParameter={addExpressionParameter}
+          onSave={saveMatrixEditor}
           onCancel={() => { setEditorId(null); setEditorMatrix(null) }}
         />
       )}
