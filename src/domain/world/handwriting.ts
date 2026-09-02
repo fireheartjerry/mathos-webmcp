@@ -88,6 +88,37 @@ function cropAndFit(
   }
 }
 
+/**
+ * World-space box of one captured stroke after the same crop/fit an ink object
+ * receives, including the object's rotation about its own centre. This lets a
+ * Tutor mark land on the exact glyph instead of on hand-tuned coordinates.
+ */
+export function handwritingStrokeWorldBox(
+  samples: Record<string, HandwritingSample>,
+  sampleId: string,
+  strokeIndex: number,
+  options: Pick<InkObject, 'bounds' | 'rotation'>,
+): Bounds | null {
+  const sample = samples[sampleId]
+  if (!sample) return null
+  const fitted = cropAndFit(sample, options.bounds)
+  const stroke = fitted?.strokes[strokeIndex]
+  if (!fitted || !stroke || stroke.length === 0) return null
+  const left = Math.min(...stroke.map((point) => point.x))
+  const top = Math.min(...stroke.map((point) => point.y))
+  const right = Math.max(...stroke.map((point) => point.x))
+  const bottom = Math.max(...stroke.map((point) => point.y))
+  const centre = { x: options.bounds.x + options.bounds.width / 2, y: options.bounds.y + options.bounds.height / 2 }
+  const radians = (options.rotation * Math.PI) / 180
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  const local = { x: options.bounds.x + (left + right) / 2 - centre.x, y: options.bounds.y + (top + bottom) / 2 - centre.y }
+  const rotated = { x: centre.x + local.x * cos - local.y * sin, y: centre.y + local.x * sin + local.y * cos }
+  const width = Math.max(1, right - left)
+  const height = Math.max(1, bottom - top)
+  return { x: rotated.x - width / 2, y: rotated.y - height / 2, width, height }
+}
+
 /** Turn a named studio sample into a world-local, aspect-fitted ink object. */
 export function handwritingSampleToInk(
   samples: Record<string, HandwritingSample>,

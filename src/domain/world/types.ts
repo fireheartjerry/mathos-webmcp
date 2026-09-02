@@ -57,7 +57,7 @@ export type GraphObject = BaseObject & {
   binEdges?: [number, number, number, number]
 } & SemanticViewLink
 export type GeometryPrimitive =
-  | { kind: 'point'; id: string; at: Point; label?: string; draggable?: boolean }
+  | { kind: 'point'; id: string; at: Point; label?: string; draggable?: boolean; hidden?: boolean }
   | { kind: 'segment'; id: string; from: string; to: string }
   | { kind: 'line'; id: string; through: [string, string] }
   | { kind: 'circle'; id: string; center: string; through: string }
@@ -69,6 +69,8 @@ export type GeometryPrimitive =
   | { kind: 'angle'; id: string; a: string; vertex: string; b: string }
   | { kind: 'homothety'; id: string; center: string; source: string; factor: number; label?: string }
   | { kind: 'similarity'; id: string; center: string; source: string; factor: number; angle: number; label?: string }
+  /** The unique fixed point of the spiral similarity sending a→a2 and b→b2. */
+  | { kind: 'spiralCenter'; id: string; a: string; b: string; a2: string; b2: string; label?: string }
 export type GeometryObject = BaseObject & SemanticViewLink & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
 export type MatrixObject = BaseObject & {
   kind: 'matrix'; values: [[number, number], [number, number]]; sourceIds: string[]; accent: string

@@ -28,6 +28,21 @@ export function normalizeSimplexWeights(weights: readonly number[]): SimplexWeig
   ]
 }
 
+/**
+ * Set one weight and redistribute the remainder over the other three so they
+ * keep their relative ratios. The result always sums to exactly one.
+ */
+export function setSimplexWeight(weights: SimplexWeights, index: number, value: number): SimplexWeights {
+  const nextValue = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0))
+  const others = weights.reduce((sum, item, current) => current === index ? sum : sum + Math.max(0, item), 0)
+  const remainder = 1 - nextValue
+  return weights.map((item, current) => {
+    if (current === index) return nextValue
+    if (others > 1e-12) return Math.max(0, item) * remainder / others
+    return remainder / 3
+  }) as SimplexWeights
+}
+
 export function pointFromSimplexWeights(vertices: Tetrahedron, weights: SimplexWeights): Vec3 {
   const normalized = normalizeSimplexWeights(weights)
   return vertices.reduce(

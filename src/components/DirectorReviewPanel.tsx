@@ -1,5 +1,8 @@
+import { cueRestObjectIds } from '../domain/demo/cues'
+import type { DemoCueId } from '../domain/demo/shotContract'
 import { DIRECTOR_SHOTS } from '../domain/world/director'
 import type { DirectorReviewState, DirectorShot } from '../domain/world/director'
+import type { WorldState } from '../domain/world/types'
 
 function shotStatus(shot: DirectorShot, approved: boolean, availableObjectIds: Set<string>) {
   if (shot.status === 'planned') return 'planned'
@@ -36,6 +39,8 @@ export default function DirectorReviewPanel({
   controlsHidden,
   availableObjectIds,
   selectedObjectIds,
+  cueRunning,
+  world,
   onClose,
   onToggleControls,
   onSelectShot,
@@ -46,12 +51,15 @@ export default function DirectorReviewPanel({
   onApproveShot,
   onPreviewNext,
   onPrepareShot,
+  onRunCue,
 }: {
   state: DirectorReviewState
   activeShot: DirectorShot | null
   controlsHidden: boolean
   availableObjectIds: Set<string>
   selectedObjectIds: string[]
+  cueRunning: DemoCueId | null
+  world: WorldState
   onClose: () => void
   onToggleControls: () => void
   onSelectShot: (id: string) => void
@@ -61,7 +69,8 @@ export default function DirectorReviewPanel({
   onResetShot: () => void
   onApproveShot: () => void
   onPreviewNext: () => void
-  onPrepareShot?: () => void
+  onPrepareShot: () => void
+  onRunCue: (cue: DemoCueId) => void
 }) {
   if (controlsHidden) {
     return (
@@ -78,10 +87,12 @@ export default function DirectorReviewPanel({
   const approvedCount = approvedIds.size
   const targets = activeShot?.editable ?? []
   const targetIds = targets.map((target) => target.id)
-  const missingTargets = targetIds.filter((id) => !availableObjectIds.has(id))
-  const prepare = activeShot?.prepare
-  const needsPrepare = Boolean(onPrepareShot && missingTargets.length && (prepare === 'tutor' || prepare === 'correction'))
   const status = activeShot ? shotStatus(activeShot, approvedIds.has(activeShot.id), availableObjectIds) : 'planned'
+  const restIds = activeShot ? cueRestObjectIds(activeShot.cue) : []
+  const restReady = restIds.every((id) => Boolean(world.objects[id]))
+  const nextShot = activeShot
+    ? DIRECTOR_SHOTS[(DIRECTOR_SHOTS.findIndex((shot) => shot.id === activeShot.id) + 1) % DIRECTOR_SHOTS.length]
+    : null
 
   return (
     <aside className="director-panel" aria-label="Live director review">
@@ -132,6 +143,34 @@ export default function DirectorReviewPanel({
             </div>
             <h3 id="director-active-shot">{activeShot.title}</h3>
             <p>{activeShot.intent}</p>
+            <dl className="director-contract">
+              <div><dt>Invariant</dt><dd>{activeShot.invariant}</dd></div>
+              <div><dt>Gesture</dt><dd>{activeShot.gesture}</dd></div>
+            </dl>
+          </section>
+
+          <section className="director-cues" aria-labelledby="director-cues-heading">
+            <div className="director-section-label">
+              <span id="director-cues-heading">Cue</span>
+              <small>{cueRunning ? `running ${cueRunning}` : restReady ? 'rest state present' : 'rest state missing'}</small>
+            </div>
+            <div className="director-cue-row">
+              <button type="button" className={`director-prepare${restReady ? ' is-ready' : ''}`} disabled={Boolean(cueRunning)} onClick={onPrepareShot}>
+                <span><i aria-hidden="true" /> Prepare rest state</span><small>{activeShot.cue}</small>
+              </button>
+              {activeShot.beats.map((beat) => (
+                <button
+                  type="button"
+                  key={beat.cue}
+                  className={`director-beat is-${beat.actor}`}
+                  disabled={Boolean(cueRunning)}
+                  onClick={() => onRunCue(beat.cue)}
+                  title={beat.cue}
+                >
+                  <i aria-hidden="true" />{beat.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section className="director-targets" aria-labelledby="director-targets-heading">
@@ -155,13 +194,8 @@ export default function DirectorReviewPanel({
                     <i aria-hidden="true" />{target.label}{!available && <small>missing</small>}
                   </button>
                 )
-              }) : <span className="director-empty-targets">No object targets on this frame.</span>}
+              }) : <span className="director-empty-targets">Camera-only frame. Nudge or zoom to reframe.</span>}
             </div>
-            {needsPrepare && (
-              <button type="button" className="director-prepare" onClick={onPrepareShot}>
-                <span><i aria-hidden="true" /> Prepare live state</span><small>{prepare} layer missing</small>
-              </button>
-            )}
           </section>
 
           <section className="director-camera" aria-labelledby="director-camera-heading">
@@ -191,7 +225,9 @@ export default function DirectorReviewPanel({
 
           <footer className="director-actions">
             <button type="button" className="director-secondary-action" onClick={onResetShot}>Reset framing</button>
-            <button type="button" className="director-secondary-action" onClick={onPreviewNext}>Preview next <span aria-hidden="true">→</span></button>
+            <button type="button" className="director-secondary-action" onClick={onPreviewNext} title={activeShot.bridge ? `Bridge: ${activeShot.bridge}` : 'Camera move only'}>
+              {activeShot.bridge ? activeShot.transition : 'Preview next'} <span aria-hidden="true">→</span>{nextShot && <small>{nextShot.number}</small>}
+            </button>
             <button type="button" className={`director-approve-action is-${status}`} onClick={onApproveShot} disabled={status !== 'ready'}>
               {status === 'planned' ? 'Awaiting build' : status === 'setup' ? 'State missing' : status === 'approved' ? 'Frame approved' : 'Approve frame'} <span aria-hidden="true">✓</span>
             </button>

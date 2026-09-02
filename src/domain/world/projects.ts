@@ -53,7 +53,7 @@ export const SCENES: Readonly<Record<SceneId, ProjectScene>> = {
   'gamma-clinic': scene({
     id: 'gamma-clinic', projectId: 'gamma-lab',
     title: 'Gamma Recurrence', subtitle: 'Correct the sign',
-    center: { x: -450, y: 340 }, zoom: 1.05, frameId: 'gamma_clinic_frame', keyboard: 1,
+    center: { x: -450, y: 400 }, zoom: 1.05, frameId: 'gamma_clinic_frame', keyboard: 1,
     transition: 'The corrected recurrence normalizes into a probability density.',
   }),
   'gamma-probability': scene({

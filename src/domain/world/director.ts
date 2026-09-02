@@ -1,5 +1,6 @@
 import type { Bounds, Viewport, WorldState } from './types'
 import type { CatalogSceneId } from './projects'
+import { getShotContract, type BridgeTransition, type DemoCueId, type ShotBeat } from '../demo/shotContract'
 
 export const DIRECTOR_STORAGE_KEY = 'mathburst.director.v1'
 
@@ -38,11 +39,34 @@ export type DirectorShot = {
   editable: Array<{ id: string; label: string }>
   transition: string
   status: 'live' | 'planned'
-  prepare?: 'tutor' | 'correction'
+  /** Deterministic rest-state cue for this frame. */
+  cue: DemoCueId
+  /** On-camera turns fired after the rest state. */
+  beats: readonly ShotBeat[]
+  /** Presentational bridge toward the next frame, if the storyboard names one. */
+  bridge?: BridgeTransition
+  /** The exact spec sentence this frame must keep true. */
+  invariant: string
+  gesture: string
   hiddenObjectIds?: string[]
 }
 
-export const DIRECTOR_SHOTS: DirectorShot[] = [
+type DirectorShotSeed = Omit<DirectorShot, 'cue' | 'beats' | 'bridge' | 'invariant' | 'gesture'>
+
+function attachContract(seed: DirectorShotSeed): DirectorShot {
+  const contract = getShotContract(seed.id)
+  if (!contract) throw new Error(`Director frame ${seed.id} has no shot contract.`)
+  return {
+    ...seed,
+    cue: contract.cue,
+    beats: contract.beats,
+    bridge: contract.bridgeToNext,
+    invariant: contract.visibleInvariant,
+    gesture: contract.gesture,
+  }
+}
+
+const DIRECTOR_SHOT_SEEDS: DirectorShotSeed[] = [
   {
     id: 'opening-attempt', number: '01', timecode: '0:00–0:05', title: 'The hidden sign',
     intent: 'Hold on the human recurrence before the Tutor enters.', scene: 'gamma-clinic',
@@ -58,7 +82,7 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
       { id: 'opening_annotation_strike', label: 'Underline' },
       { id: 'opening_annotation_question', label: 'Tutor note' },
     ],
-    transition: 'Rack focus', status: 'live', prepare: 'tutor',
+    transition: 'Rack focus', status: 'live',
     hiddenObjectIds: ['opening_correction'],
   },
   {
@@ -69,15 +93,16 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
       { id: 'opening_annotation_circle', label: 'Circle' },
       { id: 'opening_annotation_question', label: 'Tutor note' },
     ],
-    transition: 'Minus → integral', status: 'live', prepare: 'correction',
+    transition: 'Minus → integral', status: 'live',
   },
   {
     id: 'reconstruction', number: '04', timecode: '0:14–0:29', title: 'Ink becomes semantic math',
     intent: 'Photo and reconstructed objects remain linked in one readable composition.', scene: 'gamma-clinic',
     editable: [
       { id: 'source', label: 'Source photo' },
-      { id: 'opening_attempt', label: 'Source handwriting' },
-      { id: 'gamma_clinic_frame', label: 'Clinic frame' },
+      { id: 'eq_integral', label: 'Reconstructed equation' },
+      { id: 'recon_recurrence', label: 'Recurrence' },
+      { id: 'recon_work', label: 'Unfolding' },
     ],
     transition: 'Lateral track', status: 'live',
   },
@@ -164,6 +189,8 @@ export const DIRECTOR_SHOTS: DirectorShot[] = [
     transition: 'Final pullback', status: 'live',
   },
 ]
+
+export const DIRECTOR_SHOTS: DirectorShot[] = DIRECTOR_SHOT_SEEDS.map(attachContract)
 
 export const EMPTY_DIRECTOR_REVIEW: DirectorReviewState = {
   version: 1,

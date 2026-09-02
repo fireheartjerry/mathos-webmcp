@@ -44,11 +44,18 @@ export function auditReconstruction(
   }
 }
 
+/**
+ * Approval commits the audited objects as live semantic children of the frame
+ * that owns the source image. The source stays fully visible: the film shows
+ * ink and LaTeX linked side by side, never one replacing the other.
+ */
 export function approveReconstruction(world: WorldState): WorldAction {
   const draft = world.reconstruction
   if (!draft) throw new Error('There is no reconstruction to approve.')
   const source = world.objects[draft.sourceImageId]
-  const problem = world.objects.problem
+  const owningFrame = Object.values(world.objects).find((candidate) => (
+    candidate.kind === 'frame' && candidate.childIds.includes(draft.sourceImageId)
+  )) ?? world.objects.problem
   const approvedIds = draft.proposedObjects.map((object) => object.id)
   return {
     id: actionId(),
@@ -56,12 +63,13 @@ export function approveReconstruction(world: WorldState): WorldAction {
     summary: 'Approved the clean reconstruction',
     operations: [
       ...draft.proposedObjects.map((object) => ({ type: 'put' as const, object })),
-      ...(source ? [{ type: 'put' as const, object: { ...source, opacity: 0.18 } }] : []),
-      ...(problem?.kind === 'frame'
-        ? [{ type: 'put' as const, object: { ...problem, childIds: [...new Set([...problem.childIds, ...approvedIds])] } }]
+      ...(source && source.opacity < 1 ? [{ type: 'put' as const, object: { ...source, opacity: 1 } }] : []),
+      ...(owningFrame?.kind === 'frame'
+        ? [{ type: 'put' as const, object: { ...owningFrame, childIds: [...new Set([...owningFrame.childIds, ...approvedIds])] } }]
         : []),
       { type: 'session', patch: { reconstructionStatus: 'approved' } },
       { type: 'reconstruction', draft: null },
+      { type: 'select', ids: approvedIds },
     ],
   }
 }

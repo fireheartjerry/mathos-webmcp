@@ -161,6 +161,7 @@ function geometryPrimitiveError(value: unknown): string | null {
   if (value.kind === 'angle') return string('a') && string('vertex') && string('b') ? null : `Angle ${value.id} needs a, vertex and b ids.`
   if (value.kind === 'homothety') return string('center') && string('source') && typeof value.factor === 'number' ? null : `Homothety ${value.id} needs center, source and factor.`
   if (value.kind === 'similarity') return string('center') && string('source') && typeof value.factor === 'number' && Number.isFinite(value.factor) && value.factor !== 0 && typeof value.angle === 'number' && Number.isFinite(value.angle) ? null : `Similarity ${value.id} needs center, source, factor and angle.`
+  if (value.kind === 'spiralCenter') return string('a') && string('b') && string('a2') && string('b2') ? null : `Spiral centre ${value.id} needs a, b, a2 and b2 point ids.`
   return `Geometry primitive ${value.id} has an unknown kind.`
 }
 
@@ -431,10 +432,20 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     operations.push({ type: 'put', object: graph }, { type: 'select', ids: [graph.id] }); return bridge.runAgentAction(action('Graphed a live expression', operations), changedIds(operations))
   })
 
-  const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Create a declarative live construction.', schema({ primitives: primitivesSchema, bounds: boundsSchema, accent: { type: 'string' } }, ['primitives']), false, async (input) => {
-    const args = values(input, ['primitives', 'bounds', 'accent']); const bounds = args.bounds === undefined ? { x: 400, y: 170, width: 430, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.')
-    const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', primitives: primitives(args.primitives), accent: typeof args.accent === 'string' ? args.accent : '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }
-    return bridge.runAgentAction(action('Constructed dynamic geometry', [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id])
+  const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Create a declarative live construction, or extend an existing construction by objectId so the new marks stay dependent on its points.', schema({ primitives: primitivesSchema, bounds: boundsSchema, accent: { type: 'string' }, objectId: { type: 'string' }, summary: { type: 'string' } }, ['primitives']), false, async (input) => {
+    const args = values(input, ['primitives', 'bounds', 'accent', 'objectId', 'summary']); const bounds = args.bounds === undefined ? { x: 400, y: 170, width: 430, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds are invalid.')
+    const added = primitives(args.primitives)
+    if (typeof args.objectId === 'string' && args.objectId.trim()) {
+      const existing = bridge.getWorld().objects[args.objectId]
+      if (existing?.kind !== 'geometry') throw new Error(`${args.objectId} is not a geometry object.`)
+      const taken = new Set(existing.primitives.map((primitive) => primitive.id))
+      const duplicate = added.find((primitive) => taken.has(primitive.id))
+      if (duplicate) throw new Error(`Primitive ${duplicate.id} already exists in ${existing.id}.`)
+      const object: WorldObject = { ...existing, primitives: [...existing.primitives, ...added] }
+      return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : `Extended construction ${existing.id}`, [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id])
+    }
+    const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', primitives: added, accent: typeof args.accent === 'string' ? args.accent : '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }
+    return bridge.runAgentAction(action(typeof args.summary === 'string' ? args.summary : 'Constructed dynamic geometry', [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id])
   })
 
   const visualizeConcept = tool('visualize_concept', 'Visualize a mathematical concept', 'Create a curated integral, tangent, homothety, matrix, probability, attention, geometry or partition scene.', schema({ concept: { type: 'string', enum: ['integral', 'tangent', 'homothety', 'matrix-transform', 'gamma-density', 'attention', 'training', 'barycentric', 'spiral-similarity', 'simplex', 'partitions'] }, sourceIds: { type: 'array', items: { type: 'string' } }, bounds: boundsSchema }, ['concept']), false, async (input) => {

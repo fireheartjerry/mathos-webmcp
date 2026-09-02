@@ -18,6 +18,26 @@ export const SOURCE_IMAGE_ID = 'source'
 export const OPENING_FRAME_ID = 'gamma_clinic_frame'
 export const OPENING_ATTEMPT_ID = 'opening_attempt'
 export const OPENING_CORRECTION_ID = 'opening_correction'
+export const RECON_RECURRENCE_ID = 'recon_recurrence'
+export const RECON_WORK_ID = 'recon_work'
+export const ATTENTION_ID = 'attention_mechanism'
+export const TRAINING_ID = 'training_panel'
+export const BARYCENTRIC_ID = 'barycentric_geometry'
+export const GEOMETRY_ID = 'geometry_construction'
+export const SIMPLEX_ID = 'simplex_projection'
+export const NUMBER_THEORY_ID = 'partition_observatory'
+
+/** Camera-visible defaults shared by the seed and the deterministic cue layer. */
+export const GAMMA_SHAPE = 4.5
+export const GAMMA_BOUND = 6
+/** The final bin owns the infinite tail; the stored edge is only the plot cutoff. */
+export const GAMMA_BIN_EDGES: [number, number, number, number] = [0, 3.15, 6.075, 16]
+
+/** Hidden spiral-similarity centre and the fixed similarity used by the construction. */
+export const SPIRAL_CENTER = { x: 640, y: 150 }
+export const SPIRAL_FACTOR = 0.72
+export const SPIRAL_ANGLE = 38
+export const HOMOTHETY_FACTOR = 0.58
 
 const frame = (
   id: string,
@@ -26,7 +46,7 @@ const frame = (
   x: number,
   y: number,
   width = 820,
-  height = 540,
+  height = 550,
 ): WorldObject => ({
   id,
   kind: 'frame',
@@ -39,25 +59,23 @@ const frame = (
 })
 
 export function createSeedWorld(): WorldState {
-  const shape = 4.5
-  const binEdges: [number, number, number, number] = [0, 3.15, 6.075, 16]
-  const bridgeMasses = gammaBinMasses(shape, binEdges)
+  const bridgeMasses = gammaBinMasses(GAMMA_SHAPE, GAMMA_BIN_EDGES)
   const model = createInitialTinyModel(bridgeMasses)
   const initialPass = evaluateTinyModel(model, bridgeMasses)
 
   const attention: AttentionObject = {
-    id: 'attention_mechanism',
+    id: ATTENTION_ID,
     kind: 'attention',
     model,
     bridgeMasses,
     temperature: 1,
-    bounds: { x: 1355, y: 138, width: 790, height: 430 },
+    bounds: { x: 1345, y: 120, width: 810, height: 470 },
     rotation: 0,
     author: 'agent',
     opacity: 1,
   }
   const training: TrainingObject = {
-    id: 'training_panel',
+    id: TRAINING_ID,
     kind: 'training',
     model: createInitialTinyModel(bridgeMasses),
     linkedAttentionId: attention.id,
@@ -65,62 +83,57 @@ export function createSeedWorld(): WorldState {
     lossHistory: [initialPass.loss],
     probabilityHistory: [initialPass.targetProbability],
     learningRate: 0,
-    bounds: { x: 2455, y: 138, width: 790, height: 430 },
+    bounds: { x: 2445, y: 120, width: 810, height: 470 },
     rotation: 0,
     author: 'human',
     opacity: 1,
   }
   const barycentric: BarycentricObject = {
-    id: 'barycentric_geometry',
+    id: BARYCENTRIC_ID,
     kind: 'barycentric',
-    vertices: [{ x: 110, y: 330 }, { x: 650, y: 330 }, { x: 385, y: 60 }],
-    labels: ['V₁', 'V₂', 'V₃'],
-    weights: bridgeMasses,
+    vertices: [{ x: 90, y: 320 }, { x: 470, y: 320 }, { x: 300, y: 48 }],
+    labels: ['A', 'B', 'C'],
+    weights: initialPass.attentionWeights,
     linkedAttentionId: attention.id,
-    bounds: { x: -815, y: 820, width: 750, height: 430 },
+    bounds: { x: -825, y: 830, width: 750, height: 440 },
     rotation: 0,
     author: 'agent',
     opacity: 1,
   }
-  const invariantPoint = {
-    x: bridgeMasses[0] * 95 + bridgeMasses[1] * 560 + bridgeMasses[2] * 270,
-    y: bridgeMasses[0] * 325 + bridgeMasses[1] * 330 + bridgeMasses[2] * 62,
-  }
   const similarity: GeometryObject = {
-    id: 'geometry_construction',
+    id: GEOMETRY_ID,
     kind: 'geometry',
     accent: '#7c5cff',
-    bounds: { x: 250, y: 820, width: 760, height: 430 },
+    bounds: { x: 250, y: 826, width: 800, height: 400 },
     rotation: 0,
     author: 'agent',
     opacity: 1,
     primitives: [
-      { kind: 'point', id: 'O', at: { x: 350, y: 220 }, label: 'O', draggable: true },
-      { kind: 'point', id: 'A', at: { x: 95, y: 325 }, label: 'A', draggable: true },
-      { kind: 'point', id: 'B', at: { x: 560, y: 330 }, label: 'B', draggable: true },
-      { kind: 'point', id: 'C', at: { x: 270, y: 62 }, label: 'C', draggable: true },
-      { kind: 'point', id: 'P', at: invariantPoint, label: 'P' },
+      { kind: 'point', id: 'O', at: { x: 330, y: 250 }, label: 'O', draggable: true },
+      { kind: 'point', id: 'A', at: { x: 90, y: 340 }, label: 'A', draggable: true },
+      { kind: 'point', id: 'B', at: { x: 520, y: 356 }, label: 'B', draggable: true },
+      { kind: 'point', id: 'C', at: { x: 250, y: 74 }, label: 'C', draggable: true },
+      { kind: 'point', id: 'Z', at: SPIRAL_CENTER, hidden: true },
       { kind: 'polygon', id: 'triangle-ABC', points: ['A', 'B', 'C'] },
-      { kind: 'midpoint', id: 'M', of: ['A', 'B'], label: 'M' },
-      { kind: 'circle', id: 'source-circle', center: 'A', through: 'M' },
-      { kind: 'homothety', id: 'H-A', center: 'O', source: 'A', factor: 0.58, label: 'Aₕ' },
-      { kind: 'homothety', id: 'H-B', center: 'O', source: 'B', factor: 0.58, label: 'Bₕ' },
-      { kind: 'homothety', id: 'H-C', center: 'O', source: 'C', factor: 0.58, label: 'Cₕ' },
-      { kind: 'homothety', id: 'H-P', center: 'O', source: 'P', factor: 0.58, label: 'Pₕ' },
+      { kind: 'segment', id: 'ray-OA', from: 'O', to: 'A' },
+      { kind: 'segment', id: 'ray-OB', from: 'O', to: 'B' },
+      { kind: 'segment', id: 'ray-OC', from: 'O', to: 'C' },
+      { kind: 'homothety', id: 'H-A', center: 'O', source: 'A', factor: HOMOTHETY_FACTOR, label: 'Aₕ' },
+      { kind: 'homothety', id: 'H-B', center: 'O', source: 'B', factor: HOMOTHETY_FACTOR, label: 'Bₕ' },
+      { kind: 'homothety', id: 'H-C', center: 'O', source: 'C', factor: HOMOTHETY_FACTOR, label: 'Cₕ' },
       { kind: 'polygon', id: 'homothetic-triangle', points: ['H-A', 'H-B', 'H-C'] },
-      { kind: 'similarity', id: 'S-A', center: 'O', source: 'A', factor: 0.72, angle: 38, label: 'A′' },
-      { kind: 'similarity', id: 'S-B', center: 'O', source: 'B', factor: 0.72, angle: 38, label: 'B′' },
-      { kind: 'similarity', id: 'S-C', center: 'O', source: 'C', factor: 0.72, angle: 38, label: 'C′' },
-      { kind: 'similarity', id: 'S-P', center: 'O', source: 'P', factor: 0.72, angle: 38, label: 'P′' },
+      // Both circles pass through O, so the homothety maps one onto the other
+      // and they are tangent at its centre.
+      { kind: 'circle', id: 'circle-A', center: 'A', through: 'O' },
+      { kind: 'circle', id: 'circle-Ah', center: 'H-A', through: 'O' },
+      { kind: 'similarity', id: 'S-A', center: 'Z', source: 'A', factor: SPIRAL_FACTOR, angle: SPIRAL_ANGLE, label: 'A′' },
+      { kind: 'similarity', id: 'S-B', center: 'Z', source: 'B', factor: SPIRAL_FACTOR, angle: SPIRAL_ANGLE, label: 'B′' },
+      { kind: 'similarity', id: 'S-C', center: 'Z', source: 'C', factor: SPIRAL_FACTOR, angle: SPIRAL_ANGLE, label: 'C′' },
       { kind: 'polygon', id: 'spiral-triangle', points: ['S-A', 'S-B', 'S-C'] },
-      { kind: 'segment', id: 'spiral-ray-a', from: 'A', to: 'S-A' },
-      { kind: 'segment', id: 'spiral-ray-b', from: 'B', to: 'S-B' },
-      { kind: 'segment', id: 'spiral-point-path', from: 'P', to: 'S-P' },
-      { kind: 'angle', id: 'spiral-angle', a: 'A', vertex: 'O', b: 'S-A' },
     ],
   }
   const simplex: SimplexObject = {
-    id: 'simplex_projection',
+    id: SIMPLEX_ID,
     kind: 'simplex',
     weights: [bridgeMasses[0] * 0.82, bridgeMasses[1] * 0.82, bridgeMasses[2] * 0.82, 0.18],
     rotationX: -0.32,
@@ -128,20 +141,20 @@ export function createSeedWorld(): WorldState {
     section: 0.46,
     denominator: 5,
     showLattice: true,
-    bounds: { x: 1350, y: 810, width: 800, height: 450 },
+    bounds: { x: 1345, y: 830, width: 810, height: 440 },
     rotation: 0,
     author: 'agent',
     opacity: 1,
   }
   const numberTheory: NumberTheoryObject = {
-    id: 'partition_observatory',
+    id: NUMBER_THEORY_ID,
     kind: 'numberTheory',
     selectedN: 9,
     maxN: 24,
-    finiteCutoff: 12,
+    finiteCutoff: 14,
     linkedSimplexId: simplex.id,
-    revealTheorem: true,
-    bounds: { x: 2445, y: 800, width: 815, height: 470 },
+    revealTheorem: false,
+    bounds: { x: 2445, y: 830, width: 810, height: 440 },
     rotation: 0,
     author: 'agent',
     opacity: 1,
@@ -150,14 +163,14 @@ export function createSeedWorld(): WorldState {
   const objects: WorldObject[] = [
     frame(OPENING_FRAME_ID, 'Gamma Function · Gamma Recurrence', [
       'opening_prompt', OPENING_ATTEMPT_ID, SOURCE_IMAGE_ID, HERO_EQUATION_ID,
-    ], -860, 70, 820, 550),
+    ], -860, 70, 820, 660),
     {
       id: 'opening_prompt',
       kind: 'text',
       text: 'Don’t finish it. Mark the exact place my reasoning breaks.',
       color: '#171713',
-      fontSize: 22,
-      bounds: { x: -815, y: 138, width: 700, height: 56 },
+      fontSize: 20,
+      bounds: { x: -815, y: 112, width: 700, height: 44 },
       rotation: 0,
       author: 'human',
       opacity: 1,
@@ -165,7 +178,7 @@ export function createSeedWorld(): WorldState {
     {
       id: OPENING_ATTEMPT_ID,
       kind: 'text',
-      text: 'Γ(9/2) = ∫₀∞ x⁷ᐟ²e⁻ˣ dx\n= [−x⁷ᐟ²e⁻ˣ]₀∞ − (7/2)Γ(7/2)',
+      text: 'Γ(9/2) = ∫₀∞ x⁷ᐟ²e⁻ˣ dx = [−x⁷ᐟ²e⁻ˣ]₀∞ − (7/2)Γ(7/2)',
       color: '#171713',
       fontSize: 29,
       presentation: 'handwritten',
@@ -179,7 +192,7 @@ export function createSeedWorld(): WorldState {
       kind: 'image',
       src: 'handwriting://opening-attempt',
       alt: 'Captured handwritten Gamma recurrence',
-      bounds: { x: -810, y: 430, width: 190, height: 135 },
+      bounds: { x: -815, y: 552, width: 200, height: 140 },
       rotation: -1.2,
       author: 'human',
       opacity: 1,
@@ -187,9 +200,9 @@ export function createSeedWorld(): WorldState {
     {
       id: HERO_EQUATION_ID,
       kind: 'equation',
-      latex: '\\Gamma\\!\\left(\\frac92\\right)=\\frac72\\Gamma\\!\\left(\\frac72\\right)',
+      latex: '\\Gamma\\!\\left(\\tfrac92\\right)=\\int_0^{\\infty}x^{7/2}e^{-x}\\,dx=\\tfrac72\\,\\Gamma\\!\\left(\\tfrac72\\right)',
       color: '#171713',
-      bounds: { x: -585, y: 452, width: 465, height: 70 },
+      bounds: { x: -590, y: 548, width: 500, height: 62 },
       rotation: 0,
       author: 'human',
       opacity: 0,
@@ -201,9 +214,9 @@ export function createSeedWorld(): WorldState {
     {
       id: 'eq_integrand',
       kind: 'equation',
-      latex: 'g_a(x)=\\frac{x^{a-1}e^{-x}}{\\Gamma(a)},\\quad\\int_0^\\infty g_a(x)\\,dx=1',
+      latex: 'g_a(x)=\\frac{x^{a-1}e^{-x}}{\\Gamma(a)},\\qquad\\int_0^\\infty g_a(x)\\,dx=1',
       color: '#171713',
-      bounds: { x: 270, y: 125, width: 730, height: 68 },
+      bounds: { x: 270, y: 116, width: 760, height: 64 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -215,12 +228,12 @@ export function createSeedWorld(): WorldState {
       xDomain: [0, 16],
       yDomain: [0, 0.26],
       color: '#7c5cff',
-      parameters: { a: shape, b: 6 },
-      showTangentAt: shape - 1,
-      shadeIntegral: [0, 6],
+      parameters: { a: GAMMA_SHAPE, b: GAMMA_BOUND },
+      showTangentAt: GAMMA_SHAPE - 1,
+      shadeIntegral: [0, GAMMA_BOUND],
       visualization: 'gamma-density',
-      binEdges,
-      bounds: { x: 255, y: 195, width: 790, height: 375 },
+      binEdges: GAMMA_BIN_EDGES,
+      bounds: { x: 255, y: 188, width: 790, height: 384 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -228,9 +241,9 @@ export function createSeedWorld(): WorldState {
     {
       id: 'gamma_bridge_equation',
       kind: 'equation',
-      latex: 'w_j=\\int_{b_{j-1}}^{b_j}g_a(x)\\,dx,\\qquad \\sum_jw_j=1',
+      latex: 'w_j=\\int_{b_{j-1}}^{b_j}g_a(x)\\,dx,\\qquad \\ell_j=\\log w_j,\\qquad \\operatorname{softmax}(\\ell)_j=w_j',
       color: '#7c5cff',
-      bounds: { x: 490, y: 550, width: 430, height: 48 },
+      bounds: { x: 290, y: 578, width: 720, height: 36 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -242,10 +255,10 @@ export function createSeedWorld(): WorldState {
     {
       id: 'attention_bridge_label',
       kind: 'text',
-      text: 'Edit any input or weight. Every downstream value recomputes immediately.',
+      text: 'One head, two-dimensional embeddings. Every value on this card is recomputed from the matrices you edit.',
       color: '#7c5cff',
-      fontSize: 16,
-      bounds: { x: 1380, y: 570, width: 700, height: 32 },
+      fontSize: 13,
+      bounds: { x: 1360, y: 596, width: 780, height: 20 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -258,10 +271,10 @@ export function createSeedWorld(): WorldState {
     {
       id: 'training_truth_label',
       kind: 'text',
-      text: 'A complete tiny model: every visible update is a real numerical gradient step.',
+      text: 'A tiny transformer training step: one numerical gradient on the visible parameters, never frontier-model training.',
       color: '#7c5cff',
-      fontSize: 16,
-      bounds: { x: 2490, y: 570, width: 700, height: 32 },
+      fontSize: 13,
+      bounds: { x: 2460, y: 596, width: 780, height: 20 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -274,9 +287,9 @@ export function createSeedWorld(): WorldState {
     {
       id: 'barycentric_equation',
       kind: 'equation',
-      latex: 'P=\\alpha A+\\beta B+\\gamma C,\\quad \\alpha+\\beta+\\gamma=1',
+      latex: 'P=\\alpha A+\\beta B+\\gamma C,\\qquad \\alpha+\\beta+\\gamma=1',
       color: '#171713',
-      bounds: { x: -725, y: 770, width: 540, height: 58 },
+      bounds: { x: -760, y: 772, width: 620, height: 50 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -289,10 +302,10 @@ export function createSeedWorld(): WorldState {
     {
       id: 'geometry_prompt',
       kind: 'text',
-      text: 'The normalized point moves with the triangle.',
+      text: 'Two circles tangent at O. Drag A.',
       color: '#171713',
       fontSize: 19,
-      bounds: { x: 300, y: 770, width: 350, height: 40 },
+      bounds: { x: 300, y: 774, width: 330, height: 36 },
       rotation: 0,
       author: 'human',
       opacity: 1,
@@ -300,9 +313,9 @@ export function createSeedWorld(): WorldState {
     {
       id: 'geometry_ratio',
       kind: 'equation',
-      latex: 'S(X)=O+0.72R_{38^\\circ}(X-O)',
-      color: '#7c5cff',
-      bounds: { x: 650, y: 770, width: 400, height: 48 },
+      latex: '\\frac{OA_h}{OA}=\\frac{OB_h}{OB}=\\frac{OC_h}{OC}=0.58',
+      color: '#171713',
+      bounds: { x: 640, y: 768, width: 410, height: 48 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -310,10 +323,10 @@ export function createSeedWorld(): WorldState {
     {
       id: 'geometry_hint',
       kind: 'text',
-      text: 'Drag A, B, C, or O. Ratios and equal angles recompute.',
+      text: 'Drag A, B, C or O. Mapped points, tangent circles, ratios and equal angles recompute.',
       color: '#817d73',
-      fontSize: 14,
-      bounds: { x: 380, y: 1255, width: 540, height: 28 },
+      fontSize: 13,
+      bounds: { x: 300, y: 1234, width: 740, height: 22 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -326,23 +339,12 @@ export function createSeedWorld(): WorldState {
     {
       id: 'simplex_equation',
       kind: 'equation',
-      latex: 'P=\\alpha A+\\beta B+\\gamma C+\\delta D,\\quad \\sum\\lambda_i=1',
+      latex: 'P=\\alpha A+\\beta B+\\gamma C+\\delta D,\\qquad \\alpha+\\beta+\\gamma+\\delta=1',
       color: '#171713',
-      bounds: { x: 1450, y: 770, width: 600, height: 56 },
+      bounds: { x: 1400, y: 772, width: 700, height: 50 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
-    },
-    {
-      id: 'simplex_section',
-      kind: 'text',
-      text: 'The moving triangular section remembers barycentrics.',
-      color: '#7c5cff',
-      fontSize: 15,
-      bounds: { x: 1490, y: 1260, width: 520, height: 26 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 0,
     },
     simplex,
 
@@ -352,33 +354,12 @@ export function createSeedWorld(): WorldState {
     {
       id: 'partition_equation',
       kind: 'equation',
-      latex: '\\prod_{m\\ge1}(1-q^m)^{-1}=\\sum_{N\\ge0}p(N)q^N',
+      latex: 'P(q)=\\prod_{m\\ge1}(1-q^m)^{-1}=\\sum_{n\\ge0}p(n)\\,q^n',
       color: '#171713',
-      bounds: { x: 2590, y: 765, width: 520, height: 52 },
+      bounds: { x: 2520, y: 770, width: 660, height: 52 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
-    },
-    {
-      id: 'partition_lattice',
-      kind: 'text',
-      text: 'compositions → quotient by order → partitions',
-      color: '#817d73',
-      fontSize: 14,
-      bounds: { x: 2470, y: 1265, width: 390, height: 24 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 0,
-    },
-    {
-      id: 'ramanujan_lanes',
-      kind: 'equation',
-      latex: 'p(5n+4)\\equiv0\\pmod5',
-      color: '#7c5cff',
-      bounds: { x: 2920, y: 1255, width: 280, height: 38 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 0,
     },
     numberTheory,
   ]

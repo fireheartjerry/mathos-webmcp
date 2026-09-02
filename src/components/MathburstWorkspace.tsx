@@ -18,18 +18,23 @@ import {
   type SceneViewport,
 } from '../domain/world/library'
 import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
-import { createSeedWorld, HERO_EQUATION_ID, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, OPENING_FRAME_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
+import { createSeedWorld, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
   getProjectForScene,
   getSceneObjectIds,
   getScenesForProject,
   getViewportForScene,
+  PROJECTS,
   SCENES,
   type CatalogSceneId,
   type ProjectId,
 } from '../domain/world/projects'
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
-import type { DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
+import type { DirectorShot, DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
+import { prepareDemoCue, reconstructionObjects, RECONSTRUCTION_AUDIT_SUMMARY, RECONSTRUCTION_UNCERTAIN_IDS } from '../domain/demo/cues'
+import type { BridgeTransition, DemoCueId } from '../domain/demo/shotContract'
+import CinematicBridge, { bridgeAnchors } from './CinematicBridge'
+import type { BridgeEndpoints } from './CinematicBridge'
 import type { SemanticEdit } from '../domain/semantic/transactions'
 import { validateLatex } from '../domain/semantic/expression'
 import type { SemanticBinding, SemanticEntity } from '../domain/semantic/types'
@@ -171,42 +176,6 @@ const rebaseSceneViewport = (
   return { x: width / 2 - center.x * zoom, y: height / 2 - center.y * zoom, zoom }
 }
 
-function demoReconstruction(audited: boolean): WorldObject[] {
-  return [
-    {
-      id: HERO_EQUATION_ID,
-      kind: 'equation',
-      latex: '\\Gamma\\!\\left(\\frac92\\right)=\\int_0^\\infty x^{7/2}e^{-x}\\,dx',
-      color: '#171713',
-      bounds: { x: -595, y: 410, width: 485, height: 66 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 1,
-    },
-    {
-      id: 'recon_prompt',
-      kind: 'text',
-      text: 'Repeated integration by parts · sign audited against source',
-      color: '#171713',
-      fontSize: 17,
-      bounds: { x: -585, y: 485, width: 465, height: 34 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 1,
-    },
-    {
-      id: 'recon_work',
-      kind: 'equation',
-      latex: audited ? '\\frac72\\Gamma\\!\\left(\\frac72\\right)' : '-\\frac72\\Gamma\\!\\left(\\frac72\\right)\\;?',
-      color: audited ? '#171713' : '#f05f44',
-      bounds: { x: -575, y: 530, width: 410, height: 58 },
-      rotation: 0,
-      author: 'agent',
-      opacity: 1,
-    },
-  ]
-}
-
 function applyCapturedOpeningAttempt(world: WorldState, samples: Record<string, HandwritingSample>): WorldState {
   const attempt = world.objects[OPENING_ATTEMPT_ID]
   if (!attempt) return world
@@ -221,6 +190,37 @@ function applyCapturedOpeningAttempt(world: WorldState, samples: Record<string, 
   })
   return captured ? { ...world, objects: { ...world.objects, [OPENING_ATTEMPT_ID]: captured } } : world
 }
+
+/**
+ * The final pull-back is a Director camera state, not cross-project leakage:
+ * it reads every built-in project's own world (the live one for the active
+ * document) and composes them for display only. Nothing here is written back.
+ */
+function buildOverviewWorld(projects: LibraryProject[], activeDocumentId: string, activeWorld: WorldState): WorldState {
+  const active = projects.find((project) => project.id === activeDocumentId)
+  const objects: WorldState['objects'] = {}
+  const entities: WorldState['entities'] = {}
+  const bindings: WorldState['bindings'] = {}
+  const timelines: WorldState['timelines'] = {}
+  const order: string[] = []
+  for (const template of PROJECTS) {
+    const source = active?.templateId === template.id
+      ? activeWorld
+      : projects.find((project) => project.kind === 'built-in' && project.id === template.id)?.world
+    if (!source) continue
+    for (const id of source.order) {
+      if (objects[id] || !source.objects[id]) continue
+      objects[id] = source.objects[id]
+      order.push(id)
+    }
+    Object.assign(entities, source.entities)
+    Object.assign(bindings, source.bindings)
+    Object.assign(timelines, source.timelines)
+  }
+  return { ...activeWorld, objects, entities, bindings, timelines, order, selection: [] }
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => { window.setTimeout(resolve, ms) })
 
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
@@ -258,6 +258,9 @@ export default function MathburstWorkspace() {
   const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: SceneViewport } | null>(null)
   const directorOpenRef = useRef(false)
   const directorPreviewFrameRef = useRef<number | null>(null)
+  const [cueRunning, setCueRunning] = useState<DemoCueId | null>(null)
+  const cueRunningRef = useRef<DemoCueId | null>(null)
+  const [bridgePlay, setBridgePlay] = useState<{ key: number; transition: BridgeTransition; endpoints: BridgeEndpoints } | null>(null)
 
   const updateLibraryProjects = useCallback((update: (projects: LibraryProject[]) => LibraryProject[]) => {
     setLibraryProjects((current) => {
@@ -765,87 +768,90 @@ export default function MathburstWorkspace() {
   }), [runAgent, runHistoryBridge])
   const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
 
-  const openingTutor = async () => {
-    const getSelection = webMcpTools.find((tool) => tool.name === 'get_selection')
-    const getObjects = webMcpTools.find((tool) => tool.name === 'get_objects')
-    const createObjects = webMcpTools.find((tool) => tool.name === 'create_objects')
-    if (!getSelection || !getObjects || !createObjects || worldRef.current.objects[OPENING_ATTEMPT_ID] === undefined) return
-    await getSelection.execute({})
-    await getObjects.execute({ ids: [OPENING_ATTEMPT_ID] })
-    const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
-    const tutorNote = handwritingSampleToInk(samples, 'tutor-note', {
-      id: 'opening_annotation_question',
-      bounds: { x: -730, y: 448, width: 360, height: 58 },
-      color: '#7c5cff',
-      width: 7.5,
-      rotation: -1.8,
-      author: 'agent',
-      opacity: 1,
-    }) ?? {
-      id: 'opening_annotation_question', kind: 'text' as const, text: 'v = −e⁻ˣ. Two negatives.', color: '#7c5cff', fontSize: 23,
-      presentation: 'handwritten' as const, bounds: { x: -730, y: 448, width: 360, height: 58 }, rotation: -1.8, author: 'agent' as const, opacity: 1,
-    }
-    await createObjects.execute({
-      summary: 'Tutor annotated the reasoning break',
-      objects: [
-        {
-          id: 'opening_annotation_circle', kind: 'ink',
-          points: [
-            { x: 4, y: 27 }, { x: 10, y: 10 }, { x: 28, y: 3 }, { x: 48, y: 7 },
-            { x: 58, y: 21 }, { x: 57, y: 38 }, { x: 44, y: 50 }, { x: 24, y: 52 },
-            { x: 8, y: 43 }, { x: 4, y: 27 },
-          ],
-          color: '#7c5cff', width: 4, bounds: { x: -470, y: 324, width: 62, height: 56 }, rotation: -3, author: 'agent', opacity: 1,
-        },
-        {
-          id: 'opening_annotation_strike', kind: 'ink',
-          points: [{ x: 0, y: 8 }, { x: 18, y: 6 }, { x: 37, y: 7 }, { x: 57, y: 3 }],
-          color: '#7c5cff', width: 5, bounds: { x: -468, y: 376, width: 62, height: 14 }, rotation: -6, author: 'agent', opacity: 1,
-        },
-        tutorNote,
-      ],
-    })
-  }
+  /** Wait for the Tutor presence to settle so consecutive real tool calls never collide. */
+  const waitForTutor = () => new Promise<void>((resolve) => {
+    const check = () => { if (agentBusyRef.current) window.setTimeout(check, 40); else resolve() }
+    check()
+  })
 
-  const correctGammaSign = () => {
-    const attempt = worldRef.current.objects[OPENING_ATTEMPT_ID]
-    if (!attempt) return
-    const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
-    const capturedCorrection = handwritingSampleToInk(samples, 'opening-correction', {
-      id: OPENING_CORRECTION_ID,
-      bounds: { x: attempt.bounds.x, y: attempt.bounds.y + attempt.bounds.height + 12, width: attempt.bounds.width, height: 125 },
-      color: '#171713',
-      width: 7.5,
-      rotation: -0.8,
-      author: 'human',
-      opacity: 1,
-    })
-    if (capturedCorrection) {
-      const frame = worldRef.current.objects[OPENING_FRAME_ID]
-      run(humanAction('Corrected the Gamma recurrence sign', [
-        { type: 'put', object: capturedCorrection },
-        ...(frame?.kind === 'frame' && !frame.childIds.includes(OPENING_CORRECTION_ID)
-          ? [{ type: 'put' as const, object: { ...frame, childIds: [...frame.childIds, OPENING_CORRECTION_ID] } }]
-          : []),
-        { type: 'select', ids: [OPENING_CORRECTION_ID] },
-      ]))
-      return
+  /**
+   * Run one deterministic cue. Every Tutor step goes through the real WebMCP
+   * tool objects (trace, attribution, undo); every learner step goes through
+   * the same reducer the canvas uses. Cues are idempotent by construction.
+   */
+  const runDemoCue = useCallback(async (cue: DemoCueId) => {
+    if (cueRunningRef.current) return
+    cueRunningRef.current = cue
+    setCueRunning(cue)
+    try {
+      const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
+      const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+      const prepared = prepareDemoCue(cue, worldRef.current, { samples, activeProject: project?.templateId ?? null })
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      for (const thunk of prepared.steps) {
+        const step = thunk(worldRef.current)
+        if (!step) continue
+        if (step.kind === 'pause') {
+          if (!reduceMotion) await sleep(step.ms)
+          continue
+        }
+        if (step.kind === 'human') {
+          run(step.action)
+          if (!reduceMotion) await sleep(240)
+          continue
+        }
+        const tool = webMcpTools.find((candidate) => candidate.name === step.name)
+        if (!tool) continue
+        await waitForTutor()
+        const result = await tool.execute(step.input)
+        if (!result.ok) {
+          console.warn(`Cue ${cue} stopped at ${step.name}: ${result.error ?? 'tool failed'}`)
+          break
+        }
+        await waitForTutor()
+        if (!reduceMotion) await sleep(tool.annotations.readOnlyHint ? 180 : 320)
+      }
+      const restIds = (prepared.selectIds ?? []).filter((id) => Boolean(worldRef.current.objects[id]))
+      if (directorOpenRef.current) setDirectorSelection([])
+      else if (restIds.length && JSON.stringify(restIds) !== JSON.stringify(worldRef.current.selection)) {
+        run(humanAction('Selected object', [{ type: 'select', ids: restIds }]))
+      }
+    } finally {
+      cueRunningRef.current = null
+      setCueRunning(null)
     }
-    if (attempt.kind !== 'text') return
-    run(humanAction('Corrected the Gamma recurrence sign', [{
-      type: 'put', object: {
-        ...attempt,
-        text: 'Γ(9/2) = ∫₀∞ x⁷ᐟ²e⁻ˣ dx\n= [−x⁷ᐟ²e⁻ˣ]₀∞ + (7/2)Γ(7/2)\n= (7/2)(5/2)(3/2)(1/2)√π = 105√π/16',
-        bounds: { ...attempt.bounds, height: 205 },
-        author: 'human',
-      },
-    }]))
-  }
+  }, [run, webMcpTools])
 
-  const isDirectorShotAllowed = (shot: { scene: CatalogSceneId }) => {
+  // The Director is a film tool: it may step through every frame, opening the
+  // built-in project a frame belongs to exactly as the gallery would. Ordinary
+  // navigation stays limited to the active project's own two scenes.
+  const isDirectorShotAllowed = (_shot: { scene: CatalogSceneId }) => {
     const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
-    if (!project?.templateId || shot.scene === 'overview') return false
-    return getScenesForProject(project.templateId).some((scene) => scene.id === shot.scene)
+    return Boolean(project?.templateId)
+  }
+
+  /** Open the built-in project that owns a frame's scene without leaving Director review. */
+  const activateProjectForScene = (scene: CatalogSceneId) => {
+    if (scene === 'overview') return
+    const projectId = getProjectForScene(scene).id
+    const current = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+    if (current?.templateId === projectId) return
+    stashActiveProject()
+    const target = libraryProjectsRef.current.find((candidate) => candidate.kind === 'built-in' && candidate.id === projectId)
+    if (!target) return
+    const { width, height } = canvasSize()
+    activeDocumentIdRef.current = target.id
+    setActiveDocumentId(target.id)
+    const nextWorld = { ...target.world, title: target.title, selection: [] }
+    worldRef.current = nextWorld
+    setWorld(nextWorld)
+    const firstScene = getScenesForProject(projectId)[0].id
+    directorSceneSnapshotRef.current = {
+      scene: firstScene,
+      viewport: sceneViewportBookmark(cameraViewport(firstScene, width, height), width, height),
+    }
+    setEditorId(null)
+    setEditorMatrix(null)
   }
 
   const directorDefaultViewport = (scene: CatalogSceneId): Viewport => {
@@ -900,6 +906,7 @@ export default function MathburstWorkspace() {
   const selectDirectorShot = (id: string) => {
     const shot = DIRECTOR_SHOTS.find((candidate) => candidate.id === id)
     if (!shot || !isDirectorShotAllowed(shot) || !directorOpenRef.current) return
+    activateProjectForScene(shot.scene)
     const shotViewport = directorViewportForShot(directorState.shots[shot.id], shot.scene)
     const nextWorld = { ...worldRef.current, viewport: { ...shotViewport } }
     worldRef.current = nextWorld
@@ -1024,11 +1031,44 @@ export default function MathburstWorkspace() {
     updatedAt: Date.now(),
   }))
 
+  /** Screen-space anchors for a bridge, computed from camera math rather than the DOM. */
+  const bridgeEndpointsFor = (from: DirectorShot, to: DirectorShot): BridgeEndpoints | null => {
+    if (!from.bridge) return null
+    const { width, height } = canvasSize()
+    const canvasOrigin = { x: window.innerWidth - width, y: window.innerHeight - height }
+    const worldForScene = (scene: CatalogSceneId): WorldState => {
+      if (scene === 'overview') return buildOverviewWorld(libraryProjectsRef.current, activeDocumentIdRef.current, worldRef.current)
+      const projectId = getProjectForScene(scene).id
+      const current = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+      if (current?.templateId === projectId) return worldRef.current
+      return libraryProjectsRef.current.find((candidate) => candidate.kind === 'built-in' && candidate.id === projectId)?.world ?? worldRef.current
+    }
+    const project = (scene: CatalogSceneId, viewport: Viewport, world: WorldState, objectId: string, fraction: Point): Point | null => {
+      const object = world.objects[objectId]
+      if (!object) return scene === 'overview' ? { x: canvasOrigin.x + width / 2, y: canvasOrigin.y + height * 0.16 } : null
+      return {
+        x: canvasOrigin.x + viewport.x + (object.bounds.x + object.bounds.width * fraction.x) * viewport.zoom,
+        y: canvasOrigin.y + viewport.y + (object.bounds.y + object.bounds.height * fraction.y) * viewport.zoom,
+      }
+    }
+    const anchors = bridgeAnchors(from.bridge)
+    const sourceWorld = worldForScene(from.scene)
+    const targetWorld = worldForScene(to.scene)
+    const source = project(from.scene, directorViewport, sourceWorld, anchors.source.objectId, anchors.source.fraction)
+    const target = project(to.scene, directorViewportForShot(directorState.shots[to.id], to.scene), targetWorld, anchors.target.objectId, anchors.target.fraction)
+    if (!source || !target) return null
+    return { source, target, sourceLabel: anchors.source.label, targetLabel: anchors.target.label }
+  }
+
   const previewNextDirectorShot = () => {
     const availableShots = DIRECTOR_SHOTS.filter(isDirectorShotAllowed)
     if (!availableShots.length) return
     const index = availableShots.findIndex((shot) => shot.id === activeDirectorShot.id)
     const next = availableShots[(index + 1) % availableShots.length]
+    const endpoints = activeDirectorShot.bridge ? bridgeEndpointsFor(activeDirectorShot, next) : null
+    if (endpoints && activeDirectorShot.bridge) {
+      setBridgePlay({ key: Date.now(), transition: activeDirectorShot.bridge, endpoints })
+    }
     setDirectorCameraPreviewing(true)
     directorPreviewFrameRef.current = window.requestAnimationFrame(() => {
       directorPreviewFrameRef.current = null
@@ -1037,14 +1077,7 @@ export default function MathburstWorkspace() {
     window.setTimeout(() => setDirectorCameraPreviewing(false), 920)
   }
 
-  const prepareDirectorShot = async () => {
-    if (activeDirectorShot.prepare === 'tutor' && !worldRef.current.objects.opening_annotation_question) {
-      await openingTutor()
-    } else if (activeDirectorShot.prepare === 'correction') {
-      if (!worldRef.current.objects.opening_annotation_question) await openingTutor()
-      if (!worldRef.current.objects[OPENING_CORRECTION_ID]) correctGammaSign()
-    }
-  }
+  const prepareDirectorShot = () => { void runDemoCue(activeDirectorShot.cue) }
 
   useEffect(() => {
     if (!hydrated) return
@@ -1056,23 +1089,24 @@ export default function MathburstWorkspace() {
   }, [bridge, hydrated])
 
   const startReconstruction = () => {
-    runAgent(
-      proposeReconstruction(SOURCE_IMAGE_ID, demoReconstruction(false), ['recon_work']),
-      [SOURCE_IMAGE_ID],
-    )
+    const reconstruct = webMcpTools.find((tool) => tool.name === 'reconstruct_problem')
+    if (!reconstruct) return
+    void reconstruct.execute({
+      sourceImageId: SOURCE_IMAGE_ID,
+      proposedObjects: reconstructionObjects(false),
+      uncertainObjectIds: RECONSTRUCTION_UNCERTAIN_IDS,
+    })
   }
 
   const auditCurrentReconstruction = () => {
     if (!world.reconstruction) return
-    runAgent(
-      auditReconstruction(
-        world.reconstruction,
-        'Matched every symbol back to the photograph. Removed the duplicated x after the second integral.',
-        demoReconstruction(true),
-        [],
-      ),
-      [SOURCE_IMAGE_ID],
-    )
+    const audit = webMcpTools.find((tool) => tool.name === 'audit_reconstruction')
+    if (!audit) return
+    void audit.execute({
+      auditSummary: RECONSTRUCTION_AUDIT_SUMMARY,
+      proposedObjects: reconstructionObjects(true),
+      uncertainObjectIds: [],
+    })
   }
 
   const acceptReconstruction = () => {
@@ -1375,6 +1409,18 @@ export default function MathburstWorkspace() {
     run(humanAction('Fit selection', [{ type: 'viewport', viewport: viewportForBounds(bounds) }]))
   }
 
+  const directorOverviewWorld = useMemo(
+    () => directorOpen && activeDirectorShot.scene === 'overview'
+      ? buildOverviewWorld(libraryProjects, activeDocumentId, world)
+      : null,
+    [activeDirectorShot.scene, activeDocumentId, directorOpen, libraryProjects, world],
+  )
+  const canvasWorld = directorOverviewWorld ?? world
+  const ignoreRun = useCallback((_action: WorldAction) => { /* the overview is a camera state, never a document */ }, [])
+  const registeredCount = registrationStatus?.state === 'live' || registrationStatus?.state === 'partial'
+    ? `${registrationStatus.registered} / ${registrationStatus.total}`
+    : `${webMcpTools.length} / ${webMcpTools.length}`
+
   const projectBreadcrumb = activeLibraryProject?.templateId && activeScene !== 'overview'
     ? {
         number: String(Math.max(0, getScenesForProject(activeLibraryProject.templateId).findIndex((scene) => scene.id === activeScene)) + 1).padStart(2, '0'),
@@ -1441,11 +1487,11 @@ export default function MathburstWorkspace() {
       />
 
       <WorldCanvas
-        world={world}
-        scene={activeScene}
+        world={canvasWorld}
+        scene={directorOverviewWorld ? 'overview' : activeScene}
         navigationKey={canvasNavigationRevision}
         mode={directorOpen ? (mode === 'hand' ? 'hand' : 'select') : mode}
-        run={run}
+        run={directorOverviewWorld ? ignoreRun : run}
         onEditObject={openEditor}
         agentCommitIds={agentCommitIds}
         directorMode={directorOpen}
@@ -1461,12 +1507,13 @@ export default function MathburstWorkspace() {
           <section className="opening-tutor-panel" aria-label="Ask WebMCP tutor about the opening attempt">
             <header><span>01 · Reasoning check</span><b>human attempt</b></header>
             {!world.objects.opening_annotation_question ? (
-              <button type="button" disabled={agentBusy} onClick={() => { void openingTutor() }}>Ask WebMCP tutor</button>
+              <button type="button" data-demo-target="ask-tutor" disabled={agentBusy || Boolean(cueRunning)} onClick={() => { void runDemoCue('gamma-tutor') }}>Ask WebMCP tutor</button>
             ) : (
               <button
                 type="button"
-                onClick={correctGammaSign}
-                disabled={agentBusy || Boolean(world.objects[OPENING_CORRECTION_ID]) || (world.objects[OPENING_ATTEMPT_ID]?.kind === 'text' && world.objects[OPENING_ATTEMPT_ID].text.includes('105√π/16'))}
+                data-demo-target="correct-sign"
+                onClick={() => { void runDemoCue('gamma-corrected') }}
+                disabled={agentBusy || Boolean(cueRunning) || Boolean(world.objects[OPENING_CORRECTION_ID]) || (world.objects[OPENING_ATTEMPT_ID]?.kind === 'text' && world.objects[OPENING_ATTEMPT_ID].text.includes('105√π/16'))}
               >Correct the sign</button>
             )}
             <p>{world.objects.opening_annotation_question ? 'The Tutor marked the sign lost during integration by parts.' : 'Use the live page tools to inspect and annotate the recurrence.'}</p>
@@ -1512,7 +1559,10 @@ export default function MathburstWorkspace() {
           onResetShot={resetDirectorShot}
           onApproveShot={approveDirectorShot}
           onPreviewNext={previewNextDirectorShot}
-          onPrepareShot={activeDirectorShot.prepare ? () => { void prepareDirectorShot() } : undefined}
+          onPrepareShot={prepareDirectorShot}
+          onRunCue={(cue) => { void runDemoCue(cue) }}
+          cueRunning={cueRunning}
+          world={world}
         />
       ) : activeLibraryProject ? (
         <PersonalProjectNavigator
@@ -1546,7 +1596,21 @@ export default function MathburstWorkspace() {
       />
       <AgentPresence presence={presence} />
       <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />
-      <WebMCPTrace events={traceEvents} />
+      <WebMCPTrace events={traceEvents} world={canvasWorld} viewport={directorOpen ? directorViewport : world.viewport} />
+      {bridgePlay && (
+        <CinematicBridge
+          key={bridgePlay.key}
+          transition={bridgePlay.transition}
+          endpoints={bridgePlay.endpoints}
+          onDone={() => setBridgePlay(null)}
+        />
+      )}
+      {directorOpen && (activeDirectorShot.id === 'one-world' || activeDirectorShot.id === 'webmcp-crescendo') && (
+        <div className={`cinematic-lockup${activeDirectorShot.id === 'one-world' ? ' is-final' : ''}`} aria-live="polite">
+          {activeDirectorShot.id === 'one-world' && <p><b>One mathematical world.</b><span>Every agent can enter.</span></p>}
+          <small><i aria-hidden="true" />WebMCP <strong>{registeredCount}</strong></small>
+        </div>
+      )}
 
       {!directorOpen && selectedObjects.length > 0 && (
         <div className="object-context" aria-label="Selected object actions">
