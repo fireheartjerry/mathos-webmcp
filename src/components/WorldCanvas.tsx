@@ -20,6 +20,7 @@ import type { ResizeHandle } from '../domain/world/operations'
 import type { DirectorObjectOverride } from '../domain/world/director'
 import type { CatalogSceneId } from '../domain/world/projects'
 import type { Bounds, Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
+import { clampZoom } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
 import NodeEditor from './canvas/NodeEditor'
 import type { NodeRef } from './canvas/NodeEditor'
@@ -938,7 +939,7 @@ export default function WorldCanvas({
   const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault()
     const rect = canvasRef.current!.getBoundingClientRect()
-    const zoom = Math.min(2.5, Math.max(0.25, effectiveViewport.zoom * Math.exp(-event.deltaY * 0.0012)))
+    const zoom = clampZoom(effectiveViewport.zoom * Math.exp(-event.deltaY * 0.0012))
     const worldPoint = screenToWorld(event.clientX, event.clientY)
     const viewport = {
       x: event.clientX - rect.left - worldPoint.x * zoom,

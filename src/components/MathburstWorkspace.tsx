@@ -62,6 +62,7 @@ import {
   unionBounds,
 } from '../domain/world/operations'
 import type { AgentPresenceState, Point, Viewport, WorldAction, WorldObject, WorldOperation, WorldState } from '../domain/world/types'
+import { clampZoom } from '../domain/world/types'
 import ActivityRail from './ActivityRail'
 import AgentPresence from './AgentPresence'
 import BrandMark from './BrandMark'
@@ -124,10 +125,10 @@ const cameraViewportForWorld = (
   // Pad by the same fraction on both axes so a wide frame and a tall frame sit
   // in the picture identically.
   const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.06))
-  const zoom = Math.min(2.5, Math.max(0.25, Math.min(
+  const zoom = clampZoom(Math.min(
     Math.max(1, width - padding * 2) / frame.bounds.width,
     Math.max(1, height - padding * 2) / frame.bounds.height,
-  )))
+  ))
   return {
     x: width / 2 - (frame.bounds.x + frame.bounds.width / 2) * zoom,
     y: height / 2 - (frame.bounds.y + frame.bounds.height / 2) * zoom,
@@ -171,7 +172,7 @@ const sceneViewportBookmark = (viewport: Viewport, width: number, height: number
   canvasHeight: height,
 })
 
-const boundedViewportZoom = (zoom: number) => Math.min(2.5, Math.max(0.25, zoom))
+const boundedViewportZoom = (zoom: number) => clampZoom(zoom)
 
 type EquationView = Extract<WorldObject, { kind: 'equation' }>
 type ExpressionEntity = Extract<SemanticEntity, { kind: 'expression' }>
@@ -1299,7 +1300,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const zoomDirectorCamera = (factor: number) => {
     const { width, height } = canvasSize()
     const center = { x: width / 2, y: height / 2 }
-    const zoom = Math.min(2.5, Math.max(0.25, directorViewport.zoom * factor))
+    const zoom = clampZoom(directorViewport.zoom * factor)
     const focus = {
       x: (center.x - directorViewport.x) / directorViewport.zoom,
       y: (center.y - directorViewport.y) / directorViewport.zoom,
@@ -1706,7 +1707,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   )
 
   const zoomTo = (zoom: number) => {
-    run(humanAction('Changed zoom', [{ type: 'viewport', viewport: { ...world.viewport, zoom: Math.min(2.5, Math.max(0.25, zoom)) } }]))
+    run(humanAction('Changed zoom', [{ type: 'viewport', viewport: { ...world.viewport, zoom: clampZoom(zoom) } }]))
   }
 
   /**
@@ -1745,7 +1746,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     const rawZoom = bounds.width > 0 && bounds.height > 0
       ? Math.min(availableWidth / bounds.width, availableHeight / bounds.height)
       : 1
-    const zoom = Math.min(2.5, Math.max(0.25, Number.isFinite(rawZoom) ? rawZoom : 1))
+    const zoom = clampZoom(rawZoom)
     return {
       x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
       y: height / 2 - (bounds.y + bounds.height / 2) * zoom,

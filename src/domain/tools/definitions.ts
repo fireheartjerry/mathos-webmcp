@@ -707,13 +707,13 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     return outcome.ok ? { ...outcome, changedIds: outcome.changedIds ?? [], data: { ...(outcome.data ?? {}), direction: args.direction, ids: outcome.changedIds ?? [] } } : outcome
   })
 
-  const setViewport = tool('set_viewport', 'Set the world viewport', 'Pan and zoom the learner\'s camera to an exact viewport {x, y, zoom}. x, y are the world px offset of the top-left corner; zoom 0.25..2.5. Prefer focus_objects when you want particular objects in view.', schema({
+  const setViewport = tool('set_viewport', 'Set the world viewport', 'Pan and zoom the learner\'s camera to an exact viewport {x, y, zoom}. x, y are the world px offset of the top-left corner; zoom 0.25..4. Prefer focus_objects when you want particular objects in view.', schema({
     viewport: schema({
       x: { type: 'number', description: 'World px shown at the left edge of the canvas.' }, y: { type: 'number', description: 'World px shown at the top edge of the canvas.' },
-      zoom: { type: 'number', minimum: 0.25, maximum: 2.5, description: 'Zoom factor 0.25..2.5; 1 is 100%.' },
+      zoom: { type: 'number', minimum: 0.25, maximum: 4, description: 'Zoom factor 0.25..4; 1 is 100%.' },
     }, ['x', 'y', 'zoom'], { description: 'Target camera, e.g. {x: 0, y: 0, zoom: 1}.' }),
   }, ['viewport']), false, async (input) => {
-    const args = values(input, ['viewport']); if (!isRecord(args.viewport) || typeof args.viewport.x !== 'number' || typeof args.viewport.y !== 'number' || typeof args.viewport.zoom !== 'number' || !finite(args.viewport.x, args.viewport.y, args.viewport.zoom) || args.viewport.zoom < 0.25 || args.viewport.zoom > 2.5) throw new Error('viewport must be {x, y, zoom} with finite x, y in world px and zoom between 0.25 and 2.5, e.g. {"x": 0, "y": 0, "zoom": 1}.')
+    const args = values(input, ['viewport']); if (!isRecord(args.viewport) || typeof args.viewport.x !== 'number' || typeof args.viewport.y !== 'number' || typeof args.viewport.zoom !== 'number' || !finite(args.viewport.x, args.viewport.y, args.viewport.zoom) || args.viewport.zoom < 0.25 || args.viewport.zoom > 4) throw new Error('viewport must be {x, y, zoom} with finite x, y in world px and zoom between 0.25 and 4, e.g. {"x": 0, "y": 0, "zoom": 1}.')
     const viewport = args.viewport as Viewport
     return commit(bridge, action(`Moved the viewport to (${Math.round(viewport.x)}, ${Math.round(viewport.y)}) at ${viewport.zoom}×`, [{ type: 'viewport', viewport }]), [], { viewport })
   })

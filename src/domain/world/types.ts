@@ -5,6 +5,17 @@ export type Actor = 'human' | 'agent'
 export type Point = { x: number; y: number }
 export type Bounds = { x: number; y: number; width: number; height: number }
 export type Viewport = { x: number; y: number; zoom: number }
+
+/**
+ * Camera zoom range. The ceiling was 2.5, which meant every target under roughly
+ * 1000 world px framed identically -- a matrix cell and the card holding it both
+ * reached maximum zoom, so a detail shot and a feature shot looked the same. 4
+ * gives the camera somewhere to go on a single control. Handles and hairlines are
+ * drawn through --hs (1 / zoom) so they hold one screen pixel at any value here.
+ */
+export const ZOOM_MIN = 0.25
+export const ZOOM_MAX = 4
+export const clampZoom = (zoom: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number.isFinite(zoom) ? zoom : 1))
 export type InkStroke = { points: Point[] }
 
 export type BaseObject = {

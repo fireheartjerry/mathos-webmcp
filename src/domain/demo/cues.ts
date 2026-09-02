@@ -36,6 +36,7 @@ import type {
   WorldObject,
   WorldState,
 } from '../world/types'
+import { clampZoom } from '../world/types'
 import type { DemoCueId } from './shotContract'
 
 /**
@@ -510,7 +511,7 @@ function crescendoSteps(activeProject: ProjectId | null): CueThunk[] {
       summary: 'Tutor nudged the note',
       ids: [CRESCENDO_NOTE_ID], translate: { x: 0, y: -14 },
     }) : null,
-    (world) => tool('set_viewport', { viewport: { ...world.viewport, zoom: Math.min(2.5, Math.max(0.25, world.viewport.zoom)) } }),
+    (world) => tool('set_viewport', { viewport: { ...world.viewport, zoom: clampZoom(world.viewport.zoom) } }),
     (world) => tool('graph_expression', {
       latex: 'a\\,x\\,e^{-x}', parameters: { a: 1 }, showTangentAt: 1, shadeIntegral: [0, 2], bounds: proofBounds(world, 0),
     }),
