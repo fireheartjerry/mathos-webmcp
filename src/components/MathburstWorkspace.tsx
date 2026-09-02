@@ -467,14 +467,13 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     const element = document.querySelector('.world-canvas')
     if (!element) return
     const reframe = (width: number, height: number) => {
-      // The first measurement is not a no-op: the opening viewport was computed
-      // before this element existed, from the arithmetic fallback.
-      const previous = canvasMetricsRef.current ?? {
-        width: Math.max(1, window.innerWidth - RAIL_WIDTH),
-        height: Math.max(1, window.innerHeight - HEADER_HEIGHT),
-      }
+      // The first pass after mounting always frames the scene: the opening
+      // viewport was computed before this element existed and before the
+      // WebMCP column claimed its width, so it cannot be trusted. Later
+      // passes only act when the canvas actually changed size.
+      const previous = canvasMetricsRef.current
       canvasMetricsRef.current = { width, height }
-      if (Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1) return
+      if (previous && Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1) return
       if (directorOpenRef.current) return
       const scene = activeSceneRef.current
       if (scene === 'overview') return
