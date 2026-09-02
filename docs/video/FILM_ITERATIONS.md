@@ -64,3 +64,4 @@ Found on the full viewing pass:
 ## Render 3 — cycle 3: QA pass
 
 - Same take 8 capture; only the reconstruction camera changed in the manifest. Re-rendered final and review, re-probed, contact sheets regenerated.
+- The first cycle-3 push (zoom 1.14 at x 0.66) clipped the audit panel's right edge by a sliver on the review copy; re-set to zoom 1.12 at x 0.60 so the panel stays whole. The cycle-3 final started while `pnpm build` was running and Remotion's bundle server timed out; renders are run on an idle machine.
