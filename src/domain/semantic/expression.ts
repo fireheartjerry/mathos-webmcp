@@ -25,14 +25,17 @@ const FUNCTION_NAMES = new Set([
 
 const UNSAFE_PARAMETER_NAMES = new Set(['__proto__', 'prototype', 'constructor'])
 
-// Only this allow-list of Greek symbol commands is semantic; formatting,
+// Only known Greek symbol commands are eligible semantic controls. Formatting,
 // operator, and structural TeX commands remain invisible to discovery.
-const GREEK_PARAMETERS = new Set([
+const GREEK_COMMANDS = new Set([
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'varepsilon', 'zeta', 'eta',
   'theta', 'vartheta', 'iota', 'kappa', 'varkappa', 'lambda', 'mu', 'nu',
   'xi', 'omicron', 'pi', 'varpi', 'rho', 'varrho', 'sigma', 'varsigma',
   'tau', 'upsilon', 'phi', 'varphi', 'chi', 'psi', 'omega',
+  'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma', 'Upsilon', 'Phi', 'Psi', 'Omega',
 ])
+
+const GREEK_NON_PARAMETER_COMMANDS = new Set(['Gamma', 'Pi', 'pi'])
 
 const TEXT_COMMANDS = new Set(['mathrm', 'mathbf', 'mathit', 'mathsf', 'mathtt', 'text', 'textrm', 'textbf', 'operatorname'])
 
@@ -101,10 +104,10 @@ export function detectNamedParameters(latex: string): string[] {
     return ' '
   })
 
-  // Keep lowercase Greek command names as canonical ASCII chips. Case matters:
-  // `\\gamma` is a variable, while uppercase `\\Gamma` is a function symbol.
+  // Preserve command casing: `\\gamma` and `\\Delta` are variables, while
+  // uppercase `\\Gamma`/`\\Pi` and lowercase `\\pi` are function/constants.
   for (const command of commands) {
-    if (GREEK_PARAMETERS.has(command) && command !== 'pi') names.push(command)
+    if (GREEK_COMMANDS.has(command) && !GREEK_NON_PARAMETER_COMMANDS.has(command)) names.push(command)
   }
 
   for (const identifier of source.match(identifierPattern) ?? []) {
