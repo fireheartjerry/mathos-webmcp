@@ -178,7 +178,9 @@ function LiveGeometry({
   run: (action: WorldAction) => void
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const [dragging, setDragging] = useState<{ id: string; pointerId: number } | null>(null)
+  const [dragging, setDraggingState] = useState<{ id: string; pointerId: number } | null>(null)
+  const draggingRef = useRef<{ id: string; pointerId: number } | null>(null)
+  const setDragging = (next: { id: string; pointerId: number } | null) => { draggingRef.current = next; setDraggingState(next) }
   const [preview, setPreview] = useState<Point | null>(null)
   const primitives = preview && dragging
     ? object.primitives.map((primitive) => primitive.kind === 'point' && primitive.id === dragging.id ? { ...primitive, at: preview } : primitive)
@@ -207,21 +209,22 @@ function LiveGeometry({
   }
 
   const moveDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragging || dragging.pointerId !== event.pointerId) return
+    const active = draggingRef.current
+    if (!active || active.pointerId !== event.pointerId) return
     event.stopPropagation()
     setPreview(localPoint(event))
   }
 
   const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragging || dragging.pointerId !== event.pointerId) return
+    const active = draggingRef.current
+    if (!active || active.pointerId !== event.pointerId) return
     event.stopPropagation()
-    if (preview) {
-      const updated: GeometryObject = {
-        ...object,
-        primitives: object.primitives.map((primitive) => primitive.kind === 'point' && primitive.id === dragging.id ? { ...primitive, at: preview } : primitive),
-      }
-      run(humanPut(`Moved geometry point ${dragging.id}`, updated))
+    const point = localPoint(event)
+    const updated: GeometryObject = {
+      ...object,
+      primitives: object.primitives.map((primitive) => primitive.kind === 'point' && primitive.id === active.id ? { ...primitive, at: point } : primitive),
     }
+    run(humanPut(`Moved ${active.id}; every dependent mark recomputed`, updated))
     try { svgRef.current?.releasePointerCapture(event.pointerId) } catch { /* pointer already released */ }
     setDragging(null)
     setPreview(null)

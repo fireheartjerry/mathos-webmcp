@@ -40,7 +40,9 @@ const polygonPoints = (points: readonly Point[]) => points.map((point) => `${poi
  */
 export default function BarycentricView({ object, world, run }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const [drag, setDrag] = useState<Drag | null>(null)
+  const [drag, setDragState] = useState<Drag | null>(null)
+  const dragRef = useRef<Drag | null>(null)
+  const setDrag = (next: Drag | null) => { dragRef.current = next; setDragState(next) }
   const [previewPoint, setPreviewPoint] = useState<Point | null>(null)
   const [previewVertices, setPreviewVertices] = useState<Triangle | null>(null)
   const width = Math.max(280, object.bounds.width)
@@ -85,26 +87,30 @@ export default function BarycentricView({ object, world, run }: Props) {
   }
 
   const moveDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!drag || drag.pointerId !== event.pointerId) return
+    const active = dragRef.current
+    if (!active || active.pointerId !== event.pointerId) return
     event.preventDefault(); event.stopPropagation()
     const point = localPoint(event)
-    if (drag.kind === 'point') setPreviewPoint(point)
+    if (active.kind === 'point') setPreviewPoint(point)
     else setPreviewVertices((current) => {
       const next = [...(current ?? vertices)] as Triangle
-      next[drag.index] = { x: Math.max(12, Math.min(canvasWidth - 12, point.x)), y: Math.max(28, Math.min(canvasHeight - 12, point.y)) }
+      next[active.index] = { x: Math.max(12, Math.min(canvasWidth - 12, point.x)), y: Math.max(28, Math.min(canvasHeight - 12, point.y)) }
       return next
     })
   }
 
   const finishDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!drag || drag.pointerId !== event.pointerId) return
+    const active = dragRef.current
+    if (!active || active.pointerId !== event.pointerId) return
     event.preventDefault(); event.stopPropagation()
-    if (drag.kind === 'point') {
-      const point = previewPoint ?? localPoint(event)
+    const point = localPoint(event)
+    if (active.kind === 'point') {
       const weights = triangleAreas(point, vertices).weights
       run(humanPut(`Moved P to [${weights.map((weight) => weight.toFixed(2)).join(' : ')}]`, { ...object, weights }))
-    } else if (previewVertices) {
-      run(humanPut(`Moved vertex ${object.labels[drag.index]}; P follows the same weights`, { ...object, vertices: previewVertices }))
+    } else {
+      const nextVertices = [...(previewVertices ?? vertices)] as Triangle
+      nextVertices[active.index] = { x: Math.max(12, Math.min(canvasWidth - 12, point.x)), y: Math.max(28, Math.min(canvasHeight - 12, point.y)) }
+      run(humanPut(`Moved vertex ${object.labels[active.index]}; P follows the same weights`, { ...object, vertices: nextVertices }))
     }
     try { svgRef.current?.releasePointerCapture(event.pointerId) } catch { /* pointer already released */ }
     setDrag(null)

@@ -25,6 +25,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [draft, setDraft] = useState<{ a?: number; b?: number } | null>(null)
   const [draggingBound, setDraggingBound] = useState(false)
+  const draggingRef = useRef(false)
   const width = Math.max(420, object.bounds.width)
   const height = Math.max(300, object.bounds.height)
   const plotHeight = height - 150
@@ -91,16 +92,18 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const beginBoundDrag = (event: ReactPointerEvent<SVGCircleElement>) => {
     if (event.button !== 0) return
     event.preventDefault(); event.stopPropagation(); svgRef.current?.setPointerCapture(event.pointerId)
+    draggingRef.current = true
     setDraggingBound(true)
     setDraft({ b: committedBound })
   }
   const moveBound = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!draggingBound) return
+    if (!draggingRef.current) return
     event.preventDefault(); event.stopPropagation()
     setDraft({ b: Number(boundFromPointer(event).toFixed(2)) })
   }
   const endBound = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!draggingBound) return
+    if (!draggingRef.current) return
+    draggingRef.current = false
     event.preventDefault(); event.stopPropagation(); setDraggingBound(false)
     try { svgRef.current?.releasePointerCapture(event.pointerId) } catch { /* pointer already released */ }
     commit(`Moved the CDF bound b to ${short(Number(boundFromPointer(event).toFixed(2)))}`, { b: Number(boundFromPointer(event).toFixed(2)) })

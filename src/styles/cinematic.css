@@ -220,7 +220,8 @@
 .gamma-label, .gamma-mode-label { fill: var(--muted); font: 11px/1 var(--mono); }
 .gamma-bin-label { fill: var(--graphite); font: 500 11px/1 var(--mono); }
 .gamma-cdf-label { fill: var(--purple); font: 600 13px/1 var(--mono); }
-.gamma-probability-band { display: grid; grid-template-columns: 236px minmax(0, 1fr) 190px; gap: 14px; padding: 10px 16px 12px; border-top: 1px solid var(--line); }
+.gamma-probability-band { display: grid; grid-template-columns: 224px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 6px 18px; padding: 10px 16px 10px; border-top: 1px solid var(--line); }
+.gamma-probability-controls { grid-row: 1 / 3; }
 .gamma-probability-controls { position: static; display: grid; gap: 5px; padding: 0; background: transparent; border: 0; }
 .gamma-probability-formula { position: static; margin-bottom: 2px; font-size: 13px; }
 .gamma-probability-controls label { width: auto; display: grid; grid-template-columns: 1fr; gap: 3px; color: var(--muted); font: 11px/1 var(--mono); text-transform: none; }
@@ -239,9 +240,9 @@
 .gamma-bridge-table tr.is-log td { color: var(--muted); }
 .gamma-bridge-table tr.is-softmax td { color: var(--purple); }
 .gamma-bridge-table .gamma-sum { color: var(--purple); font-weight: 600; }
-.gamma-bridge-note { position: static; display: grid; align-content: start; gap: 5px; color: var(--muted); font: 11px/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.gamma-bridge-note { position: static; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: var(--muted); font: 10px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .gamma-bridge-note b { color: var(--graphite); font-weight: 600; }
-.gamma-bridge-note em { position: static; width: auto; color: var(--purple); font-size: 11px; font-style: normal; text-align: left; }
+.gamma-bridge-note em { position: static; width: auto; color: var(--purple); font-size: 10px; font-style: normal; text-align: left; }
 
 /* ---- Attention -------------------------------------------------------------- */
 .attention-view { display: grid; grid-template-columns: 392px minmax(0, 1fr); grid-template-rows: 40px minmax(0, 1fr); gap: 8px 14px; width: 100%; height: 100%; padding: 12px 14px 12px; box-sizing: border-box; overflow: hidden; background: var(--paper); font-family: var(--mono); }
