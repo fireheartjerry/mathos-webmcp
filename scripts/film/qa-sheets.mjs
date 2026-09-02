@@ -19,8 +19,8 @@ const times = []
 for (let t = 0.2; t < duration; t += STEP) times.push(t)
 const files = times.map((t, index) => {
   const file = `q${String(index).padStart(3, '0')}.png`
-  const label = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}.${String(Math.round((t % 1) * 10))}`
-  execFileSync('ffmpeg', ['-y', '-v', 'error', '-ss', t.toFixed(3), '-i', FILM, '-frames:v', '1', '-vf', `scale=480:-1,drawbox=x=0:y=0:w=64:h=20:color=0x171713@0.9:t=fill,drawtext=text='${label}':x=5:y=4:fontsize=13:fontcolor=0xf4f0e6:font=Consolas`, resolve(TMP, file)])
+  const label = `${Math.floor(t / 60)}m${String(Math.floor(t % 60)).padStart(2, '0')}.${String(Math.round((t % 1) * 10))}`
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-ss', t.toFixed(3), '-i', FILM, '-frames:v', '1', '-vf', `scale=480:-1,drawbox=x=0:y=0:w=64:h=20:color=0x171713@0.9:t=fill,drawtext=text='${label}':x=5:y=4:fontsize=13:fontcolor=0xf4f0e6:fontfile=/Windows/Fonts/consola.ttf`, resolve(TMP, file)])
   return file
 })
 

@@ -135,7 +135,7 @@
           "waitFor": ".audit-button"
         },
         {
-          "wait": 3000
+          "wait": 2400
         },
         {
           "click": ".audit-button"
@@ -144,7 +144,7 @@
           "waitFor": ".approve-button"
         },
         {
-          "wait": 3000
+          "wait": 2400
         },
         {
           "click": ".approve-button"
@@ -237,7 +237,7 @@
     {
       "id": "attention",
       "title": "Attention geometry",
-      "seconds": 19,
+      "seconds": 18,
       "approved": true,
       "steps": [
         {
@@ -614,7 +614,7 @@
     {
       "id": "one-world",
       "title": "One mathematical world",
-      "seconds": 8,
+      "seconds": 7,
       "approved": true,
       "steps": [
         {

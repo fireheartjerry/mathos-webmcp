@@ -284,6 +284,8 @@ export default function MathburstWorkspace() {
   const [directorState, setDirectorState] = useState(EMPTY_DIRECTOR_REVIEW)
   const [directorSelection, setDirectorSelection] = useState<string[]>([])
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
+  const [projectSwitchPhase, setProjectSwitchPhase] = useState<'out' | 'in' | null>(null)
+  const projectSwitchTimersRef = useRef<number[]>([])
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
   const [filmMode, setFilmMode] = useState(false)
   useEffect(() => { setFilmMode(detectFilmMode()) }, [])
@@ -1124,6 +1126,23 @@ export default function MathburstWorkspace() {
     if (endpoints && activeDirectorShot.bridge) {
       setBridgePlay({ key: Date.now(), transition: activeDirectorShot.bridge, endpoints })
     }
+    const projectOf = (scene: CatalogSceneId) => (scene === 'overview' ? null : getProjectForScene(scene).id)
+    const fromProject = projectOf(activeDirectorShot.scene)
+    const toProject = projectOf(next.scene)
+    if (fromProject && toProject && fromProject !== toProject) {
+      // Different project: never pan across its empty canvas. Dim, cut, fade in.
+      for (const timer of projectSwitchTimersRef.current) window.clearTimeout(timer)
+      setProjectSwitchPhase('out')
+      projectSwitchTimersRef.current = [
+        window.setTimeout(() => {
+          if (!directorOpenRef.current) { setProjectSwitchPhase(null); return }
+          selectDirectorShot(next.id)
+          setProjectSwitchPhase('in')
+        }, 300),
+        window.setTimeout(() => setProjectSwitchPhase(null), 900),
+      ]
+      return
+    }
     setDirectorCameraPreviewing(true)
     directorPreviewFrameRef.current = window.requestAnimationFrame(() => {
       directorPreviewFrameRef.current = null
@@ -1541,7 +1560,7 @@ export default function MathburstWorkspace() {
       : undefined
 
   return (
-    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen} data-film={filmMode}>
+    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen} data-film={filmMode} data-project-switch={projectSwitchPhase ?? undefined}>
       {filmMode && <FilmCursor />}
       <header className="world-header">
         <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><BrandMark className="brand-mark" /><span>Mathburst</span></button>

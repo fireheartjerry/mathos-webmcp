@@ -66,6 +66,10 @@
 .world-canvas { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='1' cy='1' r='0.7' fill='%23171713' fill-opacity='0.11'/%3E%3C/svg%3E"); }
 .world-stage { transition: transform 620ms var(--ease-out); }
 .world-canvas[data-camera-preview='true'] .world-stage { transition: transform 1050ms var(--ease-in-out); }
+/* Project switches do not pan across an empty canvas: the outgoing world dims, the incoming one fades in. */
+.mathburst-app[data-project-switch='out'] .world-stage { transition: opacity 300ms var(--ease-in-out); opacity: 0.12; }
+.mathburst-app[data-project-switch='in'] .world-stage { transition: none; animation: cinematic-switch-in 560ms var(--ease-out) both; }
+@keyframes cinematic-switch-in { from { opacity: 0; } to { opacity: 1; } }
 .world-object.is-agent-commit { animation: agent-commit 620ms var(--ease-out) both; }
 @keyframes agent-commit {
   0% { box-shadow: 0 0 0 2px var(--purple), 0 0 0 14px rgba(124, 92, 255, 0.22); }
@@ -163,9 +167,9 @@
 .cinematic-lockup:not(.is-final) { animation: none; }
 
 .cinematic-bridge { position: fixed; inset: 0; z-index: 135; width: 100vw; height: 100vh; overflow: visible; pointer-events: none; }
-.bridge-guide { stroke: rgba(124, 92, 255, 0.3); stroke-width: 1; stroke-dasharray: 3 5; }
-.bridge-segment { fill: none; stroke: var(--graphite); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.bridge-segment.is-focus { stroke: var(--purple); stroke-width: 3; }
+.bridge-guide { stroke: rgba(124, 92, 255, 0.3); stroke-width: calc(1px * var(--bridge-size, 1)); stroke-dasharray: 3 5; }
+.bridge-segment { fill: none; stroke: var(--graphite); stroke-width: calc(2.4px * var(--bridge-size, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.bridge-segment.is-focus { stroke: var(--purple); stroke-width: calc(3px * var(--bridge-size, 1)); }
 .bridge-dot { fill: var(--graphite); }
 .bridge-dot.is-focus { fill: var(--purple); stroke: var(--ivory); stroke-width: 1.5; }
 .bridge-caption text { fill: var(--graphite); font: 500 13px/1 var(--serif); }

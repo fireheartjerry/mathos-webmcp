@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { BridgeTransition } from '../domain/demo/shotContract'
 import type { Point } from '../domain/world/types'
@@ -204,21 +205,23 @@ export default function CinematicBridge({
   const t = easeInOut(progress)
   const position = lerpPoint(endpoints.source, endpoints.target, t)
   const frame = frameFor(transition, t, endpoints.values)
-  const scale = 1 + 0.35 * Math.sin(Math.PI * t)
+  // Bridges are authored at ~140 px; scale them with the frame so they read at 2560 wide.
+  const size = Math.max(1, Math.min(window.innerWidth, window.innerHeight) / 640)
+  const scale = size * (1 + 0.35 * Math.sin(Math.PI * t))
   const toScreen = (point: Point): string => `${(position.x + point.x * scale).toFixed(1)},${(position.y + point.y * scale).toFixed(1)}`
   const captionOpacity = Math.sin(Math.PI * t)
 
   return (
-    <svg className="cinematic-bridge" aria-hidden="true">
+    <svg className="cinematic-bridge" aria-hidden="true" style={{ '--bridge-size': size } as CSSProperties}>
       <line className="bridge-guide" x1={endpoints.source.x} y1={endpoints.source.y} x2={position.x} y2={position.y} />
       {frame.segments.map((segment, index) => (
         <polyline key={index} className={`bridge-segment is-${segment.role}`} points={segment.points.map(toScreen).join(' ')} />
       ))}
       {frame.dots.map((dot, index) => {
         const [x, y] = toScreen(dot.at).split(',').map(Number)
-        return <circle key={index} className={`bridge-dot is-${dot.role}`} cx={x} cy={y} r={dot.role === 'focus' ? 4.5 : 2.6} />
+        return <circle key={index} className={`bridge-dot is-${dot.role}`} cx={x} cy={y} r={(dot.role === 'focus' ? 4.5 : 2.6) * size} />
       })}
-      <g className="bridge-caption" style={{ opacity: captionOpacity }} transform={`translate(${position.x.toFixed(1)}, ${(position.y + 78 * scale).toFixed(1)})`}>
+      <g className="bridge-caption" style={{ opacity: captionOpacity }} transform={`translate(${position.x.toFixed(1)}, ${(position.y + 78 * scale).toFixed(1)}) scale(${size.toFixed(2)})`}>
         <text textAnchor="middle">{frame.caption}</text>
         <text className="bridge-caption-endpoints" textAnchor="middle" y="18">{endpoints.sourceLabel} → {endpoints.targetLabel}</text>
       </g>
