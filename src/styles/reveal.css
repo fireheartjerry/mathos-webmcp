@@ -1,0 +1,28 @@
+/* ---------------------------------------------------------------------------
+   Staged reveals driven by object.drawProgress.
+
+   WorldObjectView fades every non-ink object by drawProgress on the wrapper;
+   a child cannot undo a parent's opacity, so while a view is mid-reveal the
+   wrapper is pinned to 1 here (an author !important beats the inline style)
+   and the view root carries the object's own opacity instead. Mount
+   animations on cells and geometry marks are silenced during a reveal so the
+   fraction, not a CSS timer, owns every element.
+   --------------------------------------------------------------------------- */
+
+.world-object:has(.reveal-root.is-revealing) {
+  opacity: 1 !important;
+}
+
+.reveal-root.is-revealing,
+.reveal-root.is-revealing * {
+  animation: none !important;
+}
+
+.reveal-root.is-revealing [data-reveal-hidden='true'] {
+  visibility: hidden;
+}
+
+/* Block-level pieces that fade rather than draw. */
+.reveal-fade {
+  will-change: opacity;
+}

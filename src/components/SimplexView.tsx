@@ -15,6 +15,8 @@ import {
   type Vec3,
 } from '../domain/math/simplex'
 import type { SimplexObject, WorldAction } from '../domain/world/types'
+import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import '../styles/reveal.css'
 
 type Props = {
   object: SimplexObject
@@ -74,7 +76,16 @@ export default function SimplexView({ object, run }: Props) {
   const projected = useMemo(() => projectTetrahedron(TETRAHEDRON, rotation, projection), [rotationX, rotationY, plotWidth, plotHeight])
   const point3D = pointFromSimplexWeights(TETRAHEDRON, weights)
   const projectedPoint = rotateAndProject(point3D, rotation, projection)
-  const section3D = TETRAHEDRON.slice(0, 3).map((vertex) => lerp(vertex, TETRAHEDRON[3], section)) as [Vec3, Vec3, Vec3]
+  // ---- staged reveal: edges → lattice → section plane sweeping down from the apex --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const edgesT = revealStage(p, 0, 0.4)
+  const latticeT = revealStage(p, 0.4, 0.7)
+  const sectionT = revealStage(p, 0.7, 1)
+  const pointT = revealStage(p, 0.85, 1)
+  const sideT = revealStage(p, 0, 0.2)
+  const drawnSection = 1 - (1 - section) * sectionT
+  const section3D = TETRAHEDRON.slice(0, 3).map((vertex) => lerp(vertex, TETRAHEDRON[3], drawnSection)) as [Vec3, Vec3, Vec3]
   const sectionPoints = section3D.map((vertex) => rotateAndProject(vertex, rotation, projection))
   const recurrence = pascalRecurrence(denominator, 3)
   const lattice = useMemo(() => object.showLattice ? normalizedSimplexLatticePoints(denominator) : [], [object.showLattice, denominator])
@@ -119,28 +130,38 @@ export default function SimplexView({ object, run }: Props) {
   )
 
   return (
-    <div className="simplex-view" onPointerDown={stop}>
+    <div className={`simplex-view reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
       <svg className="simplex-canvas" viewBox={`0 0 ${plotWidth} ${plotHeight}`} aria-label="Projected tetrahedral probability simplex">
         <rect className="simplex-paper" width={plotWidth} height={plotHeight} />
-        <text className="simplex-kicker" x="16" y="19">4-WEIGHT PROBABILITY SIMPLEX · PERSPECTIVE PROJECTION</text>
-        <polygon className="simplex-face" points={projected.slice(0, 3).map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} />
-        {EDGE_PAIRS.map(([first, second]) => <line key={`${first}-${second}`} className="simplex-edge" x1={projected[first].x} y1={projected[first].y} x2={projected[second].x} y2={projected[second].y} />)}
+        <text className="simplex-kicker" x="16" y="19" style={{ opacity: revealStage(p, 0, 0.15) }}>4-WEIGHT PROBABILITY SIMPLEX · PERSPECTIVE PROJECTION</text>
+        <polygon className="simplex-face" points={projected.slice(0, 3).map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} style={{ opacity: revealStage(p, 0.3, 0.45) }} />
+        {EDGE_PAIRS.map(([first, second], index) => {
+          const t = revealItem(edgesT, index, EDGE_PAIRS.length, 0.8)
+          if (t <= 0) return null
+          return <line key={`${first}-${second}`} className="simplex-edge" x1={projected[first].x} y1={projected[first].y} x2={projected[second].x} y2={projected[second].y} pathLength={1} style={revealDash(t)} />
+        })}
         {lattice.map((latticeWeights, index) => {
+          const t = revealItem(latticeT, index, lattice.length, 3)
+          if (t <= 0) return null
           const mapped = rotateAndProject(pointFromSimplexWeights(TETRAHEDRON, latticeWeights), rotation, projection)
           const onPlane = Math.abs(latticeWeights[3] - section) < 1e-9
-          return <circle key={`lattice-${index}`} className={`simplex-lattice-point${onPlane ? ' is-on-section' : ''}`} cx={mapped.x} cy={mapped.y} r={onPlane ? 2.8 : 2} />
+          return <circle key={`lattice-${index}`} className={`simplex-lattice-point${onPlane ? ' is-on-section' : ''}`} cx={mapped.x} cy={mapped.y} r={onPlane ? 2.8 : 2} style={t < 1 ? { opacity: 0.65 * t } : undefined} />
         })}
-        <polygon className={`simplex-section${onSection ? ' is-holding-point' : ''}`} points={sectionPoints.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} />
+        {sectionT > 0 && <polygon className={`simplex-section${onSection ? ' is-holding-point' : ''}`} points={sectionPoints.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} />}
         {sectionPoints.map((vertex, index) => (
-          <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + 6} y={vertex.y - 5}>{LABELS[index]}<tspan baselineShift="sub" fontSize="8">t</tspan></text>
+          <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + 6} y={vertex.y - 5} style={{ opacity: sectionT }}>{LABELS[index]}<tspan baselineShift="sub" fontSize="8">t</tspan></text>
         ))}
-        <circle className={`simplex-interior-point${onSection ? ' is-on-section' : ''}`} cx={projectedPoint.x} cy={projectedPoint.y} r="7" />
-        <text className="simplex-interior-label" x={projectedPoint.x + 11} y={projectedPoint.y - 9}>P [{weights.map((weight) => weight.toFixed(2)).join(' : ')}]</text>
-        {projected.map((vertex, index) => <g key={LABELS[index]}><circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r="4.5" /><text className="simplex-vertex-label" x={vertex.x + 9} y={vertex.y - 9}>{LABELS[index]}</text></g>)}
-        <text className="simplex-section-label" x={plotWidth - 16} y={19} textAnchor="end">section δ = {section.toFixed(2)}{onSection ? ' · holds P' : ''}</text>
+        {pointT > 0 && <circle className={`simplex-interior-point${onSection ? ' is-on-section' : ''}`} cx={projectedPoint.x} cy={projectedPoint.y} r={7 * pointT} />}
+        <text className="simplex-interior-label" x={projectedPoint.x + 11} y={projectedPoint.y - 9} style={{ opacity: pointT }}>P [{weights.map((weight) => weight.toFixed(2)).join(' : ')}]</text>
+        {projected.map((vertex, index) => {
+          const t = revealStage(p, index * 0.08, index * 0.08 + 0.12)
+          if (t <= 0) return null
+          return <g key={LABELS[index]}><circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r={4.5 * t} /><text className="simplex-vertex-label" x={vertex.x + 9} y={vertex.y - 9} style={{ opacity: t }}>{LABELS[index]}</text></g>
+        })}
+        <text className="simplex-section-label" x={plotWidth - 16} y={19} textAnchor="end" style={{ opacity: sectionT }}>section δ = {section.toFixed(2)}{onSection ? ' · holds P' : ''}</text>
       </svg>
 
-      <aside className="simplex-side" onPointerDown={stop}>
+      <aside className="simplex-side reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
         <div className="simplex-weight-grid">
           {weights.map((weight, index) => (
             <div key={LABELS[index]} className={index === 3 ? 'is-hero' : undefined}>

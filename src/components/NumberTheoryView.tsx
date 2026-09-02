@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import {
   compositionToPartition,
   ferrersDiagram,
@@ -11,7 +11,9 @@ import {
 } from '../domain/math/partitions'
 import { tetrahedralLatticeCount } from '../domain/math/simplex'
 import type { NumberTheoryObject, WorldAction, WorldState } from '../domain/world/types'
+import { revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
 import { Tex } from './Tex'
+import '../styles/reveal.css'
 
 type NumberTheoryViewProps = {
   object: NumberTheoryObject
@@ -67,6 +69,19 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
   const selectedCoefficient = coefficients[selectedN]
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
+  // ---- staged reveal: coefficient cells left→right → residue lanes → theorem card --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const headerT = revealStage(p, 0, 0.15)
+  const chainT = revealStage(p, 0.05, 0.25)
+  const cellsT = revealStage(p, 0, 0.6)
+  const lanesT = revealStage(p, 0.6, 0.9)
+  const theoremT = revealStage(p, 0.9, 1)
+  const cellStyle = (index: number, count: number, extra?: CSSProperties): CSSProperties => {
+    const t = revealItem(cellsT, index, count, 1)
+    return { ...extra, opacity: t, transform: t < 1 ? `translateY(${((1 - t) * 6).toFixed(2)}px)` : undefined }
+  }
+
   const commit = (summary: string) => {
     const next: NumberTheoryObject = { ...object, selectedN, finiteCutoff: cutoff }
     setDraft(null)
@@ -76,8 +91,8 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
   const reveal = (revealTheorem: boolean) => run(humanPut(revealTheorem ? 'Revealed the verified p(5n+4) lane' : 'Hid the theorem', { ...object, revealTheorem }))
 
   return (
-    <section className="number-theory-view" aria-label="Integer partitions" onPointerDown={stop}>
-      <header className="number-theory-header">
+    <section className={`number-theory-view reveal-root${revealing ? ' is-revealing' : ''}`} aria-label="Integer partitions" onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
+      <header className="number-theory-header reveal-fade" style={{ opacity: headerT }}>
         <div>
           <span className="math-object-kicker">INTEGER PARTITIONS · FINITE EULER PRODUCT</span>
           <h3>Lattice points become partition coefficients</h3>
@@ -106,7 +121,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
         </div>
       </header>
 
-      <div className="number-theory-chain" aria-label="Lattice point to partition">
+      <div className="number-theory-chain reveal-fade" aria-label="Lattice point to partition" style={{ opacity: chainT }}>
         <div className="number-theory-step">
           <small>simplex lattice point · N = {denominator}</small>
           <strong>({tuple.join(', ')})</strong>
@@ -138,18 +153,18 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
 
       <div className="coefficient-strip" aria-label={`Partition coefficients from zero to ${cutoff}`} data-cutoff={cutoff}>
         {coefficients.map((value, index) => (
-          <div key={index} className={`coefficient-cell${index === selectedN ? ' is-selected' : ''}${index % 5 === 4 ? ' is-lane-four' : ''}`} style={{ animationDelay: `${index * 34}ms` }}>
+          <div key={index} className={`coefficient-cell${index === selectedN ? ' is-selected' : ''}${index % 5 === 4 ? ' is-lane-four' : ''}`} style={cellStyle(index, coefficients.length, { animationDelay: `${index * 34}ms` })}>
             <small>p({index})</small>
             <b>{value}</b>
           </div>
         ))}
-        <div className="coefficient-selected"><span>p({selectedN}) =</span><b>{selectedCoefficient}</b></div>
+        <div className="coefficient-selected" style={{ opacity: revealStage(p, 0.55, 0.65) }}><span>p({selectedN}) =</span><b>{selectedCoefficient}</b></div>
       </div>
 
       <section className="residue-observatory" aria-label="Five residue lanes">
         <div className="residue-lanes">
-          {lanes.map((lane) => (
-            <div key={lane.residue} className={`residue-lane${lane.residue === 4 ? ' is-highlighted' : ''}`}>
+          {lanes.map((lane, laneIndex) => (
+            <div key={lane.residue} className={`residue-lane${lane.residue === 4 ? ' is-highlighted' : ''}`} style={(() => { const t = revealItem(lanesT, laneIndex, lanes.length, 0.6); return { opacity: t, transform: t < 1 ? `translateX(${((1 - t) * -10).toFixed(2)}px)` : undefined } })()}>
               <span className="residue-lane-label">n ≡ {lane.residue} (mod 5)</span>
               <div className="residue-lane-values">
                 {lane.values.map((entry) => (
@@ -164,7 +179,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
       </section>
 
       {object.revealTheorem ? (
-        <aside className={`ramanujan-reveal ${verification.verified ? 'is-verified' : 'has-counterexample'}`}>
+        <aside className={`ramanujan-reveal ${verification.verified ? 'is-verified' : 'has-counterexample'}`} style={{ opacity: theoremT }}>
           <div className="ramanujan-statement">
             <span className="math-object-kicker">THEOREM · RAMANUJAN (1919)</span>
             <h4><Tex latex={'p(5n+4)\\equiv 0\\pmod 5'} /></h4>
@@ -177,7 +192,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
           <button type="button" onPointerDown={stop} onClick={() => reveal(false)}>hide</button>
         </aside>
       ) : (
-        <button className="ramanujan-tease" type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)}>
+        <button className="ramanujan-tease" type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)} style={{ opacity: theoremT }}>
           <span>?</span> every value in the n ≡ 4 lane is a multiple of five · reveal the theorem
         </button>
       )}

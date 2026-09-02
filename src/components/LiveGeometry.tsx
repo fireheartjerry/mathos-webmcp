@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import {
   RAY_PREFIX,
@@ -17,7 +17,9 @@ import type { ResolvedAngle, ResolvedGeometry, ResolvedPoint } from '../domain/m
 import type { GeometryObject, GeometryPrimitive, GraphObject, MatrixObject, Point, WorldAction } from '../domain/world/types'
 import GeometryToolbar, { GEOMETRY_TOOLS } from './GeometryToolbar'
 import type { GeometryTool } from './GeometryToolbar'
+import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
 import '../styles/geometry.css'
+import '../styles/reveal.css'
 
 const humanPut = (summary: string, object: GraphObject | GeometryObject | MatrixObject): WorldAction => ({
   id: crypto.randomUUID(),
@@ -28,6 +30,54 @@ const humanPut = (summary: string, object: GraphObject | GeometryObject | Matrix
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 const RAY_LENGTH = 1200
+
+/** Ids a primitive is built from; base points reference nothing. */
+function primitiveRefs(primitive: GeometryPrimitive): string[] {
+  switch (primitive.kind) {
+    case 'point': return []
+    case 'segment': return [primitive.from, primitive.to]
+    case 'line': return [...primitive.through]
+    case 'circle': return [primitive.center, primitive.through]
+    case 'polygon': return [...primitive.points]
+    case 'midpoint': return [...primitive.of]
+    case 'perpendicular':
+    case 'parallel': return [primitive.through, primitive.to]
+    case 'intersection': return [...primitive.lines]
+    case 'angle': return [primitive.a, primitive.vertex, primitive.b]
+    case 'homothety':
+    case 'similarity': return [primitive.center, primitive.source]
+    case 'spiralCenter': return [primitive.a, primitive.b, primitive.a2, primitive.b2]
+  }
+}
+
+/** Within one dependency layer: points, then segments/lines/polygons, then circles, then derived points, then angles. */
+const REVEAL_RANK: Record<GeometryPrimitive['kind'], number> = {
+  point: 0, segment: 1, line: 1, polygon: 1, perpendicular: 1, parallel: 1, circle: 2,
+  midpoint: 3, intersection: 3, homothety: 3, similarity: 3, spiralCenter: 3, angle: 4,
+}
+
+/**
+ * Drawing order for the staged reveal: a primitive joins the order once every
+ * id it references has been revealed, so the figure builds the way it was
+ * constructed. Hidden points are revealed silently (they take no slot).
+ */
+function revealOrder(primitives: GeometryPrimitive[]): string[] {
+  const known = new Set(primitives.map((primitive) => primitive.id))
+  const revealed = new Set<string>()
+  const order: string[] = []
+  let pending = primitives.slice()
+  while (pending.length) {
+    let ready = pending.filter((primitive) => primitiveRefs(primitive).every((id) => revealed.has(id) || !known.has(id)))
+    if (!ready.length) ready = pending
+    ready.sort((a, b) => REVEAL_RANK[a.kind] - REVEAL_RANK[b.kind])
+    for (const primitive of ready) {
+      revealed.add(primitive.id)
+      if (!(primitive.kind === 'point' && primitive.hidden)) order.push(primitive.id)
+    }
+    pending = pending.filter((primitive) => !revealed.has(primitive.id))
+  }
+  return order
+}
 
 /** Live ratio and angle readouts computed from the resolved figure, never from the primitive factors. */
 function constructionReadouts(points: ResolvedPoint[]): Array<{ id: string; label: string; value: string; tone: 'invariant' | 'tutor' }> {
@@ -131,6 +181,19 @@ export default function LiveGeometry({
   const hasSpiral = resolved.points.some((point) => point.id === 'S')
   const pointAt = (id: string) => resolved.points.find((point) => point.id === id)?.point ?? null
   const pendingIds = new Set(pending.map((item) => item.id))
+
+  // ---- staged reveal: primitives draw in dependency order from drawProgress --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const order = useMemo(() => revealOrder(object.primitives), [object.primitives])
+  const orderIndex = useMemo(() => new Map(order.map((id, index) => [id, index])), [order])
+  const drawT = (id: string) => {
+    if (!revealing) return 1
+    const index = orderIndex.get(id)
+    return index === undefined ? 1 : revealItem(p, index, order.length, 0.7)
+  }
+  const kickerT = revealStage(p, 0, 0.15)
+  const legendT = revealStage(p, 0.85, 1)
 
   const setTool = (next: GeometryTool) => {
     setToolState(next)
@@ -466,12 +529,13 @@ export default function LiveGeometry({
     run(humanPut(`Set ${nameOf(id, object.primitives)} to (${at.x}, ${at.y})`, updated))
   }
 
-  const rootClass = ['live-geometry', 'has-toolbar', tool === 'move' ? 'is-moving' : tool === 'delete' ? 'is-deleting' : 'is-constructing'].join(' ')
+  const rootClass = ['live-geometry', 'has-toolbar', 'reveal-root', revealing ? 'is-revealing' : '', tool === 'move' ? 'is-moving' : tool === 'delete' ? 'is-deleting' : 'is-constructing'].filter(Boolean).join(' ')
 
   return (
     <div
       ref={rootRef}
       className={rootClass}
+      style={revealing ? { opacity: object.opacity } : undefined}
       tabIndex={-1}
       onPointerEnter={() => { activeRef.current = true }}
       onPointerLeave={() => { activeRef.current = rootRef.current?.contains(document.activeElement) ?? false; if (isConstructing && !draggingRef.current) setCursor(null) }}
@@ -500,55 +564,78 @@ export default function LiveGeometry({
         onClick={tool === 'move' ? handleMoveSelect : handleConstructClick}
       >
         <rect className="geometry-paper" width={width} height={height} />
-        <text className="geometry-kicker" x="18" y="20">HOMOTHETY · SPIRAL SIMILARITY</text>
-        {resolved.polygons.map((polygon) => (
-          <polygon
-            key={polygon.id}
-            className={`geometry-polygon is-${polygon.id}${selected === polygon.id ? ' is-selected' : ''}`}
-            points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')}
-            data-primitive-id={polygon.id}
-            data-canvas-handle="true"
-            onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, polygon.id) : undefined}
-          />
-        ))}
-        {resolved.circles.map((circle) => <g key={circle.id}>
-          <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} />
-          <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
-        </g>)}
+        <text className="geometry-kicker" x="18" y="20" style={{ opacity: kickerT }}>HOMOTHETY · SPIRAL SIMILARITY</text>
+        {resolved.polygons.map((polygon) => {
+          const t = drawT(polygon.id)
+          if (t <= 0) return null
+          return (
+            <polygon
+              key={polygon.id}
+              className={`geometry-polygon is-${polygon.id}${selected === polygon.id ? ' is-selected' : ''}`}
+              points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')}
+              pathLength={1}
+              style={t < 1 ? { ...revealDash(t), fillOpacity: t } : undefined}
+              data-primitive-id={polygon.id}
+              data-canvas-handle="true"
+              onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, polygon.id) : undefined}
+            />
+          )
+        })}
+        {resolved.circles.map((circle) => {
+          const t = drawT(circle.id)
+          if (t <= 0) return null
+          return <g key={circle.id}>
+            <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
+            <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
+          </g>
+        })}
         {resolved.lines.map((line) => {
+          const t = drawT(line.id)
+          if (t <= 0) return null
           const ends = lineEndpoints(line)
           return <g key={line.id}>
-            <line className={`geometry-line is-${line.id}${selected === line.id ? ' is-selected' : ''}${pendingIds.has(line.id) ? ' is-pending' : ''}`} {...ends} />
+            <line className={`geometry-line is-${line.id}${selected === line.id ? ' is-selected' : ''}${pendingIds.has(line.id) ? ' is-pending' : ''}`} {...ends} pathLength={1} style={revealDash(t)} />
             <line className="geometry-hit" {...ends} data-primitive-id={line.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, line.id) : undefined} />
           </g>
         })}
-        {resolved.segments.map((segment) => <g key={segment.id}>
-          <line className={`geometry-segment is-${segment.id}${selected === segment.id ? ' is-selected' : ''}${pendingIds.has(segment.id) ? ' is-pending' : ''}`} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} />
-          <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
-        </g>)}
+        {resolved.segments.map((segment) => {
+          const t = drawT(segment.id)
+          if (t <= 0) return null
+          return <g key={segment.id}>
+            <line className={`geometry-segment is-${segment.id}${selected === segment.id ? ' is-selected' : ''}${pendingIds.has(segment.id) ? ' is-pending' : ''}`} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} pathLength={1} style={revealDash(t)} />
+            <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
+          </g>
+        })}
         {resolved.angles.map((angle) => {
+          const t = drawT(angle.id)
+          if (t <= 0) return null
           const arc = angleArc(angle)
           return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
-            <path className="geometry-angle" d={arc.path} />
+            <path className="geometry-angle" d={arc.path} pathLength={1} style={revealDash(t)} />
             <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
-            <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle">{angle.degrees.toFixed(1)}°</text>
+            <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={{ opacity: t }}>{angle.degrees.toFixed(1)}°</text>
           </g>
         })}
         {previews}
-        {resolved.points.filter((point) => !point.hidden).map((point) => <g key={point.id} className={`geometry-point-group is-${point.id}`}>
-          {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
-          <circle
-            className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
-            data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
-            data-canvas-handle={point.draggable ? 'true' : undefined}
-            data-primitive-id={point.id}
-            cx={point.point.x}
-            cy={point.point.y}
-            r={point.draggable ? 6 : 4.5}
-            onPointerDown={tool === 'move' && point.draggable ? (event) => beginDrag(event, point.id) : undefined}
-          />
-          {point.label && <text className={`geometry-label${showLabels ? '' : ' is-hidden'}`} x={point.point.x + 9} y={point.point.y - 9}>{point.label}</text>}
-        </g>)}
+        {resolved.points.filter((point) => !point.hidden).map((point) => {
+          const t = drawT(point.id)
+          if (t <= 0) return null
+          const radius = point.draggable ? 6 : 4.5
+          return <g key={point.id} className={`geometry-point-group is-${point.id}`}>
+            {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
+            <circle
+              className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
+              data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
+              data-canvas-handle={point.draggable ? 'true' : undefined}
+              data-primitive-id={point.id}
+              cx={point.point.x}
+              cy={point.point.y}
+              r={radius * (0.25 + 0.75 * t)}
+              onPointerDown={tool === 'move' && point.draggable ? (event) => beginDrag(event, point.id) : undefined}
+            />
+            {point.label && <text className={`geometry-label${showLabels ? '' : ' is-hidden'}`} x={point.point.x + 9} y={point.point.y - 9} style={{ opacity: t }}>{point.label}</text>}
+          </g>
+        })}
       </svg>
       {selectionChip && <span className="geometry-selection-chip" data-canvas-control="true"><small>{selectionChip.label}</small><b>{selectionChip.value}</b></span>}
       {showCoordinates && (
@@ -564,7 +651,7 @@ export default function LiveGeometry({
           {!freePoints.length && <p>No free points yet.</p>}
         </div>
       )}
-      <div className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`}>
+      <div className={`geometry-legend reveal-fade${hasSpiral ? ' has-spiral' : ''}`} style={{ opacity: legendT }}>
         {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
         <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
       </div>

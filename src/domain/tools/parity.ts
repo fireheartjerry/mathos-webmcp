@@ -8,6 +8,7 @@
  */
 import { evaluateLatexAt } from '../math/graph'
 import type { AnimationKeyframe, AnimationTimeline, AnimationTrack, AnimationValue } from '../animation/types'
+import { TIMELINE_PRESETS, TIMELINE_PRESET_NAMES, type PresetArgs } from '../animation/presets'
 import type { Bounds, Point, WorldObject, WorldOperation, WorldState } from '../world/types'
 import {
   action, boundsSchema, changedIds, emptySchema, isBounds, isPair, isPoint, isRecord, isStringArray, isStringNumberMap,
@@ -128,7 +129,7 @@ function matrixValues(value: unknown): number[][] {
 type TrackTarget = AnimationTrack['target']
 
 /** Describe the value shape a path accepts, or throw when the path is not animatable on this target. */
-function pathValueKind(world: WorldState, target: TrackTarget): 'number' | 'pair' | 'weights3' | 'weights4' | 'string' {
+function pathValueKind(world: WorldState, target: TrackTarget): 'number' | 'pair' | 'weights3' | 'weights4' | 'string' | 'matrix' {
   if (target.kind === 'camera') {
     if (!CAMERA_PATHS.has(target.path)) throw new Error(`Camera path ${target.path} is not animatable; use x, y or zoom.`)
     return 'number'
@@ -142,7 +143,9 @@ function pathValueKind(world: WorldState, target: TrackTarget): 'number' | 'pair
     if (path.startsWith('parameters.') && path.length > 'parameters.'.length) return 'number'
     if (path === 'showTangentAt') return 'number'
     if (path === 'shadeIntegral') return 'pair'
+    if (path === 'binEdges') return 'weights4'
   }
+  if (object.kind === 'matrix' && path === 'values') return 'matrix'
   if (object.kind === 'barycentric' && path === 'weights') return 'weights3'
   if (object.kind === 'simplex' && (path === 'weights' || path === 'section')) return path === 'weights' ? 'weights4' : 'number'
   if (object.kind === 'geometry' && /^primitives\.[^.]+\.at$/.test(path)) {
@@ -158,8 +161,9 @@ function pathValueKind(world: WorldState, target: TrackTarget): 'number' | 'pair
 }
 
 function keyframeValue(value: unknown, kind: ReturnType<typeof pathValueKind>, at: number): AnimationValue {
-  const fail = () => new Error(`Keyframe at t=${at} needs a ${kind === 'number' ? 'finite number' : kind === 'pair' ? '[x, y] pair' : kind === 'weights3' ? 'three-number array' : kind === 'weights4' ? 'four-number array' : 'LaTeX string'}.`)
+  const fail = () => new Error(`Keyframe at t=${at} needs a ${kind === 'number' ? 'finite number' : kind === 'pair' ? '[x, y] pair' : kind === 'weights3' ? 'three-number array' : kind === 'weights4' ? 'four-number array' : kind === 'matrix' ? 'rectangular number[][]' : 'LaTeX string'}.`)
   if (kind === 'number') { if (typeof value !== 'number' || !Number.isFinite(value)) throw fail(); return value }
+  if (kind === 'matrix') { try { return matrixValues(value) } catch { throw fail() } }
   if (kind === 'string') { if (typeof value !== 'string') throw fail(); return value }
   if (kind === 'pair') {
     if (isPoint(value)) return [value.x, value.y]
@@ -202,6 +206,69 @@ function summarizeTimeline(timeline: AnimationTimeline) {
     id: timeline.id, name: timeline.name, duration: timeline.duration, playbackRange: timeline.playbackRange, trackCount: tracks.length,
     tracks: tracks.slice(0, 24).map((track) => ({ id: track.id, target: track.target, keyframeCount: Object.keys(track.keyframes).length })),
   }
+}
+
+const TYPEWRITER_MIN_MS = 200
+const TYPEWRITER_MAX_MS = 6000
+const TYPEWRITER_DEFAULT_MS = 1400
+const typewriterSchema = {
+  typewriter: { type: 'boolean', description: 'true: type the new value live, character by character, before committing it.' },
+  typewriterMs: { type: 'number', minimum: TYPEWRITER_MIN_MS, maximum: TYPEWRITER_MAX_MS, description: `Typing duration in ms (${TYPEWRITER_MIN_MS}..${TYPEWRITER_MAX_MS}). Default ${TYPEWRITER_DEFAULT_MS}.` },
+}
+
+/** Validate the shared typewriter options; returns the duration when the preview is requested, otherwise null. */
+function typewriterMs(args: Record<string, unknown>): number | null {
+  if (args.typewriter !== undefined && typeof args.typewriter !== 'boolean') throw new Error('typewriter must be boolean.')
+  const ms = optionalNumber(args.typewriterMs, 'typewriterMs') ?? TYPEWRITER_DEFAULT_MS
+  if (ms < TYPEWRITER_MIN_MS || ms > TYPEWRITER_MAX_MS) throw new Error(`typewriterMs must be between ${TYPEWRITER_MIN_MS} and ${TYPEWRITER_MAX_MS}.`)
+  return args.typewriter === true ? ms : null
+}
+
+/** Play the live typing preview when requested and the bridge supports it; the commit always follows. */
+async function typewrite(bridge: WorldBridge, ms: number | null, objectId: string, field: 'latex' | 'text', value: string | undefined): Promise<void> {
+  if (ms === null || value === undefined || !bridge.typewrite) return
+  await bridge.typewrite(objectId, field, value, ms)
+}
+
+/**
+ * Build a timeline from a named preset, validating that the referenced objects
+ * exist and have the kind the preset expects. Missing `from` values default to
+ * the live state (bin edges, section, matrix values, latex, camera).
+ */
+function buildPresetTimeline(world: WorldState, raw: unknown, name: string | undefined, duration: number | undefined): { timeline: AnimationTimeline; presetName: string; objectIds: string[] } {
+  if (!isRecord(raw)) throw new Error('preset must be an object { name, objectId?, objectIds?, seconds?, from?, to?, parameter? }.')
+  const presetName = requiredString(raw.name, 'preset.name')
+  const preset = TIMELINE_PRESETS[presetName]
+  if (!preset) throw new Error(`Unknown preset ${presetName}. Available: ${TIMELINE_PRESET_NAMES.join(', ')}.`)
+  const objectId = optionalString(raw.objectId, 'preset.objectId')
+  if (raw.objectIds !== undefined && !isStringArray(raw.objectIds)) throw new Error('preset.objectIds must be a string array.')
+  const objectIds = (raw.objectIds as string[] | undefined) ?? []
+  const seconds = optionalNumber(raw.seconds, 'preset.seconds') ?? duration
+  const parameter = optionalString(raw.parameter, 'preset.parameter')
+  const all = [...(objectId ? [objectId] : []), ...objectIds]
+  for (const id of all) if (!world.objects[id]) throw new Error(`Object ${id} does not exist.`)
+  if (preset.kinds && objectId) {
+    const object = world.objects[objectId]
+    if (!preset.kinds.includes(object.kind)) throw new Error(`Preset ${presetName} needs a ${preset.kinds.join(' or ')} object; ${objectId} is a ${object.kind}.`)
+  }
+  if (preset.params.objectId?.required && !objectId) throw new Error(`Preset ${presetName} needs objectId.`)
+  let from = raw.from
+  const object = objectId ? world.objects[objectId] : undefined
+  if (from === undefined && object) {
+    if (presetName === 'bridgeMorph' && object.kind === 'graph') from = object.binEdges
+    else if ((presetName === 'simplexSweep' || presetName === 'sweepSection') && object.kind === 'simplex') from = object.section
+    else if (presetName === 'matrixSweep' && object.kind === 'matrix') from = object.values
+    else if (presetName === 'crossfadeLatex' && object.kind === 'equation') from = object.latex
+    else if (presetName === 'sweepParameter' && object.kind === 'graph' && parameter) from = object.parameters?.[parameter] ?? 1
+  }
+  if (from === undefined && presetName === 'cameraTo') from = world.viewport
+  if (presetName === 'bridgeMorph') {
+    for (const id of objectIds) if (world.objects[id].kind !== 'equation') throw new Error(`Preset bridgeMorph: ${id} is a ${world.objects[id].kind}, not an equation.`)
+  }
+  const args: PresetArgs = { objectId, objectIds, seconds, from, to: raw.to, parameter }
+  const built = preset.build(args)
+  const timeline: AnimationTimeline = { ...built, id: crypto.randomUUID(), name: name ?? built.name }
+  return { timeline, presetName, objectIds: all }
 }
 
 /** Built lazily: definitions.ts and parity.ts import each other, so top-level use of `schema` would hit the TDZ. */
@@ -266,12 +333,12 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     return outcome.ok ? { ...outcome, data: { ...outcome.data, removed: targets.length, ids: targets } } : outcome
   })
 
-  const editText = tool('edit_text', 'Edit a text object', 'Change the text, color, fontSize, presentation (typed or handwritten) or textAlign of one existing text object, keeping its id, position and author. Use annotate_object to add a new note instead.', schema({
+  const editText = tool('edit_text', 'Edit a text object', 'Change the text, color, fontSize, presentation (typed or handwritten) or textAlign of one existing text object, keeping its id, position and author. typewriter: true types the value live so the learner watches it appear (typewriterMs sets the pace). Use annotate_object to add a new note instead.', schema({
     objectId: { type: 'string', minLength: 1 }, text: { type: 'string', maxLength: 2000 }, color: { type: 'string' }, fontSize: { type: 'number', exclusiveMinimum: 0, maximum: 200 },
-    presentation: { type: 'string', enum: ['typed', 'handwritten'] }, textAlign: { type: 'string', enum: ['left', 'center', 'right'] },
+    presentation: { type: 'string', enum: ['typed', 'handwritten'] }, textAlign: { type: 'string', enum: ['left', 'center', 'right'] }, ...typewriterSchema,
   }, ['objectId']), false, async (input) => {
-    const args = values(input, ['objectId', 'text', 'color', 'fontSize', 'presentation', 'textAlign'])
-    const world = bridge.getWorld(); const object = objectOfKind(world, args.objectId, 'text')
+    const args = values(input, ['objectId', 'text', 'color', 'fontSize', 'presentation', 'textAlign', 'typewriter', 'typewriterMs'])
+    const world = bridge.getWorld(); const object = objectOfKind(world, args.objectId, 'text'); const typing = typewriterMs(args)
     const patch: Partial<typeof object> = {}
     const text = optionalString(args.text, 'text'); if (text !== undefined) patch.text = text.slice(0, 2000)
     const color = optionalString(args.color, 'color'); if (color !== undefined) patch.color = color
@@ -279,17 +346,19 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     if (args.presentation !== undefined) { if (args.presentation !== 'typed' && args.presentation !== 'handwritten') throw new Error('presentation must be typed or handwritten.'); patch.presentation = args.presentation }
     if (args.textAlign !== undefined) { if (args.textAlign !== 'left' && args.textAlign !== 'center' && args.textAlign !== 'right') throw new Error('textAlign must be left, center or right.'); patch.textAlign = args.textAlign }
     if (!Object.keys(patch).length) throw new Error('Provide at least one field to change.')
+    await typewrite(bridge, typing, object.id, 'text', patch.text)
     return bridge.runAgentAction(action('Edited text', [{ type: 'put', object: { ...object, ...patch } }]), [object.id])
   })
 
-  const editEquation = tool('edit_equation', 'Edit an equation', 'Replace the LaTeX (and optionally the color) of one existing equation object. Graphs linked to it re-plot automatically; the result lists their ids. Use graph_expression to create a new equation with a plot.', schema({ objectId: { type: 'string', minLength: 1 }, latex: { type: 'string', minLength: 1, maxLength: 2000 }, color: { type: 'string' } }, ['objectId']), false, async (input) => {
-    const args = values(input, ['objectId', 'latex', 'color'])
-    const world = bridge.getWorld(); const object = objectOfKind(world, args.objectId, 'equation')
+  const editEquation = tool('edit_equation', 'Edit an equation', 'Replace the LaTeX (and optionally the color) of one existing equation object. Graphs linked to it re-plot automatically; the result lists their ids. typewriter: true types the value live so the learner watches it appear (typewriterMs sets the pace). Use graph_expression to create a new equation with a plot.', schema({ objectId: { type: 'string', minLength: 1 }, latex: { type: 'string', minLength: 1, maxLength: 2000 }, color: { type: 'string' }, ...typewriterSchema }, ['objectId']), false, async (input) => {
+    const args = values(input, ['objectId', 'latex', 'color', 'typewriter', 'typewriterMs'])
+    const world = bridge.getWorld(); const object = objectOfKind(world, args.objectId, 'equation'); const typing = typewriterMs(args)
     const latex = optionalString(args.latex, 'latex'); const color = optionalString(args.color, 'color')
     if (latex === undefined && color === undefined) throw new Error('Provide latex or color.')
     if (latex !== undefined && !latex.trim()) throw new Error('latex must be a non-empty string.')
     const dependents = world.order.filter((id) => { const item = world.objects[id]; return item?.kind === 'graph' && item.equationId === object.id })
     const next = { ...object, latex: latex ?? object.latex, color: color ?? object.color }
+    await typewrite(bridge, typing, object.id, 'latex', latex)
     const outcome = await bridge.runAgentAction(action('Edited equation', [{ type: 'put', object: next }]), [object.id, ...dependents])
     return outcome.ok ? { ...outcome, data: { ...outcome.data, latex: next.latex, dependentGraphIds: dependents } } : outcome
   })
@@ -367,21 +436,21 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     return outcome.ok ? { ...outcome, data: { ...outcome.data, values: next, changes: notes } } : outcome
   })
 
-  const setGraph = tool('set_graph', 'Update a graph', 'Update one existing graph: latex (rewrites its linked equation), xDomain, yDomain, color, parameters (merged), showTangentAt or shadeIntegral (null clears), visualization, binEdges. Use graph_expression to create a graph; inspect_math to read one.', schema({
+  const setGraph = tool('set_graph', 'Update a graph', 'Update one existing graph: latex (rewrites its linked equation), xDomain, yDomain, color, parameters (merged), showTangentAt or shadeIntegral (null clears), visualization, binEdges. With latex, typewriter: true types the value live so the learner watches it appear (typewriterMs sets the pace). Use graph_expression to create a graph; inspect_math to read one.', schema({
     objectId: { type: 'string', minLength: 1 }, latex: { type: 'string', minLength: 1 }, xDomain: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } }, yDomain: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } },
     color: { type: 'string' }, parameters: { type: 'object', additionalProperties: { type: 'number' }, description: 'Merged into existing parameters.' },
     showTangentAt: { type: ['number', 'null'] }, shadeIntegral: { type: ['array', 'null'], minItems: 2, maxItems: 2, items: { type: 'number' } },
-    visualization: { type: 'string', enum: ['standard', 'gamma-density'] }, binEdges: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number' } },
+    visualization: { type: 'string', enum: ['standard', 'gamma-density'] }, binEdges: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number' } }, ...typewriterSchema,
   }, ['objectId']), false, async (input) => {
-    const args = values(input, ['objectId', 'latex', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges'])
-    const world = bridge.getWorld(); const graph = objectOfKind(world, args.objectId, 'graph')
+    const args = values(input, ['objectId', 'latex', 'xDomain', 'yDomain', 'color', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges', 'typewriter', 'typewriterMs'])
+    const world = bridge.getWorld(); const graph = objectOfKind(world, args.objectId, 'graph'); const typing = typewriterMs(args)
     const next: typeof graph = { ...graph }; const operations: WorldOperation[] = []; const notes: string[] = []
-    const latex = optionalString(args.latex, 'latex')
+    const latex = optionalString(args.latex, 'latex'); let equationId: string | null = null
     if (latex !== undefined) {
       if (!latex.trim()) throw new Error('latex must be a non-empty string.')
       const equation = world.objects[graph.equationId]
       if (equation?.kind !== 'equation') throw new Error(`Graph ${graph.id} has no linked equation to rewrite.`)
-      operations.push({ type: 'put', object: { ...equation, latex } }); notes.push('latex')
+      operations.push({ type: 'put', object: { ...equation, latex } }); notes.push('latex'); equationId = equation.id
     }
     if (args.xDomain !== undefined) { if (!isPair(args.xDomain) || args.xDomain[1] <= args.xDomain[0]) throw new Error('xDomain must be [min, max] with max > min.'); next.xDomain = [args.xDomain[0], args.xDomain[1]]; notes.push('xDomain') }
     if (args.yDomain !== undefined) { if (!isPair(args.yDomain) || args.yDomain[1] <= args.yDomain[0]) throw new Error('yDomain must be [min, max] with max > min.'); next.yDomain = [args.yDomain[0], args.yDomain[1]]; notes.push('yDomain') }
@@ -393,6 +462,7 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     if (args.binEdges !== undefined) { if (!Array.isArray(args.binEdges) || args.binEdges.length !== 4 || !args.binEdges.every((value) => typeof value === 'number' && Number.isFinite(value))) throw new Error('binEdges must contain four finite numbers.'); next.binEdges = [args.binEdges[0], args.binEdges[1], args.binEdges[2], args.binEdges[3]]; notes.push('binEdges') }
     if (!notes.length) throw new Error('Provide at least one field to change.')
     operations.push({ type: 'put', object: next })
+    if (equationId) await typewrite(bridge, typing, equationId, 'latex', latex)
     const outcome = await bridge.runAgentAction(action('Updated graph', operations), changedIds(operations))
     return outcome.ok ? { ...outcome, data: { ...outcome.data, changed: notes, latex: latex ?? null, xDomain: next.xDomain, yDomain: next.yDomain } } : outcome
   })
@@ -411,15 +481,31 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     return outcome.ok ? { ...outcome, data: { ...outcome.data, from: worldFrom, to: worldTo, bounds } } : outcome
   })
 
-  const createTimeline = tool('create_timeline', 'Create an animation timeline', 'Create a keyframed timeline. Tracks target an object field or the camera (x, y, zoom). Object paths: opacity, rotation, bounds.x/y/width/height, drawProgress, parameters.<name> / showTangentAt / shadeIntegral (graph), weights / section (barycentric, simplex), primitives.<pointId>.at (geometry), from / to (arrow), latex (equation). Play it with play_timeline.', schema({
-    name: { type: 'string', minLength: 1, maxLength: 80 }, duration: { type: 'number', exclusiveMinimum: 0, maximum: 600, description: 'Seconds.' },
+  const createTimeline = tool('create_timeline', 'Create an animation timeline', `Create a timeline from tracks or a preset {name, objectId, objectIds?, seconds?, from?, to?, parameter?}. Presets: ${TIMELINE_PRESET_NAMES.join(', ')}. Paths: opacity, rotation, bounds.*, drawProgress, parameters.<n>/binEdges/shadeIntegral (graph), weights/section, values (matrix), primitives.<id>.at, latex, camera x/y/zoom.`, schema({
+    name: { type: 'string', minLength: 1, maxLength: 80 }, duration: { type: 'number', exclusiveMinimum: 0, maximum: 600, description: 'Seconds. Required with tracks; optional with preset (its default seconds otherwise).' },
     tracks: { type: 'array', minItems: 1, maxItems: 32, items: trackSchema() },
-  }, ['name', 'duration', 'tracks']), false, async (input) => {
-    const args = values(input, ['name', 'duration', 'tracks'])
-    const name = requiredString(args.name, 'name').trim().slice(0, 80); const duration = finiteNumber(args.duration, 'duration')
-    if (duration <= 0 || duration > 600) throw new Error('duration must be between 0 and 600 seconds.')
+    preset: schema({
+      name: { type: 'string', enum: TIMELINE_PRESET_NAMES, description: 'Preset name; see get_timelines.data.presets for params.' },
+      objectId: { type: 'string', minLength: 1 }, objectIds: { type: 'array', maxItems: 16, items: { type: 'string', minLength: 1 }, description: 'Extra ids (bridgeMorph: equations to crossfade).' },
+      seconds: { type: 'number', exclusiveMinimum: 0, maximum: 600 }, from: { description: 'Start value; defaults to the live state where sensible.' }, to: { description: 'End value (number, number[4], number[][], LaTeX or viewport).' },
+      parameter: { type: 'string', description: 'Graph parameter name for sweepParameter.' },
+    }, ['name']),
+  }), false, async (input) => {
+    const args = values(input, ['name', 'duration', 'tracks', 'preset'])
+    const name = optionalString(args.name, 'name')?.trim().slice(0, 80) || undefined
+    const duration = optionalNumber(args.duration, 'duration')
+    if (duration !== undefined && (duration <= 0 || duration > 600)) throw new Error('duration must be between 0 and 600 seconds.')
+    if ((args.tracks === undefined) === (args.preset === undefined)) throw new Error('Provide exactly one of tracks or preset.')
+    const world = bridge.getWorld()
+    if (args.preset !== undefined) {
+      const { timeline, presetName, objectIds } = buildPresetTimeline(world, args.preset, name, duration)
+      const outcome = await bridge.runAgentAction(action(`Created ${presetName} timeline`, [{ type: 'putTimeline', timeline }]), objectIds)
+      return outcome.ok ? { ...outcome, data: { ...outcome.data, timelineId: timeline.id, preset: presetName, ...summarizeTimeline(timeline) } } : outcome
+    }
+    if (!name) throw new Error('name is required with tracks.')
+    if (duration === undefined) throw new Error('duration is required with tracks.')
     if (!Array.isArray(args.tracks) || !args.tracks.length || args.tracks.length > 32) throw new Error('tracks must contain 1 to 32 tracks.')
-    const world = bridge.getWorld(); const tracks: Record<string, AnimationTrack> = {}; const seen: TrackTarget[] = []
+    const tracks: Record<string, AnimationTrack> = {}; const seen: TrackTarget[] = []
     for (const raw of args.tracks) {
       if (!isRecord(raw)) throw new Error('Each track must be an object.')
       const target = parseTarget(raw.target)
@@ -474,8 +560,27 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
   const getTimelines = tool('get_timelines', 'List animation timelines', 'Read every timeline in the world with its duration, playback range, track targets and keyframe counts. Use before add_keyframes or play_timeline.', emptySchema, true, (input) => {
     values(input, [])
     const world = bridge.getWorld(); const timelines = Object.values(world.timelines).map(summarizeTimeline)
-    return { ok: true, summary: `Read ${timelines.length} timeline${timelines.length === 1 ? '' : 's'}`, data: { timelines: timelines.slice(0, 50), ...(timelines.length > 50 ? { truncated: true } : {}) } }
+    const presets = Object.entries(TIMELINE_PRESETS).map(([name, preset]) => ({ name, describe: preset.describe, kinds: preset.kinds ?? null, params: preset.params }))
+    return { ok: true, summary: `Read ${timelines.length} timeline${timelines.length === 1 ? '' : 's'}`, data: { timelines: timelines.slice(0, 50), ...(timelines.length > 50 ? { truncated: true } : {}), presets } }
   })
 
-  return [drawInk, eraseInk, editText, editEquation, createShape, editShape, setMatrixCells, setGraph, setArrow, createTimeline, addKeyframes, playTimeline, getTimelines]
+  const spotlightObjects = tool('spotlight_objects', 'Spotlight objects before changing them', 'Draw a purple aura around objects for a moment before you change them, so the learner sees what you are about to touch. Read-only: changes nothing in the world.', schema({
+    ids: { type: 'array', minItems: 1, maxItems: 8, items: { type: 'string', minLength: 1 }, description: 'Object ids to ring.' },
+    label: { type: 'string', maxLength: 60, description: 'Short mono caption above the aura, e.g. "about to move P".' },
+    seconds: { type: 'number', minimum: 0.5, maximum: 6, description: 'How long the aura stays. Default 2.5.' },
+  }, ['ids']), true, (input) => {
+    const args = values(input, ['ids', 'label', 'seconds'])
+    if (!isStringArray(args.ids) || !args.ids.length || args.ids.length > 8) throw new Error('ids must contain 1 to 8 object ids.')
+    const ids = args.ids.map((id, index) => requiredString(id, `ids[${index}]`))
+    const seconds = optionalNumber(args.seconds, 'seconds') ?? 2.5
+    if (seconds < 0.5 || seconds > 6) throw new Error('seconds must be between 0.5 and 6.')
+    const label = optionalString(args.label, 'label')
+    const world = bridge.getWorld()
+    const missing = ids.filter((id) => !world.objects[id])
+    if (missing.length) throw new Error(`Object${missing.length > 1 ? 's' : ''} ${missing.join(', ')} ${missing.length > 1 ? 'do' : 'does'} not exist.`)
+    if (!bridge.spotlight) return { ok: false, summary: 'No changes made', error: 'Spotlight is not available on this page: the workspace has not wired bridge.spotlight.' }
+    return bridge.spotlight(ids, seconds, label)
+  })
+
+  return [drawInk, eraseInk, editText, editEquation, createShape, editShape, setMatrixCells, setGraph, setArrow, createTimeline, addKeyframes, playTimeline, getTimelines, spotlightObjects]
 }

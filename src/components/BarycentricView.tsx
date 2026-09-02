@@ -10,6 +10,8 @@ import {
   type Triangle,
 } from '../domain/math/barycentric'
 import type { BarycentricObject, Point, WorldAction, WorldState } from '../domain/world/types'
+import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import '../styles/reveal.css'
 
 type Props = {
   object: BarycentricObject
@@ -60,6 +62,17 @@ export default function BarycentricView({ object, world, run }: Props) {
     ? evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights
     : null
   const linkedNow = attentionWeights ? attentionWeights.every((weight, index) => Math.abs(weight - committedWeights[index]) < 5e-4) : false
+
+  // ---- staged reveal: triangle edges → cevians → P and its labels --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const kickerT = revealStage(p, 0, 0.15)
+  const edgeT = revealStage(p, 0, 0.4)
+  const fillT = revealStage(p, 0.3, 0.5)
+  const cevianT = (index: number) => revealItem(revealStage(p, 0.4, 0.7), index, 3, 1)
+  const pointT = revealStage(p, 0.7, 0.9)
+  const labelT = revealStage(p, 0.75, 1)
+  const sideT = revealStage(p, 0, 0.2)
 
   const localPoint = (event: ReactPointerEvent<SVGElement>): Point => {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -132,7 +145,7 @@ export default function BarycentricView({ object, world, run }: Props) {
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
-    <div className={`barycentric-view${drag ? ' is-dragging' : ''}`} onPointerDown={stop}>
+    <div className={`barycentric-view reveal-root${drag ? ' is-dragging' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
       <svg
         ref={svgRef}
         className="barycentric-canvas"
@@ -144,49 +157,60 @@ export default function BarycentricView({ object, world, run }: Props) {
       >
         <defs><clipPath id={clipId}><rect width={canvasWidth} height={canvasHeight} /></clipPath></defs>
         <rect className="barycentric-paper" width={canvasWidth} height={canvasHeight} />
-        <text className="barycentric-kicker" x="16" y="18">BARYCENTRIC COORDINATES · P = αA + βB + γC</text>
+        <text className="barycentric-kicker" x="16" y="18" style={{ opacity: kickerT }}>BARYCENTRIC COORDINATES · P = αA + βB + γC</text>
         <g clipPath={`url(#${clipId})`}>
-          <polygon className="barycentric-subarea barycentric-subarea-a" points={polygonPoints([livePoint, vertices[1], vertices[2]])} />
-          <polygon className="barycentric-subarea barycentric-subarea-b" points={polygonPoints([livePoint, vertices[2], vertices[0]])} />
-          <polygon className="barycentric-subarea barycentric-subarea-c" points={polygonPoints([livePoint, vertices[0], vertices[1]])} />
-          <polygon className="barycentric-triangle" points={polygonPoints(vertices)} />
-          {vertices.map((vertex, index) => <line key={`cevian-${index}`} className="barycentric-cevian" x1={vertex.x} y1={vertex.y} x2={livePoint.x} y2={livePoint.y} />)}
+          <g style={{ opacity: fillT }}>
+            <polygon className="barycentric-subarea barycentric-subarea-a" points={polygonPoints([livePoint, vertices[1], vertices[2]])} />
+            <polygon className="barycentric-subarea barycentric-subarea-b" points={polygonPoints([livePoint, vertices[2], vertices[0]])} />
+            <polygon className="barycentric-subarea barycentric-subarea-c" points={polygonPoints([livePoint, vertices[0], vertices[1]])} />
+          </g>
+          <polygon className="barycentric-triangle" points={polygonPoints(vertices)} pathLength={1} style={edgeT < 1 ? { ...revealDash(edgeT), fillOpacity: edgeT } : undefined} />
+          {vertices.map((vertex, index) => {
+            const t = cevianT(index)
+            if (t <= 0) return null
+            const tip = revealLerp(vertex, livePoint, t)
+            return <line key={`cevian-${index}`} className="barycentric-cevian" x1={vertex.x} y1={vertex.y} x2={tip.x} y2={tip.y} />
+          })}
           {/* Subarea labels sit at the centroid of each signed sub-triangle. */}
           {[[1, 2], [2, 0], [0, 1]].map(([first, second], index) => {
             const cx = (livePoint.x + vertices[first].x + vertices[second].x) / 3
             const cy = (livePoint.y + vertices[first].y + vertices[second].y) / 3
-            return <text key={`area-${index}`} className={`barycentric-area-label is-${index}`} x={cx} y={cy + 4} textAnchor="middle">{GREEK[index]} = {liveWeights[index].toFixed(2)}</text>
+            return <text key={`area-${index}`} className={`barycentric-area-label is-${index}`} x={cx} y={cy + 4} textAnchor="middle" style={{ opacity: labelT }}>{GREEK[index]} = {(liveWeights[index] * labelT).toFixed(2)}</text>
           })}
-          {vertices.map((vertex, index) => (
-            <g key={object.labels[index]}>
-              <circle
-                className="barycentric-vertex is-draggable"
-                data-canvas-handle="true"
-                data-demo-target={index === 0 ? 'barycentric-vertex-a' : undefined}
-                cx={vertex.x}
-                cy={vertex.y}
-                r="6"
-                onPointerDown={(event) => beginVertexDrag(event, index as 0 | 1 | 2)}
-                aria-label={`Drag vertex ${object.labels[index]}`}
-              />
-              <text className="barycentric-vertex-label" x={vertex.x + (index === 1 ? 11 : index === 0 ? -20 : -5)} y={vertex.y + (index === 2 ? -12 : 20)}>{object.labels[index]}</text>
-            </g>
-          ))}
-          <circle
+          {vertices.map((vertex, index) => {
+            const t = revealStage(p, index * 0.1, index * 0.1 + 0.15)
+            if (t <= 0) return null
+            return (
+              <g key={object.labels[index]}>
+                <circle
+                  className="barycentric-vertex is-draggable"
+                  data-canvas-handle="true"
+                  data-demo-target={index === 0 ? 'barycentric-vertex-a' : undefined}
+                  cx={vertex.x}
+                  cy={vertex.y}
+                  r={6 * t}
+                  onPointerDown={(event) => beginVertexDrag(event, index as 0 | 1 | 2)}
+                  aria-label={`Drag vertex ${object.labels[index]}`}
+                />
+                <text className="barycentric-vertex-label" x={vertex.x + (index === 1 ? 11 : index === 0 ? -20 : -5)} y={vertex.y + (index === 2 ? -12 : 20)} style={{ opacity: t }}>{object.labels[index]}</text>
+              </g>
+            )
+          })}
+          {pointT > 0 && <circle
             className="barycentric-point"
             data-canvas-handle="true"
             data-demo-target="barycentric-point"
             cx={livePoint.x}
             cy={livePoint.y}
-            r="8"
+            r={8 * pointT}
             onPointerDown={beginPointDrag}
             aria-label="Drag barycentric point P"
-          />
-          <text className="barycentric-point-label" x={livePoint.x + 12} y={livePoint.y - 10}>P</text>
+          />}
+          <text className="barycentric-point-label" x={livePoint.x + 12} y={livePoint.y - 10} style={{ opacity: labelT }}>P</text>
         </g>
       </svg>
 
-      <aside className="barycentric-side" onPointerDown={stop}>
+      <aside className="barycentric-side reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
         <div className="barycentric-weight-grid" aria-label="Barycentric weights">
           {liveWeights.map((weight, index) => (
             <label key={GREEK[index]} className={`is-${index}`}>

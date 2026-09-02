@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   MATRIX_MAX_SIZE,
   MATRIX_MIN_SIZE,
@@ -18,7 +18,9 @@ import {
   type MatrixValues,
 } from '../domain/math/matrix'
 import type { MatrixObject, Point, WorldAction, WorldState } from '../domain/world/types'
+import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
 import '../styles/matrix.css'
+import '../styles/reveal.css'
 
 const TOOLBAR_HEIGHT = 30
 const SIDE_WIDTH = 150
@@ -144,8 +146,17 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
     return { det: determinant(values), tr: trace(values), eig }
   })()
 
+  // ---- staged reveal: lattice → basis vectors → readouts (see TwoByTwoPlane for the plot) --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const toolbarT = revealStage(p, 0, 0.2)
+  const gridT = revealStage(p, 0, isTwoByTwo ? 0.3 : 0.5)
+  const readoutT = revealStage(p, isTwoByTwo ? 0.85 : 0.5, 1)
+  const rootClass = `matrix-plane matrix-widget reveal-root${revealing ? ' is-revealing' : ''}`
+  const rootStyle = revealing ? { opacity: object.opacity } : undefined
+
   const toolbar = (
-    <div className="matrix-toolbar" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()}>
+    <div className="matrix-toolbar reveal-fade" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()} style={{ opacity: toolbarT }}>
       <button type="button" title="Add row" disabled={rows >= MATRIX_MAX_SIZE} onClick={() => resize(rows + 1, columns)}>row +</button>
       <button type="button" title="Remove row" disabled={rows <= MATRIX_MIN_SIZE} onClick={() => resize(rows - 1, columns)}>row −</button>
       <button type="button" title="Add column" disabled={columns >= MATRIX_MAX_SIZE} onClick={() => resize(rows, columns + 1)}>col +</button>
@@ -161,7 +172,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
       className="matrix-grid"
       role="group"
       aria-label={`Edit ${rows} by ${columns} matrix`}
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(44px, 1fr))` }}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(44px, 1fr))`, opacity: gridT }}
       data-canvas-control="true"
       onPointerDown={stopCanvas}
       onDoubleClick={(event) => event.stopPropagation()}
@@ -181,7 +192,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   )
 
   const readouts = (
-    <div className="matrix-facts" aria-live="polite">
+    <div className="matrix-facts reveal-fade" aria-live="polite" style={{ opacity: readoutT }}>
       <span><small>dim </small>{rows} × {columns}</span>
       {facts.det !== null && facts.tr !== null ? (
         <>
@@ -196,14 +207,14 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   if (!isTwoByTwo) {
     const showColumns = rows === 2 || columns === 2
     return (
-      <div className="matrix-plane matrix-widget">
+      <div className={rootClass} style={rootStyle}>
         {toolbar}
         <div className="matrix-body matrix-centre">
-          <span className="matrix-name">A =</span>
+          <span className="matrix-name" style={{ opacity: gridT }}>A =</span>
           {grid}
           {readouts}
           {showColumns && (
-            <ul className="matrix-column-list" aria-label="Column vectors">
+            <ul className="matrix-column-list" aria-label="Column vectors" style={{ opacity: readoutT }}>
               {matrixColumns(values).map((column, index) => <li key={index}><span>c{index + 1} </span>({column.map(formatNumber).join(', ')})</li>)}
             </ul>
           )}
@@ -212,7 +223,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
     )
   }
 
-  return <TwoByTwoPlane object={object} world={world} values={values} width={width} height={height} setDraft={setDraft} put={put} toolbar={toolbar} grid={grid} readouts={readouts} />
+  return <TwoByTwoPlane object={object} world={world} values={values} width={width} height={height} setDraft={setDraft} put={put} toolbar={toolbar} grid={grid} readouts={readouts} progress={p} rootClass={rootClass} rootStyle={rootStyle} />
 }
 
 function TwoByTwoPlane({
@@ -226,6 +237,9 @@ function TwoByTwoPlane({
   toolbar,
   grid,
   readouts,
+  progress,
+  rootClass,
+  rootStyle,
 }: {
   object: MatrixObject
   world: WorldState
@@ -237,6 +251,9 @@ function TwoByTwoPlane({
   toolbar: ReactNode
   grid: ReactNode
   readouts: ReactNode
+  progress: number
+  rootClass: string
+  rootStyle: CSSProperties | undefined
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{ column: 0 | 1; pointerId: number; scale: number; values: MatrixValues } | null>(null)
@@ -256,6 +273,16 @@ function TwoByTwoPlane({
   const draw = (point: Point) => ({ x: center.x + point.x * scale, y: center.y - point.y * scale })
   const sourceMarker = `matrix-source-${object.id}`
   const resultMarker = `matrix-result-${object.id}`
+
+  // ---- staged reveal: lattice lines draw → vectors grow from the origin → readouts --
+  const p = progress
+  const kickerT = revealStage(p, 0, 0.15)
+  const axesT = revealStage(p, 0, 0.2)
+  const latticeT = revealStage(p, 0, 0.5)
+  const vectorT = revealStage(p, 0.5, 0.85)
+  const keyT = revealStage(p, 0.85, 1)
+  const latticeCount = GRID_VALUES.length * 2
+  const grow = (tip: Point) => revealLerp(center, tip, vectorT)
 
   const localPoint = (event: ReactPointerEvent<SVGElement>, currentScale: number): Point => {
     const rect = svgRef.current!.getBoundingClientRect()
@@ -298,7 +325,7 @@ function TwoByTwoPlane({
   }
 
   return (
-    <div className="matrix-plane matrix-widget">
+    <div className={rootClass} style={rootStyle}>
       {toolbar}
       <div className="matrix-body">
         <div className="matrix-plot">
@@ -315,33 +342,37 @@ function TwoByTwoPlane({
               <marker id={resultMarker} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path className="matrix-result-head" d="M0 0L10 5L0 10Z" /></marker>
             </defs>
             <rect className="matrix-paper" width={plotWidth} height={plotHeight} />
-            <text className="matrix-kicker" x="17" y="21">LINEAR TRANSFORMATION</text>
+            <text className="matrix-kicker" x="17" y="21" style={{ opacity: kickerT }}>LINEAR TRANSFORMATION</text>
             <g className="matrix-lattice">
-              {GRID_VALUES.map((value) => {
+              {GRID_VALUES.map((value, index) => {
+                const t = revealItem(latticeT, index, latticeCount, 2)
+                if (t <= 0) return null
                 const first = draw(applyMatrix(values, { x: value, y: -4 }))
                 const last = draw(applyMatrix(values, { x: value, y: 4 }))
-                return <line key={`v-${value}`} x1={first.x} y1={first.y} x2={last.x} y2={last.y} />
+                return <line key={`v-${value}`} x1={first.x} y1={first.y} x2={last.x} y2={last.y} pathLength={1} style={revealDash(t)} />
               })}
-              {GRID_VALUES.map((value) => {
+              {GRID_VALUES.map((value, index) => {
+                const t = revealItem(latticeT, GRID_VALUES.length + index, latticeCount, 2)
+                if (t <= 0) return null
                 const first = draw(applyMatrix(values, { x: -4, y: value }))
                 const last = draw(applyMatrix(values, { x: 4, y: value }))
-                return <line key={`h-${value}`} x1={first.x} y1={first.y} x2={last.x} y2={last.y} />
+                return <line key={`h-${value}`} x1={first.x} y1={first.y} x2={last.x} y2={last.y} pathLength={1} style={revealDash(t)} />
               })}
             </g>
-            <line className="matrix-axis" x1="8" x2={plotWidth - 8} y1={center.y} y2={center.y} />
-            <line className="matrix-axis" x1={center.x} x2={center.x} y1="32" y2={plotHeight - 12} />
-            {vectors.map((vector, index) => {
-              const source = draw(vector.source)
-              const transformed = draw(vector.transformed)
+            <line className="matrix-axis" x1="8" x2={plotWidth - 8} y1={center.y} y2={center.y} pathLength={1} style={revealDash(axesT)} />
+            <line className="matrix-axis" x1={center.x} x2={center.x} y1={plotHeight - 12} y2="32" pathLength={1} style={revealDash(axesT)} />
+            {vectorT > 0 && vectors.map((vector, index) => {
+              const source = grow(draw(vector.source))
+              const transformed = grow(draw(vector.transformed))
               return <g key={vector.id}>
                 <line className="matrix-source-vector" x1={center.x} y1={center.y} x2={source.x} y2={source.y} markerEnd={`url(#${sourceMarker})`} />
                 <line className="matrix-result-vector" x1={center.x} y1={center.y} x2={transformed.x} y2={transformed.y} markerEnd={`url(#${resultMarker})`} />
-                <text className="matrix-vector-label" x={transformed.x + 6} y={transformed.y - 6}>v{index + 1}′</text>
+                <text className="matrix-vector-label" x={transformed.x + 6} y={transformed.y - 6} style={{ opacity: vectorT }}>v{index + 1}′</text>
               </g>
             })}
-            {basis.map((point, index) => {
+            {vectorT > 0 && basis.map((point, index) => {
               const column = index as 0 | 1
-              const at = draw(point)
+              const at = grow(draw(point))
               return <g key={`basis-${column}`}>
                 <line className="matrix-basis-vector" x1={center.x} y1={center.y} x2={at.x} y2={at.y} />
                 <circle
@@ -354,17 +385,17 @@ function TwoByTwoPlane({
                   r={6}
                   onPointerDown={(event) => beginDrag(event, column)}
                 />
-                <text className="matrix-basis-label" x={at.x + 8} y={at.y + 4}>e{column + 1}′</text>
+                <text className="matrix-basis-label" x={at.x + 8} y={at.y + 4} style={{ opacity: vectorT }}>e{column + 1}′</text>
               </g>
             })}
           </svg>
-          <div className="matrix-key"><span>— source</span><b>— transformed</b></div>
+          <div className="matrix-key" style={{ opacity: keyT }}><span>— source</span><b>— transformed</b></div>
         </div>
         <div className="matrix-side" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()}>
-          <span className="matrix-name">A =</span>
+          <span className="matrix-name" style={{ opacity: revealStage(p, 0, 0.3) }}>A =</span>
           {grid}
           {readouts}
-          <em>drag e1′ e2′ · type to edit</em>
+          <em style={{ opacity: keyT }}>drag e1′ e2′ · type to edit</em>
         </div>
       </div>
     </div>

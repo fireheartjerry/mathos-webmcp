@@ -56,6 +56,15 @@ function toPoint(value: unknown): Point | null {
   return null
 }
 
+/** A rectangular, non-empty number[][] (matrix `values`); rows are copied. */
+function toMatrix(value: unknown): number[][] | null {
+  if (!Array.isArray(value) || value.length === 0 || !value.every(isNumberArray)) return null
+  const rows = value as number[][]
+  const columns = rows[0].length
+  if (columns === 0 || rows.some((row) => row.length !== columns)) return null
+  return rows.map((row) => row.slice())
+}
+
 const NUMBER_PATHS = new Set([
   'opacity', 'rotation', 'drawProgress', 'showTangentAt', 'section', 'width', 'fontSize', 'strokeScale',
   'temperature', 'rotationX', 'rotationY', 'step', 'learningRate', 'selectedN',
@@ -72,6 +81,11 @@ export function applyObjectPath(object: WorldObject, path: string, value: Animat
   const record = object as unknown as Record<string, unknown>
   const segments = path.split('.')
   const root = segments[0]
+
+  if (segments.length === 1 && root === 'values' && object.kind === 'matrix') {
+    const values = toMatrix(value)
+    return values ? { ...object, values } : null
+  }
 
   if (segments.length === 1) {
     if (NUMBER_PATHS.has(root)) {
@@ -232,4 +246,46 @@ export function evaluateActiveTimelines(world: WorldState, playbacks: ActivePlay
     applyTimelineInto(draft, world, timeline, time)
   }
   return touched ? commit(world, draft) : world
+}
+
+// ---------------------------------------------------------------------------
+// Staged reveals: pure helpers the view components use to turn one
+// drawProgress fraction into per-element geometry.
+// ---------------------------------------------------------------------------
+
+/** Transient reveal fraction of an object; undefined or non-finite means fully drawn (1). */
+export function revealProgress(object: { drawProgress?: number } | null | undefined): number {
+  const progress = object?.drawProgress
+  if (typeof progress !== 'number' || !Number.isFinite(progress)) return 1
+  return Math.min(1, Math.max(0, progress))
+}
+
+/** Linear sub-stage of `p` on [start, end], clamped to 0..1. */
+export function revealStage(p: number, start: number, end: number): number {
+  if (end <= start) return p >= end ? 1 : 0
+  return Math.min(1, Math.max(0, (p - start) / (end - start)))
+}
+
+/**
+ * Sequential per-item fraction: item `index` of `count` draws while
+ * `stage` runs through [index/count, (index+1)/count]; `overlap` (0..1) lets
+ * consecutive items share part of their window so the sweep reads continuous.
+ */
+export function revealItem(stage: number, index: number, count: number, overlap = 0): number {
+  const clamp = (value: number) => Math.min(1, Math.max(0, value))
+  if (count <= 1) return clamp(stage)
+  const window = Math.min(1, (1 + Math.max(0, overlap)) / count)
+  const start = (Math.min(index, count - 1) * (1 - window)) / (count - 1)
+  return clamp((stage - start) / window)
+}
+
+/** Inline SVG stroke style that draws a path from its start up to fraction `t` (use with pathLength={1}). */
+export function revealDash(t: number): { strokeDasharray?: number; strokeDashoffset?: number } {
+  if (t >= 1) return {}
+  return { strokeDasharray: 1, strokeDashoffset: 1 - t }
+}
+
+/** Linear blend of two points, for endpoints that grow from an origin. */
+export function revealLerp(from: Point, to: Point, t: number): Point {
+  return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t }
 }

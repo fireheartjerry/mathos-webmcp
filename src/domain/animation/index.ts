@@ -27,6 +27,11 @@ export {
   applyObjectPath,
   evaluateActiveTimelines,
   evaluateTimeline,
+  revealDash,
+  revealItem,
+  revealLerp,
+  revealProgress,
+  revealStage,
   sampleTrack,
   sortedKeyframes,
   type ActivePlaybacks,
@@ -42,16 +47,31 @@ export {
 } from './playback'
 
 export {
+  BRIDGE_LATEX_CHAIN,
+  TIMELINE_PRESETS,
+  TIMELINE_PRESET_NAMES,
+  attentionDrawIn,
+  barycentricDrawIn,
+  bridgeMorph,
   cameraTo,
   cameraTrack,
   crossfadeLatex,
+  densityConstruct,
   drawIn,
   fadeIn,
+  geometryDependencyDraw,
   makeTimeline,
+  matrixSweep,
   objectTrack,
+  partitionRows,
+  simplexSweep,
   sweepParameter,
   sweepSection,
   timelinePresets,
+  type BinEdges,
+  type PresetArgs,
+  type PresetParam,
+  type TimelinePreset,
 } from './presets'
 
 export {

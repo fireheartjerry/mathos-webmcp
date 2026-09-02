@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { gammaBinMasses, gammaCDF, gammaDensity, gammaFunction, massesToSoftmax } from '../domain/math/probability'
 import type { GraphObject, WorldAction } from '../domain/world/types'
+import { revealDash, revealProgress, revealStage } from '../domain/animation/evaluate'
 import { Tex } from './Tex'
 import '../styles/graph.css'
+import '../styles/reveal.css'
 
 type Props = { object: GraphObject; run: (action: WorldAction) => void }
 
@@ -136,13 +138,24 @@ export default function GammaProbabilityView({ object, run }: Props) {
     commit(`Moved the CDF bound b to ${short(Number(boundFromPointer(event).toFixed(2)))}`, { b: Number(boundFromPointer(event).toFixed(2)) })
   }
   const clipId = `gamma-clip-${object.id}`
+  const areaClipId = `gamma-area-clip-${object.id}`
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
   const cdfLabelFlipped = bound > (xMin + xMax) * 0.62
   const modeLabelFlipped = mapX(mode) > plot.right - 120
 
+  // ---- staged reveal: axes/grid → curve → shaded area → bins and counting labels --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const chromeT = revealStage(p, 0, 0.2)
+  const axesT = revealStage(p, 0, 0.25)
+  const curveT = revealStage(p, 0.25, 0.65)
+  const areaT = revealStage(p, 0.65, 0.85)
+  const finalT = revealStage(p, 0.85, 1)
+  const binCutTop = plot.top + 10
+
   return (
-    <section className={`gamma-probability-view gamma-widget${draggingBound ? ' is-dragging' : ''}`} onPointerDown={stop}>
-      <header className="gamma-header">
+    <section className={`gamma-probability-view gamma-widget reveal-root${draggingBound ? ' is-dragging' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
+      <header className="gamma-header reveal-fade" style={{ opacity: chromeT }}>
         <span className="graph-widget-kicker gamma-kicker-text">normalised gamma density · total area 1</span>
         <div className="gamma-header-equation">
           <Tex latex={DENSITY_LATEX} ariaLabel="g sub a of x equals x to the a minus one times e to the minus x, over Gamma of a" />
@@ -159,59 +172,66 @@ export default function GammaProbabilityView({ object, run }: Props) {
           onPointerUp={endBound}
           onPointerCancel={endBound}
         >
-          <defs><clipPath id={clipId}><rect x={plot.left} y={plot.top} width={Math.max(0, plot.right - plot.left)} height={Math.max(0, plot.bottom - plot.top)} /></clipPath></defs>
+          <defs>
+            <clipPath id={clipId}><rect x={plot.left} y={plot.top} width={Math.max(0, plot.right - plot.left)} height={Math.max(0, plot.bottom - plot.top)} /></clipPath>
+            <clipPath id={areaClipId}><rect x={plot.left} y={plot.top} width={Math.max(0, plot.right - plot.left) * areaT} height={Math.max(0, plot.bottom - plot.top)} /></clipPath>
+          </defs>
           <rect className="gamma-paper" width={width} height={plotHeight} />
           <g clipPath={`url(#${clipId})`}>
             {Array.from({ length: 9 }, (_, index) => {
               const x = xMin + ((xMax - xMin) * index) / 8
-              return <line key={`x-${index}`} className="gamma-grid" x1={mapX(x)} x2={mapX(x)} y1={plot.top} y2={plot.bottom} />
+              return <line key={`x-${index}`} className="gamma-grid" x1={mapX(x)} x2={mapX(x)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />
             })}
-            <path className="gamma-area" d={shade} />
-            {binCuts.map((cut, index) => (
-              <line key={`cut-${index}`} className="gamma-bin-cut" x1={mapX(cut)} x2={mapX(cut)} y1={plot.top + 10} y2={plot.bottom} />
+            {areaT > 0 && <g clipPath={`url(#${areaClipId})`}><path className="gamma-area" d={shade} /></g>}
+            {finalT > 0 && binCuts.map((cut, index) => (
+              <line key={`cut-${index}`} className="gamma-bin-cut" x1={mapX(cut)} x2={mapX(cut)} y1={plot.bottom - (plot.bottom - binCutTop) * finalT} y2={plot.bottom} />
             ))}
-            <path className="gamma-curve" d={curve} />
-            <line className="gamma-tangent" x1={mapX(tangentA)} y1={mapY(tangentY + slope * (tangentA - tangentX))} x2={mapX(tangentB)} y2={mapY(tangentY + slope * (tangentB - tangentX))} />
-            <line className="gamma-bound" x1={mapX(bound)} x2={mapX(bound)} y1={plot.top} y2={plot.bottom} />
-            <circle className="gamma-mode" cx={mapX(mode)} cy={mapY(gammaDensity(mode, shape))} r="4" />
-            <circle
-              className="gamma-bound-handle"
-              data-demo-target="gamma-bound-handle"
-              cx={mapX(bound)}
-              cy={mapY(gammaDensity(bound, shape))}
-              r="8"
-              onPointerDown={beginBoundDrag}
-              aria-label="Drag CDF bound"
-            />
-            {masses.map((mass, index) => {
-              const left = index === 0 ? xMin : edges[index]
-              const right = index === 2 ? xMax : edges[index + 1]
-              return (
-                <text key={BIN_LABELS[index]} className="gamma-bin-label" x={mapX((left + right) / 2)} y={plot.top + 12} textAnchor="middle">
-                  {BIN_LABELS[index]} = {fmt(mass)}
-                </text>
-              )
-            })}
-            <text className="gamma-cdf-label" x={mapX(bound) + (cdfLabelFlipped ? -10 : 10)} y={plot.top + 32} textAnchor={cdfLabelFlipped ? 'end' : 'start'}>
-              P(X ≤ {short(bound)}) = {fmt(cdf)}
-            </text>
-            <text
-              className="gamma-mode-label"
-              x={mapX(mode) + (modeLabelFlipped ? -8 : 8)}
-              y={Math.max(plot.top + 48, mapY(gammaDensity(mode, shape)) - 9)}
-              textAnchor={modeLabelFlipped ? 'end' : 'start'}
-            >
-              mode a − 1 = {short(mode)}
-            </text>
+            {curveT > 0 && <path className="gamma-curve" d={curve} pathLength={1} style={revealDash(curveT)} />}
+            <g style={{ opacity: finalT }}>
+              <line className="gamma-tangent" x1={mapX(tangentA)} y1={mapY(tangentY + slope * (tangentA - tangentX))} x2={mapX(tangentB)} y2={mapY(tangentY + slope * (tangentB - tangentX))} />
+              <line className="gamma-bound" x1={mapX(bound)} x2={mapX(bound)} y1={plot.top} y2={plot.bottom} />
+              <circle className="gamma-mode" cx={mapX(mode)} cy={mapY(gammaDensity(mode, shape))} r="4" />
+              <circle
+                className="gamma-bound-handle"
+                data-demo-target="gamma-bound-handle"
+                cx={mapX(bound)}
+                cy={mapY(gammaDensity(bound, shape))}
+                r="8"
+                onPointerDown={beginBoundDrag}
+                aria-label="Drag CDF bound"
+              />
+              {masses.map((mass, index) => {
+                const left = index === 0 ? xMin : edges[index]
+                const right = index === 2 ? xMax : edges[index + 1]
+                return (
+                  <text key={BIN_LABELS[index]} className="gamma-bin-label" x={mapX((left + right) / 2)} y={plot.top + 12} textAnchor="middle">
+                    {BIN_LABELS[index]} = {fmt(mass * finalT)}
+                  </text>
+                )
+              })}
+              <text className="gamma-cdf-label" x={mapX(bound) + (cdfLabelFlipped ? -10 : 10)} y={plot.top + 32} textAnchor={cdfLabelFlipped ? 'end' : 'start'}>
+                P(X ≤ {short(bound)}) = {fmt(cdf * finalT)}
+              </text>
+              <text
+                className="gamma-mode-label"
+                x={mapX(mode) + (modeLabelFlipped ? -8 : 8)}
+                y={Math.max(plot.top + 48, mapY(gammaDensity(mode, shape)) - 9)}
+                textAnchor={modeLabelFlipped ? 'end' : 'start'}
+              >
+                mode a − 1 = {short(mode)}
+              </text>
+            </g>
           </g>
-          <line className="gamma-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} />
-          {[0, 4, 8, 12, 16].filter((tick) => tick >= xMin && tick <= xMax).map((tick) => (
-            <text key={tick} className="gamma-label" x={mapX(tick)} y={plot.bottom + 15} textAnchor="middle">{tick}</text>
-          ))}
+          <line className="gamma-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} pathLength={1} style={revealDash(axesT)} />
+          <g style={{ opacity: axesT }}>
+            {[0, 4, 8, 12, 16].filter((tick) => tick >= xMin && tick <= xMax).map((tick) => (
+              <text key={tick} className="gamma-label" x={mapX(tick)} y={plot.bottom + 15} textAnchor="middle">{tick}</text>
+            ))}
+          </g>
         </svg>
       </div>
 
-      <footer className="gamma-footer">
+      <footer className="gamma-footer reveal-fade" style={{ opacity: chromeT }}>
         <div className="gamma-probability-controls" onPointerDown={stop}>
           <label>
             <span>shape a <b>{short(shape)}</b></span>
@@ -252,18 +272,18 @@ export default function GammaProbabilityView({ object, run }: Props) {
             <tbody>
               <tr className="is-mass" data-hero-path="mass">
                 <th scope="row">probability mass</th>
-                {bridge.masses.map((mass, index) => <td key={index}>{fmt(mass)}</td>)}
-                <td className="gamma-sum">{fmt(bridge.masses.reduce((sum, mass) => sum + mass, 0))}</td>
+                {bridge.masses.map((mass, index) => <td key={index}>{fmt(mass * finalT)}</td>)}
+                <td className="gamma-sum">{fmt(bridge.masses.reduce((sum, mass) => sum + mass, 0) * finalT)}</td>
               </tr>
-              <tr className="is-log">
+              <tr className="is-log" style={{ opacity: finalT }}>
                 <th scope="row">log mass ℓⱼ</th>
                 {bridge.logs.map((value, index) => <td key={index}>{fmt(value)}</td>)}
                 <td />
               </tr>
               <tr className="is-softmax">
                 <th scope="row">softmax(ℓ)ⱼ</th>
-                {bridge.probabilities.map((probability, index) => <td key={index}>{fmt(probability)}</td>)}
-                <td className="gamma-sum">{fmt(bridge.probabilities.reduce((sum, probability) => sum + probability, 0))}</td>
+                {bridge.probabilities.map((probability, index) => <td key={index}>{fmt(probability * finalT)}</td>)}
+                <td className="gamma-sum">{fmt(bridge.probabilities.reduce((sum, probability) => sum + probability, 0) * finalT)}</td>
               </tr>
             </tbody>
           </table>

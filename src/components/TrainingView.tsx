@@ -4,6 +4,8 @@ import { useMemo } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createInitialTinyModel, evaluateTinyModel, trainOneStep } from '../domain/math/transformer'
 import type { AttentionObject, Matrix2, TrainingObject, WorldAction, WorldObject, WorldState } from '../domain/world/types'
+import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import '../styles/reveal.css'
 
 type Props = { object: TrainingObject; world: WorldState; run: (action: WorldAction) => void }
 const fmt = (value: number, digits = 3) => value.toFixed(digits)
@@ -15,7 +17,8 @@ function linkedAttention(world: WorldState, id: string): AttentionObject | null 
   return candidate?.kind === 'attention' ? candidate : null
 }
 
-function Sparkline({ values, tone, label }: { values: number[]; tone: 'loss' | 'probability'; label: string }) {
+/** `draw` (0..1) draws the polyline left→right; dots and end labels follow the pen. */
+function Sparkline({ values, tone, label, draw = 1 }: { values: number[]; tone: 'loss' | 'probability'; label: string; draw?: number }) {
   const width = 210
   const height = 56
   const max = Math.max(...values)
@@ -25,13 +28,14 @@ function Sparkline({ values, tone, label }: { values: number[]; tone: 'loss' | '
   const x = (index: number) => pad + (index / Math.max(1, values.length - 1)) * (width - pad * 2)
   const y = (value: number) => height - pad - ((value - min) / span) * (height - pad * 2)
   const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(' ')
+  const reached = (index: number) => (values.length <= 1 ? draw : draw >= index / (values.length - 1) - 1e-6 ? 1 : 0)
   return (
     <svg className={`training-sparkline is-${tone}`} viewBox={`0 0 ${width} ${height}`} aria-label={label}>
-      <polyline points={points} />
-      {values.map((value, index) => <circle key={index} cx={x(index)} cy={y(value)} r={index === values.length - 1 ? 3.4 : 2.2} />)}
-      <text x={x(0)} y={y(values[0]) + (values[0] >= values[values.length - 1] ? -6 : 12)} textAnchor="start">{fmt(values[0])}</text>
+      {draw > 0 && <polyline points={points} pathLength={1} style={revealDash(draw)} />}
+      {values.map((value, index) => <circle key={index} cx={x(index)} cy={y(value)} r={(index === values.length - 1 ? 3.4 : 2.2) * reached(index)} />)}
+      <text x={x(0)} y={y(values[0]) + (values[0] >= values[values.length - 1] ? -6 : 12)} textAnchor="start" style={{ opacity: revealStage(draw, 0, 0.2) }}>{fmt(values[0])}</text>
       {values.length > 1 && (
-        <text x={x(values.length - 1)} y={y(values[values.length - 1]) + (values[0] >= values[values.length - 1] ? 13 : -7)} textAnchor="end">{fmt(values[values.length - 1])}</text>
+        <text x={x(values.length - 1)} y={y(values[values.length - 1]) + (values[0] >= values[values.length - 1] ? 13 : -7)} textAnchor="end" style={{ opacity: revealStage(draw, 0.85, 1) }}>{fmt(values[values.length - 1])}</text>
       )}
     </svg>
   )
@@ -99,9 +103,19 @@ export default function TrainingView({ object, world, run }: Props) {
 
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
+  // ---- staged reveal: header → metric cards → distribution → history cards → drift, then the sparklines draw --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const headerT = revealStage(p, 0, 0.15)
+  const metricT = (index: number) => revealItem(revealStage(p, 0.1, 0.4), index, 4, 1)
+  const distributionT = revealStage(p, 0.3, 0.5)
+  const historyT = (index: number) => revealStage(p, 0.4 + index * 0.05, 0.55 + index * 0.05)
+  const driftT = revealStage(p, 0.5, 0.7)
+  const sparkT = revealStage(p, 0.6, 1)
+
   return (
-    <section className="training-view" onPointerDown={stop}>
-      <header className="training-header">
+    <section className={`training-view reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
+      <header className="training-header reveal-fade" style={{ opacity: headerT }}>
         <div><span className="math-object-kicker">TINY TRANSFORMER · GRADIENT STEP</span><h3>One honest training step</h3></div>
         <div className="training-actions">
           <button type="button" data-demo-target="train-reset" onClick={reset}>reset</button>
@@ -110,34 +124,34 @@ export default function TrainingView({ object, world, run }: Props) {
       </header>
 
       <div className="training-metrics">
-        <div><small>STEP</small><strong>{object.step}</strong><span>η = {object.learningRate ? short(object.learningRate, 3) : '—'}</span></div>
-        <div><small>TARGET TOKEN</small><strong>{object.model.tokens[object.model.targetIndex]}</strong><span>query {object.model.tokens[object.model.queryIndex]}</span></div>
-        <div className="is-loss"><small>CROSS-ENTROPY L = −log p(target)</small><strong>{fmt(pass.loss)}</strong><span>{lossDelta < 0 ? `↓ ${fmt(-lossDelta)} since step 0` : 'awaiting a step'}</span></div>
-        <div className="is-probability"><small>TARGET PROBABILITY</small><strong>{fmt(pass.targetProbability)}</strong><span>{probabilityDelta > 0 ? `↑ ${fmt(probabilityDelta)} since step 0` : 'awaiting a step'}</span></div>
+        <div style={{ opacity: metricT(0) }}><small>STEP</small><strong>{object.step}</strong><span>η = {object.learningRate ? short(object.learningRate, 3) : '—'}</span></div>
+        <div style={{ opacity: metricT(1) }}><small>TARGET TOKEN</small><strong>{object.model.tokens[object.model.targetIndex]}</strong><span>query {object.model.tokens[object.model.queryIndex]}</span></div>
+        <div className="is-loss" style={{ opacity: metricT(2) }}><small>CROSS-ENTROPY L = −log p(target)</small><strong>{fmt(pass.loss * metricT(2))}</strong><span>{lossDelta < 0 ? `↓ ${fmt(-lossDelta)} since step 0` : 'awaiting a step'}</span></div>
+        <div className="is-probability" style={{ opacity: metricT(3) }}><small>TARGET PROBABILITY</small><strong>{fmt(pass.targetProbability * metricT(3))}</strong><span>{probabilityDelta > 0 ? `↑ ${fmt(probabilityDelta)} since step 0` : 'awaiting a step'}</span></div>
       </div>
 
       <div className="training-body">
-        <div className="training-probabilities">
+        <div className="training-probabilities reveal-fade" style={{ opacity: distributionT }}>
           <div className="training-card-heading"><span>OUTPUT DISTRIBUTION</span><b>Σ p = {fmt(pass.probabilities.reduce((sum, value) => sum + value, 0))}</b></div>
           {pass.probabilities.map((probability, index) => (
             <div className={`training-probability ${index === object.model.targetIndex ? 'is-target' : ''}`} key={index}>
-              <span>{object.model.tokens[index]}</span><i><em style={{ width: `${(probability * 100).toFixed(2)}%` }} /></i><b>{fmt(probability)}</b>
+              <span>{object.model.tokens[index]}</span><i><em style={{ width: `${(probability * 100 * distributionT).toFixed(2)}%` }} /></i><b>{fmt(probability * distributionT)}</b>
             </div>
           ))}
         </div>
         <div className="training-history">
-          <div className="training-history-card is-loss">
+          <div className="training-history-card is-loss reveal-fade" style={{ opacity: historyT(0) }}>
             <div className="training-card-heading"><span>LOSS</span><b>{lossHistory.map((value) => fmt(value)).join(' → ')}</b></div>
-            <Sparkline values={lossHistory} tone="loss" label="Loss history" />
+            <Sparkline values={lossHistory} tone="loss" label="Loss history" draw={sparkT} />
           </div>
-          <div className="training-history-card is-probability">
+          <div className="training-history-card is-probability reveal-fade" style={{ opacity: historyT(1) }}>
             <div className="training-card-heading"><span>TARGET PROBABILITY</span><b>{probabilityHistory.map((value) => fmt(value)).join(' → ')}</b></div>
-            <Sparkline values={probabilityHistory} tone="probability" label="Target probability history" />
+            <Sparkline values={probabilityHistory} tone="probability" label="Target probability history" draw={sparkT} />
           </div>
         </div>
       </div>
 
-      <div className="training-drift" aria-label="Parameters moved by the gradient">
+      <div className="training-drift reveal-fade" aria-label="Parameters moved by the gradient" style={{ opacity: driftT }}>
         <MatrixDrift label="W_Q" current={object.model.wq} initial={initial.wq} />
         <MatrixDrift label="W_K" current={object.model.wk} initial={initial.wk} />
         <MatrixDrift label="W_V" current={object.model.wv} initial={initial.wv} />

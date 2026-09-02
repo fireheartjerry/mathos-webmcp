@@ -12,6 +12,8 @@ import type {
   WorldAction,
   WorldState,
 } from '../domain/world/types'
+import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import '../styles/reveal.css'
 
 type Props = { object: AttentionObject; world: WorldState; run: (action: WorldAction) => void }
 type MatrixKey = 'wq' | 'wk' | 'wv'
@@ -68,6 +70,19 @@ export default function AttentionView({ object, world, run }: Props) {
   const markerId = `attention-arrow-${object.id}`
   const contextMarkerId = `attention-context-${object.id}`
 
+  // ---- staged reveal: matrix rows → score columns and softmax bars → readouts --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const headerT = revealStage(p, 0, 0.15)
+  const rowT = (row: number) => revealStage(p, row * 0.2, row * 0.2 + 0.2)
+  const planeT = revealStage(p, 0, 0.2)
+  const vectorT = revealStage(p, 0.1, 0.5)
+  const arcT = revealStage(p, 0.4, 0.6)
+  const columnT = (column: number) => revealStage(p, 0.4 + column * 0.1, 0.5 + column * 0.1)
+  const barT = (index: number) => revealItem(revealStage(p, 0.4, 0.8), index, 3, 0.6)
+  const readoutT = revealStage(p, 0.8, 1)
+  const grow = (tip: { x: number; y: number }) => revealLerp(ORIGIN, tip, vectorT)
+
   const commit = (next: AttentionObject, summary: string) => {
     const nextPass = evaluateTinyModel(next.model, next.bridgeMasses, next.temperature)
     const linkedTraining = Object.values(world.objects).filter((candidate): candidate is TrainingObject => (
@@ -122,6 +137,7 @@ export default function AttentionView({ object, world, run }: Props) {
           return (
             <input
               key={`${rowIndex}-${columnIndex}`}
+              style={revealing ? { opacity: rowT(rowIndex) } : undefined}
               className={isHero ? 'is-hero' : undefined}
               data-demo-target={isHero ? 'attention-matrix-cell' : undefined}
               aria-label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
@@ -142,8 +158,8 @@ export default function AttentionView({ object, world, run }: Props) {
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
-    <section className={`attention-view${heroActive ? ' is-hero-active' : ''}`} onPointerDown={stop}>
-      <header className="attention-header">
+    <section className={`attention-view reveal-root${heroActive ? ' is-hero-active' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
+      <header className="attention-header reveal-fade" style={{ opacity: headerT }}>
         <div><span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span><h3>Attention is a weighted sum</h3></div>
         <span className="attention-truth">softmax over q·kⱼ/√2 + log wⱼ · not a frontier model</span>
       </header>
@@ -155,50 +171,50 @@ export default function AttentionView({ object, world, run }: Props) {
             <marker id={contextMarkerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
           </defs>
           <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
-          <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} />
-          <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 34} y2={12} />
-          <text className="attention-plane-kicker" x={12} y={16}>KEYS k = W_K e · QUERY q = W_Q e</text>
+          <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} pathLength={1} style={revealDash(planeT)} />
+          <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 34} y2={12} pathLength={1} style={revealDash(planeT)} />
+          <text className="attention-plane-kicker" x={12} y={16} style={{ opacity: planeT }}>KEYS k = W_K e · QUERY q = W_Q e</text>
           {arcs.map((arc, index) => (
-            <g key={`arc-${index}`} className={`attention-arc${index === pass.attentionWeights.indexOf(Math.max(...pass.attentionWeights)) ? ' is-strongest' : ''}`} data-hero-path="score">
-              <path d={arc.d} />
+            <g key={`arc-${index}`} className={`attention-arc${index === pass.attentionWeights.indexOf(Math.max(...pass.attentionWeights)) ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
+              <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
               <text x={arc.label.x} y={arc.label.y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
             </g>
           ))}
-          {pass.values.map((value, index) => {
-            const tip = toPlane(value)
+          {vectorT > 0 && pass.values.map((value, index) => {
+            const tip = grow(toPlane(value))
             return <line key={`v-${index}`} className="attention-value-vector" x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} />
           })}
-          {pass.keys.map((key, index) => {
-            const tip = toPlane(key)
+          {vectorT > 0 && pass.keys.map((key, index) => {
+            const tip = grow(toPlane(key))
             return (
               <g key={`k-${index}`} className="attention-key-vector">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                <text x={tip.x + 6} y={tip.y - 6}>k{index}</text>
+                <text x={tip.x + 6} y={tip.y - 6} style={{ opacity: vectorT }}>k{index}</text>
               </g>
             )
           })}
-          {(() => {
-            const tip = toPlane(pass.context)
+          {vectorT > 0 && (() => {
+            const tip = grow(toPlane(pass.context))
             return (
               <g className="attention-context-vector" data-hero-path="context">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
-                <text x={tip.x + 7} y={tip.y + 14}>c = Σ αⱼ vⱼ</text>
+                <text x={tip.x + 7} y={tip.y + 14} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
               </g>
             )
           })()}
-          {(() => {
-            const tip = toPlane(query)
+          {vectorT > 0 && (() => {
+            const tip = grow(toPlane(query))
             return (
               <g className="attention-query-vector" data-hero-path="query">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                <text x={tip.x + 7} y={tip.y - 8}>q = W_Q e{queryIndex}</text>
+                <text x={tip.x + 7} y={tip.y - 8} style={{ opacity: vectorT }}>q = W_Q e{queryIndex}</text>
               </g>
             )
           })()}
           {object.model.embeddings.map((embedding, index) => {
             const at = toPlane(embedding)
             return (
-              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === object.model.targetIndex ? ' is-target' : ''}`}>
+              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === object.model.targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
                 <circle cx={at.x} cy={at.y} r="4" />
                 <text x={at.x + 7} y={at.y + 4}>e{index} · {object.model.tokens[index]}</text>
               </g>
@@ -207,40 +223,40 @@ export default function AttentionView({ object, world, run }: Props) {
         </svg>
         <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
           {pass.attentionWeights.map((weight, index) => (
-            <div key={index} className={`attention-ribbon${index === object.model.targetIndex ? ' is-target' : ''}`}>
+            <div key={index} className={`attention-ribbon${index === object.model.targetIndex ? ' is-target' : ''}`} style={{ opacity: revealStage(p, 0.35, 0.45) }}>
               <span>α{index} · {object.model.tokens[index]}</span>
-              <i><em style={{ width: `${(weight * 100).toFixed(2)}%` }} /></i>
-              <b>{fmt(weight)}</b>
+              <i><em style={{ width: `${(weight * 100 * barT(index)).toFixed(2)}%` }} /></i>
+              <b>{fmt(weight * barT(index))}</b>
             </div>
           ))}
-          <small>Σ α = {fmt(pass.attentionWeights.reduce((sum, weight) => sum + weight, 0))}</small>
+          <small style={{ opacity: revealStage(p, 0.75, 0.85) }}>Σ α = {fmt(pass.attentionWeights.reduce((sum, weight) => sum + weight, 0))}</small>
         </div>
       </div>
 
       <div className="attention-side">
         <div className="attention-matrices">{matrix('wq')}{matrix('wk')}{matrix('wv')}</div>
         <table className="attention-score-table" aria-label="Scores and softmax weights">
-          <thead><tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">score</th><th scope="col">αⱼ</th></tr></thead>
+          <thead style={{ opacity: revealStage(p, 0.35, 0.45) }}><tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">score</th><th scope="col">αⱼ</th></tr></thead>
           <tbody>
             {pass.scores.map((score, index) => (
               <tr key={index} className={index === queryIndex ? 'is-query' : undefined} data-hero-path={index === object.model.targetIndex ? 'score' : undefined}>
-                <th scope="row">{object.model.tokens[index]}</th>
-                <td>{fmt(dots[index])}</td>
-                <td>{fmt(logs[index])}</td>
-                <td>{fmt(score)}</td>
-                <td className="is-weight">{fmt(pass.attentionWeights[index])}</td>
+                <th scope="row" style={{ opacity: revealStage(p, 0.35, 0.45) }}>{object.model.tokens[index]}</th>
+                <td style={{ opacity: columnT(0) }}>{fmt(dots[index])}</td>
+                <td style={{ opacity: columnT(1) }}>{fmt(logs[index])}</td>
+                <td style={{ opacity: columnT(2) }}>{fmt(score)}</td>
+                <td className="is-weight" style={{ opacity: columnT(3) }}>{fmt(pass.attentionWeights[index] * barT(index))}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="attention-readout">
-          <div><small>CONTEXT c</small><strong>[{pass.context.map((value) => fmt(value)).join(', ')}]</strong></div>
+        <div className="attention-readout reveal-fade" style={{ opacity: readoutT }}>
+          <div><small>CONTEXT c</small><strong>[{pass.context.map((value) => fmt(value * readoutT)).join(', ')}]</strong></div>
           <div className="attention-probability-list"><small>NEXT TOKEN · W_out c + b → softmax</small>{pass.probabilities.map((probability, index) => (
             <span className={index === object.model.targetIndex ? 'is-target' : ''} key={index} data-hero-path={index === object.model.targetIndex ? 'target' : undefined}>
-              <i>{object.model.tokens[index]}</i><em><b style={{ width: `${(probability * 100).toFixed(2)}%` }} /></em><strong>{fmt(probability)}</strong>
+              <i>{object.model.tokens[index]}</i><em><b style={{ width: `${(probability * 100 * readoutT).toFixed(2)}%` }} /></em><strong>{fmt(probability * readoutT)}</strong>
             </span>
           ))}</div>
-          <div className="attention-loss" data-hero-path="loss"><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss)}</strong><span>−log p(target) · p = {fmt(pass.targetProbability)}</span></div>
+          <div className="attention-loss" data-hero-path="loss"><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss * readoutT)}</strong><span>−log p(target) · p = {fmt(pass.targetProbability * readoutT)}</span></div>
         </div>
       </div>
     </section>

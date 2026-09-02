@@ -10,9 +10,11 @@ import {
   splitGraphExpressions,
 } from '../domain/math/graph'
 import type { EquationObject, GraphObject, WorldAction, WorldState } from '../domain/world/types'
+import { revealDash, revealProgress, revealStage } from '../domain/animation/evaluate'
 import { Tex } from './Tex'
 import '../styles/graph.css'
 import '../styles/overflow.css'
+import '../styles/reveal.css'
 
 /** Graphite for the human, purple for the Tutor, teal and orange as accents. */
 export const GRAPH_PALETTE: ReadonlyArray<{ name: string; value: string }> = [
@@ -277,10 +279,20 @@ export default function LiveGraph({
     ? `M ${mapX(shade[0].x).toFixed(2)} ${mapY(0).toFixed(2)} ${shade.map((point) => `L ${mapX(point.x).toFixed(2)} ${mapY(point.y).toFixed(2)}`).join(' ')} L ${mapX(shade.at(-1)!.x).toFixed(2)} ${mapY(0).toFixed(2)} Z`
     : ''
 
+  // ---- staged reveal: axes → curve → area → readouts, all from drawProgress --
+  const p = revealProgress(object)
+  const revealing = p < 1
+  const chromeT = revealStage(p, 0, 0.2)
+  const axesT = revealStage(p, 0, 0.25)
+  const curveT = revealStage(p, 0.25, 0.65)
+  const areaT = revealStage(p, 0.65, 0.85)
+  const finalT = revealStage(p, 0.85, 1)
+  const areaClipId = `graph-area-clip-${object.id}`
+
   const labels: Array<{ className: string; text: string }> = []
-  if (liveY !== null) labels.push({ className: 'graph-value-label', text: `f(${short(liveX, 2)}) = ${short(liveY)}` })
-  if (tangent) labels.push({ className: 'graph-slope-label', text: `slope ${short(tangent.slope)}` })
-  if (area !== null) labels.push({ className: 'graph-area-label', text: `∫ area ≈ ${short(area)}` })
+  if (liveY !== null) labels.push({ className: 'graph-value-label', text: `f(${short(liveX, 2)}) = ${short(liveY * finalT)}` })
+  if (tangent) labels.push({ className: 'graph-slope-label', text: `slope ${short(tangent.slope * finalT)}` })
+  if (area !== null) labels.push({ className: 'graph-area-label', text: `∫ area ≈ ${short(area * finalT)}` })
   const labelWidth = Math.max(...labels.map((label) => label.text.length), 0) * 7.4 + 12
   const clipId = `graph-clip-${object.id}`
   const stopWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -290,8 +302,8 @@ export default function LiveGraph({
   const invalid = Boolean(latex.trim()) && curves.every((curve) => curve.samples.length === 0)
 
   return (
-    <div className="live-graph graph-widget">
-      <header className="graph-header" data-canvas-control="true" onPointerDown={stopCanvasDrag}>
+    <div className={`live-graph graph-widget reveal-root${revealing ? ' is-revealing' : ''}`} style={revealing ? { opacity: object.opacity } : undefined}>
+      <header className="graph-header reveal-fade" data-canvas-control="true" onPointerDown={stopCanvasDrag} style={{ opacity: chromeT }}>
         <div className="graph-header-kicker">
           <span className="graph-widget-kicker">live function</span>
           {expressions.length > 1 && <span className="graph-widget-kicker">{expressions.length} curves</span>}
@@ -331,28 +343,32 @@ export default function LiveGraph({
             <clipPath id={clipId}>
               <rect x={plot.left} y={plot.top} width={Math.max(0, plot.right - plot.left)} height={Math.max(0, plot.bottom - plot.top)} />
             </clipPath>
+            <clipPath id={areaClipId}>
+              <rect x={plot.left} y={plot.top} width={Math.max(0, plot.right - plot.left) * areaT} height={Math.max(0, plot.bottom - plot.top)} />
+            </clipPath>
           </defs>
           <rect className="graph-paper" x="0" y="0" width={width} height={height} />
           <g clipPath={`url(#${clipId})`}>
-            {ticks(object.xDomain).map((value) => <line key={`x-${value}`} className="graph-grid" x1={mapX(value)} x2={mapX(value)} y1={plot.top} y2={plot.bottom} />)}
-            {ticks(object.yDomain).map((value) => <line key={`y-${value}`} className="graph-grid" x1={plot.left} x2={plot.right} y1={mapY(value)} y2={mapY(value)} />)}
-            {yMin <= 0 && yMax >= 0 && <line className="graph-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} />}
-            {xMin <= 0 && xMax >= 0 && <line className="graph-axis" x1={mapX(0)} x2={mapX(0)} y1={plot.top} y2={plot.bottom} />}
-            {shadePath && <path className="graph-area" d={shadePath} />}
-            {curves.map((curve, index) => curve.samples.length > 1 && (
+            {ticks(object.xDomain).map((value) => <line key={`x-${value}`} className="graph-grid" x1={mapX(value)} x2={mapX(value)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />)}
+            {ticks(object.yDomain).map((value) => <line key={`y-${value}`} className="graph-grid" x1={plot.left} x2={plot.right} y1={mapY(value)} y2={mapY(value)} pathLength={1} style={revealDash(axesT)} />)}
+            {yMin <= 0 && yMax >= 0 && <line className="graph-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} pathLength={1} style={revealDash(axesT)} />}
+            {xMin <= 0 && xMax >= 0 && <line className="graph-axis" x1={mapX(0)} x2={mapX(0)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />}
+            {shadePath && areaT > 0 && <g clipPath={`url(#${areaClipId})`}><path className="graph-area" d={shadePath} /></g>}
+            {curves.map((curve, index) => curve.samples.length > 1 && curveT > 0 && (
               <path
                 key={`curve-${index}`}
                 className={`graph-curve${index ? ' is-secondary' : ''}`}
                 d={pathOf(curve.samples)}
-                style={{ stroke: curve.colour }}
+                pathLength={1}
+                style={{ stroke: curve.colour, ...revealDash(curveT) }}
               />
             ))}
-            {tangent && <>
+            {tangent && finalT > 0 && <g style={{ opacity: finalT }}>
               <line className="graph-tangent" x1={mapX(tangent.first.x)} y1={mapY(tangent.first.y)} x2={mapX(tangent.second.x)} y2={mapY(tangent.second.y)} />
               <circle className="graph-focus" cx={mapX(tangent.x)} cy={mapY(tangent.y)} r="4.5" />
-            </>}
-            {labels.length > 0 && (
-              <g>
+            </g>}
+            {labels.length > 0 && finalT > 0 && (
+              <g style={{ opacity: finalT }}>
                 <rect className="graph-label-plate" x={plot.right - labelWidth} y={plot.top + 2} width={labelWidth} height={labels.length * 16 + 6} rx="2" />
                 {labels.map((label, index) => (
                   <text key={label.className} className={label.className} x={plot.right - 6} y={plot.top + 16 + index * 16} textAnchor="end">{label.text}</text>
@@ -360,14 +376,16 @@ export default function LiveGraph({
               </g>
             )}
           </g>
-          <text className="graph-tick" x={plot.left} y={plot.bottom + 15}>{short(xMin, 2)}</text>
-          <text className="graph-tick" x={plot.right} y={plot.bottom + 15} textAnchor="end">{short(xMax, 2)}</text>
-          <text className="graph-tick" x={plot.left - 5} y={plot.top + 10} textAnchor="end">{short(yMax, 2)}</text>
-          <text className="graph-tick" x={plot.left - 5} y={plot.bottom} textAnchor="end">{short(yMin, 2)}</text>
+          <g style={{ opacity: axesT }}>
+            <text className="graph-tick" x={plot.left} y={plot.bottom + 15}>{short(xMin, 2)}</text>
+            <text className="graph-tick" x={plot.right} y={plot.bottom + 15} textAnchor="end">{short(xMax, 2)}</text>
+            <text className="graph-tick" x={plot.left - 5} y={plot.top + 10} textAnchor="end">{short(yMax, 2)}</text>
+            <text className="graph-tick" x={plot.left - 5} y={plot.bottom} textAnchor="end">{short(yMin, 2)}</text>
+          </g>
         </svg>
       </div>
 
-      <footer className="graph-footer" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel}>
+      <footer className="graph-footer reveal-fade" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel} style={{ opacity: chromeT }}>
         <div className="graph-row graph-domain">
           <span className="graph-row-label">x</span>
           <NumberField label="x minimum" value={xMin} onCommit={(value) => commitDomain({ xMin: value })} />
