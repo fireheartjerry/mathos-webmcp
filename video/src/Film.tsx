@@ -65,8 +65,17 @@ function cameraAt(shot: (typeof SHOTS)[number], t: number): CameraKey {
   return { at: t, zoom: pick('zoom'), x: pick('x'), y: pick('y') }
 }
 
-/** One shot's span of the capture, with the composition's camera push applied. */
-function Segment({ shot, seconds, opacity, push }: { shot: (typeof SHOTS)[number]; seconds: number; opacity: number; push: number }) {
+/**
+ * One shot's span of the capture, with the composition's camera push applied.
+ *
+ * MUST be rendered inside a <Sequence from={filmStart}>. OffthreadVideo advances with
+ * the frame it sees, so outside a Sequence every layer plays `srcStart + globalFrame`
+ * and shows content its own filmStart seconds too late -- which silently made every
+ * shot after the first display the wrong scene. Inside a Sequence the clock is
+ * relative, so `startFrom` means what it says.
+ */
+function Segment({ shot, opacity, push }: { shot: (typeof SHOTS)[number]; opacity: number; push: number }) {
+  const seconds = useCurrentFrame() / FILM_FPS
   const camera = cameraAt(shot, Math.max(0, seconds))
   const zoom = clamp(camera.zoom, 1, 1.35) * push
   const left = clamp(FILM_W / 2 - camera.x * FILM_W * zoom, FILM_W - FILM_W * zoom, 0)
@@ -99,7 +108,7 @@ function Stage() {
   const shot = SHOTS[index]
   const next = SHOTS[index + 1]
 
-  const layers: Array<{ key: string; shot: (typeof SHOTS)[number]; seconds: number; opacity: number; push: number }> = []
+  const layers: Array<{ shot: (typeof SHOTS)[number]; opacity: number; push: number }> = []
   const overlap = shot.transitionSeconds ?? 0
   const intoTransition = next && overlap > 0 ? seconds - (shot.filmEnd - overlap) : -1
 
@@ -107,16 +116,24 @@ function Stage() {
     const t = clamp(intoTransition / overlap, 0, 1)
     const eased = Easing.bezier(0.4, 0, 0.2, 1)(t)
     const depth = shot.kind === 'bridge' ? 0.012 : 0.055
-    layers.push({ key: shot.id, shot, seconds: seconds - shot.filmStart, opacity: 1 - eased, push: 1 + depth * eased })
-    layers.push({ key: next.id, shot: next, seconds: seconds - next.filmStart, opacity: eased, push: 1 + depth * (1 - eased) })
+    layers.push({ shot, opacity: 1 - eased, push: 1 + depth * eased })
+    layers.push({ shot: next, opacity: eased, push: 1 + depth * (1 - eased) })
   } else {
-    layers.push({ key: shot.id, shot, seconds: seconds - shot.filmStart, opacity: 1, push: 1 })
+    layers.push({ shot, opacity: 1, push: 1 })
   }
 
   return (
     <AbsoluteFill style={{ overflow: 'hidden', background: '#f4f0e6' }}>
       {layers.map((layer) => (
-        <Segment key={layer.key} shot={layer.shot} seconds={layer.seconds} opacity={layer.opacity} push={layer.push} />
+        <Sequence
+          key={layer.shot.id}
+          from={Math.round(layer.shot.filmStart * FILM_FPS)}
+          durationInFrames={Math.max(1, Math.round((layer.shot.seconds + 1) * FILM_FPS))}
+          layout="none"
+          name={`shot ${layer.shot.id}`}
+        >
+          <Segment shot={layer.shot} opacity={layer.opacity} push={layer.push} />
+        </Sequence>
       ))}
     </AbsoluteFill>
   )
