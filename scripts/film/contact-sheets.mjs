@@ -22,7 +22,7 @@ const grab = (seconds, file, label) => {
   const at = Math.max(0, seconds - filmStart)
   execFileSync('ffmpeg', [
     '-y', '-v', 'error', '-ss', at.toFixed(3), '-i', FILM, '-frames:v', '1',
-    '-vf', `scale=640:-1,drawbox=x=0:y=0:w=640:h=30:color=0x171713@0.85:t=fill,drawtext=text='${label.replace(/[':]/g, ' ')}':x=10:y=8:fontsize=15:fontcolor=0xf4f0e6:font=Consolas`,
+    '-vf', `scale=640:-1,drawbox=x=0:y=0:w=640:h=30:color=0x171713@0.85:t=fill,drawtext=text='${label.replace(/[':]/g, ' ')}':x=10:y=8:fontsize=15:fontcolor=0xf4f0e6:fontfile=/Windows/Fonts/consola.ttf`,
     resolve(TMP, file),
   ])
 }

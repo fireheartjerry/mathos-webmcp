@@ -50,3 +50,17 @@ Found:
 - The final lockup grows to 4.4 vw at film size, with a larger registered-tools chip, so "One mathematical world." reads at 720p.
 - Take 7 showed the closer camera pushing the clinic's Tutor panel above the top edge, so the learner's "Correct the sign" click missed (34 of 35 commits). The clinic keeps a 1.04× fit; every other frame uses 1.18×. Take 8: 161.5 s, 35 commits, no shot over budget.
 - Render 2 (final + review) is built from take 8.
+
+## Render 2 (final 2560×1440 + review) — 2026-09-02 05:47
+
+From take 8. 161.1 s, 60 fps, stereo 48 kHz; integrated loudness −19.4 LUFS, true peak −4.4 dBFS, loudness range 6.8 LU. Contact sheets (`video/out/contact-storyboard.png`, `contact-transitions.png`) show thirteen distinct frames and every bridge mid-flight.
+
+Found on the full viewing pass:
+
+- The reconstruction shot kept the camera on the handwriting while the Tutor's semantic draft and audit panel sat at the right edge at 380 px; the composition's push now travels to that panel for the audit and approval and returns to the reconstructed LaTeX.
+- Everything else held: no blank or stale frames, no overlaps between narration clips, the crescendo bridge (residue lanes → tool families) reads as dots gathering under the lockup, and the closing lockup survives the 720p review copy.
+- The contact-sheet script needed the same Windows font fix as the QA sheets.
+
+## Render 3 — cycle 3: QA pass
+
+- Same take 8 capture; only the reconstruction camera changed in the manifest. Re-rendered final and review, re-probed, contact sheets regenerated.
