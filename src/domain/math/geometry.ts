@@ -242,3 +242,77 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
 
   return output
 }
+
+/** A `line` primitive whose id starts with `ray:` is rendered as a half-line from its first point. */
+export const RAY_PREFIX = 'ray:'
+export const isRayId = (id: string) => id.startsWith(RAY_PREFIX)
+
+/** Ids a primitive depends on, in declaration order. Free points depend on nothing. */
+export function primitiveReferences(primitive: GeometryPrimitive): string[] {
+  switch (primitive.kind) {
+    case 'point': return []
+    case 'segment': return [primitive.from, primitive.to]
+    case 'line': return [...primitive.through]
+    case 'circle': return [primitive.center, primitive.through]
+    case 'polygon': return [...primitive.points]
+    case 'midpoint': return [...primitive.of]
+    case 'perpendicular':
+    case 'parallel': return [primitive.through, primitive.to]
+    case 'intersection': return [...primitive.lines]
+    case 'angle': return [primitive.a, primitive.vertex, primitive.b]
+    case 'homothety':
+    case 'similarity': return [primitive.center, primitive.source]
+    case 'spiralCenter': return [primitive.a, primitive.b, primitive.a2, primitive.b2]
+  }
+}
+
+/** The given ids plus every primitive that (transitively) references one of them. */
+export function dependentIds(primitives: GeometryPrimitive[], ids: string[]): Set<string> {
+  const removed = new Set(ids)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const primitive of primitives) {
+      if (removed.has(primitive.id)) continue
+      if (primitiveReferences(primitive).some((id) => removed.has(id))) {
+        removed.add(primitive.id)
+        changed = true
+      }
+    }
+  }
+  return removed
+}
+
+/** Whether a primitive resolves to a point (usable as a point reference). */
+export function isPointLike(primitive: GeometryPrimitive): boolean {
+  return primitive.kind === 'point' || primitive.kind === 'midpoint' || primitive.kind === 'intersection'
+    || primitive.kind === 'homothety' || primitive.kind === 'similarity' || primitive.kind === 'spiralCenter'
+}
+
+/** Whether a primitive resolves to a direction (usable by perpendicular, parallel and intersection). */
+export function isLineLike(primitive: GeometryPrimitive): boolean {
+  return primitive.kind === 'segment' || primitive.kind === 'line' || primitive.kind === 'perpendicular' || primitive.kind === 'parallel'
+}
+
+/** A, B, … Z, A1, B1, … skipping anything already used as an id or label. */
+export function nextPointLabel(used: Iterable<string>): string {
+  const taken = new Set(used)
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  for (let round = 0; round < 1000; round += 1) {
+    for (const letter of letters) {
+      const candidate = round === 0 ? letter : `${letter}${round}`
+      if (!taken.has(candidate)) return candidate
+    }
+  }
+  return `P${Date.now()}`
+}
+
+/** Resolve an id that is free for a new primitive, appending -2, -3 … when needed. */
+export function uniquePrimitiveId(primitives: GeometryPrimitive[], base: string): string {
+  const taken = new Set(primitives.map((primitive) => primitive.id))
+  if (!taken.has(base)) return base
+  for (let n = 2; ; n += 1) {
+    const candidate = `${base}-${n}`
+    if (!taken.has(candidate)) return candidate
+  }
+}

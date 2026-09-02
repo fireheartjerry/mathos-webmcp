@@ -1,0 +1,28 @@
+/* ---------------------------------------------------------------------------
+   Overflow audit. Widgets clip at their own bounds; typeset display blocks
+   scroll horizontally inside the widget instead of spilling over the canvas.
+   Nothing here changes a layout metric — only what happens past the edge.
+   --------------------------------------------------------------------------- */
+
+.live-graph,
+.gamma-probability-view,
+.math-equation-object,
+.world-object > :not(.author-pip):not(.tutor-overlay) {
+  overflow: hidden;
+}
+
+.math-equation-object .katex-display,
+.live-graph .katex-display,
+.gamma-probability-view .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  scrollbar-width: thin;
+}
+
+.math-equation-object .math.math-display,
+.gamma-probability-view .math.math-display {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+}

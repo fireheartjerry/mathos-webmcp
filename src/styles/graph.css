@@ -1,0 +1,495 @@
+/* ---------------------------------------------------------------------------
+   Graph widgets: the live function graph and the Gamma density.
+   Ivory ground, graphite for the human, purple for the Tutor, teal and
+   orange as the only accents. Mono captions in small caps, 12px floor so a
+   720p downscale still reads.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --graph-teal: #1f8a70;
+  --graph-orange: #d2691e;
+}
+
+/* ---- Shared chrome ------------------------------------------------------ */
+
+.graph-widget-kicker {
+  color: var(--muted, #7a776d);
+  font: 500 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.graph-widget-plot {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+
+.graph-widget-plot > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.graph-number {
+  width: 58px;
+  min-width: 0;
+  padding: 2px 4px;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 3px;
+  font: 12px/1.2 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: text;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.graph-number::-webkit-outer-spin-button,
+.graph-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.graph-number:focus-visible,
+.graph-latex-input:focus-visible {
+  outline: none;
+  border-color: var(--graphite, #171713);
+  box-shadow: 0 0 0 1px var(--graphite, #171713);
+}
+
+.graph-number.is-small {
+  width: 46px;
+}
+
+/* ---- Live function graph ------------------------------------------------ */
+
+.live-graph.graph-widget {
+  display: grid;
+  /* The plot keeps at least 90px; the footer takes what is left and scrolls. */
+  grid-template-rows: auto minmax(90px, 1fr) minmax(0, auto);
+  width: 100%;
+  height: 100%;
+  background: var(--paper, #fbf9f3);
+  color: var(--graphite, #171713);
+  font-family: var(--mono, 'Fira Code', ui-monospace, monospace);
+}
+
+.live-graph .graph-header {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 12px 7px;
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  cursor: default;
+}
+
+.live-graph .graph-header-kicker {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.live-graph .graph-equation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.live-graph .graph-fx {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  color: var(--paper, #fbf9f3);
+  background: var(--graphite, #171713);
+  font: 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  white-space: nowrap;
+}
+
+.live-graph .graph-latex-input {
+  flex: 1 1 120px;
+  min-width: 90px;
+  padding: 3px 6px;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 3px;
+  font: 13px/1.3 var(--mono, 'Fira Code', ui-monospace, monospace);
+  user-select: text;
+}
+
+.live-graph .graph-latex-input:disabled {
+  color: var(--muted, #7a776d);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.live-graph .graph-latex-input[aria-invalid='true'] {
+  border-color: var(--graph-orange);
+}
+
+.live-graph .graph-preview {
+  flex: 1 1 140px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 80px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  font-size: 15px;
+  scrollbar-width: thin;
+}
+
+.live-graph .graph-preview-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.live-graph .graph-preview-item > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.live-graph .graph-preview .katex {
+  white-space: nowrap;
+}
+
+.live-graph .graph-preview-empty {
+  color: var(--muted, #7a776d);
+  font-size: 12px;
+}
+
+/* SVG plot */
+.live-graph .graph-paper { fill: var(--paper, #fbf9f3); }
+.live-graph .graph-tick { fill: var(--muted, #7a776d); font: 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace); }
+.live-graph .graph-value-label,
+.live-graph .graph-area-label,
+.live-graph .graph-slope-label {
+  font: 600 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.live-graph .graph-value-label { fill: var(--graphite, #171713); }
+.live-graph .graph-slope-label { fill: var(--graph-orange); }
+.live-graph .graph-area-label { fill: var(--purple, #7c5cff); }
+.live-graph .graph-label-plate { fill: rgba(251, 249, 243, 0.88); }
+.live-graph .graph-curve.is-secondary { stroke-width: 2.2; }
+
+/* Footer */
+.live-graph .graph-footer {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 12px 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  font-size: 12px;
+  scrollbar-width: thin;
+  cursor: default;
+}
+
+.live-graph .graph-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.live-graph .graph-row-label {
+  color: var(--muted, #7a776d);
+  white-space: nowrap;
+}
+
+.live-graph .graph-range-sep {
+  color: var(--muted, #7a776d);
+}
+
+.live-graph .graph-swatches {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.live-graph .graph-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(23, 23, 19, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--paper, #fbf9f3) inset;
+}
+
+.live-graph .graph-swatch[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--paper, #fbf9f3) inset, 0 0 0 1.5px var(--graphite, #171713);
+}
+
+.live-graph .graph-swatch:focus-visible {
+  outline: 1.5px solid var(--graphite, #171713);
+  outline-offset: 2px;
+}
+
+.live-graph .graph-param {
+  display: grid;
+  grid-template-columns: 74px 46px minmax(60px, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.live-graph .graph-param > span {
+  color: var(--muted, #7a776d);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-graph .graph-param b {
+  color: var(--purple, #7c5cff);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-graph .graph-param input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--purple, #7c5cff);
+  cursor: ew-resize;
+}
+
+.live-graph .graph-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted, #7a776d);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.live-graph .graph-toggle input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--graphite, #171713);
+}
+
+.live-graph .graph-toggle.is-on {
+  color: var(--graphite, #171713);
+}
+
+.live-graph .graph-analysis-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.live-graph .graph-missing {
+  color: var(--muted, #7a776d);
+  font-size: 12px;
+}
+
+/* ---- Gamma density widget ----------------------------------------------- */
+
+.gamma-probability-view.gamma-widget {
+  display: grid;
+  grid-template-rows: auto minmax(110px, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  background: var(--paper, #fbf9f3);
+  color: var(--graphite, #171713);
+  font-family: var(--mono, 'Fira Code', ui-monospace, monospace);
+}
+
+.gamma-widget .gamma-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 5px 16px 4px;
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.gamma-widget .gamma-header > .graph-widget-kicker {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gamma-widget .gamma-header-equation {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  font-size: 14px;
+  line-height: 1;
+  scrollbar-width: thin;
+}
+
+.gamma-widget .gamma-header-equation .katex {
+  white-space: nowrap;
+}
+
+.gamma-widget .gamma-plot {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+
+.gamma-widget .gamma-plot > .gamma-probability-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gamma-widget .gamma-footer {
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr);
+  gap: 6px 20px;
+  min-width: 0;
+  padding: 8px 16px 8px;
+  border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.gamma-widget .gamma-probability-controls {
+  position: static;
+  grid-row: auto;
+  grid-column: 1;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.gamma-widget .gamma-probability-controls label {
+  width: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  color: var(--muted, #7a776d);
+  font: 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  text-transform: none;
+}
+
+.gamma-widget .gamma-probability-controls label span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gamma-widget .gamma-probability-controls b {
+  color: var(--graphite, #171713);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.gamma-widget .gamma-probability-controls input {
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  accent-color: var(--purple, #7c5cff);
+  cursor: ew-resize;
+}
+
+.gamma-widget .gamma-probability-controls small {
+  color: var(--muted, #7a776d);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gamma-widget .gamma-bridge {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.gamma-widget .gamma-bridge-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 12px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.gamma-widget .gamma-bridge-table th,
+.gamma-widget .gamma-bridge-table td {
+  padding: 3px 6px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gamma-widget .gamma-bridge-table thead th {
+  color: var(--graphite, #171713);
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  vertical-align: bottom;
+}
+
+.gamma-widget .gamma-bridge-table thead th b {
+  display: block;
+  font-weight: 600;
+}
+
+.gamma-widget .gamma-bridge-table thead th small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted, #7a776d);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.gamma-widget .gamma-bridge-table tbody th {
+  color: var(--muted, #7a776d);
+  font-weight: 400;
+  text-align: left;
+}
+
+.gamma-widget .gamma-bridge-table tbody td { color: var(--graphite, #171713); }
+.gamma-widget .gamma-bridge-table tr.is-mass td { font-weight: 600; }
+.gamma-widget .gamma-bridge-table tr.is-log td { color: var(--muted, #7a776d); }
+.gamma-widget .gamma-bridge-table tr.is-softmax td { color: var(--purple, #7c5cff); }
+.gamma-widget .gamma-bridge-table .gamma-sum { color: var(--purple, #7c5cff); font-weight: 600; }
+
+.gamma-widget .gamma-bridge-note {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  width: auto;
+  color: var(--muted, #7a776d);
+  font: 12px/1.25 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.gamma-widget .gamma-bridge-note b { color: var(--graphite, #171713); font-weight: 600; }
+.gamma-widget .gamma-bridge-note em { position: static; width: auto; color: var(--purple, #7c5cff); font-size: 12px; font-style: normal; text-align: left; }
+
+/* Narrow frames stack the footer. */
+@container (max-width: 560px) {
+  .gamma-widget .gamma-footer { grid-template-columns: minmax(0, 1fr); }
+}

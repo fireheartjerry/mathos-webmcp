@@ -1,0 +1,206 @@
+/* GeoGebra-style construction chrome for the geometry widget. Quiet, 1px, no gradients. */
+
+.live-geometry.has-toolbar {
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+.live-geometry.has-toolbar > svg {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  touch-action: none;
+}
+
+.live-geometry.has-toolbar.is-constructing > svg { cursor: crosshair; }
+.live-geometry.has-toolbar.is-deleting > svg { cursor: not-allowed; }
+
+/* Toolbar: one row that wraps rather than spilling past the widget edge. */
+.geometry-toolbar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 6px 3px;
+  background: var(--paper, #fbf9f3);
+  border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  cursor: default;
+}
+
+.geometry-tool {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  color: var(--graphite, #171713);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.geometry-tool:hover { border-color: var(--line, rgba(23, 23, 19, 0.16)); }
+.geometry-tool:focus-visible { outline: 1px solid var(--purple, #7c5cff); outline-offset: 1px; }
+.geometry-tool[aria-pressed='true'] { color: var(--paper, #fbf9f3); background: var(--graphite, #171713); border-color: var(--graphite, #171713); }
+.geometry-tool.is-toggle[aria-pressed='true'] { color: var(--graphite, #171713); background: var(--purple-soft, rgba(124, 92, 255, 0.12)); border-color: var(--purple, #7c5cff); }
+.geometry-tool.is-delete[aria-pressed='true'] { background: #b3402a; border-color: #b3402a; }
+
+.geometry-tool svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.geometry-toolbar-divider {
+  width: 1px;
+  height: 14px;
+  margin: 0 3px;
+  background: var(--line, rgba(23, 23, 19, 0.16));
+}
+
+.geometry-toolbar-hint {
+  flex: 1 1 60px;
+  min-width: 0;
+  margin-left: 4px;
+  color: var(--muted, #7a776d);
+  font: 10px/1.2 var(--mono, 'Fira Code', monospace);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+/* Invisible wide strokes so 1px lines are clickable. */
+.geometry-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  pointer-events: stroke;
+  vector-effect: non-scaling-stroke;
+}
+
+.live-geometry.is-moving .geometry-hit { cursor: grab; }
+.live-geometry.is-moving .geometry-polygon { cursor: grab; }
+.live-geometry.is-deleting .geometry-hit,
+.live-geometry.is-deleting .geometry-polygon,
+.live-geometry.is-deleting .geometry-point { cursor: not-allowed; }
+
+/* Pending / selected marks. */
+.geometry-ring {
+  fill: none;
+  stroke: var(--purple, #7c5cff);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-ring.is-selected { stroke-dasharray: none; stroke: var(--graphite, #171713); }
+
+.geometry-segment.is-selected,
+.geometry-line.is-selected,
+.geometry-circle.is-selected { stroke: var(--purple, #7c5cff); stroke-width: 2; }
+.geometry-polygon.is-selected { stroke: var(--purple, #7c5cff); fill: rgba(124, 92, 255, 0.1); }
+.geometry-angle-group.is-selected .geometry-angle { stroke-width: 3; }
+.geometry-segment.is-pending,
+.geometry-line.is-pending { stroke: var(--purple, #7c5cff); }
+
+/* Live preview of the primitive under construction. */
+.geometry-preview {
+  fill: none;
+  stroke: var(--purple, #7c5cff);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-preview.is-point {
+  fill: var(--paper, #fbf9f3);
+  stroke-dasharray: none;
+}
+
+.live-geometry .geometry-label.is-hidden { display: none; }
+
+/* Measurement chip for the selected primitive, kept out of the legend grid. */
+.geometry-selection-chip {
+  position: absolute;
+  left: 14px;
+  bottom: 52px;
+  display: inline-grid;
+  gap: 2px;
+  padding: 4px 8px;
+  color: var(--graphite, #171713);
+  background: rgba(251, 249, 243, 0.94);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-left: 2px solid var(--graphite, #171713);
+  border-radius: 3px;
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
+  pointer-events: none;
+}
+
+.geometry-selection-chip small { color: var(--muted, #7a776d); font-size: 10px; }
+.geometry-selection-chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Coordinates side panel. */
+.geometry-coordinates {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  bottom: 46px;
+  width: 150px;
+  overflow: auto;
+  padding: 6px 8px;
+  color: var(--graphite, #171713);
+  background: rgba(251, 249, 243, 0.96);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 4px;
+  font: 11px/1.3 var(--mono, 'Fira Code', monospace);
+}
+
+.geometry-coordinates h4 {
+  margin: 0 0 4px;
+  color: var(--muted, #7a776d);
+  font: 500 10px/1 var(--mono, 'Fira Code', monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.geometry-coordinates p { margin: 4px 0 0; color: var(--muted, #7a776d); font-size: 10px; }
+
+.geometry-coordinate-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.geometry-coordinate-row b { font: 600 12px/1 var(--serif, 'STIX Two Text', serif); }
+
+.geometry-coordinate-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  color: var(--graphite, #171713);
+  background: var(--paper, #fbf9f3);
+  border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
+  border-radius: 3px;
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.geometry-coordinate-row input:focus { outline: none; border-color: var(--purple, #7c5cff); }
+.geometry-coordinate-row input::-webkit-outer-spin-button,
+.geometry-coordinate-row input::-webkit-inner-spin-button { appearance: none; margin: 0; }
