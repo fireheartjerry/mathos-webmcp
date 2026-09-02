@@ -1514,7 +1514,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
-      if (target?.matches('input, textarea, [contenteditable="true"]')) return
+      if (target instanceof Element && target.matches('input, textarea, [contenteditable="true"]')) return
       const command = event.ctrlKey || event.metaKey
       if (command && event.key.toLowerCase() === 'z') {
         event.preventDefault()

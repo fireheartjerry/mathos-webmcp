@@ -110,7 +110,7 @@ export default function WebMCPInspector({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
-      if (target?.matches('input, textarea, [contenteditable="true"]')) return
+      if (target instanceof Element && target.matches('input, textarea, [contenteditable="true"]')) return
       if (event.ctrlKey || event.metaKey || event.altKey) return
       if (event.key.toLowerCase() === 'w') setOpen((value) => !value)
       else if (event.key === 'Escape') setOpen(false)
