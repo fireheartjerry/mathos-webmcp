@@ -14,6 +14,8 @@ export type BaseObject = {
   author: Actor
   opacity: number
   locked?: boolean
+  /** Transient 0..1 reveal used by stroke replay and draw tracks; never persisted. */
+  drawProgress?: number
 }
 
 export type InkObject = BaseObject & {
@@ -39,7 +41,14 @@ export type TextObject = BaseObject & {
 }
 export type ImageObject = BaseObject & { kind: 'image'; src: string; alt: string }
 export type ShapeObject = BaseObject & {
-  kind: 'shape'; shape: 'rectangle' | 'ellipse' | 'triangle'; fill: string; stroke: string
+  kind: 'shape'
+  shape: 'rectangle' | 'ellipse' | 'triangle' | 'polygon' | 'freeform'
+  fill: string
+  stroke: string
+  /** Node positions local to bounds for polygon (closed) and freeform (open path) shapes. */
+  points?: Point[]
+  strokeWidth?: number
+  cornerRadius?: number
 }
 export type ArrowObject = BaseObject & { kind: 'arrow'; from: Point; to: Point; color: string }
 export type SemanticViewLink = { entityId?: string; bindingIds?: string[] }
@@ -72,8 +81,9 @@ export type GeometryPrimitive =
   /** The unique fixed point of the spiral similarity sending a→a2 and b→b2. */
   | { kind: 'spiralCenter'; id: string; a: string; b: string; a2: string; b2: string; label?: string }
 export type GeometryObject = BaseObject & SemanticViewLink & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
+/** Rows × columns, 1..4 each. Only 2×2 matrices drive the transformation plane. */
 export type MatrixObject = BaseObject & {
-  kind: 'matrix'; values: [[number, number], [number, number]]; sourceIds: string[]; accent: string
+  kind: 'matrix'; values: number[][]; sourceIds: string[]; accent: string
 } & SemanticViewLink
 
 export type Vector2 = [number, number]
