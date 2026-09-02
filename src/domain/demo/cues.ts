@@ -105,8 +105,9 @@ const constant = (step: CueStep): CueThunk => () => step
 const frameShot = (ids: string[], emphasis: 'detail' | 'feature' | 'establish'): CueThunk =>
   (world) => ids.every((id) => world.objects[id]) ? tool('focus_objects', { ids, emphasis }) : null
 
-/** Long enough for the 760ms camera travel and its settle to land before the next step. */
-const SHOT_SETTLE_MS = 820
+// A camera beat needs no explicit pause after it: the cue runner awaits idle between
+// every step, and the 760ms travel happens inside that wait. Eight explicit settles
+// cost 6.6s of take time for nothing the picture showed.
 
 const objectOf = <K extends WorldObject['kind']>(world: WorldState, id: string, kind: K): Extract<WorldObject, { kind: K }> | null => {
   const object = world.objects[id]
@@ -167,7 +168,6 @@ const openingTutorSteps = (samples: Record<string, HandwritingSample>): CueThunk
   (world) => world.objects.opening_annotation_question ? null : tool('get_selection', {}),
   (world) => world.objects.opening_annotation_question ? null : tool('get_objects', { ids: [OPENING_ATTEMPT_ID] }),
   (world) => world.objects.opening_annotation_question ? null : frameShot([OPENING_ATTEMPT_ID], 'detail')(world),
-  (world) => world.objects.opening_annotation_question ? null : pause(SHOT_SETTLE_MS),
   (world) => world.objects.opening_annotation_question ? null : tool('create_objects', {
     summary: 'Tutor marked the sign lost in integration by parts',
     objects: buildOpeningMarks(world, samples),
@@ -286,10 +286,6 @@ const gammaTutorShapeSteps: CueThunk[] = [
   },
   (world) => {
     const graph = objectOf(world, HERO_GRAPH_ID, 'graph')
-    return graph && !APPROXIMATELY(graph.parameters?.a ?? 0, GAMMA_TUTOR_SHAPE) ? pause(SHOT_SETTLE_MS) : null
-  },
-  (world) => {
-    const graph = objectOf(world, HERO_GRAPH_ID, 'graph')
     if (!graph || APPROXIMATELY(graph.parameters?.a ?? 0, GAMMA_TUTOR_SHAPE)) return null
     return tool('update_objects', {
       summary: `Tutor raised the shape a to ${GAMMA_TUTOR_SHAPE}`,
@@ -341,7 +337,6 @@ const trainingHumanStep: CueThunk = (world) => {
 const trainingTutorSteps: CueThunk[] = [
   (world) => objectOf(world, TRAINING_ID, 'training') ? tool('inspect_math', { objectId: TRAINING_ID }) : null,
   (world) => objectOf(world, TRAINING_ID, 'training') ? frameShot([TRAINING_ID], 'feature')(world) : null,
-  (world) => objectOf(world, TRAINING_ID, 'training') ? pause(SHOT_SETTLE_MS) : null,
   (world) => {
     const training = objectOf(world, TRAINING_ID, 'training')
     const attention = objectOf(world, ATTENTION_ID, 'attention')
@@ -395,10 +390,6 @@ const centroidSteps: CueThunk[] = [
   },
   (world) => {
     const barycentric = objectOf(world, BARYCENTRIC_ID, 'barycentric')
-    return barycentric && !barycentric.weights.every((weight) => APPROXIMATELY(weight, 1 / 3, 1e-6)) ? pause(SHOT_SETTLE_MS) : null
-  },
-  (world) => {
-    const barycentric = objectOf(world, BARYCENTRIC_ID, 'barycentric')
     if (!barycentric || barycentric.weights.every((weight) => APPROXIMATELY(weight, 1 / 3, 1e-6))) return null
     return tool('update_objects', {
       summary: 'Tutor moved P to the centroid [1:1:1]',
@@ -417,10 +408,6 @@ const spiralConstructSteps: CueThunk[] = [
   (world) => {
     const geometry = objectOf(world, GEOMETRY_ID, 'geometry')
     return geometry && !geometry.primitives.some((primitive) => primitive.id === 'S') ? frameShot([GEOMETRY_ID], 'establish')(world) : null
-  },
-  (world) => {
-    const geometry = objectOf(world, GEOMETRY_ID, 'geometry')
-    return geometry && !geometry.primitives.some((primitive) => primitive.id === 'S') ? pause(SHOT_SETTLE_MS) : null
   },
   (world) => {
     const geometry = objectOf(world, GEOMETRY_ID, 'geometry')
@@ -475,10 +462,6 @@ const simplexTutorSteps: CueThunk[] = [
   },
   (world) => {
     const simplex = objectOf(world, SIMPLEX_ID, 'simplex')
-    return simplex && !APPROXIMATELY(simplex.weights[3], SIMPLEX_TUTOR_DELTA, 1e-6) ? pause(SHOT_SETTLE_MS) : null
-  },
-  (world) => {
-    const simplex = objectOf(world, SIMPLEX_ID, 'simplex')
     if (!simplex || APPROXIMATELY(simplex.weights[3], SIMPLEX_TUTOR_DELTA, 1e-6)) return null
     return tool('update_objects', {
       summary: `Tutor set δ to ${SIMPLEX_TUTOR_DELTA}; α, β, γ keep their ratios`,
@@ -506,10 +489,6 @@ const partitionRevealSteps: CueThunk[] = [
   (world) => {
     const observatory = objectOf(world, NUMBER_THEORY_ID, 'numberTheory')
     return observatory && !observatory.revealTheorem ? frameShot([NUMBER_THEORY_ID], 'feature')(world) : null
-  },
-  (world) => {
-    const observatory = objectOf(world, NUMBER_THEORY_ID, 'numberTheory')
-    return observatory && !observatory.revealTheorem ? pause(SHOT_SETTLE_MS) : null
   },
   (world) => {
     const observatory = objectOf(world, NUMBER_THEORY_ID, 'numberTheory')
@@ -554,7 +533,6 @@ function crescendoSteps(activeProject: ProjectId | null): CueThunk[] {
     constant(tool('get_world', { includeObjects: false })),
     (world) => hasHero(world) ? tool('get_objects', { ids: [heroId] }) : null,
     (world) => hasHero(world) ? frameShot([heroId], 'establish')(world) : null,
-    (world) => hasHero(world) ? pause(SHOT_SETTLE_MS) : null,
     constant(tool('get_selection', {})),
     constant(tool('get_session_context', {})),
     (world) => hasHero(world) ? tool('inspect_math', { objectId: heroId }) : null,

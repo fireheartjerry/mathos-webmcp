@@ -1,0 +1,88 @@
+/**
+ * Turns the measured take into a cut list: which span of `capture.mp4` each shot
+ * uses, where it sits in the finished film, and what transition joins it to the next.
+ *
+ * The composition used to play the capture straight through, so what a viewer saw
+ * between two scenes was the app's own camera panning across empty canvas. That is
+ * not a transition, it is dead air with movement in it -- and across twelve shot
+ * boundaries it cost about eighteen seconds of a film with a three-minute ceiling.
+ *
+ * A `camera` boundary is a plain move, so its pan is excised: the outgoing shot ends
+ * on settled content and the incoming shot begins on settled content, joined by a
+ * designed push. A `bridge` boundary is different -- there the product animates a
+ * real match between two representations, which is the best content in the film -- so
+ * its span is kept whole and only softened at the seam.
+ *
+ * Both the composition and the narration builder read the result, so the picture and
+ * the words cannot disagree about when a shot starts.
+ *
+ *   node scripts/film/build-cutlist.mjs
+ */
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const ROOT = resolve('.')
+const TIMELINE_FILE = resolve(ROOT, 'video/public/film/timeline.json')
+const MANIFEST_FILE = resolve(ROOT, 'video/film.manifest.json')
+const OUT_FILE = resolve(ROOT, 'video/public/film/cutlist.json')
+
+if (!existsSync(TIMELINE_FILE)) throw new Error(`missing ${TIMELINE_FILE} -- run scripts/film/capture.mjs first`)
+
+const timeline = JSON.parse(readFileSync(TIMELINE_FILE, 'utf8'))
+const manifest = JSON.parse(readFileSync(MANIFEST_FILE, 'utf8'))
+
+/** How long each kind of join takes, and how much of the outgoing shot it overlaps. */
+const TRANSITION = {
+  camera: 0.68,
+  bridge: 0.40,
+}
+/** Never cut a shot shorter than this, however aggressive the excision maths gets. */
+const MIN_SHOT_SECONDS = 1.6
+/** The app's camera travel (760ms) plus its arrival settle -- the span worth skipping. */
+const PAN_SECONDS = 0.95
+
+const shots = []
+for (let index = 0; index < timeline.shots.length; index += 1) {
+  const shot = timeline.shots[index]
+  const next = timeline.shots[index + 1]
+  const kind = shot.transitionOut === 'bridge' ? 'bridge' : shot.transitionOut === 'end' ? 'end' : 'camera'
+
+  // The pan runs at the HEAD of the incoming shot, not the tail of the outgoing one:
+  // previewNext fires at the boundary and the camera is still travelling while the
+  // next shot's first steps begin. So a camera join skips the arriving shot's first
+  // moments, where the picture is a canvas sliding past. A bridge join keeps them --
+  // there the movement is a real match between two representations.
+  const previous = timeline.shots[index - 1]
+  const arrivesFromCamera = previous && previous.transitionOut !== 'bridge' && previous.transitionOut !== 'end'
+  // The capture's first shot can be logged at -0.0; a negative source frame is not a thing.
+  let srcStart = Math.max(0, shot.start)
+  if (arrivesFromCamera) srcStart = Math.min(shot.start + PAN_SECONDS, shot.end - MIN_SHOT_SECONDS)
+
+  shots.push({ id: shot.id, title: shot.title, srcStart, srcEnd: shot.end, kind, excised: +(srcStart - shot.start).toFixed(3) })
+}
+
+// Lay the segments out with each transition overlapping the two shots it joins.
+let cursor = 0
+for (let index = 0; index < shots.length; index += 1) {
+  const shot = shots[index]
+  shot.filmStart = +cursor.toFixed(3)
+  shot.seconds = +(shot.srcEnd - shot.srcStart).toFixed(3)
+  shot.filmEnd = +(shot.filmStart + shot.seconds).toFixed(3)
+  const overlap = index < shots.length - 1 ? (TRANSITION[shot.kind] ?? 0) : 0
+  shot.transitionSeconds = overlap
+  cursor = shot.filmEnd - overlap
+}
+
+const filmSeconds = +shots.at(-1).filmEnd.toFixed(3)
+const rawSeconds = +(timeline.shots.at(-1).end - timeline.shots[0].start).toFixed(3)
+const excised = +shots.reduce((total, shot) => total + shot.excised, 0).toFixed(1)
+const overlapped = +shots.reduce((total, shot) => total + shot.transitionSeconds, 0).toFixed(1)
+
+writeFileSync(OUT_FILE, JSON.stringify({ filmSeconds, rawSeconds, excised, overlapped, shots }, null, 2))
+
+console.log(`raw take     ${rawSeconds.toFixed(1)}s`)
+console.log(`pans excised ${excised.toFixed(1)}s across ${shots.filter((shot) => shot.excised > 0.05).length} camera joins`)
+console.log(`overlap      ${overlapped.toFixed(1)}s across ${shots.filter((shot) => shot.transitionSeconds > 0).length} transitions`)
+console.log(`film         ${filmSeconds.toFixed(1)}s = ${Math.floor(filmSeconds / 60)}:${String(Math.round(filmSeconds % 60)).padStart(2, '0')}`)
+if (filmSeconds >= 180) console.error('WARNING: the film is three minutes or longer, which the rules do not allow')
+console.log(`wrote ${OUT_FILE}`)

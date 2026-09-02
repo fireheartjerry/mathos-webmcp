@@ -255,7 +255,11 @@ try {
     if (next && shot.transitionOut !== 'end') {
       transitionAt = now() - takeStart
       events.push({ t: transitionAt, kind: shot.transitionOut === 'bridge' ? 'bridge' : 'camera', label: `${shot.id} → ${next.id}` })
-      await page.evaluate('window.__mathburstFilm.previewNext(); return true')
+      // previewNext advances the DIRECTOR by one frame, which only lines up while
+      // manifest shots and Director frames march together. The cold open is not a
+      // Director frame -- it ends by selecting the first one itself -- so advancing
+      // after it would leave the Director a full scene ahead of the manifest.
+      if (shot.stage !== 'gallery') await page.evaluate('window.__mathburstFilm.previewNext(); return true')
     }
     shots.push({ id: shot.id, title: shot.title, start: shotStart, end: shotEnd, budget: shot.seconds, transitionAt, transitionOut: shot.transitionOut })
     const commits = await page.evaluate('return window.__mathburstFilm.getWorld().activity.map((c) => ({ id: c.action.id, at: c.at, source: c.action.source, summary: c.action.summary }))')

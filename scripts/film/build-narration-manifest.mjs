@@ -30,17 +30,47 @@ if (!existsSync(RENDERED_FILE)) {
 const manifest = JSON.parse(readFileSync(MANIFEST_FILE, 'utf8'))
 const rendered = JSON.parse(readFileSync(RENDERED_FILE, 'utf8'))
 
-/** Absolute start of every shot, so a clip's offset can be resolved against the film. */
+/**
+ * Shot starts come from the MEASURED take when one exists, never from the manifest's
+ * budgets. Steps overrun -- a cue that waits for the app to settle takes as long as it
+ * takes -- so the budgets are a plan and `timeline.json` is what actually happened. The
+ * composition derives its own length from the timeline too, so timing narration against
+ * the budgets would drift it further ahead of the picture with every overrun.
+ */
+/** Kept in step with TAIL_SECONDS in video/src/Film.tsx. */
+const TAIL_SECONDS = 1.6
+
+const CUTLIST_FILE = resolve(ROOT, 'video/public/film/cutlist.json')
+const TIMELINE_FILE = resolve(ROOT, 'video/public/film/timeline.json')
+const cutlist = existsSync(CUTLIST_FILE) ? JSON.parse(readFileSync(CUTLIST_FILE, 'utf8')) : null
+const timeline = !cutlist && existsSync(TIMELINE_FILE) ? JSON.parse(readFileSync(TIMELINE_FILE, 'utf8')) : null
 const shotStart = new Map()
 let cursor = 0
-for (const shot of manifest.shots) {
-  shotStart.set(shot.id, cursor)
-  cursor += shot.seconds
+if (cutlist?.shots?.length) {
+  // The cut list is the finished film's clock: pans excised, transitions overlapped.
+  // Timing against the raw take instead would drift the words later than the picture
+  // by however much was cut out ahead of them.
+  for (const shot of cutlist.shots) shotStart.set(shot.id, shot.filmStart)
+  // Film.tsx holds the closing lockup for TAIL_SECONDS after the last shot, so that
+  // time is part of the film and available to the closing line.
+  cursor = cutlist.filmSeconds + TAIL_SECONDS
+  console.log(`timing against the cut film (${cutlist.filmSeconds.toFixed(1)}s + ${TAIL_SECONDS}s tail)`)
+} else if (timeline?.shots?.length) {
+  const first = timeline.shots[0].start
+  for (const shot of timeline.shots) shotStart.set(shot.id, shot.start - first)
+  cursor = timeline.shots.at(-1).end - first
+  console.log(`timing against the raw take (${cursor.toFixed(1)}s)`)
+} else {
+  for (const shot of manifest.shots) {
+    shotStart.set(shot.id, cursor)
+    cursor += shot.seconds
+  }
+  console.log(`no timeline.json yet -- timing against manifest budgets (${cursor}s)`)
 }
 const filmSeconds = cursor
 
 /** Never let two clips talk at once; a clip may start late but never early. */
-const MIN_GAP = 0.45
+const MIN_GAP = 0.32
 
 const problems = []
 const clips = []

@@ -11,6 +11,7 @@ import {
 } from 'remotion'
 import manifest from '../film.manifest.json'
 import timeline from '../public/film/timeline.json'
+import cutlist from '../public/film/cutlist.json'
 import narration from '../public/film/narration.json'
 
 /**
@@ -35,17 +36,20 @@ type TimelineShot = (typeof timeline.shots)[number]
 const OUT = Easing.bezier(0.22, 1, 0.36, 1)
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
-/** The film starts at the first shot's start and ends after the last shot plus a short rest. */
-const FIRST = timeline.shots[0]
-const LAST = timeline.shots[timeline.shots.length - 1]
-const TAIL_SECONDS = 0.8
-export const FILM_START = Math.max(0, FIRST.start)
-export const FILM_SECONDS = Math.min(manifest.output.maxSeconds, LAST.end - FILM_START + TAIL_SECONDS)
+/**
+ * The film is cut, not played straight through. `cutlist.json` says which span of the
+ * capture each shot uses and where it sits in the finished film; the pans between
+ * scenes are excised there and replaced by the transitions below.
+ */
+/** The closing lockup holds this long after the last word. Shared with build-narration-manifest.mjs. */
+const TAIL_SECONDS = 1.6
+export const FILM_START = Math.max(0, timeline.shots[0].start)
+export const FILM_SECONDS = Math.min(manifest.output.maxSeconds, cutlist.filmSeconds + TAIL_SECONDS)
 export const FILM_FRAMES = Math.round(FILM_SECONDS * FILM_FPS)
 
-const SHOTS = timeline.shots.map((shot: TimelineShot) => {
+const SHOTS = cutlist.shots.map((shot) => {
   const spec = manifest.shots.find((candidate: ManifestShot) => candidate.id === shot.id)
-  return { ...shot, spec, filmStart: shot.start - FILM_START, filmEnd: shot.end - FILM_START }
+  return { ...shot, spec }
 })
 
 /** Interpolate the manifest's camera keyframes for a shot at `t` seconds into it. */
@@ -61,36 +65,59 @@ function cameraAt(shot: (typeof SHOTS)[number], t: number): CameraKey {
   return { at: t, zoom: pick('zoom'), x: pick('x'), y: pick('y') }
 }
 
-function useCamera(): CameraKey {
-  const frame = useCurrentFrame()
-  const seconds = frame / FILM_FPS
-  const index = SHOTS.reduce((current, shot, candidate) => (seconds >= shot.filmStart ? candidate : current), 0)
-  const shot = SHOTS[index]
-  const target = cameraAt(shot, seconds - shot.filmStart)
-  // Blend from the previous shot's final camera over the first 0.9 s so a cut
-  // never snaps the push; the product's own camera move carries the transition.
-  const previous = index > 0 ? SHOTS[index - 1] : null
-  if (!previous) return target
-  const from = cameraAt(previous, previous.filmEnd - previous.filmStart)
-  const blend = interpolate(seconds - shot.filmStart, [0, 0.9], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: OUT })
-  return {
-    at: target.at,
-    zoom: from.zoom + (target.zoom - from.zoom) * blend,
-    x: from.x + (target.x - from.x) * blend,
-    y: from.y + (target.y - from.y) * blend,
-  }
+/** One shot's span of the capture, with the composition's camera push applied. */
+function Segment({ shot, seconds, opacity, push }: { shot: (typeof SHOTS)[number]; seconds: number; opacity: number; push: number }) {
+  const camera = cameraAt(shot, Math.max(0, seconds))
+  const zoom = clamp(camera.zoom, 1, 1.35) * push
+  const left = clamp(FILM_W / 2 - camera.x * FILM_W * zoom, FILM_W - FILM_W * zoom, 0)
+  const top = clamp(FILM_H / 2 - camera.y * FILM_H * zoom, FILM_H - FILM_H * zoom, 0)
+  const style: CSSProperties = { position: 'absolute', display: 'block', width: FILM_W * zoom, height: FILM_H * zoom, left, top }
+  return (
+    <AbsoluteFill style={{ overflow: 'hidden', opacity }}>
+      <OffthreadVideo src={staticFile('film/capture.mp4')} startFrom={Math.max(0, Math.round(shot.srcStart * FILM_FPS))} style={style} muted />
+    </AbsoluteFill>
+  )
 }
 
+/**
+ * A real transition, not a pan.
+ *
+ * Every join renders both shots at once and moves through them. A `camera` join is a
+ * push: the outgoing shot keeps travelling toward the viewer as it leaves and the
+ * incoming one settles back from slightly too close, so the cut carries momentum in
+ * one direction instead of stopping dead. A `bridge` join is gentler -- the product is
+ * already animating a match between two representations underneath, and a heavy
+ * effect on top would fight it -- so it is a short dissolve with almost no scale.
+ *
+ * Both are eased, so neither begins or ends at full velocity.
+ */
 function Stage() {
-  const camera = useCamera()
-  const zoom = clamp(camera.zoom, 1, 1.35)
-  const scale = zoom
-  const left = clamp(FILM_W / 2 - camera.x * FILM_W * scale, FILM_W - FILM_W * scale, 0)
-  const top = clamp(FILM_H / 2 - camera.y * FILM_H * scale, FILM_H - FILM_H * scale, 0)
-  const style: CSSProperties = { position: 'absolute', display: 'block', width: FILM_W * scale, height: FILM_H * scale, left, top }
+  const frame = useCurrentFrame()
+  const seconds = frame / FILM_FPS
+
+  const index = SHOTS.reduce((current, shot, candidate) => (seconds >= shot.filmStart ? candidate : current), 0)
+  const shot = SHOTS[index]
+  const next = SHOTS[index + 1]
+
+  const layers: Array<{ key: string; shot: (typeof SHOTS)[number]; seconds: number; opacity: number; push: number }> = []
+  const overlap = shot.transitionSeconds ?? 0
+  const intoTransition = next && overlap > 0 ? seconds - (shot.filmEnd - overlap) : -1
+
+  if (next && intoTransition >= 0) {
+    const t = clamp(intoTransition / overlap, 0, 1)
+    const eased = Easing.bezier(0.4, 0, 0.2, 1)(t)
+    const depth = shot.kind === 'bridge' ? 0.012 : 0.055
+    layers.push({ key: shot.id, shot, seconds: seconds - shot.filmStart, opacity: 1 - eased, push: 1 + depth * eased })
+    layers.push({ key: next.id, shot: next, seconds: seconds - next.filmStart, opacity: eased, push: 1 + depth * (1 - eased) })
+  } else {
+    layers.push({ key: shot.id, shot, seconds: seconds - shot.filmStart, opacity: 1, push: 1 })
+  }
+
   return (
     <AbsoluteFill style={{ overflow: 'hidden', background: '#f4f0e6' }}>
-      <OffthreadVideo src={staticFile('film/capture.mp4')} startFrom={Math.round(FILM_START * FILM_FPS)} style={style} />
+      {layers.map((layer) => (
+        <Segment key={layer.key} shot={layer.shot} seconds={layer.seconds} opacity={layer.opacity} push={layer.push} />
+      ))}
     </AbsoluteFill>
   )
 }

@@ -4,7 +4,7 @@
     "width": 2560,
     "height": 1440,
     "fps": 60,
-    "maxSeconds": 174
+    "maxSeconds": 180
   },
   "product": {
     "url": "http://localhost:3400/?film=1",
@@ -49,8 +49,7 @@
           "wait": 1800
         },
         {
-          "click": ".library-card-open",
-          "text": "Open Gamma Function"
+          "click": "[aria-label=\"Open Gamma Function\"]"
         },
         {
           "wait": 2600
@@ -211,7 +210,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1300
+          "wait": 780
         },
         {
           "click": ".reconstruct-trigger"
@@ -220,7 +219,7 @@
           "waitFor": ".audit-button"
         },
         {
-          "wait": 2400
+          "wait": 1440
         },
         {
           "click": ".audit-button"
@@ -229,13 +228,13 @@
           "waitFor": ".approve-button"
         },
         {
-          "wait": 2400
+          "wait": 1440
         },
         {
           "click": ".approve-button"
         },
         {
-          "wait": 1200
+          "wait": 720
         },
         {
           "pointer": {
@@ -386,31 +385,31 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1300
+          "wait": 780
         },
         {
           "click": "[data-demo-target=train-step]"
         },
         {
-          "wait": 1500
+          "wait": 900
         },
         {
           "cue": "training-tutor-step"
         },
         {
-          "wait": 900
+          "wait": 540
         },
         {
           "click": ".rail-button[aria-label=Undo]"
         },
         {
-          "wait": 1100
+          "wait": 660
         },
         {
           "click": ".rail-button[aria-label=Redo]"
         },
         {
-          "wait": 500
+          "wait": 300
         },
         {
           "pointer": {
@@ -442,7 +441,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1300
+          "wait": 780
         },
         {
           "drag": "[data-demo-target=barycentric-point]",
@@ -453,7 +452,7 @@
           "durationMs": 1300
         },
         {
-          "wait": 900
+          "wait": 540
         },
         {
           "drag": "[data-demo-target=barycentric-vertex-a]",
@@ -464,13 +463,13 @@
           "durationMs": 1300
         },
         {
-          "wait": 900
+          "wait": 540
         },
         {
           "cue": "barycentric-centroid"
         },
         {
-          "wait": 400
+          "wait": 250
         },
         {
           "pointer": {
@@ -502,7 +501,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1300
+          "wait": 780
         },
         {
           "drag": "[data-demo-target=geometry-vertex-a]",
@@ -513,13 +512,13 @@
           "durationMs": 1200
         },
         {
-          "wait": 700
+          "wait": 420
         },
         {
           "cue": "spiral-construct"
         },
         {
-          "wait": 900
+          "wait": 540
         },
         {
           "drag": "[data-demo-target=geometry-vertex-a]",
@@ -530,7 +529,7 @@
           "durationMs": 1200
         },
         {
-          "wait": 500
+          "wait": 300
         },
         {
           "pointer": {
@@ -562,7 +561,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1600
+          "wait": 960
         },
         {
           "slider": "[data-demo-target=partition-cutoff]",
@@ -570,13 +569,13 @@
           "durationMs": 1400
         },
         {
-          "wait": 1800
+          "wait": 1080
         },
         {
           "cue": "partition-reveal"
         },
         {
-          "wait": 600
+          "wait": 360
         },
         {
           "pointer": {
@@ -614,7 +613,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1300
+          "wait": 780
         },
         {
           "cue": "webmcp-crescendo"
@@ -639,7 +638,7 @@
     {
       "id": "one-world",
       "title": "One mathematical world",
-      "seconds": 16,
+      "seconds": 14,
       "approved": true,
       "steps": [
         {
