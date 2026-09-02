@@ -138,9 +138,11 @@ const isWorldShape = (value: UnknownRecord, version: 1 | 2): boolean => (
   && (version === 1 || (isRecord(value.entities) && isRecord(value.bindings) && isRecord(value.timelines)))
 )
 
-const isMatrixValues = (value: unknown): value is [[number, number], [number, number]] => Array.isArray(value)
-  && value.length === 2
-  && value.every((row) => Array.isArray(row) && row.length === 2 && row.every(isFiniteNumber))
+/** Rectangular, 1..4 rows and 1..4 columns, every entry finite. */
+const isMatrixValues = (value: unknown): value is number[][] => Array.isArray(value)
+  && value.length >= 1 && value.length <= 4
+  && Array.isArray(value[0]) && value[0].length >= 1 && value[0].length <= 4
+  && value.every((row) => Array.isArray(row) && row.length === (value[0] as unknown[]).length && row.every(isFiniteNumber))
 
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value)
   && value.every((item) => typeof item === 'string')
@@ -437,6 +439,7 @@ const ANIMATION_OBJECT_PATH_ROOTS = new Set([
   'bounds',
   'rotation',
   'opacity',
+  'drawProgress',
   'points',
   'strokes',
   'strokeScale',
@@ -493,8 +496,14 @@ const readAnimationPath = (root: unknown, path: string): unknown => {
   let current = root
   for (const segment of path.split('.')) {
     if (Array.isArray(current)) {
-      if (!/^(?:0|[1-9][0-9]*)$/.test(segment) || !hasOwn(current, segment)) return undefined
-      current = current[Number(segment)]
+      if (/^(?:0|[1-9][0-9]*)$/.test(segment) && hasOwn(current, segment)) {
+        current = current[Number(segment)]
+        continue
+      }
+      // Geometry primitives are addressed by their own id (`primitives.A.at`).
+      const byId = current.find((entry) => isRecord(entry) && entry.id === segment)
+      if (byId === undefined) return undefined
+      current = byId
     } else if (isRecord(current) && hasOwn(current, segment)) {
       current = current[segment]
     } else {
@@ -508,6 +517,7 @@ const isAnimationObjectPath = (object: unknown, path: unknown): boolean => {
   if (!isWorldObject(object) || !isSemanticPath(path)) return false
   const root = path.split('.')[0]
   if (!ANIMATION_OBJECT_PATH_ROOTS.has(root)) return false
+  if (path === 'drawProgress') return true
   return isAnimationValue(readAnimationPath(object, path))
 }
 

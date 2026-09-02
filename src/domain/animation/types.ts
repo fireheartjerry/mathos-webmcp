@@ -1,5 +1,8 @@
-/** Values that can be stored in an animation keyframe. */
+/** Values that can be stored in an animation keyframe. Points are stored as `[x, y]` pairs. */
 export type AnimationValue = number | number[] | number[][] | string
+
+/** Named easing curves understood by the runtime (see easing.ts). */
+export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'smoothStep'
 
 /** A stable path into a canonical entity, visible object, or the world camera. */
 export type AnimationTargetPath =
@@ -11,6 +14,8 @@ export type AnimationKeyframe = {
   id: string
   time: number
   value: AnimationValue
+  /** Easing applied on the segment that starts at this keyframe. Defaults to 'linear'. */
+  easing?: AnimationEasing
 }
 
 export type AnimationTrack = {

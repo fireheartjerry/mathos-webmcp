@@ -1,0 +1,160 @@
+/* Selection frame, resize/rotate handles and node editors. Every dimension is
+   multiplied by --hs (1 / viewport zoom) so handles stay a constant screen size
+   while living inside the scaled world-stage. Graphite for the human, purple
+   only for Tutor-authored objects. */
+
+.world-stage {
+  --hs: 1;
+  --handle-ink: #171713;
+  --handle-agent: #7c5cff;
+  --handle-paper: #fffdf8;
+}
+
+/* The per-object selection outline follows the same 1px-screen rule outside Director review. */
+.world-canvas[data-director-mode='false'] .world-object.is-selected::after {
+  inset: 0;
+  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  box-shadow: none;
+}
+
+.world-canvas[data-director-mode='false'] .world-object.is-selected[data-author='agent']::after {
+  border-color: var(--handle-agent);
+}
+
+.world-canvas[data-director-mode='false'] .world-object.is-selected::before {
+  display: none;
+}
+
+.selection-frame {
+  position: absolute;
+  z-index: 40;
+  box-sizing: border-box;
+  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.selection-frame.is-agent {
+  border-color: var(--handle-agent);
+}
+
+.selection-handle {
+  position: absolute;
+  z-index: 41;
+  box-sizing: border-box;
+  width: calc(9px * var(--hs));
+  height: calc(9px * var(--hs));
+  background: var(--handle-paper);
+  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.selection-frame.is-agent .selection-handle {
+  border-color: var(--handle-agent);
+}
+
+.selection-handle[data-handle='n'],
+.selection-handle[data-handle='s'] { cursor: ns-resize; }
+.selection-handle[data-handle='e'],
+.selection-handle[data-handle='w'] { cursor: ew-resize; }
+.selection-handle[data-handle='nw'],
+.selection-handle[data-handle='se'] { cursor: nwse-resize; }
+.selection-handle[data-handle='ne'],
+.selection-handle[data-handle='sw'] { cursor: nesw-resize; }
+
+.selection-rotate-leader {
+  position: absolute;
+  left: 50%;
+  top: calc(-18px * var(--hs));
+  width: calc(1px * var(--hs));
+  height: calc(18px * var(--hs));
+  background: var(--handle-ink);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.selection-frame.is-agent .selection-rotate-leader {
+  background: var(--handle-agent);
+}
+
+.selection-handle[data-handle='rotate'] {
+  left: 50%;
+  top: calc(-23px * var(--hs));
+  width: calc(11px * var(--hs));
+  height: calc(11px * var(--hs));
+  border-radius: 50%;
+  cursor: grab;
+}
+
+.node-editor {
+  position: absolute;
+  z-index: 42;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.node-handle {
+  position: absolute;
+  z-index: 43;
+  box-sizing: border-box;
+  width: calc(9px * var(--hs));
+  height: calc(9px * var(--hs));
+  background: var(--handle-paper);
+  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: move;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.node-editor.is-agent .node-handle {
+  border-color: var(--handle-agent);
+}
+
+.node-handle.is-midpoint {
+  width: calc(7px * var(--hs));
+  height: calc(7px * var(--hs));
+  border-radius: 0;
+  background: transparent;
+  border-style: dashed;
+  cursor: copy;
+}
+
+.node-handle.is-arrow-end {
+  border-radius: 0;
+}
+
+/* Frame titles are editable in place; the label is otherwise click-through. */
+.frame-label span {
+  pointer-events: auto;
+  cursor: text;
+}
+
+.frame-title-input {
+  width: 160px;
+  height: 22px;
+  padding: 0 4px;
+  color: var(--ivory, #fbf8f1);
+  background: transparent;
+  border: 1px solid #a9a69c;
+  border-radius: 0;
+  font: inherit;
+  outline: none;
+  pointer-events: auto;
+}
+
+/* Live construction previews for polygon and freeform shapes. */
+.path-preview {
+  position: absolute;
+  z-index: 50;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.path-preview .path-preview-node {
+  fill: var(--handle-paper);
+  stroke: var(--handle-ink);
+}

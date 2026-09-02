@@ -5,6 +5,7 @@ import { createWorldTools } from '../domain/tools/definitions'
 import type { ToolResult, WorldBridge, WorldTraceEvent } from '../domain/tools/definitions'
 import { registerWorldTools } from '../domain/tools/registry'
 import { summarizeProject } from '../domain/tools/leverage'
+import { readProjectIdFromLocation, useProjectRoute } from './useProjectRoute'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { saveWorld } from '../domain/world/persistence'
 import {
@@ -75,6 +76,14 @@ import WebMCPInspector from './WebMCPInspector'
 import WebMCPTrace from './WebMCPTrace'
 import WorldCanvas from './WorldCanvas'
 import FilmCursor from './FilmCursor'
+import AnimationTimeline from './animation/AnimationTimeline'
+import { useTimelinePlayback } from './animation/useTimelinePlayback'
+import AgentConsole from './sidebar/AgentConsole'
+import ReadingIndicator from './sidebar/ReadingIndicator'
+import ToolLedger, { useLedgerPin } from './sidebar/ToolLedger'
+import ToolToast from './sidebar/ToolToast'
+import { collapseInvocations, groupBurst, summarizeLedger } from '../domain/tools/ledger'
+import type { LedgerEvent } from '../domain/tools/ledger'
 
 /** `?film=1` hides Director chrome and exposes the in-page film driver hook. */
 const detectFilmMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('film')
@@ -257,7 +266,7 @@ function bridgeValues(transition: BridgeTransition, sourceWorld: WorldState, tar
   }
 }
 
-export default function MathburstWorkspace() {
+export default function MathburstWorkspace({ initialProjectId }: { initialProjectId?: string } = {}) {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
   const worldRef = useRef(world)
   const mainWorldRef = useRef(world)
@@ -284,6 +293,10 @@ export default function MathburstWorkspace() {
   const [attemptFeedback, setAttemptFeedback] = useState('')
   const [traceEvents, setTraceEvents] = useState<WorldTraceEvent[]>([])
   const traceTimerRef = useRef<number | null>(null)
+  /** Every tool call of the session, for the ledger, toast and inspector counters. */
+  const [toolLog, setToolLog] = useState<LedgerEvent[]>([])
+  const [ledgerPinned, toggleLedgerPinned] = useLedgerPin(false)
+  const [consoleOpen, setConsoleOpen] = useState(false)
   const handwritingSamplesRef = useRef<Record<string, HandwritingSample>>({})
   const [directorOpen, setDirectorOpen] = useState(false)
   const [directorState, setDirectorState] = useState(EMPTY_DIRECTOR_REVIEW)
@@ -369,7 +382,22 @@ export default function MathburstWorkspace() {
     setGalleryOpen(true)
     setDirectorState(loadDirectorReview())
     setHydrated(true)
+    const requestedProjectId = initialProjectId ?? readProjectIdFromLocation()
+    if (requestedProjectId) initialProjectRequestRef.current = requestedProjectId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A `/p/<id>` URL opens that project once the library is hydrated.
+  const initialProjectRequestRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!hydrated || !initialProjectRequestRef.current) return
+    const requested = initialProjectRequestRef.current
+    initialProjectRequestRef.current = null
+    const project = libraryProjectsRef.current.find((candidate) => candidate.id === requested && candidate.deletedAt === null)
+    if (project) openLibraryProject(project)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
+  useProjectRoute({ activeProjectId: hydrated ? activeDocumentId : (initialProjectId ?? null), galleryOpen: hydrated ? galleryOpen : !initialProjectId })
 
   useEffect(() => {
     if (!hydrated) return
@@ -865,6 +893,11 @@ export default function MathburstWorkspace() {
       const attention = transformerWorld ? Object.values(transformerWorld.objects).find((candidate) => candidate.kind === 'attention') : undefined
       return attention?.kind === 'attention' ? [...evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights] : null
     },
+    controlTimeline: (timelineId, timelineAction, options) => {
+      if (!worldRef.current.timelines[timelineId]) return { ok: false, summary: 'No changes made', error: `Timeline ${timelineId} does not exist.` }
+      playbackRef.current?.control(timelineId, timelineAction, options)
+      return { ok: true, summary: `${timelineAction === 'play' ? 'Played' : timelineAction === 'pause' ? 'Paused' : timelineAction === 'seek' ? 'Sought' : 'Reset'} timeline`, data: { timelineId, action: timelineAction, ...(options ?? {}) } }
+    },
     focusObjects: (ids) => {
       const current = worldRef.current
       const bounds = unionBounds(current, expandTargetIds(current, ids))
@@ -872,6 +905,7 @@ export default function MathburstWorkspace() {
       return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Focused on ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds) }] }, ids)
     },
     onTrace: (event) => {
+      setToolLog((current) => [...current, { ...event, at: Date.now() }].slice(-2000))
       setTraceEvents((current) => [
         ...current.filter((existing) => existing.invocationId !== event.invocationId),
         event,
@@ -881,6 +915,12 @@ export default function MathburstWorkspace() {
     },
   }), [createLibraryProject, navigateToScene, openLibraryProject, openProjectGallery, runAgent, runHistoryBridge, trashLibraryProject])
   const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
+  const playback = useTimelinePlayback(world)
+  const playbackRef = useRef(playback)
+  playbackRef.current = playback
+  const ledgerBursts = useMemo(() => groupBurst(toolLog), [toolLog])
+  const readingEvent = useMemo(() => collapseInvocations(toolLog).find((event) => event.readOnly && event.phase === 'running') ?? null, [toolLog])
+  const ledgerCounts = useMemo(() => Object.fromEntries(Object.entries(summarizeLedger(toolLog, webMcpTools).perTool).map(([name, entry]) => [name, entry.calls])), [toolLog, webMcpTools])
 
   /** Wait for the Tutor presence to settle so consecutive real tool calls never collide. */
   const waitForTutor = () => new Promise<void>((resolve) => {
@@ -1434,10 +1474,14 @@ export default function MathburstWorkspace() {
     setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
     else if (object.kind === 'equation') setEditorValue(object.latex)
-    else if (object.kind === 'matrix') setEditorMatrix([
-      [...object.values[0]],
-      [...object.values[1]],
-    ])
+    else if (object.kind === 'matrix') {
+      // The modal editor is 2×2 only; other sizes edit in place on the canvas.
+      if (object.values.length !== 2 || object.values[0]?.length !== 2 || object.values[1]?.length !== 2) return
+      setEditorMatrix([
+        [object.values[0][0], object.values[0][1]],
+        [object.values[1][0], object.values[1][1]],
+      ])
+    }
     else return
     setEditorId(id)
   }, [world.objects])
@@ -1562,7 +1606,7 @@ export default function MathburstWorkspace() {
       : null,
     [activeDirectorShot.scene, activeDocumentId, directorOpen, libraryProjects, world],
   )
-  const canvasWorld = directorOverviewWorld ?? world
+  const canvasWorld = playback.derivedWorld(directorOverviewWorld ?? world)
   // A frame is "ready" when its targets exist in the project that owns it,
   // whichever project is active; the Director walks all four.
   const directorAvailableObjectIds = useMemo(() => {
@@ -1658,6 +1702,7 @@ export default function MathburstWorkspace() {
               >
                 {world.session.reconstructionStatus === 'approved' ? '✓ live scene' : 'Reconstruct photo'}
               </button>}
+              <button type="button" className="console-trigger" aria-pressed={consoleOpen} onClick={() => setConsoleOpen((open) => !open)}>{consoleOpen ? 'Close agent' : 'Agent replay'}</button>
               <button type="button" className="reset-trigger" onClick={resetDemo}>{activeLibraryProject ? 'Reset project' : 'Reset demo'}</button>
             </>
           )}
@@ -1796,8 +1841,13 @@ export default function MathburstWorkspace() {
         collapseOn={activeScene === 'gamma-probability' ? undefined : activeScene}
       />
       <AgentPresence presence={presence} />
-      <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} />
+      <WebMCPInspector tools={webMcpTools} status={registrationStatus} world={world} callCounts={ledgerCounts} />
       <WebMCPTrace events={traceEvents} world={canvasWorld} viewport={directorOpen ? directorViewport : world.viewport} />
+      <ToolToast bursts={ledgerBursts} />
+      {!galleryOpen && <ToolLedger events={toolLog} tools={webMcpTools} pinned={ledgerPinned} onTogglePin={toggleLedgerPinned} />}
+      <ReadingIndicator active={Boolean(readingEvent)} label={readingEvent ? `Tutor is reading · ${readingEvent.toolName}` : undefined} />
+      <AgentConsole open={consoleOpen && !galleryOpen} onClose={() => setConsoleOpen(false)} tools={webMcpTools} />
+      {!galleryOpen && <AnimationTimeline world={world} playbacks={playback.playbacks} control={playback.control} onDeleteTimeline={(id) => run(humanAction('Deleted timeline', [{ type: 'removeTimeline', id }]))} />}
       {bridgePlay && (
         <CinematicBridge
           key={bridgePlay.key}

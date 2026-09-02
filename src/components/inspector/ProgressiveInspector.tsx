@@ -7,6 +7,7 @@ import { validateLatex } from '../../domain/semantic/expression'
 import type { WorldObject } from '../../domain/world/types'
 import EquationEditor from '../editors/EquationEditor'
 import TextEditor from '../editors/TextEditor'
+import { determinant, isSquare, matrixDimensions } from '../../domain/math/matrix'
 import InspectorField from './InspectorField'
 import type { InspectorFieldSpec, InspectorStatus, InspectorTab, ProgressiveInspectorProps } from './types'
 import '../../styles/inspector.css'
@@ -307,14 +308,15 @@ function MatrixEditor({
   onSave,
   onCancel,
 }: {
-  matrix: [[number, number], [number, number]]
+  matrix: number[][]
   onChange: ProgressiveInspectorProps['onMatrixChange']
   onSave: () => void
   onCancel: () => void
 }) {
+  // The modal draft path is 2×2 only (`onMatrixChange` addresses rows/columns 0 | 1).
   return (
     <div className="inspector-matrix-editor" role="group" aria-label="Edit 2 by 2 matrix">
-      {matrix.map((row, rowIndex) => row.map((value, columnIndex) => (
+      {matrix.slice(0, 2).map((row, rowIndex) => row.slice(0, 2).map((value, columnIndex) => (
         <input
           key={`${rowIndex}-${columnIndex}`}
           autoFocus={rowIndex === 0 && columnIndex === 0}
@@ -326,6 +328,35 @@ function MatrixEditor({
           onKeyDown={(event) => {
             if (event.key === 'Enter') onSave()
             if (event.key === 'Escape') onCancel()
+          }}
+        />
+      )))}
+    </div>
+  )
+}
+
+/** Per-cell inline editing for any size; each commit is one `put` through `onPatchObject`. */
+function MatrixCellsEditor({
+  values,
+  objectId,
+  onPatchObject,
+}: {
+  values: number[][]
+  objectId: string
+  onPatchObject: ProgressiveInspectorProps['onPatchObject']
+}) {
+  const columns = values[0]?.length ?? 0
+  return (
+    <div className="inspector-matrix-editor" role="group" aria-label={`Edit ${values.length} by ${columns} matrix`} style={{ gridTemplateColumns: `repeat(${Math.max(1, columns)}, minmax(0, 1fr))` }}>
+      {values.map((row, rowIndex) => row.map((value, columnIndex) => (
+        <InlineNumberEditor
+          key={`${rowIndex}-${columnIndex}`}
+          value={value}
+          ariaLabel={`Matrix entry row ${rowIndex + 1}, column ${columnIndex + 1} for ${objectId}`}
+          onCommit={(next) => {
+            const updated = values.map((cells) => [...cells])
+            updated[rowIndex][columnIndex] = next
+            onPatchObject(objectId, { values: updated }, `Edited matrix cell (${rowIndex + 1},${columnIndex + 1})`)
           }}
         />
       )))}
@@ -449,10 +480,20 @@ export default function ProgressiveInspector({
           { label: 'Author', value: object.author, status: 'derived' },
         ]
       case 'matrix': {
-        const matrix = editorMatrix ?? object.values
+        const matrix: number[][] = editorMatrix ?? object.values
+        const { rows, columns } = matrixDimensions(matrix)
+        const square = isSquare(matrix)
         return [
-          { label: 'Matrix A', value: `${matrix[0].join('  ')}  /  ${matrix[1].join('  ')}`, status: 'free', children: isEditing ? <MatrixEditor matrix={matrix} onChange={onMatrixChange} onSave={onSave} onCancel={onCancel} /> : undefined },
-          { label: 'Dimensions', value: '2 × 2', status: 'constrained' },
+          {
+            label: 'Matrix A',
+            value: matrix.map((row) => row.join('  ')).join('  /  '),
+            status: 'free',
+            children: isEditing && editorMatrix
+              ? <MatrixEditor matrix={matrix} onChange={onMatrixChange} onSave={onSave} onCancel={onCancel} />
+              : <MatrixCellsEditor values={object.values} objectId={object.id} onPatchObject={onPatchObject} />,
+          },
+          { label: 'Dimensions', value: `${rows} × ${columns}`, status: 'constrained' },
+          { label: 'Determinant', value: square ? String(Number(determinant(matrix).toFixed(4))) : 'not square', status: 'derived' },
           { label: 'Source vectors', value: `${object.sourceIds.length} linked`, status: 'derived' },
           { label: 'Accent', value: object.accent, status: 'free' },
         ]

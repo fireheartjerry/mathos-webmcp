@@ -1,0 +1,143 @@
+/* Animation timeline sidebar: quiet paper panel, 1px lines, mono captions. */
+
+.animation-panel {
+  --anim-ink: #171713;
+  --anim-paper: #fbf9f3;
+  --anim-ivory: #f4f0e6;
+  --anim-muted: #7a776d;
+  --anim-line: rgba(23, 23, 19, 0.16);
+  --anim-line-strong: rgba(23, 23, 19, 0.34);
+  --anim-purple: #7c5cff;
+  --anim-purple-soft: rgba(124, 92, 255, 0.12);
+  --anim-mono: 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace;
+  width: 268px;
+  max-height: 46vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--anim-ink);
+  background: rgba(251, 249, 243, 0.96);
+  border: 1px solid var(--anim-line);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(23, 23, 19, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.animation-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid var(--anim-line);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.animation-panel-head b { font-family: var(--anim-mono); font-weight: 500; font-size: 11px; color: var(--anim-muted); letter-spacing: 0; text-transform: none; }
+
+.animation-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+
+.animation-row {
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid var(--anim-line);
+  outline: none;
+  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animation-row:last-child { border-bottom: none; }
+.animation-row:focus-visible { background: var(--anim-purple-soft); box-shadow: inset 2px 0 0 var(--anim-purple); }
+.animation-row.is-playing .animation-name { color: var(--anim-purple); }
+
+.animation-row-head { display: flex; align-items: center; gap: 8px; }
+
+.animation-play {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--anim-ink);
+  background: transparent;
+  border: 1px solid var(--anim-line-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 160ms, background-color 160ms, color 160ms;
+}
+.animation-play svg { width: 10px; height: 10px; fill: currentColor; }
+.animation-play:hover { border-color: var(--anim-ink); }
+.animation-row.is-playing .animation-play { color: var(--anim-ivory); background: var(--anim-purple); border-color: var(--anim-purple); }
+
+.animation-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.animation-clock { flex: none; font-family: var(--anim-mono); font-size: 10.5px; color: var(--anim-muted); font-variant-numeric: tabular-nums; }
+
+.animation-scrubber {
+  --progress: 0%;
+  display: block;
+  width: 100%;
+  height: 14px;
+  margin: 6px 0 4px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.animation-scrubber:focus { outline: none; }
+.animation-scrubber::-webkit-slider-runnable-track {
+  height: 1px;
+  background: linear-gradient(to right, var(--anim-purple) var(--progress), var(--anim-line-strong) var(--progress));
+}
+.animation-scrubber::-moz-range-track { height: 1px; background: var(--anim-line-strong); }
+.animation-scrubber::-moz-range-progress { height: 1px; background: var(--anim-purple); }
+.animation-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  background: var(--anim-paper);
+  border: 1px solid var(--anim-ink);
+  border-radius: 50%;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animation-scrubber::-moz-range-thumb { width: 9px; height: 9px; background: var(--anim-paper); border: 1px solid var(--anim-ink); border-radius: 50%; }
+.animation-scrubber:hover::-webkit-slider-thumb, .animation-scrubber:focus-visible::-webkit-slider-thumb { transform: scale(1.3); border-color: var(--anim-purple); }
+.animation-scrubber:focus-visible::-moz-range-thumb { border-color: var(--anim-purple); }
+
+.animation-row-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+.animation-tracks {
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--anim-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--anim-muted);
+}
+.animation-tracks li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.animation-tracks li::before { content: '·'; margin-right: 5px; color: var(--anim-line-strong); }
+.animation-tracks li.is-empty { font-style: italic; }
+.animation-tracks li.is-empty::before { content: none; }
+
+.animation-actions { flex: none; display: flex; gap: 4px; }
+.animation-chip {
+  padding: 2px 7px;
+  font: 500 10px var(--anim-mono);
+  color: var(--anim-muted);
+  background: transparent;
+  border: 1px solid var(--anim-line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms, background-color 120ms;
+}
+.animation-chip:hover:not(:disabled) { color: var(--anim-ink); border-color: var(--anim-line-strong); }
+.animation-chip:disabled { opacity: 0.45; cursor: default; }
+.animation-chip.is-on { color: var(--anim-purple); border-color: var(--anim-purple); background: var(--anim-purple-soft); }
+.animation-chip.is-danger:hover { color: #d46b4c; border-color: #d46b4c; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animation-row, .animation-play, .animation-chip, .animation-scrubber::-webkit-slider-thumb { transition: none; }
+}

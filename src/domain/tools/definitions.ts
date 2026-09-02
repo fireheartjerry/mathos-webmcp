@@ -11,6 +11,7 @@ import type { CatalogSceneId, ProjectId, SceneId } from '../world/projects'
 import { auditReconstruction, proposeReconstruction } from '../world/reconstruction'
 import { createLeverageTools } from './leverage'
 import type { ProjectSummary } from './leverage'
+import { createParityTools } from './parity'
 import type {
   Bounds,
   GeometryPrimitive,
@@ -56,6 +57,8 @@ export type WorldBridge = {
   focusObjects?: (ids: string[]) => Promise<ToolResult> | ToolResult
   /** Live attention weights from the transformer project, read without opening it. */
   getAttentionWeights?: () => number[] | null
+  /** Transient timeline playback (play, pause, seek, reset); never a history commit. */
+  controlTimeline?: (timelineId: string, action: 'play' | 'pause' | 'seek' | 'reset', options?: { time?: number; speed?: number }) => Promise<ToolResult> | ToolResult
 }
 
 export type WorldTool = {
@@ -79,11 +82,11 @@ const finite = (...numbers: number[]) => numbers.every(Number.isFinite)
 export const isRecord = (value: unknown): value is Values => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 export const isPoint = (value: unknown): value is Point => isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number' && finite(value.x, value.y)
 const isStroke = (value: unknown): value is { points: Point[] } => isRecord(value) && Array.isArray(value.points) && value.points.length > 0 && value.points.every(isPoint)
-const isBounds = (value: unknown): value is Bounds => isRecord(value)
+export const isBounds = (value: unknown): value is Bounds => isRecord(value)
   && typeof value.x === 'number' && typeof value.y === 'number'
   && typeof value.width === 'number' && typeof value.height === 'number'
   && finite(value.x, value.y, value.width, value.height) && value.width > 0 && value.height > 0
-const isPair = (value: unknown): value is [number, number] => Array.isArray(value)
+export const isPair = (value: unknown): value is [number, number] => Array.isArray(value)
   && value.length === 2 && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
 export const isVector = (value: unknown, length: number): value is number[] => Array.isArray(value)
   && value.length === length && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
@@ -98,7 +101,7 @@ const isTinyModel = (value: unknown): boolean => isRecord(value)
   && Array.isArray(value.classifier) && value.classifier.length === 2 && value.classifier.every((entry) => isVector(entry, 3))
   && isVector(value.bias, 3) && typeof value.queryIndex === 'number' && Number.isFinite(value.queryIndex)
   && typeof value.targetIndex === 'number' && Number.isFinite(value.targetIndex)
-const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+export const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((entry) => typeof entry === 'string')
 
 function readInput(input: unknown): Values {
   if (typeof input === 'string') {
@@ -154,8 +157,14 @@ const primitivesSchema = {
 }
 export const schema = (properties: Values, required: string[] = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false })
 
-export function tool(name: string, title: string, description: string, inputSchema: Record<string, unknown>, readOnly: boolean, execute: ToolExecutor): WorldTool {
-  return { name, title, description, inputSchema, annotations: { readOnlyHint: readOnly, untrustedContentHint: false }, execute: safe(execute) }
+/**
+ * Build a page tool. `untrusted` marks tools whose output can carry learner-written
+ * text or ink (WebMCP untrustedContentHint), so a caller treats it as data, not instructions.
+ */
+export function tool(name: string, title: string, description: string, inputSchema: Record<string, unknown>, readOnly: boolean, execute: ToolExecutor, untrusted = false): WorldTool {
+  if (name.length > 30) throw new Error(`Tool name ${name} exceeds 30 characters.`)
+  if (description.length > 500) throw new Error(`Tool ${name} description exceeds 500 characters.`)
+  return { name, title, description, inputSchema, annotations: { readOnlyHint: readOnly, untrustedContentHint: untrusted }, execute: safe(execute) }
 }
 
 function geometryPrimitiveError(value: unknown): string | null {
@@ -300,7 +309,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
         ? { id: activeScene, title: getScene(activeScene as SceneId).title, projectId: activeProject, projectTitle: activeProject ? getProject(activeProject).title : null }
         : null
     return { ok: true, summary: `Read ${all.length} world objects`, data: { title: world.title, version: world.version, objectCount: all.length, selection: world.selection, viewport: world.viewport, scene: sceneMetadata, activeScene, activeProject, session: world.session, historyCount: world.history.length, ...(args.includeObjects ? { objects: all.slice(0, 100), ...(all.length > 100 ? { truncated: true } : {}) } : {}) } }
-  })
+  }, true)
 
   const getObjects = tool('get_objects', 'Read world objects', 'Read objects by id or kind. Results are bounded to one hundred objects.', schema({ ids: { type: 'array', items: { type: 'string' } }, kinds: { type: 'array', items: { type: 'string', enum: KINDS } }, limit: { type: 'integer', minimum: 1, maximum: 100 } }), true, (input) => {
     const args = values(input, ['ids', 'kinds', 'limit'])
@@ -309,12 +318,12 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const world = bridge.getWorld(); const maximum = limit(args.limit, 50)
     const matches = world.order.map((id) => world.objects[id]).filter((object) => object && (!args.ids || (args.ids as string[]).includes(object.id)) && (!args.kinds || (args.kinds as string[]).includes(object.kind)))
     return { ok: true, summary: `Read ${Math.min(matches.length, maximum)} objects`, data: { objects: matches.slice(0, maximum), ...(matches.length > maximum ? { truncated: true } : {}) } }
-  })
+  }, true)
 
   const getSelection = tool('get_selection', 'Read the current selection', 'Read which objects the learner currently has selected.', emptySchema, true, (input) => {
     values(input, []); const world = bridge.getWorld()
     return { ok: true, summary: `${world.selection.length} objects selected`, data: { ids: world.selection, objects: world.selection.map((id) => world.objects[id]).filter(Boolean) } }
-  })
+  }, true)
 
   const getSessionContext = tool('get_session_context', 'Read tutoring context', 'Read attempts, misconception, shown help and reconstruction state.', emptySchema, true, (input) => {
     values(input, []); const world = bridge.getWorld()
@@ -325,7 +334,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const args = values(input, ['limit']); const world = bridge.getWorld(); const maximum = limit(args.limit, 20)
     const commits = world.history.slice(-maximum).reverse().map((commit) => ({ id: commit.action.id, source: commit.action.source, summary: commit.action.summary, at: commit.at, changedIds: changedIds(commit.action.operations) }))
     return { ok: true, summary: `Read ${commits.length} history commits`, data: { commits, ...(world.history.length > maximum ? { truncated: true } : {}) } }
-  })
+  }, true)
 
   const inspectMath = tool('inspect_math', 'Inspect a mathematical object', 'Inspect live equation source, graph linkage, construction primitives or matrix vectors.', schema({ objectId: { type: 'string', minLength: 1 } }, ['objectId']), true, (input) => {
     const args = values(input, ['objectId']); const id = requiredString(args.objectId, 'objectId'); const world = bridge.getWorld(); const object = world.objects[id]
@@ -372,7 +381,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
       return { ok: true, summary: `Inspected partition observatory ${id}`, data: { kind: object.kind, selectedN: object.selectedN, finiteCutoff: cutoff, coefficient: coefficients[object.selectedN] ?? null, coefficients, ramanujan: { checked: verification.checked, verified: verification.verified, counterexamples: verification.counterexamples, statement: verification.statement }, linkedSimplexId: object.linkedSimplexId ?? null, revealTheorem: object.revealTheorem } }
     }
     throw new Error(`Object ${id} is not a mathematical object.`)
-  })
+  }, true)
 
   const createObjects = tool('create_objects', 'Create world objects', 'Create typed objects in one attributed, undoable commit.', schema({ summary: { type: 'string' }, objects: { type: 'array', minItems: 1, items: objectSchema } }, ['objects']), false, async (input) => {
     const args = values(input, ['summary', 'objects']); const objects = objectList(args.objects); const operations: WorldOperation[] = [
@@ -508,6 +517,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     createObjects, updateObjects, deleteObjects, transformObjects, applyActions, stepHistory, setViewport,
     reconstructProblem, auditReconstructionTool, graphExpression, constructGeometry, visualizeConcept,
     ...createLeverageTools(bridge),
+    ...createParityTools(bridge),
   ]
 
   if (!bridge.onTrace) return tools

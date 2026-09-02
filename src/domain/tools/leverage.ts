@@ -157,7 +157,7 @@ export function createLeverageTools(bridge: WorldBridge): WorldTool[] {
     if (!object) throw new Error(`Object ${id} does not exist.`)
     const result = explainObject(world, object)
     return { ok: true, summary: `Explained ${object.kind} ${id}`, data: { kind: object.kind, author: object.author, ...result } }
-  })
+  }, true)
 
   const evaluate = tool('evaluate_expression', 'Evaluate an expression', 'Evaluate LaTeX at one or more x values with optional named parameters, using the same evaluator the graphs use. Read-only; nothing is drawn.', schema({ latex: { type: 'string', minLength: 1 }, x: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'number' } }, parameters: { type: 'object', additionalProperties: { type: 'number' } } }, ['latex', 'x']), true, (input) => {
     const args = values(input, ['latex', 'x', 'parameters']); const latex = requiredString(args.latex, 'latex')

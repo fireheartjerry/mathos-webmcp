@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import type React from 'react'
 import { groupTools } from '../domain/tools/groups'
 import type { ToolResult, WorldTool } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
@@ -11,9 +12,12 @@ const inspectorNote = (): WorldObject => ({
   bounds: { x: 820, y: 610, width: 260, height: 54 }, rotation: 0, author: 'agent', opacity: 1,
 })
 
+const firstOfKind = (world: WorldState, kind: WorldObject['kind']) => world.order.find((id) => world.objects[id]?.kind === kind) ?? `no_${kind}`
+
 function seededInput(name: string, world: WorldState): unknown {
   const note = world.objects.inspector_note
   const targetId = note ? note.id : 'source'
+  const timelineId = Object.keys(world.timelines)[0] ?? 'no_timeline'
   switch (name) {
     case 'get_world': return { includeObjects: false }
     case 'get_objects': return { kinds: ['equation', 'graph'], limit: 12 }
@@ -52,8 +56,26 @@ function seededInput(name: string, world: WorldState): unknown {
       ],
     }
     case 'visualize_concept': return { concept: 'matrix-transform', bounds: { x: 680, y: 170, width: 500, height: 330 } }
+    case 'draw_ink': return { mode: 'highlighter', piecewise: [{ latex: '600+40\sin(x/40)', from: 820, to: 1080 }] }
+    case 'erase_ink': return { own: true }
+    case 'edit_text': return { objectId: note ? note.id : firstOfKind(world, 'text'), text: 'Edited through WebMCP', presentation: 'handwritten' }
+    case 'edit_equation': return { objectId: firstOfKind(world, 'equation'), latex: 'x^2-2x+1' }
+    case 'create_shape': return { shape: 'polygon', points: [{ x: 840, y: 700 }, { x: 960, y: 690 }, { x: 990, y: 780 }, { x: 860, y: 800 }], fill: 'rgba(124, 92, 255, 0.14)' }
+    case 'edit_shape': return { objectId: firstOfKind(world, 'shape'), stroke: '#7c5cff', strokeWidth: 3 }
+    case 'set_matrix_cells': return { objectId: firstOfKind(world, 'matrix'), cells: [{ row: 0, column: 1, value: 0.5 }] }
+    case 'set_graph': return { objectId: firstOfKind(world, 'graph'), showTangentAt: 1 }
+    case 'set_arrow': return { objectId: firstOfKind(world, 'arrow'), to: { x: 900, y: 620 } }
+    case 'create_timeline': return { name: 'Inspector camera pulse', duration: 4, tracks: [{ target: { kind: 'camera', path: 'zoom' }, keyframes: [{ time: 0, value: world.viewport.zoom }, { time: 2, value: Math.min(1.6, world.viewport.zoom * 1.2) }, { time: 4, value: world.viewport.zoom }] }] }
+    case 'add_keyframes': return { timelineId, target: { kind: 'camera', path: 'x' }, keyframes: [{ time: 0, value: world.viewport.x }, { time: 3, value: world.viewport.x + 40 }] }
+    case 'play_timeline': return { timelineId, action: 'play' }
+    case 'get_timelines': return {}
     default: return {}
   }
+}
+
+const CALL_COUNT_STYLE: React.CSSProperties = {
+  marginLeft: 6, padding: '1px 5px', borderRadius: 999, verticalAlign: 'middle',
+  font: "10px/1.4 'Fira Code', monospace", fontStyle: 'normal', color: 'var(--paper, #f7f4ec)', background: 'var(--agent, #7c5cff)',
 }
 
 function statusLabel(status: RegistrationStatus | null, defined: number) {
@@ -68,15 +90,22 @@ export default function WebMCPInspector({
   tools,
   status,
   world,
+  callCounts,
 }: {
   tools: WorldTool[]
   status: RegistrationStatus | null
   world: WorldState
+  /** Completed invocations per tool name (trace events with phase 'complete'); shown as a badge when present. */
+  callCounts?: Record<string, number>
 }) {
   const [open, setOpen] = useState(false)
   const [running, setRunning] = useState<string | null>(null)
   const [message, setMessage] = useState<{ name: string; result: ToolResult } | null>(null)
   const grouped = useMemo(() => groupTools(tools), [tools])
+  const sections = useMemo(() => [
+    ...grouped.groups.filter(({ tools: members }) => members.length > 0),
+    ...(grouped.ungrouped.length ? [{ group: { id: 'other', label: 'Other', purpose: 'Not yet grouped', tools: grouped.ungrouped.map((tool) => tool.name) }, tools: grouped.ungrouped }] : []),
+  ], [grouped])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -123,17 +152,28 @@ export default function WebMCPInspector({
           </header>
           <div className={`webmcp-registration is-${status?.state ?? 'checking'}`}><i /><span>{statusLabel(status, tools.length)}</span></div>
           <p className="webmcp-intro">The external agent and the learner operate the exact same world. Run any tool here to prove it.</p>
-          <div className="webmcp-groups">
-            {grouped.groups.map(({ group, tools: members }) => (
+          <div className="webmcp-groups" style={{ minHeight: 0, flex: '1 1 auto', overflowY: 'auto' }}>
+            {sections.map(({ group, tools: members }) => (
               <section key={group.id}>
                 <header><div><b>{group.label}</b><span>{group.purpose}</span></div><i>{members.length}</i></header>
-                {members.map((tool) => (
-                  <div className="webmcp-tool" key={tool.name} data-tool-name={tool.name}>
-                    <span className={tool.annotations.readOnlyHint ? 'is-read' : 'is-write'}>{tool.annotations.readOnlyHint ? 'R' : 'W'}</span>
-                    <div><b>{tool.name}</b><small>{tool.title}</small></div>
-                    <button type="button" disabled={Boolean(running)} onClick={() => run(tool)}>{running === tool.name ? 'Running…' : 'Run'}</button>
-                  </div>
-                ))}
+                {members.map((tool) => {
+                  const count = callCounts?.[tool.name] ?? 0
+                  return (
+                    <div className="webmcp-tool" key={tool.name} data-tool-name={tool.name}>
+                      <span className={tool.annotations.readOnlyHint ? 'is-read' : 'is-write'}>{tool.annotations.readOnlyHint ? 'R' : 'W'}</span>
+                      <div>
+                        <b>
+                          {tool.name}
+                          {callCounts && count > 0 && (
+                            <em className="webmcp-call-count" aria-label={`${count} completed call${count === 1 ? '' : 's'}`} title={`${count} completed call${count === 1 ? '' : 's'}`} style={CALL_COUNT_STYLE}>×{count}</em>
+                          )}
+                        </b>
+                        <small>{tool.title}</small>
+                      </div>
+                      <button type="button" disabled={Boolean(running)} onClick={() => run(tool)}>{running === tool.name ? 'Running…' : 'Run'}</button>
+                    </div>
+                  )
+                })}
               </section>
             ))}
           </div>

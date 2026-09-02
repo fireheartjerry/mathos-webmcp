@@ -1,5 +1,5 @@
 import { createWorldTools } from './definitions'
-import type { WorldBridge, WorldTool } from './definitions'
+import type { ToolResult, WorldBridge, WorldTool } from './definitions'
 
 export type RegisteredToolView = {
   name: string
@@ -19,6 +19,44 @@ export type Registration = {
   status: RegistrationStatus
   tools: WorldTool[]
   readBack: () => Promise<RegisteredToolView[]>
+}
+
+/** The MCP-shaped value handed back to the browser for one tool call. */
+export type McpToolResult = {
+  content: { type: 'text'; text: string }[]
+  structuredContent: Record<string, unknown>
+  isError: boolean
+}
+
+const MAX_TEXT = 1400
+const MAX_ARRAY = 40
+const MAX_STRING = 1500
+const MAX_DEPTH = 8
+const MAX_JSON = 12_000
+
+function bound(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…` : value
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (value === null || typeof value !== 'object') return value
+  if (depth >= MAX_DEPTH) return { truncated: true }
+  if (Array.isArray(value)) {
+    const items = value.slice(0, MAX_ARRAY).map((entry) => bound(entry, depth + 1))
+    return value.length > MAX_ARRAY ? [...items, { truncated: true, omitted: value.length - MAX_ARRAY }] : items
+  }
+  const record: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) record[key] = bound(entry, depth + 1)
+  return record
+}
+
+/** Shape an internal ToolResult the way MCP clients expect: text content plus bounded structured content. */
+export function toMcpResult(result: ToolResult): McpToolResult {
+  const raw = result.ok ? result.summary : (result.error ?? result.summary)
+  const text = raw.length > MAX_TEXT ? `${raw.slice(0, MAX_TEXT - 1)}…` : raw
+  let structured = bound({ ...result }) as Record<string, unknown>
+  if (JSON.stringify(structured).length > MAX_JSON) {
+    structured = { ok: result.ok, summary: result.summary, ...(result.error ? { error: result.error } : {}), ...(result.changedIds ? { changedIds: result.changedIds.slice(0, MAX_ARRAY) } : {}), data: { truncated: true }, truncated: true }
+  }
+  return { content: [{ type: 'text', text }], structuredContent: structured, isError: !result.ok }
 }
 
 export const webMcpAvailable = () => typeof document !== 'undefined' && typeof document.modelContext?.registerTool === 'function'
@@ -54,7 +92,8 @@ export async function registerWorldTools(bridge: WorldBridge): Promise<Registrat
     description: tool.description,
     inputSchema: tool.inputSchema,
     annotations: tool.annotations,
-    execute: (input: unknown) => tool.execute(input),
+    // The browser receives an MCP-shaped result; tool.execute keeps returning ToolResult for the inspector and cues.
+    execute: async (input: unknown) => toMcpResult(await tool.execute(input)),
   })))
 
   const rejected = outcomes.flatMap((outcome, index) => outcome.status === 'rejected' ? [tools[index].name] : [])
