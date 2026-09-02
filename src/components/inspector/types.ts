@@ -21,6 +21,7 @@ export type ProgressiveInspectorProps = {
   onEdit: (id: string) => void
   onValueChange: (value: string) => void
   onMatrixChange: (row: 0 | 1, column: 0 | 1, value: number) => void
+  onPatchObject: (id: string, patch: Record<string, unknown>, summary?: string) => void
   onSave: () => void
   onCancel: () => void
 }

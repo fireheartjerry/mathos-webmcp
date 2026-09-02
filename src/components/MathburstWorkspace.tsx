@@ -298,6 +298,16 @@ export default function MathburstWorkspace() {
     if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
   }, [persistActiveViewport])
 
+  // Inline inspector edits intentionally stay on the same canonical human
+  // action path as canvas gestures. One patch is one undoable put operation;
+  // deeper inverse graph/geometry semantics remain a Phase 2 concern.
+  const patchObject = useCallback((id: string, patch: Record<string, unknown>, summary = 'Updated object') => {
+    const object = worldRef.current.objects[id]
+    if (!object) return
+    const next = { ...object, ...patch, id: object.id, kind: object.kind, author: object.author } as WorldObject
+    run(humanAction(summary, [{ type: 'put', object: next }]))
+  }, [run])
+
   const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
     if (agentBusyRef.current) {
       resolve({ ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' })
@@ -1402,7 +1412,7 @@ export default function MathburstWorkspace() {
         </div>
       )}
 
-      {!directorOpen && selectedObjects[0] && (
+      {!galleryOpen && !directorOpen && selectedObjects[0] && (
         <ProgressiveInspector
           object={selectedObjects[0]}
           world={world}
@@ -1412,6 +1422,7 @@ export default function MathburstWorkspace() {
           onEdit={openEditor}
           onValueChange={setEditorValue}
           onMatrixChange={updateMatrixCell}
+          onPatchObject={patchObject}
           onSave={saveEditor}
           onCancel={() => { setEditorId(null); setEditorMatrix(null) }}
         />

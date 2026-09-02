@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import type { WorldObject } from '../../domain/world/types'
 import InspectorField from './InspectorField'
-import type { InspectorFieldSpec, InspectorTab, ProgressiveInspectorProps } from './types'
+import type { InspectorFieldSpec, InspectorStatus, InspectorTab, ProgressiveInspectorProps } from './types'
 import '../../styles/inspector.css'
 
 const tabs: Array<{ id: InspectorTab; label: string }> = [
@@ -15,6 +15,18 @@ const tabs: Array<{ id: InspectorTab; label: string }> = [
   { id: 'bindings', label: 'Bindings' },
   { id: 'animation', label: 'Animation' },
 ]
+
+// Explicit capability maps keep the tab row honest instead of advertising
+// empty panels for every selected object.
+const structuredKinds = new Set<WorldObject['kind']>([
+  'graph', 'geometry', 'matrix', 'attention', 'training', 'barycentric', 'simplex', 'numberTheory', 'frame', 'group',
+])
+const constrainedKinds = new Set<WorldObject['kind']>([
+  'geometry', 'barycentric', 'graph', 'attention', 'training', 'simplex', 'numberTheory',
+])
+const styleCapableKinds = new Set<WorldObject['kind']>([
+  'text', 'equation', 'graph', 'arrow', 'ink', 'shape', 'matrix', 'geometry',
+])
 
 const formatValue = (value: unknown): string => {
   if (typeof value === 'string') return value
@@ -27,31 +39,225 @@ const formatValue = (value: unknown): string => {
 
 const boundsLabel = (object: WorldObject) => `${formatValue(object.bounds.width)} × ${formatValue(object.bounds.height)} @ ${formatValue(object.bounds.x)}, ${formatValue(object.bounds.y)}`
 
-const linkedViewIdsFor = (object: WorldObject): string[] => {
+/** IDs this object explicitly points at in the small world dependency graph. */
+const linkedReferenceIdsFor = (object: WorldObject): string[] => {
   if (object.kind === 'graph') return [object.equationId]
   if (object.kind === 'matrix') return object.sourceIds
   if (object.kind === 'training') return [object.linkedAttentionId]
   if (object.kind === 'barycentric') return object.linkedAttentionId ? [object.linkedAttentionId] : []
-  if (object.kind === 'simplex') return []
   if (object.kind === 'numberTheory') return object.linkedSimplexId ? [object.linkedSimplexId] : []
   return object.kind === 'frame' || object.kind === 'group' ? object.childIds : []
 }
 
 const entityIdFor = (object: WorldObject): string | undefined => (
-  'entityId' in object && typeof object.entityId === 'string' ? object.entityId : undefined
+  'entityId' in object && typeof object.entityId === 'string' && object.entityId.length > 0 ? object.entityId : undefined
 )
 
-const bindingIdsFor = (object: WorldObject, world: ProgressiveInspectorProps['world']): string[] => {
-  const declared = 'bindingIds' in object && Array.isArray(object.bindingIds) ? object.bindingIds : []
+const uniqueExistingIds = (ids: string[], world: ProgressiveInspectorProps['world'], exclude?: string): string[] => (
+  [...new Set(ids)].filter((id) => id !== exclude && Boolean(world.objects[id]))
+)
+
+/** Include declared metadata and bindings discovered from either endpoint. */
+const bindingIdsFor = (object: WorldObject, world: ProgressiveInspectorProps['world'], entityId?: string): string[] => {
+  const declared = 'bindingIds' in object && Array.isArray(object.bindingIds)
+    ? object.bindingIds.filter((id): id is string => typeof id === 'string')
+    : []
   const discovered = Object.values(world.bindings)
-    .filter((binding) => binding.target.objectId === object.id)
+    .filter((binding) => binding.target.objectId === object.id || (entityId !== undefined && binding.source.entityId === entityId))
     .map((binding) => binding.id)
   return [...new Set([...declared, ...discovered])]
 }
 
-const EmptyPanel = ({ children }: { children: string }) => (
-  <div className="inspector-empty"><span>◌</span><p>{children}</p></div>
+const linkedViewIdsFor = (object: WorldObject, world: ProgressiveInspectorProps['world']): string[] => (
+  uniqueExistingIds(linkedReferenceIdsFor(object), world, object.id)
 )
+
+/**
+ * Find reverse links without introducing a general dependency engine. This is
+ * deliberately a scan over the supported object relationships and semantic
+ * binding endpoints, which keeps the inspector cheap and predictable.
+ */
+const dependentObjectIdsFor = (
+  object: WorldObject,
+  world: ProgressiveInspectorProps['world'],
+  entityId?: string,
+): string[] => {
+  const reverseObjectLinks = Object.values(world.objects)
+    .filter((candidate) => candidate.id !== object.id)
+    .filter((candidate) => linkedReferenceIdsFor(candidate).includes(object.id))
+    .map((candidate) => candidate.id)
+  const sharedEntityViews = entityId === undefined ? [] : Object.values(world.objects)
+    .filter((candidate) => candidate.id !== object.id && entityIdFor(candidate) === entityId)
+    .map((candidate) => candidate.id)
+  const bindingTargets = entityId === undefined ? [] : Object.values(world.bindings)
+    .filter((binding) => binding.source.entityId === entityId)
+    .map((binding) => binding.target.objectId)
+  const bindingSourceViews = Object.values(world.bindings)
+    .filter((binding) => binding.target.objectId === object.id)
+    .flatMap((binding) => Object.values(world.objects)
+      .filter((candidate) => candidate.id !== object.id && entityIdFor(candidate) === binding.source.entityId)
+      .map((candidate) => candidate.id))
+  return uniqueExistingIds([
+    ...reverseObjectLinks,
+    ...sharedEntityViews,
+    ...bindingTargets,
+    ...bindingSourceViews,
+  ], world, object.id)
+}
+
+const parseFinite = (raw: string): number | null => {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const value = Number(trimmed)
+  return Number.isFinite(value) ? value : null
+}
+
+function InlineNumberEditor({
+  value,
+  ariaLabel,
+  onCommit,
+}: {
+  value: number
+  ariaLabel: string
+  onCommit: (value: number) => void
+}) {
+  const [draft, setDraft] = useState(() => formatValue(value))
+  const focused = useRef(false)
+  const committedValue = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!focused.current) setDraft(formatValue(value))
+  }, [value])
+
+  const commit = () => {
+    const parsed = parseFinite(draft)
+    if (parsed === null) {
+      committedValue.current = null
+      setDraft(formatValue(value))
+      return
+    }
+    setDraft(formatValue(parsed))
+    if (committedValue.current === parsed) return
+    committedValue.current = parsed
+    if (!Object.is(parsed, value)) onCommit(parsed)
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      aria-label={ariaLabel}
+      onFocus={() => { focused.current = true; committedValue.current = null }}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          commit()
+          event.currentTarget.blur()
+        } else if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          committedValue.current = null
+          setDraft(formatValue(value))
+          event.currentTarget.blur()
+        }
+      }}
+      onBlur={() => {
+        focused.current = false
+        commit()
+      }}
+    />
+  )
+}
+
+type NumericTuple = [number, number, ...number[]]
+
+const parseFiniteTuple = (raw: string, expectedLength: number): number[] | null => {
+  const trimmed = raw.trim().replace(/^\[/, '').replace(/\]$/, '')
+  if (!trimmed) return null
+  const parts = trimmed.split(/[\s,]+/).filter(Boolean)
+  if (parts.length !== expectedLength) return null
+  const values = parts.map(parseFinite)
+  return values.every((value): value is number => value !== null) ? values : null
+}
+
+function InlineTupleEditor({
+  values,
+  ariaLabel,
+  onCommit,
+}: {
+  values: NumericTuple
+  ariaLabel: string
+  onCommit: (values: number[]) => void
+}) {
+  const [draft, setDraft] = useState(() => formatValue(values))
+  const focused = useRef(false)
+  const committedValues = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!focused.current) setDraft(formatValue(values))
+  }, [values])
+
+  const commit = () => {
+    const parsed = parseFiniteTuple(draft, values.length)
+    if (!parsed) {
+      committedValues.current = null
+      setDraft(formatValue(values))
+      return
+    }
+    const key = parsed.join('|')
+    setDraft(formatValue(parsed))
+    if (committedValues.current === key) return
+    committedValues.current = key
+    if (parsed.some((value, index) => !Object.is(value, values[index]))) onCommit(parsed)
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      aria-label={ariaLabel}
+      onFocus={() => { focused.current = true; committedValues.current = null }}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          commit()
+          event.currentTarget.blur()
+        } else if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          committedValues.current = null
+          setDraft(formatValue(values))
+          event.currentTarget.blur()
+        }
+      }}
+      onBlur={() => {
+        focused.current = false
+        commit()
+      }}
+    />
+  )
+}
+
+function InlineRangeEditor({
+  values,
+  ariaLabel,
+  onCommit,
+}: {
+  values: [number, number]
+  ariaLabel: string
+  onCommit: (values: [number, number]) => void
+}) {
+  return (
+    <div className="inspector-range-editor">
+      <InlineNumberEditor value={values[0]} ariaLabel={`${ariaLabel} start`} onCommit={(next) => onCommit([next, values[1]])} />
+      <InlineNumberEditor value={values[1]} ariaLabel={`${ariaLabel} end`} onCommit={(next) => onCommit([values[0], next])} />
+    </div>
+  )
+}
 
 function TextEditor({
   id,
@@ -124,6 +330,7 @@ export default function ProgressiveInspector({
   onEdit,
   onValueChange,
   onMatrixChange,
+  onPatchObject,
   onSave,
   onCancel,
 }: ProgressiveInspectorProps) {
@@ -131,8 +338,9 @@ export default function ProgressiveInspector({
   const isEditing = editorId === object.id
   const canEdit = object.kind === 'text' || object.kind === 'equation' || object.kind === 'matrix'
   const entityId = entityIdFor(object)
-  const bindingIds = bindingIdsFor(object, world)
-  const linkedViewIds = linkedViewIdsFor(object)
+  const bindingIds = bindingIdsFor(object, world, entityId)
+  const linkedViewIds = linkedViewIdsFor(object, world)
+  const dependentObjectIds = dependentObjectIdsFor(object, world, entityId)
 
   const inputKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && isEditing) onCancel()
@@ -147,12 +355,51 @@ export default function ProgressiveInspector({
     ) : undefined,
   })
 
+  const numericField = (
+    label: string,
+    value: number,
+    status: InspectorStatus,
+    patch: (next: number) => Record<string, unknown>,
+    summary: string,
+  ): InspectorFieldSpec => ({
+    label,
+    value: formatValue(value),
+    status,
+    children: <InlineNumberEditor value={value} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+  })
+
+  const tupleField = (
+    label: string,
+    values: NumericTuple,
+    status: InspectorStatus,
+    patch: (next: number[]) => Record<string, unknown>,
+    summary: string,
+  ): InspectorFieldSpec => ({
+    label,
+    value: formatValue(values),
+    status,
+    children: <InlineTupleEditor values={values} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+  })
+
+  const rangeField = (
+    label: string,
+    values: [number, number],
+    status: InspectorStatus,
+    patch: (next: [number, number]) => Record<string, unknown>,
+    summary: string,
+  ): InspectorFieldSpec => ({
+    label,
+    value: `[${formatValue(values[0])}, ${formatValue(values[1])}]`,
+    status,
+    children: <InlineRangeEditor values={values} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+  })
+
   const valueFields = useMemo<InspectorFieldSpec[]>(() => {
     switch (object.kind) {
       case 'text':
         return [
           editableText('Content', object.text),
-          { label: 'Font size', value: `${formatValue(object.fontSize)} px`, status: 'free' },
+          numericField('Font size', object.fontSize, 'free', (next) => ({ fontSize: next }), 'Changed text font size'),
           { label: 'Presentation', value: object.presentation ?? 'typed', status: 'derived' },
           { label: 'Author', value: object.author, status: 'derived' },
         ]
@@ -172,13 +419,31 @@ export default function ProgressiveInspector({
           { label: 'Accent', value: object.accent, status: 'free' },
         ]
       }
-      case 'graph':
-        return [
+      case 'graph': {
+        const parameters = Object.entries(object.parameters ?? {})
+          .filter(([, value]) => Number.isFinite(value))
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([name, value]) => numericField(
+            `Parameter ${name}`,
+            value,
+            'free',
+            (next) => ({ parameters: { ...(object.parameters ?? {}), [name]: next } }),
+            `Changed graph parameter ${name}`,
+          ))
+        const fields: InspectorFieldSpec[] = [
           { label: 'Equation view', value: object.equationId, status: 'derived' },
-          { label: 'X domain', value: `[${formatValue(object.xDomain[0])}, ${formatValue(object.xDomain[1])}]`, status: 'constrained' },
-          { label: 'Y domain', value: `[${formatValue(object.yDomain[0])}, ${formatValue(object.yDomain[1])}]`, status: 'constrained' },
-          { label: 'Tangent', value: object.showTangentAt == null ? 'off' : `x = ${formatValue(object.showTangentAt)}`, status: 'computed' },
+          ...parameters,
+          rangeField('X domain', object.xDomain, 'constrained', (next) => ({ xDomain: next }), 'Changed graph X domain'),
+          rangeField('Y domain', object.yDomain, 'constrained', (next) => ({ yDomain: next }), 'Changed graph Y domain'),
         ]
+        if (typeof object.showTangentAt === 'number' && Number.isFinite(object.showTangentAt)) {
+          fields.push(numericField('Tangent', object.showTangentAt, 'free', (next) => ({ showTangentAt: next }), 'Changed graph tangent'))
+        }
+        if (Array.isArray(object.shadeIntegral) && object.shadeIntegral.length === 2) {
+          fields.push(rangeField('Integral', object.shadeIntegral, 'constrained', (next) => ({ shadeIntegral: next }), 'Changed graph integral range'))
+        }
+        return fields
+      }
       case 'shape':
         return [
           { label: 'Shape', value: object.shape, status: 'free' },
@@ -201,32 +466,39 @@ export default function ProgressiveInspector({
         ]
       case 'attention':
         return [
-          { label: 'Temperature', value: formatValue(object.temperature), status: 'free' },
+          numericField('Temperature', object.temperature, 'free', (next) => ({ temperature: Math.max(Number.EPSILON, next) }), 'Changed attention temperature'),
           { label: 'Bridge mass', value: formatValue(object.bridgeMasses), status: 'computed' },
           { label: 'Tokens', value: object.model.tokens.join(' · '), status: 'derived' },
         ]
       case 'training':
         return [
           { label: 'Step', value: formatValue(object.step), status: 'computed' },
-          { label: 'Learning rate', value: formatValue(object.learningRate), status: 'free' },
+          numericField('Learning rate', object.learningRate, 'free', (next) => ({ learningRate: Math.max(0, next) }), 'Changed training learning rate'),
           { label: 'Loss', value: formatValue(object.lossHistory.at(-1)), status: 'computed' },
         ]
       case 'barycentric':
         return [
-          { label: 'Weights', value: formatValue(object.weights), status: 'free' },
+          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed barycentric weights'),
           { label: 'Weight sum', value: formatValue(object.weights.reduce((sum, value) => sum + value, 0)), status: 'computed' },
           { label: 'Labels', value: object.labels.join(' · '), status: 'derived' },
         ]
       case 'simplex':
         return [
-          { label: 'Weights', value: formatValue(object.weights), status: 'free' },
-          { label: 'Section', value: `${formatValue(object.section)} / ${formatValue(object.denominator)}`, status: 'constrained' },
+          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed simplex weights'),
+          numericField('Rotation X', object.rotationX, 'free', (next) => ({ rotationX: next }), 'Changed simplex X rotation'),
+          numericField('Rotation Y', object.rotationY, 'free', (next) => ({ rotationY: next }), 'Changed simplex Y rotation'),
+          numericField('Section', object.section, 'constrained', (next) => ({ section: next }), 'Changed simplex section'),
+          numericField('Denominator', object.denominator, 'constrained', (next) => ({ denominator: Math.max(1, Math.round(next)) }), 'Changed simplex denominator'),
           { label: 'Lattice', value: formatValue(object.showLattice), status: 'free' },
         ]
       case 'numberTheory':
         return [
-          { label: 'Selected N', value: formatValue(object.selectedN), status: 'free' },
-          { label: 'Finite cutoff', value: formatValue(object.finiteCutoff), status: 'constrained' },
+          numericField('Selected N', object.selectedN, 'free', (next) => {
+            const selectedN = Math.max(0, Math.min(Math.round(next), object.maxN))
+            return { selectedN, finiteCutoff: Math.max(object.finiteCutoff, selectedN) }
+          }, 'Changed selected partition N'),
+          numericField('Max N', object.maxN, 'constrained', (next) => ({ maxN: Math.max(object.selectedN, Math.round(next)) }), 'Changed partition max N'),
+          numericField('Finite cutoff', object.finiteCutoff, 'constrained', (next) => ({ finiteCutoff: Math.max(object.selectedN, Math.round(next)) }), 'Changed Euler product cutoff'),
           { label: 'Theorem', value: object.revealTheorem ? 'revealed' : 'hidden', status: 'derived' },
         ]
       case 'frame':
@@ -238,7 +510,7 @@ export default function ProgressiveInspector({
       case 'ink':
         return [{ label: 'Strokes', value: `${object.strokes?.length ?? 1}`, status: 'derived' }, { label: 'Width', value: formatValue(object.width), status: 'free' }, { label: 'Color', value: object.color, status: 'free' }]
     }
-  }, [editorMatrix, editorValue, isEditing, object, onCancel, onMatrixChange, onSave, onValueChange])
+  }, [editorMatrix, editorValue, entityId, isEditing, numericField, object, onCancel, onMatrixChange, onPatchObject, onSave, onValueChange, rangeField, tupleField])
 
   const structureFields: InspectorFieldSpec[] = [
     { label: 'Kind', value: object.kind, status: 'derived' },
@@ -258,33 +530,50 @@ export default function ProgressiveInspector({
     if (object.kind === 'equation' || object.kind === 'graph' || object.kind === 'arrow' || object.kind === 'ink') return [{ label: 'Color', value: object.color, status: 'free' }, { label: 'Opacity', value: formatValue(object.opacity), status: 'constrained' }]
     if (object.kind === 'shape') return [{ label: 'Fill', value: object.fill, status: 'free' }, { label: 'Stroke', value: object.stroke, status: 'free' }]
     if (object.kind === 'matrix' || object.kind === 'geometry') return [{ label: 'Accent', value: object.accent, status: 'free' }]
-    if (object.kind === 'image') return [{ label: 'Alt text', value: object.alt, status: 'free' }]
     return []
   })()
 
   const animationTracks = Object.values(world.timelines).flatMap((timeline) => Object.values(timeline.tracks).filter((track) => (
-    track.target.kind === 'object' && track.target.objectId === object.id
+    (track.target.kind === 'object' && track.target.objectId === object.id)
+      || (track.target.kind === 'entity' && entityId !== undefined && track.target.entityId === entityId)
   )).map((track) => ({ timeline, track })))
 
-  const panel: ReactNode = tab === 'values' ? (
+  const supportedTabs = useMemo<InspectorTab[]>(() => {
+    const supported: InspectorTab[] = []
+    if (valueFields.length > 0) supported.push('values')
+    if (structuredKinds.has(object.kind)) supported.push('structure')
+    if (constrainedKinds.has(object.kind)) supported.push('constraints')
+    if (styleCapableKinds.has(object.kind) && styleFields.length > 0) supported.push('style')
+    if (entityId || bindingIds.length > 0 || linkedViewIds.length > 0 || dependentObjectIds.length > 0) supported.push('bindings')
+    if (animationTracks.length > 0) supported.push('animation')
+    return supported.length > 0 ? supported : ['values']
+  }, [animationTracks.length, bindingIds.length, dependentObjectIds.length, entityId, linkedViewIds.length, object.kind, styleFields.length, valueFields.length])
+
+  useEffect(() => {
+    if (!supportedTabs.includes(tab)) setTab(supportedTabs[0])
+  }, [supportedTabs, tab])
+
+  const activeTab = supportedTabs.includes(tab) ? tab : supportedTabs[0]
+  const hasInlineEditors = valueFields.some((field) => Boolean(field.children))
+
+  const panel: ReactNode = activeTab === 'values' ? (
     <div className="inspector-fields">{valueFields.map((field) => <InspectorField key={field.label} {...field} />)}</div>
-  ) : tab === 'structure' ? (
+  ) : activeTab === 'structure' ? (
     <div className="inspector-fields">{structureFields.map((field) => <InspectorField key={field.label} {...field} />)}</div>
-  ) : tab === 'constraints' ? (
+  ) : activeTab === 'constraints' ? (
     <div className="inspector-fields">{constraintsFields.map((field) => <InspectorField key={field.label} {...field} />)}</div>
-  ) : tab === 'style' ? (
-    styleFields.length ? <div className="inspector-fields">{styleFields.map((field) => <InspectorField key={field.label} {...field} />)}</div> : <EmptyPanel>Style controls for this view are coming next.</EmptyPanel>
-  ) : tab === 'bindings' ? (
-    entityId || bindingIds.length || linkedViewIds.length ? (
-      <div className="inspector-fields">
-        {entityId && <InspectorField label="Entity ID" value={entityId} status="derived" />}
-        {bindingIds.length > 0 && <InspectorField label="Binding IDs" value={bindingIds.join(', ')} status="derived" />}
-        {linkedViewIds.length > 0 && <InspectorField label="Linked views" value={linkedViewIds.join(', ')} status="derived" />}
-      </div>
-    ) : <EmptyPanel>This view is local. Add a semantic entity to expose bindings here.</EmptyPanel>
-  ) : animationTracks.length ? (
-    <div className="inspector-fields">{animationTracks.map(({ timeline, track }) => <InspectorField key={track.id} label={timeline.name} value={`${track.id} · ${Object.keys(track.keyframes).length} keyframes`} status="derived" />)}</div>
-  ) : <EmptyPanel>No animation tracks target this view yet.</EmptyPanel>
+  ) : activeTab === 'style' ? (
+    <div className="inspector-fields">{styleFields.map((field) => <InspectorField key={field.label} {...field} />)}</div>
+  ) : activeTab === 'bindings' ? (
+    <div className="inspector-fields">
+      {entityId && <InspectorField label="Entity ID" value={entityId} status="derived" />}
+      {bindingIds.length > 0 && <InspectorField label="Binding IDs" value={bindingIds.join(', ')} status="derived" />}
+      {linkedViewIds.length > 0 && <InspectorField label="Linked views" value={linkedViewIds.join(', ')} status="derived" />}
+      {dependentObjectIds.length > 0 && <InspectorField label="Dependencies" value={dependentObjectIds.join(', ')} status="derived" detail="reverse object and semantic links" />}
+    </div>
+  ) : (
+    <div className="inspector-fields">{animationTracks.map(({ timeline, track }) => <InspectorField key={track.id} label={timeline.name} value={`${track.id} · ${Object.keys(track.keyframes).length} keyframes`} status="derived" detail={track.target.kind === 'entity' ? `${track.target.entityId}.${track.target.path}` : track.target.path} />)}</div>
+  )
 
   return (
     <aside className="progressive-inspector" role="dialog" aria-label={`Inspector for ${object.kind}`} onKeyDown={inputKeyDown} tabIndex={-1}>
@@ -296,18 +585,18 @@ export default function ProgressiveInspector({
         <div className="inspector-header-meta">
           {entityId && <span>entity <b>{entityId}</b></span>}
           {bindingIds.length > 0 && <span>{bindingIds.length} binding{bindingIds.length === 1 ? '' : 's'}</span>}
-          {linkedViewIds.length > 0 && <span>{linkedViewIds.length} linked view{linkedViewIds.length === 1 ? '' : 's'}</span>}
+          {linkedViewIds.length + dependentObjectIds.length > 0 && <span>{linkedViewIds.length + dependentObjectIds.length} linked view{linkedViewIds.length + dependentObjectIds.length === 1 ? '' : 's'}</span>}
         </div>
       </header>
 
       <nav className="inspector-tabs" aria-label="Inspector sections" role="tablist">
-        {tabs.map((item) => (
-          <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>
+        {tabs.filter((item) => supportedTabs.includes(item.id)).map((item) => (
+          <button key={item.id} type="button" role="tab" aria-selected={activeTab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>
         ))}
       </nav>
 
-      <section className="inspector-panel" aria-label={`${tab} properties`}>
-        <div className="inspector-panel-heading"><span>{tab}</span>{tab === 'values' && <small>{canEdit ? 'double-click or edit values' : 'read-only view'}</small>}</div>
+      <section className="inspector-panel" aria-label={`${activeTab} properties`}>
+        <div className="inspector-panel-heading"><span>{activeTab}</span>{activeTab === 'values' && <small>{canEdit ? 'edit text or matrix values' : hasInlineEditors ? 'inline numbers · Enter or blur to commit' : 'read-only view'}</small>}</div>
         {panel}
       </section>
 
@@ -320,6 +609,8 @@ export default function ProgressiveInspector({
           </>
         ) : canEdit ? (
           <button type="button" className="inspector-edit" onClick={() => onEdit(object.id)}>Edit values</button>
+        ) : hasInlineEditors ? (
+          <span className="inspector-hint">Inline values commit on Enter or blur.</span>
         ) : <span className="inspector-hint">Selection stays live on the canvas.</span>}
       </footer>
     </aside>
