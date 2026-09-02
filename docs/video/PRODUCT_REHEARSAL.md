@@ -130,3 +130,46 @@ the canvas edge. `pnpm typecheck` and `pnpm build` pass.
 Two classes were deliberately excluded from the audit rather than fixed, because both are
 intentional: a panel floating over its own frame's top edge, and `.agent-activation`, the
 full-bleed veil that sweeps on every agent write.
+
+## Cinematography — 2026-09-02
+
+The camera used to move only when a scene changed, and to sit still inside a
+scene while the tutor edited a matrix cell too small to read. It now has three
+shot sizes and a set of directed beats.
+
+**Shot sizes.** `focus_objects` takes an `emphasis`: `detail` pushes in on one
+control, `feature` frames a card, `establish` keeps the scene around it. Each
+frames the target plus a margin scaled to its size, with a floor and a cap — the
+floor is what separates the levels on a small target, where the proportional term
+is negligible. Measured at 2516×1386: a 60×26 cell frames at 4.00 / 3.69 / 1.20,
+an attention card at 1.80 / 1.15 / 0.75, a scene frame at 1.54 / 1.04 / 0.70.
+
+**Zoom ceiling.** Raised 2.5× → 4×. At 2.5 every target under roughly 1000 world
+px hit the ceiling, so `detail` and `feature` were indistinguishable on anything
+small. The range is now `ZOOM_MIN` / `ZOOM_MAX` / `clampZoom` in the world types
+rather than a bare pair duplicated in eight places, and `set_viewport`'s schema,
+description and validation error all moved with it.
+
+**Directed beats.** Eight cues frame before they act:
+
+| Beat | Shot |
+|---|---|
+| Tutor marks the sign | close on the handwriting |
+| Tutor changes the shape `a` | the density graph |
+| Tutor applies a gradient step | the training panel |
+| Tutor moves P to the centroid | the triangle |
+| Tutor constructs the spiral centre | the whole construction, wide |
+| Tutor sets `δ` | the tetrahedron |
+| Tutor reveals p(5n+4) | the observatory |
+| WebMCP crescendo opens | establishing, over the composite |
+
+**The ordering rule.** A shot always goes *before* the write it introduces.
+`focus_objects` commits a viewport operation, so a shot placed after an edit
+makes the next undo revert the camera instead of the edit — which would silently
+break frames 03 and 07, both of which undo a tutor step on camera. Verified after
+the opening beat: undo removes all three tutor marks and leaves the camera where
+it was.
+
+Each shot is followed by a pause long enough for the 760 ms travel and its settle
+to land, so the camera arrives before the edit rather than during it. Measured
+live: the opening beat drives the camera from 1.72× to 2.56× with a pan.
