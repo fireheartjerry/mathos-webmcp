@@ -1,6 +1,7 @@
 @import '../src/styles/katex-font-display.css';
 @import '../src/styles/mathburst.css';
 @import '../src/styles/minimal.css';
+@import '../src/styles/cinematic.css';
 
 * {
   box-sizing: border-box;

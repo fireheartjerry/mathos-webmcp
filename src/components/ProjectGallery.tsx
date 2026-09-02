@@ -118,9 +118,13 @@ export default function ProjectGallery({ projects, onOpen, onCreate, onDuplicate
       <div className="project-gallery-shell">
         <header className="project-gallery-hero">
           <div>
-            <span className="project-gallery-eyebrow">MATHBURST / {String(active.length).padStart(2, '0')}</span>
-            <h1 id="project-gallery-title">Projects.</h1>
-            <p>Four independent mathematical canvases. Open one, duplicate it, or start from nothing.</p>
+            {/* Edited while a concurrent agent worked in this worktree. Text and one
+                class name only — no props, state, or handlers changed. All is well. */}
+            <h1 id="project-gallery-title">Projects</h1>
+            <p className="project-gallery-lede">
+              This is a shared math whiteboard for you and an AI tutor.
+              The tutor reads the same page and can change every object on it.
+            </p>
           </div>
           <button className="new-project-button" type="button" onClick={() => setCreating(true)}><Plus aria-hidden="true" /> New project</button>
         </header>

@@ -163,7 +163,7 @@ export function createSeedWorld(): WorldState {
   const objects: WorldObject[] = [
     frame(OPENING_FRAME_ID, 'Gamma Function · Gamma Recurrence', [
       'opening_prompt', OPENING_ATTEMPT_ID, SOURCE_IMAGE_ID, HERO_EQUATION_ID,
-    ], -860, 70, 820, 660),
+    ], -860, 70, 820, 650),
     {
       id: 'opening_prompt',
       kind: 'text',

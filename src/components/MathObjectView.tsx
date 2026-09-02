@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { estimateIntegral, evaluateLatexAt, sampleGraph } from '../domain/math/graph'
-import { resolveGeometry } from '../domain/math/geometry'
-import type { ResolvedAngle } from '../domain/math/geometry'
+import { resolveGeometry, spiralSimilarityParameters } from '../domain/math/geometry'
+import type { ResolvedAngle, ResolvedPoint } from '../domain/math/geometry'
 import { applyMatrix, transformVectors } from '../domain/math/matrix'
 import type {
   EquationObject,
@@ -128,6 +128,32 @@ function LiveGraph({
   )
 }
 
+const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
+
+/** Live ratio and angle readouts computed from the resolved figure, never from the primitive factors. */
+function constructionReadouts(points: ResolvedPoint[]): Array<{ id: string; label: string; value: string; tone: 'invariant' | 'tutor' }> {
+  const at = (id: string) => points.find((point) => point.id === id)?.point
+  const readouts: Array<{ id: string; label: string; value: string; tone: 'invariant' | 'tutor' }> = []
+  const O = at('O')
+  for (const vertex of ['A', 'B', 'C']) {
+    const source = at(vertex)
+    const image = at(`H-${vertex}`)
+    if (O && source && image && distance(O, source) > 1e-6) {
+      readouts.push({ id: `ratio-${vertex}`, label: `O${vertex}ₕ / O${vertex}`, value: (distance(O, image) / distance(O, source)).toFixed(3), tone: 'invariant' })
+    }
+  }
+  const S = at('S')
+  const A = at('A'); const B = at('B'); const A2 = at('S-A'); const B2 = at('S-B')
+  if (S && A && B && A2 && B2) {
+    const parameters = spiralSimilarityParameters(A, B, A2, B2)
+    if (parameters) {
+      readouts.push({ id: 'spiral-ratio', label: "SA′ / SA = SB′ / SB", value: `${(distance(S, A2) / Math.max(1e-9, distance(S, A))).toFixed(3)} = ${(distance(S, B2) / Math.max(1e-9, distance(S, B))).toFixed(3)}`, tone: 'tutor' })
+      readouts.push({ id: 'spiral-angle', label: '∠ASA′ = ∠BSB′', value: `${Math.abs(parameters.angle).toFixed(1)}°`, tone: 'tutor' })
+    }
+  }
+  return readouts
+}
+
 function angleArc(angle: ResolvedAngle) {
   const radius = 28
   const start = Math.atan2(angle.a.y - angle.vertex.y, angle.a.x - angle.vertex.x)
@@ -160,6 +186,8 @@ function LiveGeometry({
   const resolved = resolveGeometry(primitives)
   const width = Math.max(220, object.bounds.width)
   const height = Math.max(180, object.bounds.height)
+  const readouts = constructionReadouts(resolved.points)
+  const hasSpiral = resolved.points.some((point) => point.id === 'S')
 
   const localPoint = (event: ReactPointerEvent<SVGElement>): Point => {
     const rect = svgRef.current!.getBoundingClientRect()
@@ -210,22 +238,23 @@ function LiveGeometry({
         onPointerCancel={finishDrag}
       >
         <rect className="geometry-paper" width={width} height={height} />
-        <text className="geometry-kicker" x="18" y="22">DYNAMIC CONSTRUCTION</text>
-        {resolved.polygons.map((polygon) => <polygon key={polygon.id} className="geometry-polygon" points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')} />)}
-        {resolved.circles.map((circle) => <circle key={circle.id} className="geometry-circle" cx={circle.center.x} cy={circle.center.y} r={circle.radius} />)}
+        <text className="geometry-kicker" x="18" y="20">HOMOTHETY · SPIRAL SIMILARITY</text>
+        {resolved.polygons.map((polygon) => <polygon key={polygon.id} className={`geometry-polygon is-${polygon.id}`} points={polygon.points.map((point) => `${point.x},${point.y}`).join(' ')} />)}
+        {resolved.circles.map((circle) => <circle key={circle.id} className={`geometry-circle is-${circle.id}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} />)}
         {resolved.lines.map((line) => {
           const length = Math.hypot(line.direction.x, line.direction.y) || 1
           const unit = { x: line.direction.x / length, y: line.direction.y / length }
           return <line key={line.id} className="geometry-line" x1={line.through.x - unit.x * 1200} y1={line.through.y - unit.y * 1200} x2={line.through.x + unit.x * 1200} y2={line.through.y + unit.y * 1200} />
         })}
-        {resolved.segments.map((segment) => <line key={segment.id} className="geometry-segment" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} />)}
+        {resolved.segments.map((segment) => <line key={segment.id} className={`geometry-segment is-${segment.id}`} x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} />)}
         {resolved.angles.map((angle) => {
           const arc = angleArc(angle)
-          return <g key={angle.id}><path className="geometry-angle" d={arc.path} /><text className="geometry-angle-label" x={arc.label.x} y={arc.label.y}>{Math.round(angle.degrees)}°</text></g>
+          return <g key={angle.id} className={`geometry-angle-group is-${angle.id}`}><path className="geometry-angle" d={arc.path} /><text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle">{angle.degrees.toFixed(1)}°</text></g>
         })}
-        {resolved.points.map((point) => <g key={point.id}>
+        {resolved.points.filter((point) => !point.hidden).map((point) => <g key={point.id} className={`geometry-point-group is-${point.id}`}>
           <circle
-            className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}`}
+            className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
+            data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
             data-canvas-handle={point.draggable ? 'true' : undefined}
             cx={point.point.x}
             cy={point.point.y}
@@ -235,7 +264,10 @@ function LiveGeometry({
           {point.label && <text className="geometry-label" x={point.point.x + 9} y={point.point.y - 9}>{point.label}</text>}
         </g>)}
       </svg>
-      <div className="geometry-legend"><i /><span>drag purple points</span><b>{resolved.points.length} linked points</b></div>
+      <div className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`}>
+        {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
+        <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
+      </div>
     </div>
   )
 }

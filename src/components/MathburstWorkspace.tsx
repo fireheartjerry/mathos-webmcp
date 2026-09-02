@@ -32,6 +32,9 @@ import {
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
 import type { DirectorShot, DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
 import { prepareDemoCue, reconstructionObjects, RECONSTRUCTION_AUDIT_SUMMARY, RECONSTRUCTION_UNCERTAIN_IDS } from '../domain/demo/cues'
+import { gammaBinMasses } from '../domain/math/probability'
+import { tetrahedralLatticeCount } from '../domain/math/simplex'
+import { evaluateTinyModel } from '../domain/math/transformer'
 import type { BridgeTransition, DemoCueId } from '../domain/demo/shotContract'
 import CinematicBridge, { bridgeAnchors } from './CinematicBridge'
 import type { BridgeEndpoints } from './CinematicBridge'
@@ -221,6 +224,28 @@ function buildOverviewWorld(projects: LibraryProject[], activeDocumentId: string
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => { window.setTimeout(resolve, ms) })
+
+/** The honest numbers a bridge carries, read from the objects it leaves and lands on. */
+function bridgeValues(transition: BridgeTransition, sourceWorld: WorldState, targetWorld: WorldState): number[] | undefined {
+  const graph = sourceWorld.objects[HERO_GRAPH_ID]
+  const attention = sourceWorld.objects.attention_mechanism ?? targetWorld.objects.attention_mechanism
+  const training = sourceWorld.objects.training_panel
+  const geometry = targetWorld.objects.simplex_projection
+  switch (transition) {
+    case 'area-bins':
+      return graph?.kind === 'graph' ? gammaBinMasses(graph.parameters?.a ?? 4.5, graph.binEdges) : undefined
+    case 'bins-logits':
+      return attention?.kind === 'attention' ? [...attention.bridgeMasses] : undefined
+    case 'ribbons-triangle':
+      return training?.kind === 'training' && attention?.kind === 'attention'
+        ? [...evaluateTinyModel(training.model, attention.bridgeMasses, attention.temperature).attentionWeights]
+        : undefined
+    case 'lattice-lanes':
+      return geometry?.kind === 'simplex' ? [tetrahedralLatticeCount(Math.round(geometry.denominator))] : undefined
+    default:
+      return undefined
+  }
+}
 
 export default function MathburstWorkspace() {
   const [world, setWorld] = useState<WorldState>(() => createSeedWorld())
@@ -1057,7 +1082,8 @@ export default function MathburstWorkspace() {
     const source = project(from.scene, directorViewport, sourceWorld, anchors.source.objectId, anchors.source.fraction)
     const target = project(to.scene, directorViewportForShot(directorState.shots[to.id], to.scene), targetWorld, anchors.target.objectId, anchors.target.fraction)
     if (!source || !target) return null
-    return { source, target, sourceLabel: anchors.source.label, targetLabel: anchors.target.label }
+    const values = bridgeValues(from.bridge, sourceWorld, targetWorld)
+    return { source, target, sourceLabel: anchors.source.label, targetLabel: anchors.target.label, values }
   }
 
   const previewNextDirectorShot = () => {

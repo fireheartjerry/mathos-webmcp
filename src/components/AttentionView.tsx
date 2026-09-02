@@ -1,35 +1,68 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { evaluateTinyModel } from '../domain/math/transformer'
+import { logMasses } from '../domain/math/probability'
 import type {
   AttentionObject,
-  Matrix2,
   TinyModelState,
   TrainingObject,
   Vector2,
-  Vector3,
   WorldAction,
   WorldState,
 } from '../domain/world/types'
 
 type Props = { object: AttentionObject; world: WorldState; run: (action: WorldAction) => void }
 type MatrixKey = 'wq' | 'wk' | 'wv'
+type CellDraft = { key: MatrixKey; row: number; column: number; value: string }
 
-const fmt = (value: number, digits = 3) => Number(value.toFixed(digits)).toString()
-const numeric = (value: string) => Number.isFinite(Number(value)) ? Number(value) : 0
+const fmt = (value: number, digits = 3) => value.toFixed(digits)
+const short = (value: number, digits = 2) => Number(value.toFixed(digits)).toString()
 const humanAction = (summary: string, operations: WorldAction['operations']): WorldAction => ({
-  id: crypto.randomUUID(),
-  source: 'human',
-  summary,
-  operations,
+  id: crypto.randomUUID(), source: 'human', summary, operations,
 })
 
+/** The one matrix cell the film edits: W_Q[1,1]. */
+export const HERO_CELL = { key: 'wq' as MatrixKey, row: 0, column: 0 }
+const MATRIX_LABELS: Record<MatrixKey, string> = { wq: 'W_Q', wk: 'W_K', wv: 'W_V' }
+
+// Plane geometry: one unit is PLANE_SCALE pixels, origin near the lower-left.
+const PLANE = { width: 392, height: 296 }
+const PLANE_SCALE = 150
+const ORIGIN = { x: 64, y: 244 }
+const toPlane = (vector: Vector2) => ({ x: ORIGIN.x + vector[0] * PLANE_SCALE, y: ORIGIN.y - vector[1] * PLANE_SCALE })
+const angleOf = (vector: Vector2) => Math.atan2(-vector[1], vector[0])
+
+function arcPath(from: Vector2, to: Vector2, radius: number) {
+  const start = angleOf(from)
+  let delta = angleOf(to) - start
+  while (delta > Math.PI) delta -= Math.PI * 2
+  while (delta < -Math.PI) delta += Math.PI * 2
+  const first = { x: ORIGIN.x + Math.cos(start) * radius, y: ORIGIN.y + Math.sin(start) * radius }
+  const last = { x: ORIGIN.x + Math.cos(start + delta) * radius, y: ORIGIN.y + Math.sin(start + delta) * radius }
+  const middle = start + delta / 2
+  return {
+    d: `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} A ${radius} ${radius} 0 0 ${delta > 0 ? 1 : 0} ${last.x.toFixed(1)} ${last.y.toFixed(1)}`,
+    label: { x: ORIGIN.x + Math.cos(middle) * (radius + 13), y: ORIGIN.y + Math.sin(middle) * (radius + 13) },
+    degrees: Math.abs(delta) * 180 / Math.PI,
+  }
+}
+
 export default function AttentionView({ object, world, run }: Props) {
+  const [draft, setDraft] = useState<CellDraft | null>(null)
+  const [heroActive, setHeroActive] = useState(false)
+  const heroTimerRef = useRef<number | null>(null)
   const pass = useMemo(
     () => evaluateTinyModel(object.model, object.bridgeMasses, object.temperature),
     [object.model, object.bridgeMasses, object.temperature],
   )
+  const logs = useMemo(() => logMasses(object.bridgeMasses), [object.bridgeMasses])
+  const queryIndex = Math.max(0, Math.min(2, object.model.queryIndex))
+  const query = pass.queries[queryIndex]
+  const dots = pass.keys.map((key) => (query[0] * key[0] + query[1] * key[1]) / Math.sqrt(2))
+  const markerId = `attention-arrow-${object.id}`
+  const contextMarkerId = `attention-context-${object.id}`
 
   const commit = (next: AttentionObject, summary: string) => {
     const nextPass = evaluateTinyModel(next.model, next.bridgeMasses, next.temperature)
@@ -38,6 +71,8 @@ export default function AttentionView({ object, world, run }: Props) {
     ))
     run(humanAction(summary, [
       { type: 'put', object: next },
+      // Editing the head restarts the linked training history at step zero,
+      // so the sparkline can never claim a history the weights no longer own.
       ...linkedTraining.map((training) => ({
         type: 'put' as const,
         object: {
@@ -52,197 +87,156 @@ export default function AttentionView({ object, world, run }: Props) {
     ]))
   }
 
-  const editModel = (summary: string, mutate: (model: TinyModelState) => void) => {
-    const model = structuredClone(object.model)
-    mutate(model)
-    commit({ ...object, model }, summary)
+  const commitCell = (cell: CellDraft) => {
+    setDraft(null)
+    const value = Number(cell.value)
+    if (!Number.isFinite(value)) return
+    if (Math.abs(object.model[cell.key][cell.row][cell.column] - value) < 1e-12) return
+    const model: TinyModelState = structuredClone(object.model)
+    model[cell.key][cell.row][cell.column] = value
+    commit({ ...object, model }, `Edited ${MATRIX_LABELS[cell.key].replace('_', '')}[${cell.row + 1},${cell.column + 1}] to ${short(value)}`)
+    if (cell.key === HERO_CELL.key && cell.row === HERO_CELL.row && cell.column === HERO_CELL.column) {
+      if (heroTimerRef.current !== null) window.clearTimeout(heroTimerRef.current)
+      setHeroActive(true)
+      heroTimerRef.current = window.setTimeout(() => setHeroActive(false), 1900)
+    }
   }
 
-  const editMatrix = (key: MatrixKey, row: number, column: number, value: number) => {
-    editModel(`Edited ${key.toUpperCase()}[${row + 1},${column + 1}]`, (model) => {
-      model[key][row][column] = value
-    })
+  const onCellKey = (event: KeyboardEvent<HTMLInputElement>, cell: CellDraft) => {
+    if (event.key === 'Enter') { event.preventDefault(); commitCell(cell) }
+    if (event.key === 'Escape') setDraft(null)
   }
 
-  const editPrior = (index: number, value: number) => {
-    const masses = [...object.bridgeMasses] as Vector3
-    masses[index] = Math.max(0.005, value)
-    const total = masses.reduce((sum, mass) => sum + mass, 0) || 1
-    const normalized = masses.map((mass) => mass / total) as Vector3
-    commit({ ...object, bridgeMasses: normalized }, `Adjusted attention prior ${index + 1}`)
-  }
-
-  const matrix = (label: string, key: MatrixKey) => (
-    <fieldset className="attention-matrix">
-      <legend>{label}</legend>
+  const matrix = (key: MatrixKey) => (
+    <fieldset className={`attention-matrix is-${key}`} data-hero-path={key === HERO_CELL.key ? 'cell' : undefined}>
+      <legend>{key === 'wq' ? 'W' : key === 'wk' ? 'W' : 'W'}<sub>{key === 'wq' ? 'Q' : key === 'wk' ? 'K' : 'V'}</sub></legend>
       <div className="attention-matrix-grid">
-        {object.model[key].map((row, rowIndex) => row.map((value, columnIndex) => (
-          <input
-            key={`${rowIndex}-${columnIndex}`}
-            aria-label={`${label} row ${rowIndex + 1} column ${columnIndex + 1}`}
-            type="number"
-            step="0.01"
-            value={value}
-            onChange={(event) => editMatrix(key, rowIndex, columnIndex, numeric(event.target.value))}
-          />
-        )))}
+        {object.model[key].map((row, rowIndex) => row.map((value, columnIndex) => {
+          const isHero = key === HERO_CELL.key && rowIndex === HERO_CELL.row && columnIndex === HERO_CELL.column
+          const editing = draft && draft.key === key && draft.row === rowIndex && draft.column === columnIndex
+          return (
+            <input
+              key={`${rowIndex}-${columnIndex}`}
+              className={isHero ? 'is-hero' : undefined}
+              data-demo-target={isHero ? 'attention-matrix-cell' : undefined}
+              aria-label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
+              type="number"
+              step="0.01"
+              value={editing ? draft.value : short(value)}
+              onChange={(event) => setDraft({ key, row: rowIndex, column: columnIndex, value: event.target.value })}
+              onBlur={() => { if (editing) commitCell(draft) }}
+              onKeyDown={(event) => onCellKey(event, { key, row: rowIndex, column: columnIndex, value: editing ? draft.value : event.currentTarget.value })}
+            />
+          )
+        }))}
       </div>
     </fieldset>
   )
 
-  const outputHead = () => (
-    <div className="attention-output-head">
-      <fieldset>
-        <legend>W<sub>out</sub></legend>
-        <div className="attention-classifier-grid">
-          {object.model.classifier.map((row, rowIndex) => row.map((value, columnIndex) => (
-            <input
-              key={`${rowIndex}-${columnIndex}`}
-              aria-label={`Output matrix row ${rowIndex + 1} column ${columnIndex + 1}`}
-              type="number"
-              step="0.01"
-              value={value}
-              onChange={(event) => editModel(`Edited output weight ${rowIndex + 1},${columnIndex + 1}`, (model) => {
-                model.classifier[rowIndex][columnIndex] = numeric(event.target.value)
-              })}
-            />
-          )))}
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>bias</legend>
-        <div className="attention-bias-grid">
-          {object.model.bias.map((value, index) => (
-            <input
-              key={index}
-              aria-label={`Output bias ${index + 1}`}
-              type="number"
-              step="0.01"
-              value={value}
-              onChange={(event) => editModel(`Edited output bias ${index + 1}`, (model) => {
-                model.bias[index] = numeric(event.target.value)
-              })}
-            />
-          ))}
-        </div>
-      </fieldset>
-    </div>
-  )
-
-  const derivedVector = (label: string, vector: Vector2) => (
-    <span><i>{label}</i>[{fmt(vector[0], 2)}, {fmt(vector[1], 2)}]</span>
-  )
+  const arcs = pass.keys.map((key, index) => arcPath(query, key, 30 + index * 13))
+  const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
   return (
-    <section className="attention-view" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
+    <section className={`attention-view${heroActive ? ' is-hero-active' : ''}`} onPointerDown={stop}>
       <header className="attention-header">
-        <div><span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD</span><h3>Attention is a weighted sum</h3></div>
-        <span className="attention-live"><i /> Every value is live</span>
+        <div><span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span><h3>Attention is a weighted sum</h3></div>
+        <span className="attention-truth">softmax over q·kⱼ/√2 + log wⱼ · not a frontier model</span>
       </header>
 
-      <div className="attention-workbench">
-        <section className="attention-panel attention-input-panel">
-          <header><span>01</span><b>Tokens + embeddings</b></header>
-          <div className="attention-token-editor-list">
-            {object.model.tokens.map((token, index) => (
-              <article className="attention-token-editor" key={index}>
-                <div className="attention-token-name">
-                  <input
-                    aria-label={`Token ${index + 1} name`}
-                    value={token}
-                    maxLength={12}
-                    onChange={(event) => editModel(`Renamed token ${index + 1}`, (model) => { model.tokens[index] = event.target.value })}
-                  />
-                  <span>{object.model.queryIndex === index ? 'query' : object.model.targetIndex === index ? 'target' : 'token'}</span>
-                </div>
-                <div className="attention-vector-inputs">
-                  {object.model.embeddings[index].map((value, axis) => (
-                    <label key={axis}><span>e{axis}</span><input
-                      aria-label={`${token} embedding component ${axis + 1}`}
-                      type="number"
-                      step="0.01"
-                      value={value}
-                      onChange={(event) => editModel(`Edited ${token} embedding ${axis + 1}`, (model) => {
-                        model.embeddings[index][axis] = numeric(event.target.value)
-                      })}
-                    /></label>
-                  ))}
-                </div>
-                <div className="attention-derived-vectors">
-                  {derivedVector('Q', pass.queries[index])}
-                  {derivedVector('K', pass.keys[index])}
-                  {derivedVector('V', pass.values[index])}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="attention-panel attention-parameter-panel">
-          <header><span>02</span><b>Learned parameters</b></header>
-          <div className="attention-matrices">
-            {matrix('WQ', 'wq')}
-            {matrix('WK', 'wk')}
-            {matrix('WV', 'wv')}
-          </div>
-          {outputHead()}
-        </section>
-
-        <section className="attention-panel attention-control-panel">
-          <header><span>03</span><b>Attention controls</b></header>
-          <div className="attention-selects">
-            <label><span>Query token</span><select
-              aria-label="Query token"
-              value={object.model.queryIndex}
-              onChange={(event) => editModel('Changed query token', (model) => { model.queryIndex = Number(event.target.value) })}
-            >{object.model.tokens.map((token, index) => <option key={index} value={index}>{token || `token ${index + 1}`}</option>)}</select></label>
-            <label><span>Training target</span><select
-              aria-label="Training target token"
-              value={object.model.targetIndex}
-              onChange={(event) => editModel('Changed training target', (model) => { model.targetIndex = Number(event.target.value) })}
-            >{object.model.tokens.map((token, index) => <option key={index} value={index}>{token || `token ${index + 1}`}</option>)}</select></label>
-          </div>
-          <label className="attention-temperature"><span>Temperature <b>{fmt(object.temperature, 2)}</b></span><input
-            type="range"
-            min="0.25"
-            max="2"
-            step="0.05"
-            value={object.temperature}
-            aria-label="Attention temperature"
-            onChange={(event) => commit({ ...object, temperature: Number(event.target.value) }, 'Adjusted attention temperature')}
-          /></label>
-          <div className="attention-priors">
-            <span className="attention-subheading">Logit prior · normalized</span>
-            {object.bridgeMasses.map((mass, index) => (
-              <label key={index}><span>{object.model.tokens[index]} <b>{fmt(mass)}</b></span><input
-                type="range"
-                min="0.005"
-                max="0.99"
-                step="0.005"
-                value={mass}
-                aria-label={`${object.model.tokens[index]} attention prior`}
-                onChange={(event) => editPrior(index, Number(event.target.value))}
-              /></label>
-            ))}
-          </div>
-          <div className="attention-score-list">
-            <span className="attention-subheading">Score → softmax</span>
-            {pass.attentionWeights.map((weight, index) => (
-              <div key={index}><span>{object.model.tokens[index]}</span><code>{fmt(pass.scores[index])}</code><i><em style={{ width: `${weight * 100}%` }} /></i><b>{fmt(weight)}</b></div>
-            ))}
-          </div>
-        </section>
+      <div className="attention-plane-wrap">
+        <svg className="attention-plane" viewBox={`0 0 ${PLANE.width} ${PLANE.height}`} aria-label="Query, key and value vectors with attention angles">
+          <defs>
+            <marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
+            <marker id={contextMarkerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" /></marker>
+          </defs>
+          <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
+          <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} />
+          <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 34} y2={12} />
+          <text className="attention-plane-kicker" x={12} y={16}>KEYS k = W_K e · QUERY q = W_Q e</text>
+          {arcs.map((arc, index) => (
+            <g key={`arc-${index}`} className={`attention-arc${index === pass.attentionWeights.indexOf(Math.max(...pass.attentionWeights)) ? ' is-strongest' : ''}`} data-hero-path="score">
+              <path d={arc.d} />
+              <text x={arc.label.x} y={arc.label.y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
+            </g>
+          ))}
+          {pass.values.map((value, index) => {
+            const tip = toPlane(value)
+            return <line key={`v-${index}`} className="attention-value-vector" x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} />
+          })}
+          {pass.keys.map((key, index) => {
+            const tip = toPlane(key)
+            return (
+              <g key={`k-${index}`} className="attention-key-vector">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
+                <text x={tip.x + 6} y={tip.y - 6}>k{index}</text>
+              </g>
+            )
+          })}
+          {(() => {
+            const tip = toPlane(pass.context)
+            return (
+              <g className="attention-context-vector" data-hero-path="context">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
+                <text x={tip.x + 7} y={tip.y + 14}>c = Σ αⱼ vⱼ</text>
+              </g>
+            )
+          })()}
+          {(() => {
+            const tip = toPlane(query)
+            return (
+              <g className="attention-query-vector" data-hero-path="query">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
+                <text x={tip.x + 7} y={tip.y - 8}>q = W_Q e{queryIndex}</text>
+              </g>
+            )
+          })()}
+          {object.model.embeddings.map((embedding, index) => {
+            const at = toPlane(embedding)
+            return (
+              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === object.model.targetIndex ? ' is-target' : ''}`}>
+                <circle cx={at.x} cy={at.y} r="4" />
+                <text x={at.x + 7} y={at.y + 4}>e{index} · {object.model.tokens[index]}</text>
+              </g>
+            )
+          })}
+        </svg>
+        <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
+          {pass.attentionWeights.map((weight, index) => (
+            <div key={index} className={`attention-ribbon${index === object.model.targetIndex ? ' is-target' : ''}`}>
+              <span>α{index} · {object.model.tokens[index]}</span>
+              <i><em style={{ width: `${(weight * 100).toFixed(2)}%` }} /></i>
+              <b>{fmt(weight)}</b>
+            </div>
+          ))}
+          <small>Σ α = {fmt(pass.attentionWeights.reduce((sum, weight) => sum + weight, 0))}</small>
+        </div>
       </div>
 
-      <div className="attention-readout">
-        <div><small>CONTEXT · Σ αᵢVᵢ</small><strong>[{pass.context.map((value) => fmt(value)).join(', ')}]</strong></div>
-        <div><small>LOGITS</small><code>[{pass.logits.map((value) => fmt(value)).join(', ')}]</code></div>
-        <div className="attention-probability-list"><small>NEXT TOKEN</small>{pass.probabilities.map((probability, index) => (
-          <span className={index === object.model.targetIndex ? 'is-target' : ''} key={index}>
-            <i>{object.model.tokens[index]}</i><em><b style={{ width: `${probability * 100}%` }} /></em><strong>{fmt(probability)}</strong>
-          </span>
-        ))}</div>
-        <div className="attention-loss"><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss)}</strong><span>target p {fmt(pass.targetProbability)}</span></div>
+      <div className="attention-side">
+        <div className="attention-matrices">{matrix('wq')}{matrix('wk')}{matrix('wv')}</div>
+        <table className="attention-score-table" aria-label="Scores and softmax weights">
+          <thead><tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">score</th><th scope="col">αⱼ</th></tr></thead>
+          <tbody>
+            {pass.scores.map((score, index) => (
+              <tr key={index} className={index === queryIndex ? 'is-query' : undefined} data-hero-path={index === object.model.targetIndex ? 'score' : undefined}>
+                <th scope="row">{object.model.tokens[index]}</th>
+                <td>{fmt(dots[index])}</td>
+                <td>{fmt(logs[index])}</td>
+                <td>{fmt(score)}</td>
+                <td className="is-weight">{fmt(pass.attentionWeights[index])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="attention-readout">
+          <div><small>CONTEXT c</small><strong>[{pass.context.map((value) => fmt(value)).join(', ')}]</strong></div>
+          <div className="attention-probability-list"><small>NEXT TOKEN · W_out c + b → softmax</small>{pass.probabilities.map((probability, index) => (
+            <span className={index === object.model.targetIndex ? 'is-target' : ''} key={index} data-hero-path={index === object.model.targetIndex ? 'target' : undefined}>
+              <i>{object.model.tokens[index]}</i><em><b style={{ width: `${(probability * 100).toFixed(2)}%` }} /></em><strong>{fmt(probability)}</strong>
+            </span>
+          ))}</div>
+          <div className="attention-loss" data-hero-path="loss"><small>CROSS-ENTROPY</small><strong>{fmt(pass.loss)}</strong><span>−log p(target) · p = {fmt(pass.targetProbability)}</span></div>
+        </div>
       </div>
     </section>
   )

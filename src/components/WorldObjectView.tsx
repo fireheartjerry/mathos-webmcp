@@ -112,11 +112,11 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
     case 'training':
       return <TrainingView object={object} world={world} run={run} />
     case 'barycentric':
-      return <BarycentricView object={object} run={run} />
+      return <BarycentricView object={object} world={world} run={run} />
     case 'simplex':
       return <SimplexView object={object} run={run} />
     case 'numberTheory':
-      return <NumberTheoryView object={object} run={run} />
+      return <NumberTheoryView object={object} world={world} run={run} />
     case 'frame':
       return <div className="frame-label"><span>{object.title}</span><small>{object.childIds.length} objects</small></div>
     case 'group':
@@ -167,7 +167,7 @@ export default function WorldObjectView({
       }}
     >
       {objectContents(object, world, run)}
-      {object.author === 'agent' && <span className="author-pip" aria-label="Created by tutor">AI</span>}
+      {object.author === 'agent' && <span className="author-pip" aria-label="Created by the Tutor">Tutor</span>}
     </div>
   )
 }

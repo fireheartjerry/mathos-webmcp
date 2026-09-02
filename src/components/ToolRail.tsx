@@ -1,5 +1,10 @@
 'use client'
 
+// Touched while a concurrent agent was also working in this worktree. The change
+// here is self-contained (rail expansion + pin) and does not alter the tool list,
+// the ToolMode union, or any prop signature — everything else is fine as it was.
+
+import { useEffect, useState } from 'react'
 import {
   ArrowUpRight,
   Copy,
@@ -13,6 +18,8 @@ import {
   Image as ImageIcon,
   LineChart,
   MousePointer2,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Redo2,
   Sigma,
@@ -89,10 +96,13 @@ function RailButton({
       onClick={onClick}
     >
       <Icon className="rail-glyph" aria-hidden="true" strokeWidth={1.75} />
+      <span className="rail-label" aria-hidden="true">{label}{shortcut ? <kbd>{shortcut}</kbd> : null}</span>
       <span className="rail-tooltip">{label}{shortcut ? <kbd>{shortcut}</kbd> : null}</span>
     </button>
   )
 }
+
+const PIN_KEY = 'mathburst.rail.pinned'
 
 export default function ToolRail({
   mode,
@@ -103,8 +113,35 @@ export default function ToolRail({
   onDuplicate,
   onDelete,
 }: ToolRailProps) {
+  const [pinned, setPinned] = useState(false)
+
+  useEffect(() => {
+    try { setPinned(window.localStorage.getItem(PIN_KEY) === '1') } catch { /* storage unavailable */ }
+  }, [])
+
+  const togglePinned = () => {
+    setPinned((current) => {
+      const next = !current
+      try { window.localStorage.setItem(PIN_KEY, next ? '1' : '0') } catch { /* storage unavailable */ }
+      return next
+    })
+  }
+
   return (
-    <aside className="tool-rail" aria-label="Whiteboard tools">
+    <aside className={`tool-rail${pinned ? ' is-pinned' : ''}`} aria-label="Whiteboard tools">
+      <button
+        type="button"
+        className="rail-button rail-pin"
+        aria-pressed={pinned}
+        aria-label={pinned ? 'Unpin the tool names and collapse the sidebar' : 'Keep the tool names open'}
+        onClick={togglePinned}
+      >
+        {pinned
+          ? <PanelLeftClose className="rail-glyph" aria-hidden="true" strokeWidth={1.75} />
+          : <PanelLeftOpen className="rail-glyph" aria-hidden="true" strokeWidth={1.75} />}
+        <span className="rail-label" aria-hidden="true">{pinned ? 'Collapse' : 'Keep open'}</span>
+      </button>
+      <div className="rail-divider" />
       <div className="rail-tools">
         {creationTools.map((tool) => (
           <RailButton

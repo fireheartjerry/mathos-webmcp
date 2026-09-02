@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { groupTools } from '../domain/tools/groups'
 import type { ToolResult, WorldTool } from '../domain/tools/definitions'
 import type { RegistrationStatus } from '../domain/tools/registry'
@@ -56,11 +56,11 @@ function seededInput(name: string, world: WorldState): unknown {
   }
 }
 
-function statusLabel(status: RegistrationStatus | null) {
+function statusLabel(status: RegistrationStatus | null, defined: number) {
   if (!status) return 'checking browser…'
-  if (status.state === 'live') return `${status.registered}/${status.total} registered`
-  if (status.state === 'partial') return `${status.registered}/${status.total} registered`
-  if (status.state === 'unsupported') return 'local inspector fallback'
+  if (status.state === 'live') return `${status.registered} / ${status.total} registered with the browser`
+  if (status.state === 'partial') return `${status.registered} / ${status.total} registered · ${status.failures.length} failed`
+  if (status.state === 'unsupported') return `${defined} / ${defined} defined · browser has no document.modelContext`
   return 'registration failed'
 }
 
@@ -78,6 +78,18 @@ export default function WebMCPInspector({
   const [message, setMessage] = useState<{ name: string; result: ToolResult } | null>(null)
   const grouped = useMemo(() => groupTools(tools), [tools])
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.matches('input, textarea, [contenteditable="true"]')) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.key.toLowerCase() === 'w') setOpen((value) => !value)
+      else if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   const run = async (tool: WorldTool) => {
     if (running) return
     setRunning(tool.name)
@@ -89,16 +101,27 @@ export default function WebMCPInspector({
 
   return (
     <>
-      <button type="button" className="webmcp-inspector-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-        <i /> WebMCP <b>{tools.length}</b>
-      </button>
+      <div className="webmcp-launcher">
+        <button
+          type="button"
+          className="webmcp-inspector-trigger"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-label={`${open ? 'Close' : 'Open'} the WebMCP inspector — ${tools.length} live page tools`}
+        >
+          <i aria-hidden />
+          <b>WebMCP</b>
+          <em><strong>{tools.length}</strong> <span>live page </span>tools</em>
+          <u aria-hidden>W</u>
+        </button>
+      </div>
       {open && (
         <aside className="webmcp-inspector" aria-label="WebMCP tool inspector">
           <header>
-            <div><span>Agent interface</span><h2>{tools.length} page tools</h2></div>
+            <div><span>Agent interface</span><h2><span className="webmcp-count"><b>{status?.state === 'live' || status?.state === 'partial' ? status.registered : tools.length}</b> / {tools.length}</span> page tools</h2></div>
             <button type="button" aria-label="Close WebMCP inspector" onClick={() => setOpen(false)}>×</button>
           </header>
-          <div className={`webmcp-registration is-${status?.state ?? 'checking'}`}><i /><span>{statusLabel(status)}</span></div>
+          <div className={`webmcp-registration is-${status?.state ?? 'checking'}`}><i /><span>{statusLabel(status, tools.length)}</span></div>
           <p className="webmcp-intro">The external agent and the learner operate the exact same world. Run any tool here to prove it.</p>
           <div className="webmcp-groups">
             {grouped.groups.map(({ group, tools: members }) => (
