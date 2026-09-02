@@ -36,15 +36,23 @@
 
 /* ---- Selection ------------------------------------------------------------ */
 
-/* Per-object outline: 1px graphite at screen width, no offset, no glow. */
+/* Per-object outline: 1px graphite at screen width, no offset, no glow.
+
+   Everything that must hold exactly one screen pixel inside the scaled stage is
+   drawn with an inset box-shadow rather than a border. Chrome rounds both
+   border-width and outline-width to whole CSS pixels, so calc(1px * var(--hs))
+   collapses to a flat 1px and the line then thickens with the zoom -- roughly
+   2px of ink at 200%. Box-shadow spread keeps its fractional width, so the
+   rendered line stays 1px at every zoom. Dashed edges become gradient strips
+   for the same reason. */
 .world-canvas[data-director-mode='false'] .world-object.is-selected::after {
   inset: 0;
-  border: calc(1px * var(--hs)) solid var(--handle-ink);
-  box-shadow: none;
+  border: 0;
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-ink);
 }
 
 .world-canvas[data-director-mode='false'] .world-object.is-selected[data-author='agent']::after {
-  border-color: var(--handle-agent);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-agent);
 }
 
 .world-canvas[data-director-mode='false'] .world-object.is-selected::before {
@@ -56,12 +64,22 @@
   content: '';
   position: absolute;
   inset: 0;
-  border: calc(1px * var(--hs)) dashed rgba(124, 92, 255, 0.5);
+  border: 0;
+  --dash-ink: rgba(124, 92, 255, 0.5);
+  background-image:
+    repeating-linear-gradient(90deg, var(--dash-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(90deg, var(--dash-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(0deg, var(--dash-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(0deg, var(--dash-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs)));
+  background-size: 100% calc(1px * var(--hs)), 100% calc(1px * var(--hs)), calc(1px * var(--hs)) 100%, calc(1px * var(--hs)) 100%;
+  background-position: left top, left bottom, left top, right top;
+  background-repeat: no-repeat;
   pointer-events: none;
 }
 
 .world-canvas .world-object.is-group-child.is-selected::after {
-  border-style: solid;
+  background-image: none;
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--dash-ink);
 }
 
 /* Body cursor in the select tool. */
@@ -83,7 +101,7 @@
   width: calc(16px * var(--hs));
   height: calc(16px * var(--hs));
   background: rgba(251, 249, 243, 0.92);
-  border: calc(1px * var(--hs)) solid var(--line, rgba(23, 23, 19, 0.16));
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--line, rgba(23, 23, 19, 0.16));
   border-radius: calc(4px * var(--hs));
   pointer-events: none;
 }
@@ -100,17 +118,28 @@
   position: absolute;
   z-index: 40;
   box-sizing: border-box;
-  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  --frame-ink: var(--handle-ink);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--frame-ink);
   transform-origin: center;
   pointer-events: none;
 }
 
 .selection-frame.is-agent {
-  border-color: var(--handle-agent);
+  --frame-ink: var(--handle-agent);
 }
 
+/* A multi-selection reads as a dashed union box; gradient strips keep the dash
+   crisp and the line one screen pixel at any zoom. */
 .selection-frame.is-multi {
-  border-style: dashed;
+  box-shadow: none;
+  background-image:
+    repeating-linear-gradient(90deg, var(--frame-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(90deg, var(--frame-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(0deg, var(--frame-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs))),
+    repeating-linear-gradient(0deg, var(--frame-ink) 0 calc(4px * var(--hs)), transparent calc(4px * var(--hs)) calc(8px * var(--hs)));
+  background-size: 100% calc(1px * var(--hs)), 100% calc(1px * var(--hs)), calc(1px * var(--hs)) 100%, calc(1px * var(--hs)) 100%;
+  background-position: left top, left bottom, left top, right top;
+  background-repeat: no-repeat;
 }
 
 .selection-handle {
@@ -120,21 +149,21 @@
   width: calc(9px * var(--hs));
   height: calc(9px * var(--hs));
   background: var(--handle-paper);
-  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-ink);
   transform: translate(-50%, -50%);
-  transition: transform 120ms var(--handle-ease), border-color 120ms var(--handle-ease);
+  transition: transform 120ms var(--handle-ease), box-shadow 120ms var(--handle-ease);
   pointer-events: auto;
   touch-action: none;
 }
 
 .selection-frame.is-agent .selection-handle {
-  border-color: var(--handle-agent);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-agent);
 }
 
 .selection-handle:hover,
 .selection-handle:active {
   transform: translate(-50%, -50%) scale(1.15);
-  border-color: var(--handle-agent);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-agent);
 }
 
 .selection-handle[data-handle='n'],
@@ -189,32 +218,42 @@
   width: calc(8px * var(--hs));
   height: calc(8px * var(--hs));
   background: var(--handle-paper);
-  border: calc(1px * var(--hs)) solid var(--handle-ink);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-ink);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: transform 120ms var(--handle-ease), border-color 120ms var(--handle-ease);
+  transition: transform 120ms var(--handle-ease), box-shadow 120ms var(--handle-ease);
   cursor: move;
   pointer-events: auto;
   touch-action: none;
 }
 
 .node-editor.is-agent .node-handle {
-  border-color: var(--handle-agent);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-agent);
 }
 
 .node-handle:hover,
 .node-handle:active {
   transform: translate(-50%, -50%) scale(1.15);
-  border-color: var(--handle-agent);
+  box-shadow: inset 0 0 0 calc(1px * var(--hs)) var(--handle-agent);
 }
 
+/* Midpoints are the only dashed chip. At 6px a gradient dash would read as
+   noise, so this one keeps a border and accepts Chrome's pixel snapping. */
 .node-handle.is-midpoint {
   width: calc(6px * var(--hs));
   height: calc(6px * var(--hs));
   border-radius: 0;
   background: transparent;
-  border-style: dashed;
+  box-shadow: none;
+  border: calc(1px * var(--hs)) dashed var(--handle-ink);
   cursor: copy;
+}
+
+.node-editor.is-agent .node-handle.is-midpoint,
+.node-handle.is-midpoint:hover,
+.node-handle.is-midpoint:active {
+  box-shadow: none;
+  border-color: var(--handle-agent);
 }
 
 .node-handle.is-arrow-end {
@@ -333,12 +372,20 @@
   border-radius: 9px;
 }
 
-/* Kicker-style labels sit inside the top-left corner. */
+/* Kicker-style labels sit just ABOVE the top edge, left-aligned to the frame.
+
+   Inside the box the label collided with whatever the frame held near its top:
+   several seeded frames leave only ~20px of headroom and the chip is 22px tall,
+   so the title landed on the first equation. Outside the box it cannot collide
+   with content at any zoom, for any frame a user or the tutor creates, and the
+   paper background plus hairline keep it legible over bare canvas. */
 .world-canvas .world-object.kind-frame .frame-label,
 .world-canvas .world-object.kind-group .group-label {
   position: absolute;
-  left: 8px;
-  top: 8px;
+  left: 0;
+  top: auto;
+  bottom: calc(100% + 4px);
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 8px;
