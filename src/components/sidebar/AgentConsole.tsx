@@ -289,7 +289,7 @@ export default function AgentConsole({
                   <i>{call.readOnly ? 'R' : 'W'}</i>
                   <b>{call.name}</b>
                   <small>{callGlyph(call)}</small>
-                  <span>{callSummary(call)}</span>
+                  <span title={callSummary(call)}>{callSummary(call)}</span>
                 </p>
               )
             }
@@ -306,7 +306,7 @@ export default function AgentConsole({
                       <i>{call.readOnly ? 'R' : 'W'}</i>
                       <b>{call.name}</b>
                       <small>{callGlyph(call)}</small>
-                      <span>{callSummary(call)}</span>
+                      <span title={callSummary(call)}>{callSummary(call)}</span>
                     </li>
                   ))}
                 </ul>

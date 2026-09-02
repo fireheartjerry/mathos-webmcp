@@ -71,7 +71,7 @@
 
 .barycentric-card .barycentric-meta small {
   color: var(--muted, #7a776d);
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -152,9 +152,11 @@
   min-width: 0;
 }
 
+/* A `Npx/1` line box is shorter than the glyph box, so text that also clips its
+   overflow for an ellipsis loses its descenders and subscripts. */
 .barycentric-card .barycentric-weight-name {
   color: var(--muted, #7a776d);
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -276,7 +278,7 @@
   color: var(--muted, #7a776d);
   background: transparent;
   border: 0;
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   text-align: left;
   text-transform: none;
   cursor: pointer;
@@ -312,7 +314,7 @@
   background: var(--paper, #fbf9f3);
   border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
   border-radius: 4px;
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   font-variant-numeric: tabular-nums;
   text-align: right;
   appearance: textfield;
@@ -338,20 +340,26 @@
 
 .barycentric-card .barycentric-areas {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 2px 8px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--muted, #7a776d);
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
-.barycentric-card .barycentric-areas small { font-size: 11px; }
-.barycentric-card .barycentric-areas code { color: var(--graphite, #171713); font: inherit; }
-.barycentric-card .barycentric-areas em { color: var(--purple, #7c5cff); font: inherit; font-style: normal; }
+.barycentric-card .barycentric-areas small { font-size: 11px; flex: none; white-space: nowrap; }
+.barycentric-card .barycentric-areas code { color: var(--graphite, #171713); font: inherit; flex: none; white-space: nowrap; }
+/* The weight vector is the readout, so it wraps to the footer's second line rather
+   than ellipsising down to a few characters when the card is narrow. */
+.barycentric-card .barycentric-areas em {
+  min-width: 0;
+  color: var(--purple, #7c5cff);
+  font: inherit;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
 
 .barycentric-card .barycentric-invariant {
   margin: 0;

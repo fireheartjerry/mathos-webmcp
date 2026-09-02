@@ -439,7 +439,6 @@
 .number-theory-step { min-width: 0; display: grid; align-content: center; gap: 4px; padding: 7px 9px; color: var(--field-ink); background: var(--field-paper); border: 0; border-radius: 6px; }
 .number-theory-step small, .number-theory-step em { color: var(--field-muted); font-size: 10px; font-style: normal; line-height: 1.3; overflow-wrap: anywhere; }
 .number-theory-step strong { overflow: hidden; color: var(--field-ink); font: 600 13px/1.15 var(--mono); white-space: normal; }
-.number-theory-product small, .number-theory-product em { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .number-theory-product .katex { color: var(--field-ink); font-size: 0.86em; }
 .number-theory-arrow { align-self: center; color: var(--field-muted); font-size: 10px; white-space: nowrap; }
 .ferrers-step { align-content: start; }
@@ -474,7 +473,7 @@
 .ramanujan-statement h4 { margin: 0; color: var(--field-ink); font-size: 16px; }
 .ramanujan-evidence { min-width: 0; display: grid; gap: 2px; }
 .ramanujan-evidence b { color: #6fcfc7; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
-.ramanujan-evidence span { overflow: hidden; color: var(--field-ink); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+.ramanujan-evidence span { color: var(--field-ink); font-size: 11px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
 .ramanujan-evidence small { color: var(--field-muted); font: 10px/1.3 var(--system); }
 .ramanujan-reveal.has-counterexample { border-color: var(--orange); }
 .ramanujan-reveal.has-counterexample b { color: var(--orange); }

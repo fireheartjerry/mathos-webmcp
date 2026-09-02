@@ -648,6 +648,7 @@ export default function LiveGeometry({
 
   const selectedPrimitive = selected ? object.primitives.find((candidate) => candidate.id === selected) ?? null : null
   const measure = selectedPrimitive ? measurementFor(selectedPrimitive, resolved, describe(selectedPrimitive, object.primitives)) : null
+  const metaText = tool === 'move' ? (selectedPrimitive ? describe(selectedPrimitive, object.primitives) : 'move · click to select') : `${activeTool.label.toLowerCase()} tool`
   const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel'].includes(selectedPrimitive.kind) : false
 
   const previews = isConstructing && cursor ? renderPreview(tool, pending, cursor, pointAt, resolved) : null
@@ -688,7 +689,7 @@ export default function LiveGeometry({
         </div>
         <div className="geometry-meta">
           <b>{visiblePoints.length} points · {markCount} marks</b>
-          <small>{tool === 'move' ? (selectedPrimitive ? describe(selectedPrimitive, object.primitives) : 'move · click to select') : `${activeTool.label.toLowerCase()} tool`}</small>
+          <small title={metaText}>{metaText}</small>
         </div>
       </header>
       <GeometryToolbar

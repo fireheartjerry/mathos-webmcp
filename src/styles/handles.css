@@ -390,6 +390,8 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 22px;
   padding: 0 8px;
   color: var(--muted, #7a776d);
@@ -410,6 +412,7 @@
 
 .world-canvas .world-object.kind-frame .frame-label small {
   display: inline;
+  flex-shrink: 0;
   color: var(--muted, #7a776d);
   font: 400 10.5px/1 var(--mono, 'Fira Code', ui-monospace, monospace);
   letter-spacing: 0.08em;
@@ -417,8 +420,15 @@
   opacity: 0.8;
 }
 
-/* Frame titles are editable in place; the label is otherwise click-through. */
+/* Frame titles are editable in place and unbounded-length (free-text, no
+   maxLength). Ellipsise instead of letting a long title run across the
+   canvas; the container's max-width above already caps it to the frame's
+   own on-screen width. */
 .world-canvas .frame-label span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   pointer-events: auto;
   cursor: text;
 }

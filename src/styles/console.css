@@ -38,7 +38,9 @@
 .agent-console-group li > small { color: var(--teal); font: 600 12px/1 var(--mono); }
 .agent-console-group li.is-running > small { color: var(--muted); }
 .agent-console-group li.is-error > small { color: var(--orange); }
-.agent-console-group li > span { overflow: hidden; color: var(--muted); font: 11px/1.35 var(--system); white-space: nowrap; text-overflow: ellipsis; }
+/* Tool summaries wrap here as they do on a single-call line: the row has no
+   fixed height, and the ellipsis was hiding the end of every longer summary. */
+.agent-console-group li > span { color: var(--muted); font: 11px/1.35 var(--system); overflow-wrap: break-word; }
 .agent-console-group li.is-error > span { color: var(--orange); }
 
 /* ---- Thinking line ------------------------------------------------------ */

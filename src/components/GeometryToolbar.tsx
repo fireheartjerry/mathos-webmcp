@@ -191,7 +191,7 @@ export default function GeometryToolbar({
       >
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2v11h11" />{dot(9, 6, 1.8)}<path d="M9 6v7M9 6H3" strokeDasharray="1.5 1.5" /></svg>
       </button>
-      <span className="geometry-toolbar-hint" aria-live="polite">{hint}</span>
+      <span className="geometry-toolbar-hint" aria-live="polite" title={hint}>{hint}</span>
     </div>
   )
 }

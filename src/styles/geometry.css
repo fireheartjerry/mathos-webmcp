@@ -74,7 +74,9 @@
 .live-geometry.has-toolbar .geometry-meta small {
   min-width: 0;
   color: var(--muted, #7a776d);
-  font: 11px/1 var(--mono, 'Fira Code', monospace);
+  /* 11px/1 is a shorter line box than the glyphs need, and this run clips its
+     overflow for the ellipsis, so /1 would shave the descenders off. */
+  font: 11px/1.2 var(--mono, 'Fira Code', monospace);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

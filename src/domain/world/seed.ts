@@ -243,14 +243,14 @@ export function createSeedWorld(): WorldState {
 
     frame('attention_geometry_frame', 'Tiny Transformer · Attention', [
       attention.id, 'attention_bridge_label',
-    ], 1320, 70, 860, 550),
+    ], 1320, 70, 860, 590),
     {
       id: 'attention_bridge_label',
       kind: 'text',
       text: 'One head, two-dimensional embeddings. Every value on this card is recomputed from the matrices you edit.',
       color: '#7c5cff',
       fontSize: 13,
-      bounds: { x: 1360, y: 596, width: 780, height: 20 },
+      bounds: { x: 1360, y: 608, width: 780, height: 36 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -259,14 +259,14 @@ export function createSeedWorld(): WorldState {
 
     frame('train_from_scratch_frame', 'Tiny Transformer · Gradient Step', [
       training.id, 'training_truth_label',
-    ], 2420, 70, 860, 550),
+    ], 2420, 70, 860, 590),
     {
       id: 'training_truth_label',
       kind: 'text',
       text: 'A tiny transformer training step: one numerical gradient on the visible parameters, never frontier-model training.',
       color: '#7c5cff',
       fontSize: 13,
-      bounds: { x: 2460, y: 596, width: 780, height: 20 },
+      bounds: { x: 2460, y: 608, width: 780, height: 36 },
       rotation: 0,
       author: 'agent',
       opacity: 1,
@@ -297,7 +297,7 @@ export function createSeedWorld(): WorldState {
       text: 'Two circles tangent at O. Drag A.',
       color: '#171713',
       fontSize: 19,
-      bounds: { x: 300, y: 774, width: 330, height: 36 },
+      bounds: { x: 300, y: 768, width: 330, height: 44 },
       rotation: 0,
       author: 'human',
       opacity: 1,
@@ -318,7 +318,7 @@ export function createSeedWorld(): WorldState {
       text: 'Drag A, B, C or O. Mapped points, tangent circles, ratios and equal angles recompute.',
       color: '#817d73',
       fontSize: 13,
-      bounds: { x: 300, y: 1234, width: 740, height: 22 },
+      bounds: { x: 300, y: 1244, width: 740, height: 36 },
       rotation: 0,
       author: 'agent',
       opacity: 1,

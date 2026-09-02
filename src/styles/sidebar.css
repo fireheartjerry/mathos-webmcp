@@ -58,6 +58,14 @@
 .tool-toast-chips { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
 .tool-toast .tool-chip { padding: 6px 10px; font-size: 14px; }
 
+/* A replay's real tool calls feed the same ledger this toast bursts from,
+   with no check for whether the console is open, and the console outranks
+   it (--z-console > --z-toast) — so the toast would silently lose. The
+   console already prints every call as its own line, so hide the toast
+   instead of fighting it for the corner. Mirrors the existing
+   .mathburst-app:has(...) .webmcp-trace suppression in mathburst.css. */
+.mathburst-app:has(.agent-console.is-docked) .tool-toast { display: none; }
+
 /* ---- Reading indicator -------------------------------------------------- */
 
 .reading-indicator {
@@ -307,7 +315,10 @@
 .agent-console-line.is-tool > small { color: var(--teal); font: 600 12px/1 var(--mono); }
 .agent-console-line.is-tool.is-running > small { color: var(--muted); }
 .agent-console-line.is-tool.is-error > small { color: var(--orange); }
-.agent-console-line.is-tool > span { overflow: hidden; color: var(--muted); font: 11px/1.35 var(--system); white-space: nowrap; text-overflow: ellipsis; }
+/* Each tool line owns a full row with no competing sibling and the list
+   isn't height-constrained, so let the result summary wrap instead of
+   truncating it unrecoverably. */
+.agent-console-line.is-tool > span { color: var(--muted); font: 11px/1.35 var(--system); overflow-wrap: break-word; }
 .agent-console-line.is-tool.is-error > span { color: var(--orange); }
 
 .agent-console-controls {

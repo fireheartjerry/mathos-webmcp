@@ -18,8 +18,8 @@
 .attention-view .attention-heading h3, .training-view .training-heading h3 { margin: 0; overflow: hidden; font: 500 17px/1.05 var(--serif); letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; }
 .attention-view .math-object-kicker, .training-view .math-object-kicker, .attention-view .attention-kicker, .training-view .training-card-heading > span, .training-view .training-metrics small {
   display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
-}
-.attention-view .attention-kicker { overflow: hidden; text-overflow: ellipsis; }
+ line-height: 1.2;}
+.attention-view .attention-kicker { overflow: hidden; text-overflow: ellipsis; line-height: 1.2;}
 .attention-view .derived-tag, .training-view .derived-tag {
   display: inline-block; padding: 1px 4px; color: var(--muted); background: transparent; border: 1px dashed var(--line-strong); border-radius: 4px;
   font: 500 10.5px/1 var(--mono); letter-spacing: 0.04em; text-transform: lowercase; font-style: normal; vertical-align: middle;
@@ -53,7 +53,7 @@
 
 /* ---- attention: header ---------------------------------------------------- */
 .attention-view .attention-meta { flex: 0 1 auto; min-width: 0; display: grid; justify-items: end; gap: 4px; color: var(--muted); font: 11px/1.2 var(--mono); text-align: right; }
-.attention-view .attention-meta span, .attention-view .attention-meta b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
+.attention-view .attention-meta span, .attention-view .attention-meta b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; line-height: 1.2;}
 .attention-view .attention-meta b { color: var(--graphite); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* ---- attention: body columns --------------------------------------------- */
@@ -74,7 +74,10 @@
 /* ribbons (softmax weights) */
 .attention-view .attention-ribbons { display: grid; gap: 4px; min-width: 0; }
 .attention-view .attention-ribbon { display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; align-items: center; gap: 8px; color: var(--muted); font: 11px/1 var(--mono); }
-.attention-view .attention-ribbon > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* A `Npx/1` line box is shorter than the glyph box, so text that also clips its
+   overflow for an ellipsis loses its descenders and subscripts. Give every
+   truncating leaf in this file a line box its glyphs actually fit inside. */
+.attention-view .attention-ribbon > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .attention-view .attention-ribbon i { height: 9px; overflow: hidden; background: #ebe9e1; border-radius: 2px; }
 .attention-view .attention-ribbon em { display: block; height: 100%; background: var(--graphite); border-radius: 2px; transition: width 240ms var(--ease-out), background-color 240ms var(--ease-out); }
 .attention-view .attention-ribbon.is-target em { background: var(--purple); }
@@ -88,13 +91,13 @@
   display: flex; align-items: center; gap: 4px; min-width: 0; height: 24px; padding: 0 6px; color: var(--graphite); background: transparent; border: 1px solid transparent; border-radius: 4px;
   font: 11px/1 var(--mono); text-align: left; cursor: pointer; transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
 }
-.attention-view .attention-token > button > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.attention-view .attention-token > button > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .attention-view .attention-token > button > i { flex: 0 0 auto; width: 8px; height: 8px; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--paper); transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
 .attention-view .attention-token > button:hover { border-color: var(--line); background: #f7f5ee; }
 .attention-view .attention-token.is-query > button { border-color: var(--purple); background: var(--purple-soft); color: var(--purple); font-weight: 600; }
 .attention-view .attention-token.is-query > button > i { border-color: var(--purple); background: var(--purple); }
 .attention-view .attention-token.is-target > button > span { font-weight: 600; }
-.attention-view .attention-token > small { overflow: hidden; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; }
+.attention-view .attention-token > small { overflow: hidden; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .attention-view .attention-token.is-query > small { color: var(--purple); }
 
 /* matrices */
@@ -138,7 +141,7 @@
 .attention-view .attention-loss > strong { color: var(--orange); font: 600 18px/1 var(--mono); font-variant-numeric: tabular-nums; }
 .attention-view .attention-loss > span:not(.attention-kicker) { color: var(--muted); font: 11px/1.3 var(--mono); }
 .attention-view .attention-probability { display: grid; grid-template-columns: 60px minmax(0, 1fr) 40px; align-items: center; gap: 8px; color: var(--muted); font: 11px/1 var(--mono); }
-.attention-view .attention-probability > i { overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.attention-view .attention-probability > i { overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .attention-view .attention-probability > em { height: 7px; overflow: hidden; background: #e6e4dc; border-radius: 2px; }
 .attention-view .attention-probability > em b { display: block; height: 100%; background: #a9a69c; border-radius: 2px; transition: width 240ms var(--ease-out), background-color 240ms var(--ease-out); }
 .attention-view .attention-probability > strong { text-align: right; font-variant-numeric: tabular-nums; }
@@ -172,11 +175,11 @@
 
 .training-view .training-body { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 12px; }
 .training-view .training-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font-size: 11px; }
-.training-view .training-card-heading > span { overflow: hidden; text-overflow: ellipsis; }
-.training-view .training-card-heading b { flex: 0 1 auto; overflow: hidden; color: var(--graphite); font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
+.training-view .training-card-heading > span { overflow: hidden; text-overflow: ellipsis; line-height: 1.2;}
+.training-view .training-card-heading b { flex: 0 1 auto; overflow: hidden; color: var(--graphite); font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .training-view .training-probabilities { min-width: 0; min-height: 0; display: grid; grid-template-columns: 1fr; align-content: start; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
 .training-view .training-probability { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; align-items: center; gap: 8px; font: 11px/1 var(--mono); }
-.training-view .training-probability > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.training-view .training-probability > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2;}
 .training-view .training-probability i { height: 8px; overflow: hidden; background: #e6e4dc; border-radius: 2px; }
 .training-view .training-probability em { display: block; height: 100%; background: #a9a69c; border-radius: 2px; transition: width 240ms var(--ease-out), background-color 240ms var(--ease-out); }
 .training-view .training-probability.is-target { color: var(--purple); font-weight: 600; }
@@ -205,9 +208,9 @@
 .training-view .training-matrix > span { color: var(--graphite); font: 500 13px/1 var(--serif); }
 .training-view .training-matrix > div { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 4px 8px; border-left: 1px solid var(--graphite); border-right: 1px solid var(--graphite); }
 .training-view .training-matrix-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; min-width: 0; font: 11px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
-.training-view .training-matrix-cell > i { overflow: hidden; color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; }
+.training-view .training-matrix-cell > i { overflow: hidden; color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; line-height: 1.2;}
 .training-view .training-matrix-cell > em { color: var(--muted); font-style: normal; }
-.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 4px; color: var(--muted); border-radius: 3px; font-weight: 400; white-space: nowrap; }
+.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 4px; color: var(--muted); border-radius: 4px; font-weight: 400; white-space: nowrap; line-height: 1.2;}
 .training-view .training-matrix-cell.is-up > b, .training-view .training-matrix-cell.is-down > b { color: var(--graphite); font-weight: 600; }
 .training-view .training-matrix-cell.is-up > em { color: var(--purple); }
 .training-view .training-matrix-cell.is-down > em { color: var(--orange); }

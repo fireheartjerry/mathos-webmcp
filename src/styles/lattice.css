@@ -210,7 +210,9 @@
 .lattice-card .residue-lane { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 0; padding: 0 8px; border-radius: 4px; overflow: hidden; transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
 .lattice-card .residue-lane-label { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lattice-card .residue-lane-values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; min-width: 0; overflow: hidden; }
-.lattice-card .residue-lane-values > span { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 4px 8px; overflow: hidden; white-space: nowrap; background: var(--field-paper); border-radius: 3px; font: 11px/1 var(--mono); animation: none; transition: box-shadow 200ms var(--ease-out); }
+/* A `Npx/1` line box is shorter than the glyph box, so text that also clips its
+   overflow for an ellipsis loses its descenders and subscripts. */
+.lattice-card .residue-lane-values > span { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 4px 8px; overflow: hidden; white-space: nowrap; background: var(--field-paper); border-radius: 3px; font: 11px/1.2 var(--mono); animation: none; transition: box-shadow 200ms var(--ease-out); }
 .lattice-card .residue-lane-values > span > * { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* the digits are the real number the lane is verifying — never ellipsis them away;
    only the surrounding label/modulo may shrink or elide. */
