@@ -25,3 +25,6 @@ video/out/
 video/public/
 .narration/
 .demo-frames/
+
+# film working takes and QA sheets
+.film/
