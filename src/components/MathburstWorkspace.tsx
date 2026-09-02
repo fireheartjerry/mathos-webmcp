@@ -99,7 +99,35 @@ const humanAction = (summary: string, operations: WorldOperation[]): WorldAction
 
 const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: 'Tutor', action: '' }
 
-const cameraViewport = (scene: CatalogSceneId, width: number, height: number) => getViewportForScene(scene, width, height)
+/**
+ * A scene's camera frames that scene's own frame object, so the authored centre
+ * can never drift from the content it is meant to show. The authored responsive
+ * camera is the fallback while the frame is missing (the overview, a blank
+ * project, or the first paint before the world hydrates).
+ */
+const cameraViewportForWorld = (
+  scene: CatalogSceneId,
+  width: number,
+  height: number,
+  world?: WorldState,
+): Viewport => {
+  const fallback = getViewportForScene(scene, width, height)
+  if (!world || scene === 'overview') return fallback
+  const frame = world.objects[SCENES[scene].frameId]
+  if (!frame || frame.bounds.width <= 0 || frame.bounds.height <= 0) return fallback
+  // Pad by the same fraction on both axes so a wide frame and a tall frame sit
+  // in the picture identically.
+  const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.06))
+  const zoom = Math.min(2.5, Math.max(0.25, Math.min(
+    Math.max(1, width - padding * 2) / frame.bounds.width,
+    Math.max(1, height - padding * 2) / frame.bounds.height,
+  )))
+  return {
+    x: width / 2 - (frame.bounds.x + frame.bounds.width / 2) * zoom,
+    y: height / 2 - (frame.bounds.y + frame.bounds.height / 2) * zoom,
+    zoom,
+  }
+}
 
 /** How much closer the film camera sits than the Director review camera. The clinic keeps its Tutor panel above the frame in view. */
 const filmCameraFit = (scene: CatalogSceneId) => (scene === 'gamma-clinic' ? 1.04 : 1.18)
@@ -429,15 +457,25 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
    * layout width. The scene's world-space centre is preserved; this is a camera
    * move, never a history commit.
    */
+  const cameraViewport = useCallback(
+    (scene: CatalogSceneId, width: number, height: number) => cameraViewportForWorld(scene, width, height, worldRef.current),
+    [],
+  )
   const canvasMetricsRef = useRef<{ width: number; height: number } | null>(null)
   useEffect(() => {
     if (!hydrated || galleryOpen) return
     const element = document.querySelector('.world-canvas')
     if (!element) return
     const reframe = (width: number, height: number) => {
-      const previous = canvasMetricsRef.current
+      // The first measurement is not a no-op: the opening viewport was computed
+      // before this element existed, from the arithmetic fallback, so compare
+      // against that and correct it.
+      const previous = canvasMetricsRef.current ?? {
+        width: Math.max(1, window.innerWidth - RAIL_WIDTH),
+        height: Math.max(1, window.innerHeight - HEADER_HEIGHT),
+      }
       canvasMetricsRef.current = { width, height }
-      if (!previous || (Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1)) return
+      if (Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1) return
       if (directorOpenRef.current) return
       const current = worldRef.current
       const rebased = rebaseSceneViewport(
