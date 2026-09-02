@@ -66,3 +66,27 @@ Verified on the running app at 1440×900 with the WebMCP column pinned and unpin
 | WebMCP end to end | — | Verified live through the real reducer: reads, `spotlight_objects`, `set_barycentric_weights`, `explain_object`, a `barycentricDrawIn` preset timeline with `play_timeline`, and `get_history`. |
 | Agent parity for structure | — | Verified live: create objects, group, frame, lock, re-order, `edit_text`, delete and undo, all through tools with clean past-tense summaries. |
 | Build | — | `pnpm typecheck` and `pnpm build` both pass. |
+
+## Professionalism pass — 2026-09-02 (round 3)
+
+Two sweeps ran over the whole surface: 28 agents auditing and fixing the widget
+components, and 138 cheap checkers over all 20 stylesheets feeding 8 fixers. A
+live DOM audit then measured every element in all eight scenes, on a cleared
+store, at 1440×900 and 2560×1440.
+
+| Area | Finding | Resolution |
+|---|---|---|
+| Routing | Hard-loading `/p/<id>` rewrote the URL to `/` and opened the last-active project instead. | The deep link is captured on the first render and held until hydration; `useProjectRoute` takes a `paused` flag for that window. Verified: `/p/gamma-lab` opens Gamma Function. |
+| Film flag | `detectFilmMode` used `.has('film')`, so `?film=0` *enabled* film mode. | Reads the value; `0`, `false` and empty are all off. Verified in the browser. |
+| Selection | The fixed "N selected" bar swallowed pointer events for handles beneath it. | `.object-context` is `pointer-events: none` with its controls opting back in. |
+| Authored notes | Four notes declared a one-line height for copy that wraps to two, losing a line each: the attention and gradient tutor notes, the spiral-similarity prompt and its hint. | Heights fit the wrapped text; the two row-one frames grew 40 px so the notes still sit inside with the 18 px of headroom the "Tutor" pip needs. |
+| Line boxes | The house `Npx/1` font shorthand gives a line box shorter than the glyph box, so every run that also clips its overflow for an ellipsis was shaving off descenders and subscripts — visible on each α, β and subscripted token in the attention, training, residue-lane, barycentric-weight and geometry-meta readouts. | Truncating runs get a line box their glyphs fit inside. This family was invisible to static analysis: the font and the clip come from different rules. |
+| Truncated prose | The Ramanujan evidence list, the Euler-product captions, the inspector hint and the console tool summaries all ellipsised explanatory content. | All wrap. Inspector values clamp to two lines with a real ellipsis instead of a silent crop. |
+| Barycentric readout | The weight vector ellipsised down to 28 px of 139 px. | The readout wraps to the footer's second line. |
+| Panel collision | The tool toast and the agent console shared one fixed anchor, and the console's z-index swallowed the toast. | The toast is suppressed while the console is open. |
+| Z-order | The agent-commit flash (z 18) rendered over another object's selection outline and handles (z 2/3). | Selected objects sit above the flash. |
+| Type floor | The number-theory, residue-lane and Ramanujan widgets mixed 9/10/11 px for visually parallel elements. | All on the 11 px floor. |
+| Unbounded input | A free-text frame title ran indefinitely across the canvas. | Bounded and ellipsised. |
+| Measured result | — | All four projects × two scenes × two viewports: **0 clipped elements, 0 elements escaping their object bounds, 0 sibling overlaps, 0 cross-object overlaps.** |
+| Tools | — | 48 / 48 still defined after the sweep; `get_world` runs and its counter increments. The pane's Chromium has no native `document.modelContext`, which is why the film runs in the ChatGPT desktop browser. |
+| Build | — | `pnpm typecheck` and `pnpm build` both pass. |
