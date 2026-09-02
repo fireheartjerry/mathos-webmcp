@@ -568,3 +568,12 @@
   .world-stage, .attention-ribbon em, .training-probability em, .attention-probability-list > span > em b { transition: none; }
   .coefficient-cell, .residue-lane-values > span, .ramanujan-reveal, .cinematic-lockup, .webmcp-trace-attached, .world-object.is-agent-commit { animation: none; }
 }
+
+/* Film mode: the closing lockup must survive a 720p downscale. */
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final { left: 6vw; top: 9vh; gap: 16px; }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final p { gap: 6px; }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final p b { font-size: clamp(54px, 4.4vw, 116px); }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final p span { font-size: clamp(26px, 2.1vw, 56px); }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final small { padding: 10px 16px 10px 12px; font-size: clamp(12px, 0.95vw, 24px); border-radius: 9px; }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final small strong { font-size: clamp(13px, 1vw, 26px); }
+.mathburst-app[data-film='true'] .cinematic-lockup.is-final small i { width: 11px; height: 11px; }

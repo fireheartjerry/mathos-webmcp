@@ -88,6 +88,9 @@ const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: '
 
 const cameraViewport = (scene: CatalogSceneId, width: number, height: number) => getViewportForScene(scene, width, height)
 
+/** How much closer the film camera sits than the Director review camera. */
+const FILM_CAMERA_FIT = 1.18
+
 const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport => Boolean(
   viewport
   && Number.isFinite(viewport.x)
@@ -913,7 +916,12 @@ export default function MathburstWorkspace() {
   const directorDefaultViewport = (scene: CatalogSceneId): Viewport => {
     const { width, height } = canvasSize()
     const viewport = cameraViewport(scene, width, height)
-    return { ...viewport, zoom: boundedViewportZoom(viewport.zoom) }
+    // The film camera sits closer than the review camera so a frame's card fills
+    // the picture; the overview keeps its gallery framing.
+    const filmFit = filmMode && scene !== 'overview' ? FILM_CAMERA_FIT : 1
+    const zoom = boundedViewportZoom(viewport.zoom * filmFit)
+    const focus = { x: (width / 2 - viewport.x) / viewport.zoom, y: (height / 2 - viewport.y) / viewport.zoom }
+    return { x: width / 2 - focus.x * zoom, y: height / 2 - focus.y * zoom, zoom }
   }
 
   const directorViewportBookmark = (viewport: Viewport): DirectorShotViewport => {

@@ -22,3 +22,29 @@ Fixes before take 2/3:
 - Training card grid fixed; spiral equation widened; the Tutor's δ cue leaves the section plane alone.
 - Commits are read once at the end of the take from every project's own history.
 - Narration copy tightened so every clip fits its shot budget (shot 03 spills 0.8 s into shot 04, whose narration starts at 1.3 s).
+
+## Take 3 → Render 1 (review, 1280×720) — 2026-09-02 04:54
+
+First complete render. 162.0 s at 60 fps with narration, music, and sound design; every shot and every one of the 35 commits present. Watched as 65 sampled frames (`node scripts/film/qa-sheets.mjs`) and by playing the file.
+
+Found:
+
+- The film ran long at the source (165.6 s), so the composition's 162 s ceiling cut the closing lockup short.
+- Cards occupy little more than half the frame width; the composition's camera pushes (≤ 1.08) cannot make up for a review camera that was tuned for a 1440-px laptop.
+- The training → barycentrics cut crosses a project boundary and the camera panned across the new project's empty canvas: roughly one second of bare ivory with a tiny mark in the middle.
+- Bridges were authored at ~140 px and were barely visible at 2560 px wide; they read as a smudge rather than as "ribbons become triangle vertices".
+- The closing lockup was set at 54 px, legible at 1440p and marginal at 720p.
+- The music bed clipped at 0 dBFS before the composition's gain was applied.
+
+## Takes 4–6 — cycle 1: story, pacing, transitions
+
+- Budgets trimmed to 160 s at the source (reconstruction waits 2.4 s instead of 3 s between Tutor steps, attention 18 s, one-world 7 s). Take 6 measured 161.7 s with all 35 commits and no shot more than 0.1 s over budget.
+- Project switches no longer pan: the outgoing world dims for 300 ms, the world cuts to the new project on its own frame, and the incoming world fades in over 560 ms while the bridge morph carries the preserved object across (`previewNextDirectorShot`).
+- Bridge geometry, stroke widths, dots, and captions scale with the shorter side of the frame (`CinematicBridge`), so a bridge occupies roughly a fifth of the picture at 2560×1440 and still fits a laptop.
+- Music and sound-design files are peak-normalised on write (−6 dBFS music, −12 dBFS sfx); the manifest's bed gain is now −16 dB with −7 dB ducking under speech.
+- QA sheets label every sample with its timecode; the ffmpeg font is addressed by file so the script works on Windows.
+
+## Take 7 — cycle 2: composition and typography
+
+- The film camera sits 1.18× closer than the review camera on every frame except the overview (`FILM_CAMERA_FIT`), keeping each frame's focus point fixed; the composition's pushes remain as authored.
+- The final lockup grows to 4.4 vw at film size, with a larger registered-tools chip, so "One mathematical world." reads at 720p.
