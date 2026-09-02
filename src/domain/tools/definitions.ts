@@ -55,6 +55,14 @@ export type WorldBridge = {
   createProject?: (title: string, templateId: ProjectId | null) => Promise<ToolResult> | ToolResult
   deleteProject?: (projectId: string) => Promise<ToolResult> | ToolResult
   focusObjects?: (ids: string[]) => Promise<ToolResult> | ToolResult
+  /** Draw a purple aura around objects for `seconds` before touching them; read-only, never a history commit. */
+  spotlight?: (ids: string[], seconds: number, label?: string) => Promise<ToolResult> | ToolResult
+  /**
+   * Transient, render-only preview that reveals `value` character by character in
+   * the object's `latex` or `text` field over `ms`. Resolves when the reveal ends;
+   * the caller then commits the real change through runAgentAction.
+   */
+  typewrite?: (objectId: string, field: 'latex' | 'text', value: string, ms: number) => Promise<void>
   /** Live attention weights from the transformer project, read without opening it. */
   getAttentionWeights?: () => number[] | null
   /** Transient timeline playback (play, pause, seek, reset); never a history commit. */

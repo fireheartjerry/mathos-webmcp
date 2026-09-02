@@ -1889,7 +1889,12 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       <ReadingIndicator active={Boolean(readingEvent)} label={readingEvent ? `Tutor is reading · ${readingEvent.toolName}` : undefined} />
       <AgentAura targets={spotlightTargets} world={canvasWorld} viewport={directorOpen ? directorViewport : world.viewport} />
       <AgentActivation active={activationActive} kind={activationKind} />
-      <AgentConsole open={consoleOpen && !galleryOpen} onClose={() => setConsoleOpen(false)} tools={webMcpTools} />
+      <AgentConsole
+        open={consoleOpen && !galleryOpen}
+        onClose={() => setConsoleOpen(false)}
+        tools={webMcpTools}
+        onActivate={() => { setActivationKind('console'); setActivationTick((tick) => tick + 1) }}
+      />
       {!galleryOpen && <AnimationTimeline world={world} playbacks={playback.playbacks} control={playback.control} onDeleteTimeline={(id) => run(humanAction('Deleted timeline', [{ type: 'removeTimeline', id }]))} />}
       {bridgePlay && (
         <CinematicBridge

@@ -24,7 +24,40 @@ export type ReplayStep = {
   humanNote?: string
   /** A failing result does not stop the script. Use for steps that depend on human work. */
   optional?: boolean
+  /**
+   * Extra tool calls fired at the same time as `tool` (Promise.all). The console
+   * groups them under one line. Each call's result is keyed by its `id`, or by
+   * `<stepKey>_<n>` (n counted from 1) when it has none.
+   */
+  calls?: ReplayCall[]
+  /**
+   * Show an Accept / Decline card and pause the runner until the learner decides.
+   * On accept the step's `tool` (if any) runs; on decline the runner jumps to the
+   * step whose `id` equals `onDecline` when given, else continues with the next step.
+   */
+  proposal?: ReplayProposal
 }
+
+export type ReplayCall = {
+  id?: string
+  tool: string
+  input?: unknown
+  /** A failing result does not stop the script. */
+  optional?: boolean
+}
+
+export type ReplayProposal = {
+  /** Card heading, e.g. "Turn ink into live math". */
+  title: string
+  /** Accept button label. */
+  accept: string
+  /** Decline button label. */
+  decline: string
+  /** Step id to skip to when declined. */
+  onDecline?: string
+}
+
+export type ReplayDecision = 'accept' | 'decline'
 
 export type ReplayScript = {
   id: string
@@ -37,22 +70,33 @@ export type ReplayScript = {
 export type ReplayOutcome = {
   index: number
   step: ReplayStep
-  /** Present when the step called a tool. */
+  /** Present when the step called a tool (the step's own `tool`, or the first of `calls`). */
   result?: ToolResult
+  /** Every call the step made, in order, when it made more than one. */
+  calls?: { call: ReplayCall; result: ToolResult; error?: string }[]
   /** Set when the tool was missing or threw; the result, if any, is then synthetic. */
   error?: string
+  /** The learner's answer to the step's proposal, when it had one. */
+  decision?: ReplayDecision
 }
 
 export type ReplayHooks = {
   onSay?: (text: string, index: number) => void
   onHumanNote?: (text: string, index: number) => void
-  /** Fired just before the tool executes, with the resolved input. */
-  onStep?: (step: ReplayStep, index: number, input: unknown) => void
-  onResult?: (step: ReplayStep, index: number, result: ToolResult) => void
+  /** Fired just before each tool executes, with the resolved input; `callIndex` counts the step's calls. */
+  onStep?: (step: ReplayStep, index: number, input: unknown, call: ReplayCall, callIndex: number) => void
+  onResult?: (step: ReplayStep, index: number, result: ToolResult, call: ReplayCall, callIndex: number) => void
   /** Polled before every step and during waits; return true to abort. */
   shouldStop?: () => boolean
   /** Awaited before every step; the console uses it as a pause / single-step gate. */
   beforeStep?: (index: number, step: ReplayStep) => Promise<void> | void
+  /**
+   * Awaited for every step carrying `proposal`, after its `say` line is shown.
+   * When absent, proposals are accepted immediately.
+   */
+  awaitDecision?: (step: ReplayStep, index: number) => Promise<ReplayDecision>
+  /** Fired once the decision is in, before the tool (accept) or the jump (decline). */
+  onDecision?: (step: ReplayStep, index: number, decision: ReplayDecision) => void
 }
 
 export type ReplayRun = {
