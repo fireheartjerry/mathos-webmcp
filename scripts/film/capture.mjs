@@ -203,11 +203,19 @@ try {
 
   // ---- stage ---------------------------------------------------------------------
   const plan = MANIFEST.shots.filter((shot) => !ONLY || ONLY.has(shot.id))
-  await page.evaluate("window.__mathburstFilm.openProject('gamma-lab'); return true")
-  await wait(900)
-  await page.evaluate('window.__mathburstFilm.openDirector(); return true')
-  await wait(600)
-  await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(plan[0].id)}); return true`)
+  // A shot marked `stage: 'gallery'` opens on the project list instead of inside a
+  // project, and leaves the Director closed -- the cold open is real navigation, not
+  // a Director frame, so it must not start where every other shot starts.
+  if (plan[0]?.stage === 'gallery') {
+    await page.evaluate('window.__mathburstFilm.openGallery(); return true')
+    await wait(900)
+  } else {
+    await page.evaluate("window.__mathburstFilm.openProject('gamma-lab'); return true")
+    await wait(900)
+    await page.evaluate('window.__mathburstFilm.openDirector(); return true')
+    await wait(600)
+    await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(plan[0].id)}); return true`)
+  }
   await mouse('mouseMoved')
   await wait(1600)
 
@@ -231,6 +239,11 @@ try {
       else if (step.pointer) await moveTo(WIDTH * step.pointer.x, HEIGHT * step.pointer.y, 700)
       else if (step.collapseActivity !== undefined) await page.evaluate(`const t = document.querySelector('.activity-toggle'); if (t && (t.getAttribute('aria-expanded') === 'true') === ${Boolean(step.collapseActivity)}) t.click(); return true`)
       else if (step.selectShot) await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(step.selectShot)}); return true`)
+      // Cold open navigates for real: gallery, then into a project, then the Director
+      // takes over for the shot-driven remainder. Same driver hook the app exposes.
+      else if (step.openGallery) { await page.evaluate('window.__mathburstFilm.openGallery(); return true'); await wait(700) }
+      else if (step.openProject) { await page.evaluate(`window.__mathburstFilm.openProject(${JSON.stringify(step.openProject)}); return true`); await wait(900) }
+      else if (step.openDirector) { await page.evaluate('window.__mathburstFilm.openDirector(); return true'); await wait(500) }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
     const elapsed = now() - takeStart - shotStart

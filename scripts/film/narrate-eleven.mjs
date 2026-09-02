@@ -204,7 +204,7 @@ async function main() {
       writeFileSync(stamp, JSON.stringify({ hash, model: model_used, characters: characters || readStamp(stamp).characters || 0, duration: seconds }, null, 2))
     }
     rows.push({ id: clip.id, act: clip.act, seconds, characters: readStamp(stamp).characters, source })
-    out_clips.push({ id: clip.id, act: clip.act, file: `film/narration-v2/${clip.id}.wav`, duration: seconds, text: clip.text, model: model_used })
+    out_clips.push({ id: clip.id, act: clip.act, shot: clip.shot ?? null, offset: clip.offset ?? 0, file: `film/${SPEC_NAME}/${clip.id}.wav`, duration: seconds, text: clip.text, model: model_used })
   }
 
   const after = await subscription(key)

@@ -4,7 +4,7 @@
     "width": 2560,
     "height": 1440,
     "fps": 60,
-    "maxSeconds": 162
+    "maxSeconds": 174
   },
   "product": {
     "url": "http://localhost:3400/?film=1",
@@ -23,6 +23,97 @@
     "seed": 7
   },
   "shots": [
+    {
+      "id": "cold-open",
+      "title": "What this is",
+      "seconds": 38,
+      "stage": "gallery",
+      "approved": false,
+      "steps": [
+        {
+          "pointer": {
+            "x": 0.5,
+            "y": 0.55
+          }
+        },
+        {
+          "wait": 2600
+        },
+        {
+          "pointer": {
+            "x": 0.31,
+            "y": 0.44
+          }
+        },
+        {
+          "wait": 1800
+        },
+        {
+          "click": ".library-card-open",
+          "text": "Open Gamma Function"
+        },
+        {
+          "wait": 2600
+        },
+        {
+          "pointer": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        },
+        {
+          "wait": 3200
+        },
+        {
+          "click": ".webmcp-inspector-trigger"
+        },
+        {
+          "waitFor": ".webmcp-launcher"
+        },
+        {
+          "wait": 4200
+        },
+        {
+          "pointer": {
+            "x": 0.42,
+            "y": 0.6
+          }
+        },
+        {
+          "wait": 3400
+        },
+        {
+          "click": ".webmcp-inspector-trigger"
+        },
+        {
+          "wait": 900
+        },
+        {
+          "openDirector": true
+        },
+        {
+          "selectShot": "opening-attempt"
+        },
+        {
+          "wait": 900
+        }
+      ],
+      "camera": [
+        {
+          "at": 0,
+          "zoom": 1.06,
+          "x": 0.5,
+          "y": 0.5
+        },
+        {
+          "at": 36,
+          "zoom": 1.0,
+          "x": 0.5,
+          "y": 0.5
+        }
+      ],
+      "transitionOut": "camera"
+    },
     {
       "id": "opening-attempt",
       "title": "The hidden sign",
@@ -53,8 +144,6 @@
           "y": 0.5
         }
       ],
-      "narration": "Don't finish it. Mark the exact place my reasoning breaks.",
-      "narrationOffset": 0.6,
       "transitionOut": "camera"
     },
     {
@@ -84,8 +173,6 @@
           "y": 0.44
         }
       ],
-      "narration": "The tutor reads the page through WebMCP, circles one sign, and writes why.",
-      "narrationOffset": 0.2,
       "transitionOut": "camera"
     },
     {
@@ -115,14 +202,12 @@
           "y": 0.5
         }
       ],
-      "narration": "The learner repairs it. Either commit can be undone.",
-      "narrationOffset": 0.1,
       "transitionOut": "bridge"
     },
     {
       "id": "reconstruction",
       "title": "Ink becomes semantic math",
-      "seconds": 14,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -185,8 +270,6 @@
           "y": 0.54
         }
       ],
-      "narration": "The handwriting is reconstructed into live LaTeX, audited against the source, and approved. Ink and equation stay linked.",
-      "narrationOffset": 1.3,
       "transitionOut": "camera"
     },
     {
@@ -242,14 +325,12 @@
           "y": 0.56
         }
       ],
-      "narration": "Normalized, the integrand becomes a density with total area one. Drag the bound and the probability follows. When the tutor raises the shape, the three bin masses, their logs, and the softmax that reproduces them all move together.",
-      "narrationOffset": 0.3,
       "transitionOut": "bridge"
     },
     {
       "id": "attention",
       "title": "Attention geometry",
-      "seconds": 18,
+      "seconds": 12,
       "approved": true,
       "steps": [
         {
@@ -296,8 +377,6 @@
           "y": 0.5
         }
       ],
-      "narration": "Those log-masses seed a one-head transformer. Edit a single entry of W Q, and the query vector, the angles, the softmax ribbons, the context, and the loss recompute.",
-      "narrationOffset": 0.3,
       "transitionOut": "bridge"
     },
     {
@@ -354,14 +433,12 @@
           "y": 0.5
         }
       ],
-      "narration": "One honest step: a numerical gradient lowers the loss and raises the target probability. The tutor takes step two. Undo, redo.",
-      "narrationOffset": 0.1,
       "transitionOut": "bridge"
     },
     {
       "id": "barycentrics",
       "title": "Weights become barycentrics",
-      "seconds": 14,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -416,14 +493,12 @@
           "y": 0.5
         }
       ],
-      "narration": "Three attention weights become barycentric coordinates. P is alpha A plus beta B plus gamma C. Drag P, drag a vertex, and the tutor moves P to the centroid.",
-      "narrationOffset": 0.2,
       "transitionOut": "camera"
     },
     {
       "id": "homothety",
       "title": "Homothety and spiral similarity",
-      "seconds": 14,
+      "seconds": 12,
       "approved": true,
       "steps": [
         {
@@ -478,70 +553,12 @@
           "y": 0.5
         }
       ],
-      "narration": "A homothety about O keeps two circles tangent. The tutor constructs the centre of the spiral similarity from four points. Drag A again, and the ratios and equal angles hold.",
-      "narrationOffset": 0.2,
       "transitionOut": "bridge"
-    },
-    {
-      "id": "simplex",
-      "title": "Probability simplex",
-      "seconds": 17,
-      "approved": true,
-      "steps": [
-        {
-          "wait": 1300
-        },
-        {
-          "slider": "[data-demo-target=simplex-weight-delta]",
-          "value": 0.3,
-          "durationMs": 1200
-        },
-        {
-          "wait": 900
-        },
-        {
-          "cue": "simplex-tutor-weight"
-        },
-        {
-          "wait": 900
-        },
-        {
-          "slider": "[data-demo-target=simplex-section]",
-          "value": 0.34,
-          "durationMs": 1600
-        },
-        {
-          "wait": 600
-        },
-        {
-          "pointer": {
-            "x": 0.55,
-            "y": 0.96
-          }
-        }
-      ],
-      "camera": [
-        {
-          "at": 0,
-          "zoom": 1.0,
-          "x": 0.5,
-          "y": 0.5
-        },
-        {
-          "at": 17,
-          "zoom": 1.06,
-          "x": 0.46,
-          "y": 0.5
-        }
-      ],
-      "narration": "A fourth weight lifts the triangle into a tetrahedron. Change delta and the other three keep their ratios. Sweep the section plane to delta, and the triangle from the last act reappears, holding P.",
-      "narrationOffset": 0.2,
-      "transitionOut": "camera"
     },
     {
       "id": "ramanujan",
       "title": "Integer lattice to Ramanujan",
-      "seconds": 19,
+      "seconds": 13,
       "approved": true,
       "steps": [
         {
@@ -588,14 +605,12 @@
           "y": 0.6
         }
       ],
-      "narration": "Lattice points sort into partitions. Finite Euler factors compute the coefficients, and every value in the five n plus four lane is a multiple of five. Ramanujan's congruence, verified here for finite cases and labeled as a theorem, not a proof.",
-      "narrationOffset": 0.3,
       "transitionOut": "bridge"
     },
     {
       "id": "webmcp-crescendo",
       "title": "WebMCP crescendo",
-      "seconds": 11,
+      "seconds": 13,
       "approved": true,
       "steps": [
         {
@@ -619,14 +634,12 @@
           "y": 0.5
         }
       ],
-      "narration": "Every visible operation has a WebMCP tool behind it. Eighteen of eighteen, in one world.",
-      "narrationOffset": 0.2,
       "transitionOut": "camera"
     },
     {
       "id": "one-world",
       "title": "One mathematical world",
-      "seconds": 7,
+      "seconds": 16,
       "approved": true,
       "steps": [
         {
@@ -653,9 +666,8 @@
           "y": 0.5
         }
       ],
-      "narration": "One mathematical world. Every agent can enter.",
-      "narrationOffset": 1.2,
       "transitionOut": "end"
     }
-  ]
+  ],
+  "narrationSpec": "scripts/film/narration-v3.json"
 }
