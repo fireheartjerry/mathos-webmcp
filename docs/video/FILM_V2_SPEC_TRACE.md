@@ -53,3 +53,16 @@ Every requirement Jerry stated in the 2026-09-02 session, where the story (`FILM
 1. **Deploy to ChatGPT Sites** (requirement 1). Say yes; I run the Sites deploy from this worktree.
 2. **Voice check** (requirement 11): listen to `video/public/film/narration-v2/01-open.wav`.
 3. **Film capture inside the ChatGPT desktop app** cannot be scripted from here; when you are ready I will produce the exact prompt sheet and the Site tools checklist for the take.
+
+## Professionalism pass — 2026-09-02 (round 2)
+
+Verified on the running app at 1440×900 with the WebMCP column pinned and unpinned.
+
+| Area | Finding | Resolution |
+|---|---|---|
+| Scene camera | Frames sat ~290 px right of centre and clipped at the right edge whenever the WebMCP column was pinned: the camera computed from `window.innerWidth` while the canvas element was narrower. | `canvasSize()` now measures `.world-canvas`; a `ResizeObserver` re-frames on the first paint, on window resize and on pin/unpin, deferred one frame so it has the last word. |
+| Scene framing | Authored scene centres could drift from the frames they describe. | Each scene camera now fits its own frame object's bounds with even padding, falling back to the authored responsive camera for the overview, blank projects and the first paint. Measured drift across the eight seeded scenes is ≤ 5 px. |
+| Film hooks | Large CSS consolidation risked orphaning film-critical rules. | All of `data-film`, Director panel and safe frame, lockup, bridge, trace, presence, reconstruction, cursor, ledger, toast, console, aura, activation and reading indicator still carry rules; every `data-demo-target` the cues drive is still present. |
+| WebMCP end to end | — | Verified live through the real reducer: reads, `spotlight_objects`, `set_barycentric_weights`, `explain_object`, a `barycentricDrawIn` preset timeline with `play_timeline`, and `get_history`. |
+| Agent parity for structure | — | Verified live: create objects, group, frame, lock, re-order, `edit_text`, delete and undo, all through tools with clean past-tense summaries. |
+| Build | — | `pnpm typecheck` and `pnpm build` both pass. |
