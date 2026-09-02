@@ -32,7 +32,7 @@ import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirector
 import type { DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
 import type { SemanticEdit } from '../domain/semantic/transactions'
 import { validateLatex } from '../domain/semantic/expression'
-import type { SemanticEntity } from '../domain/semantic/types'
+import type { SemanticBinding, SemanticEntity } from '../domain/semantic/types'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
@@ -95,6 +95,56 @@ const sceneViewportBookmark = (viewport: Viewport, width: number, height: number
 })
 
 const boundedViewportZoom = (zoom: number) => Math.min(2.5, Math.max(0.25, zoom))
+
+type EquationView = Extract<WorldObject, { kind: 'equation' }>
+type ExpressionEntity = Extract<SemanticEntity, { kind: 'expression' }>
+type GraphView = Extract<WorldObject, { kind: 'graph' }>
+
+/** Keep equation saves deterministic while leaving unrelated entity IDs intact. */
+const expressionEntityIdFor = (world: WorldState, equation: EquationView): string => {
+  const linked = equation.entityId ? world.entities[equation.entityId] : undefined
+  if (linked?.kind === 'expression') return linked.id
+
+  const preferred = `entity:${equation.id}`
+  const preferredEntity = world.entities[preferred]
+  if (!preferredEntity || preferredEntity.kind === 'expression') return preferred
+
+  let candidate = `${preferred}:expression`
+  let suffix = 2
+  while (world.entities[candidate] && world.entities[candidate].kind !== 'expression') {
+    candidate = `${preferred}:expression:${suffix}`
+    suffix += 1
+  }
+  return candidate
+}
+
+const graphViewsForExpression = (world: WorldState, equation: EquationView, entityId: string): GraphView[] => (
+  Object.values(world.objects)
+    .filter((candidate): candidate is GraphView => candidate.kind === 'graph')
+    .filter((graph) => {
+      if (graph.entityId === entityId || graph.equationId === equation.id) return true
+      const linkedEquation = world.objects[graph.equationId]
+      return linkedEquation?.kind === 'equation' && linkedEquation.entityId === entityId
+    })
+    .sort((left, right) => left.id.localeCompare(right.id))
+)
+
+const expressionParameterBinding = (graphId: string, entityId: string, name: string): SemanticBinding => ({
+  id: `binding:${graphId}:parameter:${name}`,
+  source: { entityId, path: `parameters.${name}` },
+  target: { objectId: graphId, path: `parameters.${name}` },
+  forward: 'expression-parameter',
+  inverse: 'expression-parameter',
+})
+
+const isSameExpressionParameterBinding = (left: SemanticBinding, right: SemanticBinding): boolean => (
+  left.source.entityId === right.source.entityId
+  && left.source.path === right.source.path
+  && left.target.objectId === right.target.objectId
+  && left.target.path === right.target.path
+  && left.forward === right.forward
+  && left.inverse === right.inverse
+)
 
 /** Rebase screen-space offsets when a saved camera was recorded at another size. */
 const rebaseSceneViewport = (
@@ -310,7 +360,17 @@ export default function MathburstWorkspace() {
   const patchObject = useCallback((id: string, patch: Record<string, unknown>, summary = 'Updated object') => {
     const object = worldRef.current.objects[id]
     if (!object) return
-    const next = { ...object, ...patch, id: object.id, kind: object.kind, author: object.author } as WorldObject
+    const boundsPatch = typeof patch.bounds === 'object' && patch.bounds !== null && !Array.isArray(patch.bounds)
+      ? patch.bounds as Partial<typeof object.bounds>
+      : undefined
+    const next = {
+      ...object,
+      ...patch,
+      ...(boundsPatch ? { bounds: { ...object.bounds, ...boundsPatch } } : {}),
+      id: object.id,
+      kind: object.kind,
+      author: object.author,
+    } as WorldObject
     if (object.kind === 'graph' && typeof patch.parameters === 'object' && patch.parameters !== null && !Array.isArray(patch.parameters)) {
       const graph = next as Extract<WorldObject, { kind: 'graph' }>
       graph.parameters = { ...(object.parameters ?? {}), ...(patch.parameters as Record<string, number>) }
@@ -331,15 +391,19 @@ export default function MathburstWorkspace() {
     if (!object || (object.kind !== 'text' && object.kind !== 'equation')) return false
     if (object.kind === 'equation' && !validateLatex(value).valid) return false
 
-    const updated: WorldObject = object.kind === 'text'
-      ? { ...object, text: value }
-      : { ...object, latex: value }
-    const operations: WorldOperation[] = [{ type: 'put', object: updated }]
-    if (object.kind === 'equation' && object.entityId) {
-      const entity = currentWorld.entities[object.entityId]
-      if (entity?.kind === 'expression') {
-        operations.unshift({ type: 'putEntity', entity: { ...entity, latex: value } })
-      }
+    const operations: WorldOperation[] = []
+    let updated: WorldObject
+    if (object.kind === 'text') {
+      updated = { ...object, text: value }
+      operations.push({ type: 'put', object: updated })
+    } else {
+      const entityId = expressionEntityIdFor(currentWorld, object)
+      const existing = currentWorld.entities[entityId]
+      const entity: ExpressionEntity = existing?.kind === 'expression'
+        ? { ...existing, latex: value }
+        : { id: entityId, kind: 'expression', latex: value, parameters: {} }
+      updated = { ...object, latex: value, entityId }
+      operations.push({ type: 'putEntity', entity }, { type: 'put', object: updated })
     }
     if (object.kind === 'equation') {
       const dependents = findDependentIds(currentWorld, [object.id])
@@ -351,27 +415,24 @@ export default function MathburstWorkspace() {
     return true
   }, [run])
 
-  /** Add one detected parameter to the canonical expression in one action. */
+  /** Add one detected parameter to the canonical expression and every graph view in one action. */
   const addExpressionParameter = useCallback((objectId: string, name: string) => {
     const currentWorld = worldRef.current
     const object = currentWorld.objects[objectId]
     if (!object || object.kind !== 'equation' || !name.trim()) return
 
-    const linkedEntity = object.entityId ? currentWorld.entities[object.entityId] : undefined
-    let entityId = linkedEntity?.kind === 'expression' ? linkedEntity.id : (object.entityId ?? `entity:${object.id}`)
-    if (currentWorld.entities[entityId] && currentWorld.entities[entityId].kind !== 'expression') {
-      entityId = `entity:${object.id}:expression`
-    }
+    const entityId = expressionEntityIdFor(currentWorld, object)
     const existing = currentWorld.entities[entityId]
     const existingExpression = existing?.kind === 'expression' ? existing : undefined
     if (existingExpression?.parameters && Object.prototype.hasOwnProperty.call(existingExpression.parameters, name)) return
 
-    const graphValue = Object.values(currentWorld.objects)
-      .filter((candidate): candidate is Extract<WorldObject, { kind: 'graph' }> => candidate.kind === 'graph' && candidate.equationId === object.id)
+    const graphs = graphViewsForExpression(currentWorld, object, entityId)
+    const graphValue = graphs
       .map((graph) => graph.parameters?.[name])
       .find((candidate): candidate is number => typeof candidate === 'number' && Number.isFinite(candidate))
-    const value = existingExpression?.parameters?.[name] ?? graphValue ?? 1
-    const entity: Extract<SemanticEntity, { kind: 'expression' }> = {
+    const expressionValue = existingExpression?.parameters?.[name]
+    const value = typeof expressionValue === 'number' && Number.isFinite(expressionValue) ? expressionValue : graphValue ?? 1
+    const entity: ExpressionEntity = {
       id: entityId,
       kind: 'expression',
       latex: existingExpression?.latex ?? object.latex,
@@ -379,6 +440,24 @@ export default function MathburstWorkspace() {
     }
     const operations: WorldOperation[] = [{ type: 'putEntity', entity }]
     if (object.entityId !== entityId) operations.push({ type: 'put', object: { ...object, entityId } })
+
+    for (const graph of graphs) {
+      const binding = expressionParameterBinding(graph.id, entityId, name)
+      const existingBinding = currentWorld.bindings[binding.id]
+      const bindingIsUsable = !existingBinding || isSameExpressionParameterBinding(existingBinding, binding)
+      const bindingIds = new Set(graph.bindingIds ?? [])
+      if (bindingIsUsable) bindingIds.add(binding.id)
+      if (!existingBinding) operations.push({ type: 'putBinding', binding })
+      operations.push({
+        type: 'put',
+        object: {
+          ...graph,
+          entityId,
+          parameters: { ...(graph.parameters ?? {}), [name]: value },
+          bindingIds: [...bindingIds],
+        },
+      })
+    }
     run(humanAction(`Added expression parameter ${name}`, operations))
   }, [run])
 

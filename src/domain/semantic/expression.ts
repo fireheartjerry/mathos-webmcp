@@ -15,6 +15,7 @@ export type LatexValidation = {
 
 const PRIMARY_VARIABLES = new Set(['x', 'y', 'z', 't'])
 const CONSTANTS = new Set(['e', 'i', 'pi', 'infty', 'infinity', 'C'])
+const MAX_LATEX_LENGTH = 4000
 const FUNCTION_NAMES = new Set([
   'arccos', 'arcsin', 'arctan', 'arg', 'cos', 'cosh', 'cot', 'coth', 'csc',
   'deg', 'det', 'dim', 'exp', 'gcd', 'hom', 'inf', 'ker', 'lg', 'lim',
@@ -52,6 +53,7 @@ const conciseError = (error: unknown): string => {
 /** Validate one draft with the same renderer used by the canvas. */
 export function validateLatex(latex: string): LatexValidation {
   if (typeof latex !== 'string') return { valid: false, error: 'LaTeX must be text.' }
+  if (latex.length > MAX_LATEX_LENGTH) return { valid: false, error: `LaTeX is too long (maximum ${MAX_LATEX_LENGTH} characters).` }
   // Empty equations are valid while a newly created object is waiting for its
   // first keystroke. Tex renders this as an empty math span.
   if (latex.trim().length === 0) return { valid: true }
@@ -87,7 +89,7 @@ function stripTextGroups(latex: string): string {
  * omitted; one-letter and named Greek symbols are retained as controls.
  */
 export function detectNamedParameters(latex: string): string[] {
-  if (typeof latex !== 'string' || latex.length === 0) return []
+  if (typeof latex !== 'string' || latex.length === 0 || latex.length > MAX_LATEX_LENGTH) return []
 
   const names: string[] = []
   let source = stripTextGroups(latex.replace(/%[^\n]*/g, ''))
@@ -99,11 +101,10 @@ export function detectNamedParameters(latex: string): string[] {
     return ' '
   })
 
-  // Keep Greek command names as canonical ASCII chips while ignoring TeX
-  // functions (`\\sin`) and constants (`\\pi`).
+  // Keep lowercase Greek command names as canonical ASCII chips. Case matters:
+  // `\\gamma` is a variable, while uppercase `\\Gamma` is a function symbol.
   for (const command of commands) {
-    const lower = command.toLowerCase()
-    if (GREEK_PARAMETERS.has(lower) && lower !== 'pi') names.push(lower)
+    if (GREEK_PARAMETERS.has(command) && command !== 'pi') names.push(command)
   }
 
   for (const identifier of source.match(identifierPattern) ?? []) {
@@ -115,8 +116,7 @@ export function detectNamedParameters(latex: string): string[] {
   }
 
   for (const character of source.match(greekCharacterPattern) ?? []) {
-    const lower = character.toLowerCase()
-    if (lower !== 'π') names.push(lower)
+    if (character === character.toLowerCase() && character !== 'π') names.push(character)
   }
 
   return uniqueSorted(names)
