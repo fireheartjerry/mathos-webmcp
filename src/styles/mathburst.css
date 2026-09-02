@@ -1048,7 +1048,11 @@ button {
   box-shadow: var(--shadow-panel);
   transform: translateX(-50%);
   animation: chrome-in-up-centred 220ms var(--ease-out) both;
+  /* The bar floats over the canvas: only its controls take the pointer, so a
+     selection handle underneath its padding stays grabbable. */
+  pointer-events: none;
 }
+.object-context > * { pointer-events: auto; }
 .object-context span { padding: 0 10px 0 8px; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 .object-context button {
   height: 28px;

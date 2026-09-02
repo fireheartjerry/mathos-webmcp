@@ -54,6 +54,14 @@ const fmt = (value: number) => value.toFixed(3)
 const short = (value: number, digits = 2) => Number(value.toFixed(digits)).toString()
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 const bracket = (weights: readonly number[]) => `[${weights.map((weight) => weight.toFixed(2)).join(' : ')}]`
+// Coarse width estimate for the 11px mono labels drawn on the plot (no canvas
+// measurement available for SVG text) — enough to keep an anchored label's
+// bounding box inside the plot instead of running off an edge.
+const MONO_CHAR_WIDTH_11 = 6.4
+const estimateLabelWidth = (text: string) => text.length * MONO_CHAR_WIDTH_11
+const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
+const LABEL_MARGIN = 4
+const LABEL_OFFSET = 8
 
 type Draft = Partial<Pick<SimplexObject, 'weights' | 'section' | 'rotationX' | 'rotationY'>>
 type DragState =
@@ -245,6 +253,19 @@ export default function SimplexView({ object, run }: Props) {
   const sum = weights.reduce((total, weight) => total + weight, 0)
   const latticeDelay = (index: number) => `${Math.min(360, index * 3)}ms`
 
+  // ---- label placement: keep the P/section readouts on-canvas and off any
+  // vertex label they may currently coincide with (weights or δ at an extreme) --
+  const interiorLabelText = `P ${bracket(weights)}`
+  const interiorLabelWidth = estimateLabelWidth(interiorLabelText)
+  const pointOnVertex = projected.some((vertex) => distance(projectedPoint, vertex) < 5)
+  const interiorLabelRawX = pointOnVertex ? projectedPoint.x - LABEL_OFFSET - interiorLabelWidth : projectedPoint.x + LABEL_OFFSET
+  const interiorLabelRawY = pointOnVertex ? projectedPoint.y + LABEL_OFFSET + 8 : projectedPoint.y - LABEL_OFFSET
+  const interiorLabelX = clamp(interiorLabelRawX, LABEL_MARGIN, Math.max(LABEL_MARGIN, plotWidth - interiorLabelWidth - LABEL_MARGIN))
+  const interiorLabelY = clamp(interiorLabelRawY, 12, plotHeight - LABEL_MARGIN)
+  const sectionLabelText = `section δ = ${section.toFixed(2)}${onSection ? ' · holds P' : ''}`
+  const sectionLabelWidth = estimateLabelWidth(sectionLabelText)
+  const sectionLabelX = Math.max(plotWidth - 12, sectionLabelWidth + LABEL_MARGIN)
+
   const commit = (summary: string, patch: Partial<SimplexObject>) => {
     setDraft(null)
     const next: SimplexObject = { ...object, ...patch }
@@ -424,30 +445,36 @@ export default function SimplexView({ object, run }: Props) {
                 points={sectionPoints.map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')}
               />
             )}
-            {sectionPoints.map((vertex, index) => (
-              <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + 6} y={vertex.y - 5} style={{ opacity: sectionT }}>
-                {LABELS[index]}ₜ
-              </text>
-            ))}
+            {sectionPoints.map((vertex, index) => {
+              // At δ = 0 the section triangle sits exactly on A/B/C; at δ = 1 all
+              // three collapse onto D. Either way the "ₜ" label would sit on top
+              // of that vertex's own label, so skip it rather than double-draw.
+              if (distance(vertex, projected[index]) < 4 || distance(vertex, projected[3]) < 4) return null
+              return (
+                <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: sectionT }}>
+                  {LABELS[index]}ₜ
+                </text>
+              )
+            })}
             {pointT > 0 && (
               <g>
                 <circle className={`simplex-interior-point${onSection ? ' is-on-section' : ''}${flash.weights ? ' is-agent-set' : ''}`} cx={projectedPoint.x} cy={projectedPoint.y} r={7 * pointT} />
                 <circle className="simplex-point-hit" cx={projectedPoint.x} cy={projectedPoint.y} r={15} onPointerDown={beginPointDrag} />
               </g>
             )}
-            <text className="simplex-interior-label" x={projectedPoint.x + 11} y={projectedPoint.y - 9} style={{ opacity: pointT }}>P {bracket(weights)}</text>
+            <text className="simplex-interior-label" x={interiorLabelX} y={interiorLabelY} style={{ opacity: pointT }}>{interiorLabelText}</text>
             {projected.map((vertex, index) => {
               const t = revealStage(p, index * 0.08, index * 0.08 + 0.12)
               if (t <= 0) return null
               return (
                 <g key={LABELS[index]}>
                   <circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r={4.5 * t} />
-                  <text className="simplex-vertex-label" x={vertex.x + 9} y={vertex.y - 9} style={{ opacity: t }}>{LABELS[index]}</text>
+                  <text className="simplex-vertex-label" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: t }}>{LABELS[index]}</text>
                 </g>
               )
             })}
-            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={plotWidth - 12} y={17} textAnchor="end" style={{ opacity: sectionT }}>
-              section δ = {section.toFixed(2)}{onSection ? ' · holds P' : ''}
+            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={sectionLabelX} y={17} textAnchor="end" style={{ opacity: sectionT }}>
+              {sectionLabelText}
             </text>
           </svg>
           <span className="simplex-orbit-hint" aria-hidden="true" style={{ opacity: chromeT * 0.7 }}>drag P · drag space to orbit</span>

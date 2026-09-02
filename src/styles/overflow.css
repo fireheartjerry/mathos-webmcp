@@ -7,8 +7,7 @@
 .live-graph,
 .gamma-probability-view,
 .matrix-plane,
-.math-equation-object,
-.world-object > :not(.author-pip):not(.tutor-overlay) {
+.math-equation-object {
   overflow: hidden;
 }
 
@@ -16,7 +15,7 @@
 .live-graph .katex-display,
 .gamma-probability-view .katex-display {
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   max-width: 100%;
   scrollbar-width: thin;
 }
@@ -26,6 +25,17 @@
   display: block;
   max-width: 100%;
   min-width: 0;
+}
+
+/* KaTeX parse failures fall back to the raw LaTeX string (Tex.tsx). That
+   string is plain text with no line-break opportunities, so give it the
+   same scroll relief as .katex-display plus a wrap fallback. */
+.math-raw {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
 }
 
 /* Widget chrome never grows past its column; long values ellipsise instead. */

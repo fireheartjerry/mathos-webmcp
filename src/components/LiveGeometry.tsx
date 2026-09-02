@@ -118,7 +118,9 @@ function constructionReadouts(points: ResolvedPoint[]): Array<{ id: string; labe
   return readouts
 }
 
-function angleArc(angle: ResolvedAngle) {
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+function angleArc(angle: ResolvedAngle, width: number, height: number) {
   const radius = 28
   const start = Math.atan2(angle.a.y - angle.vertex.y, angle.a.x - angle.vertex.x)
   const finish = Math.atan2(angle.b.y - angle.vertex.y, angle.b.x - angle.vertex.x)
@@ -130,7 +132,10 @@ function angleArc(angle: ResolvedAngle) {
   const middle = start + delta / 2
   return {
     path: `M ${first.x} ${first.y} A ${radius} ${radius} 0 0 ${delta > 0 ? 1 : 0} ${last.x} ${last.y}`,
-    label: { x: angle.vertex.x + Math.cos(middle) * 44, y: angle.vertex.y + Math.sin(middle) * 44 },
+    label: {
+      x: clamp(angle.vertex.x + Math.cos(middle) * 44, 8, width - 8),
+      y: clamp(angle.vertex.y + Math.sin(middle) * 44, 8, height - 8),
+    },
   }
 }
 
@@ -752,7 +757,7 @@ export default function LiveGeometry({
           {resolved.angles.map((angle) => {
             const t = drawT(angle.id)
             if (t <= 0) return null
-            const arc = angleArc(angle)
+            const arc = angleArc(angle, width, height)
             return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
               <path className={`geometry-angle${enteringClass(angle.id)}`} d={arc.path} pathLength={1} style={revealDash(t)} />
               <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
@@ -803,13 +808,18 @@ export default function LiveGeometry({
             </g>
           })}
           {editingPoint && (
-            <foreignObject x={editingPoint.point.x + 4} y={editingPoint.point.y - 26} width={96} height={30}>
+            <foreignObject
+              x={clamp(editingPoint.point.x + 4, 4, width - 100)}
+              y={clamp(editingPoint.point.y - 26, 4, height - 34)}
+              width={96}
+              height={30}
+            >
               <LabelEditor value={editingPoint.label ?? editingPoint.id} onCommit={(label) => renameLabel(editingPoint.id, label)} onCancel={() => setEditingLabel(null)} />
             </foreignObject>
           )}
         </svg>
         {measure && selectedPrimitive && (
-          <div className="geometry-measure" data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
+          <div className={`geometry-measure${showCoordinates ? ' has-coordinates' : ''}`} data-canvas-control="true" onPointerDown={(event) => { if (event.button !== 2) event.stopPropagation() }}>
             <small>measure</small>
             <span className="geometry-measure-name">{measure.label}</span>
             <b>{measure.value}</b>

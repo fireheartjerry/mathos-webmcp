@@ -8,7 +8,7 @@
 
 .barycentric-view.barycentric-card {
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) 32px;
+  grid-template-rows: 44px minmax(0, 1fr) 56px;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
   height: 100%;
@@ -33,7 +33,7 @@
   border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
 }
 
-.barycentric-card .barycentric-heading { display: grid; gap: 3px; min-width: 0; }
+.barycentric-card .barycentric-heading { display: grid; gap: 4px; min-width: 0; }
 
 .barycentric-card .barycentric-kicker {
   color: var(--muted, #7a776d);
@@ -57,7 +57,7 @@
 .barycentric-card .barycentric-meta {
   display: grid;
   justify-items: end;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
   flex: none;
   text-align: right;
@@ -96,7 +96,7 @@
 .barycentric-label-editor {
   width: 100%;
   height: 100%;
-  padding: 0 6px;
+  padding: 0 8px;
   box-sizing: border-box;
   color: var(--graphite, #171713);
   background: var(--paper, #fbf9f3);
@@ -119,7 +119,7 @@
 
 @keyframes barycentric-agent-pulse {
   0% { opacity: 0.9; transform: scale(0.35); stroke-width: 3; }
-  100% { opacity: 0; transform: scale(1.6); stroke-width: 1; }
+  100% { opacity: 0; transform: scale(1.3); stroke-width: 1; }
 }
 
 /* ---- Side panel ------------------------------------------------------------ */
@@ -138,7 +138,7 @@
 .barycentric-card .barycentric-weight-grid {
   display: grid;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #f7f5ee;
   border-radius: 6px;
 }
@@ -164,7 +164,7 @@
   width: 100%;
   min-width: 0;
   height: 22px;
-  padding: 0 6px;
+  padding: 0 8px;
   box-sizing: border-box;
   color: var(--graphite, #171713);
   background: var(--paper, #fbf9f3);
@@ -245,7 +245,7 @@
 .barycentric-card .barycentric-actions button {
   height: 28px;
   min-width: 0;
-  padding: 0 10px;
+  padding: 0 12px;
   color: var(--graphite, #171713);
   background: transparent;
   border: 1px solid var(--line, rgba(23, 23, 19, 0.16));
@@ -270,9 +270,9 @@
 .barycentric-card .barycentric-coordinates-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   height: 22px;
-  padding: 0 2px;
+  padding: 0 4px;
   color: var(--muted, #7a776d);
   background: transparent;
   border: 0;
@@ -289,9 +289,10 @@
 
 .barycentric-card .barycentric-coordinate-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  gap: 4px;
+  column-gap: 8px;
+  row-gap: 4px;
 }
 
 .barycentric-card .barycentric-coordinate-row b {
@@ -305,7 +306,7 @@
   width: 100%;
   min-width: 0;
   height: 22px;
-  padding: 0 6px;
+  padding: 0 8px;
   box-sizing: border-box;
   color: var(--graphite, #171713);
   background: var(--paper, #fbf9f3);
@@ -325,11 +326,11 @@
 /* ---- Footer ---------------------------------------------------------------- */
 .barycentric-card .barycentric-footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
-  height: 32px;
+  height: 56px;
   padding: 0 16px;
   box-sizing: border-box;
   border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
@@ -338,9 +339,10 @@
 .barycentric-card .barycentric-areas {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted, #7a776d);
   font: 11px/1 var(--mono, 'Fira Code', monospace);
   font-variant-numeric: tabular-nums;
@@ -355,11 +357,9 @@
   margin: 0;
   min-width: 0;
   color: var(--muted, #7a776d);
-  font: 11px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font: 11px/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -298,7 +298,7 @@ export default function TrainingView({ object, world, run }: Props) {
       </div>
 
       <footer className="training-footnote" style={{ opacity: footerT }}>
-        central finite differences on every visible parameter · deterministic backtracking from η · a step is committed only when the loss fell and p(target) rose · not frontier-model training
+        central finite differences on every visible parameter · deterministic backtracking from η · a step is committed only when the loss fell and p(target) rose
       </footer>
     </section>
   )

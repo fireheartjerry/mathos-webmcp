@@ -51,10 +51,13 @@ const stopForLeftClicks = (event: ReactPointerEvent<HTMLElement>) => { if (event
 
 /** Pixel budget of the toolbar row, mirrored by geometry.css. */
 const TOOL_SLOT = 23
-const HORIZONTAL_PADDING = 12
+const HORIZONTAL_PADDING = 32 // 16px each side, matching the header/footer inset
 const DIVIDER = 7
 const TOGGLE_SLOTS = 2
-const HINT_MIN_WIDTH = 132
+const GAP = 1 // matches the flex `gap` in geometry.css
+const HINT_CHAR_WIDTH = 6.6 // ~0.6em per glyph at 11px in the mono stack
+const HINT_MIN_WIDTH = 96 // floor so even a short hint gets a legible line
+const HINT_MAX_WIDTH = 460 // cap so one long hint can't swallow the whole row
 const HINT_BREAKPOINT = 640
 
 /**
@@ -107,7 +110,10 @@ export default function GeometryToolbar({
   }, [menuOpen])
 
   const compact = Number.isFinite(width) && width < HINT_BREAKPOINT
-  const reserved = HORIZONTAL_PADDING + DIVIDER + TOGGLE_SLOTS * TOOL_SLOT + (compact ? 0 : HINT_MIN_WIDTH)
+  // Reserve room for the *current* hint's actual text (not a flat guess), so a long hint like
+  // Move's never gets less space than it needs and a short one doesn't starve the icons.
+  const hintWidth = compact ? 0 : Math.min(HINT_MAX_WIDTH, Math.max(HINT_MIN_WIDTH, Math.ceil(hint.length * HINT_CHAR_WIDTH) + GAP + 4 /* hint's own margin-left */))
+  const reserved = HORIZONTAL_PADDING + DIVIDER + TOGGLE_SLOTS * TOOL_SLOT + hintWidth + GAP * 3 /* divider/toggle/hint gaps */
   let visibleCount = Number.isFinite(width) ? Math.floor((width - reserved) / TOOL_SLOT) : GEOMETRY_TOOLS.length
   if (visibleCount < GEOMETRY_TOOLS.length) visibleCount = Math.max(1, visibleCount - 1) // keep a slot for the ⋯ button
   const visible = GEOMETRY_TOOLS.slice(0, visibleCount)

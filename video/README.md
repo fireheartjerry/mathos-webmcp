@@ -1,54 +1,45 @@
-# The demo video
+# Mathburst demo video
 
-A Remotion composition that assembles the submission video from three things, none of
-them staged:
+This Remotion composition turns a real Mathburst screencast into the submission film. The product is full bleed for the complete 155-second narration body. Frame one is the functioning whiteboard. There is no title card or end card.
 
-1. **`public/screen.mp4`** — a real screencast of the production build being driven
-   through its own WebMCP tools, produced by `scripts/record-demo.mjs` at the repository
-   root. Nothing in it is mocked; every state change went through `executeTool`.
-2. **`public/seg*.wav`** — the narration, one file per beat, synthesised offline by
-   `scripts/build-narration.ps1` from `docs/narration.json`.
-3. **`src/Demo.tsx`** — the composition: the screencast stays the subject, with a caption
-   carrying the sentence being spoken and a quiet marker naming the beat.
+The composition consumes these files from `video/public/`:
 
-## Why it is a separate workspace
+- `screen.mp4` — the real product capture from `scripts/record-demo.mjs`.
+- `beats.json` — measured beat timing and focus rectangles for restrained camera moves.
+- `narration.json` — the seven beat definitions and their 155-second body timing.
+- `seg00.wav` through `seg06.wav` — one narration track per beat.
 
-It has its own `package.json` so the application's dependencies stay small. Remotion pulls
-a renderer and a headless browser, and nobody reviewing the source of a maths scratchpad
-should have to install those to run `pnpm test`.
+## Rebuild from the repository root
 
-## Rebuilding
+Run the product and capture it at the root URL:
 
-```bash
-# 1. the picture — needs the production server and an ACTIVE flagged Chrome tab
-pnpm build && npx vinext start --port 3400
-#    open http://localhost:3400/learn, make that tab frontmost, then:
-FPS=6 HOLD_SCALE=8.5 node scripts/record-demo.mjs
-
-# 2. the voice
-pwsh -File scripts/build-narration.ps1
-
-# 3. stage and render
-cp docs/images/demo.mp4 video/public/screen.mp4 && cp .narration/*.wav video/public/
-cd video && npm install
-npx remotion studio src/index.ts     # to preview and adjust
-npx remotion render src/index.ts Demo out/demo.mp4 --concurrency=4 \
-  --browser-executable="C:\Program Files\Google\Chrome\Application\chrome.exe"
+```powershell
+pnpm build
+npx vinext start --port 3400
 ```
 
-`--browser-executable` is not optional here: Remotion's bundled headless shell downloads
-but is then not found on this machine, and pointing it at the installed Chrome is the fix.
+In a second PowerShell window, capture the product, build the seven narration files, and copy the metadata:
 
-## Timing
+```powershell
+$env:URL = 'http://localhost:3400/'
+node scripts/record-demo.mjs
+pwsh -File scripts/build-narration.ps1 -Json docs/narration.json -OutDir video/public
+Copy-Item -LiteralPath docs/narration.json -Destination video/public/narration.json -Force
+```
 
-The captions and audio are positioned from `startSeconds` in `src/Demo.tsx`, which mirror
-the beat holds in `scripts/record-demo.mjs` at `HOLD_SCALE=8.5`. **Change one and you must
-change the other**, or the voice drifts away from the picture. Each segment's spoken
-length was measured against its budget after synthesis; all seven fit.
+Then install the separate video workspace and render:
 
-## Replacing the synthetic voice
+```powershell
+npm --prefix video install
+npm --prefix video run render
+```
 
-The narration is a Windows system voice. It is correct and correctly timed, which makes it
-a usable reference track — but a human read will always be better. To replace it, record
-one file per beat at the same lengths, drop them in as `seg00.wav` … `seg06.wav`, and
-re-render. No code changes.
+The render is written to `video/out/demo.mp4`. To preview the composition instead, run `npm --prefix video run studio`.
+
+## Composition rules
+
+The seven held marker/caption pairs are defined in `video/src/Demo.tsx` and follow the narration beat order. The marker is quiet and top-aligned. The caption is a readable bottom band. Both use Mathburst ivory, graphite, and purple with no gradients.
+
+The camera may use the measured focus rectangles, but narrow regions stay at a full-product shot. This keeps tool panels, equations, and the mathematical canvas from being cropped out for emphasis.
+
+The final beat closes on the shared mathematical world and the WebMCP thesis. Audio is attached to its matching beat sequence, so changing a beat's timing requires regenerating `beats.json`, `narration.json`, and the seven WAV files together.

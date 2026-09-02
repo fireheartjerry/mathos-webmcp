@@ -1,24 +1,24 @@
-# Synthesises the narration in docs/narration.json to one WAV per segment.
+# Synthesises the seven Mathburst narration beats to one WAV per segment.
 #
-# Offline, using the speech synthesiser Windows ships with. The result is a *reference*
-# track: correctly worded and correctly timed to the video's beats, so it can either be
-# used as-is or read over by a person who wants their own voice on it.
+# Offline, using the speech synthesiser Windows ships with. No account or API key.
 #
-#   pwsh -File scripts/build-narration.ps1
+#   pwsh -File scripts/build-narration.ps1 -Json docs/narration.json -OutDir video/public
 
 param(
     [string]$Json = "docs/narration.json",
-    [string]$OutDir = ".narration"
+    [string]$OutDir = "video/public"
 )
 
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Speech
 
-$spec = Get-Content $Json -Raw | ConvertFrom-Json
+$spec = Get-Content -LiteralPath $Json -Raw | ConvertFrom-Json
+if (@($spec.segments).Count -ne 7) { throw 'Mathburst narration must contain exactly seven segments.' }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-try { $synth.SelectVoice($spec.voice) } catch { Write-Host "voice '$($spec.voice)' unavailable; using the default" }
-$synth.Rate = $spec.rate
+try { $synth.SelectVoice([string]$spec.voice) } catch { Write-Host "voice '$($spec.voice)' unavailable; using the system default" }
+$synth.Rate = [int]$spec.rate
 
 $i = 0
 foreach ($seg in $spec.segments) {

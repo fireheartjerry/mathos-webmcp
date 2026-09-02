@@ -88,7 +88,13 @@ import { collapseInvocations, groupBurst, summarizeLedger } from '../domain/tool
 import type { LedgerEvent } from '../domain/tools/ledger'
 
 /** `?film=1` hides Director chrome and exposes the in-page film driver hook. */
-const detectFilmMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('film')
+/** `?film=1` enables film mode; `?film=0`, `?film=false` and `?film=` do not. */
+const detectFilmMode = () => {
+  if (typeof window === 'undefined') return false
+  const value = new URLSearchParams(window.location.search).get('film')
+  if (value === null) return false
+  return value !== '0' && value.toLowerCase() !== 'false' && value !== ''
+}
 
 const humanAction = (summary: string, operations: WorldOperation[]): WorldAction => ({
   id: crypto.randomUUID(),
@@ -356,6 +362,8 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const [projectSwitchPhase, setProjectSwitchPhase] = useState<'out' | 'in' | null>(null)
   const projectSwitchTimersRef = useRef<number[]>([])
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
+  /** A `/p/<id>` deep link, captured on the first render so no later URL rewrite can lose it. */
+  const [pendingProjectId, setPendingProjectId] = useState<string | null>(() => initialProjectId ?? readProjectIdFromLocation())
   const [filmMode, setFilmMode] = useState(false)
   useEffect(() => { setFilmMode(detectFilmMode()) }, [])
   const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: SceneViewport } | null>(null)
@@ -433,22 +441,22 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     setGalleryOpen(true)
     setDirectorState(loadDirectorReview())
     setHydrated(true)
-    const requestedProjectId = initialProjectId ?? readProjectIdFromLocation()
-    if (requestedProjectId) initialProjectRequestRef.current = requestedProjectId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // A `/p/<id>` URL opens that project once the library is hydrated.
-  const initialProjectRequestRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!hydrated || !initialProjectRequestRef.current) return
-    const requested = initialProjectRequestRef.current
-    initialProjectRequestRef.current = null
-    const project = libraryProjectsRef.current.find((candidate) => candidate.id === requested && candidate.deletedAt === null)
+    if (!hydrated || pendingProjectId === null) return
+    const project = libraryProjectsRef.current.find((candidate) => candidate.id === pendingProjectId && candidate.deletedAt === null)
+    setPendingProjectId(null)
     if (project) openLibraryProject(project)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated])
-  useProjectRoute({ activeProjectId: hydrated ? activeDocumentId : (initialProjectId ?? null), galleryOpen: hydrated ? galleryOpen : !initialProjectId })
+  }, [hydrated, pendingProjectId])
+  useProjectRoute({
+    activeProjectId: hydrated ? activeDocumentId : (initialProjectId ?? null),
+    galleryOpen: hydrated ? galleryOpen : !initialProjectId,
+    paused: pendingProjectId !== null,
+  })
 
   /**
    * Keep the camera honest when the canvas itself changes size: the first paint

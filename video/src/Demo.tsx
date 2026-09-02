@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 import {
   AbsoluteFill,
   Audio,
@@ -15,35 +15,16 @@ import narration from '../public/narration.json'
 import beatsFile from '../public/beats.json'
 
 /**
- * The demo.
+ * The Mathburst film keeps the real product on screen for its entire duration.
+ * There is no title card or end card: frame one is already a functioning whiteboard,
+ * and the final beat closes on the product itself.
  *
- * The product fills the frame and a camera moves over it. This is not a deck with a
- * screenshot pasted in the middle. An earlier cut put the screencast in a 1340px box
- * floating in white, which reads as a presentation *about* software rather than software.
- *
- * The camera is not hand-placed. `scripts/record-demo.mjs` measures the bounding box of
- * the region each beat is about, at capture time, and writes it to `beats.json`. This
- * file turns those rectangles into a zoom and a centre. Measuring rather than hard-coding
- * means the camera cannot drift off the subject when the layout changes.
- *
- * Motion rules, applied throughout, because the temptation is to add more:
- *
- *   - Entrances ease out. Nothing eases in, which reads as sluggish at exactly the moment
- *     the eye is most attentive.
- *   - Nothing scales from zero. Text arrives from 0.985 and eight pixels low.
- *   - Camera moves are springs, so a move interrupted by the next beat continues from
- *     where it was instead of snapping back.
- *   - The camera never moves horizontally unless the region already spans most of the
- *     page. Zoom is capped at 1.15 and is often exactly 1. A demo that lunges at the
- *     screen is harder to read, not easier.
- *   - Exits are faster than entrances. Leaving is a system response, not a decision.
+ * `beats.json` is measured from the captured page. Focus rectangles are used only for
+ * restrained camera moves. Narrow regions keep the whole product in view so a tool
+ * panel or equation can never be enlarged at the expense of the subject.
  */
 
 export const FPS = 30
-const TITLE_SECONDS = 3.6
-const END_SECONDS = 4.2
-
-/** The capture viewport in CSS pixels. The recording is 2x this in real pixels (2560x1600). */
 const SRC_W = 1280
 const SRC_H = 800
 const FRAME_W = 1920
@@ -51,85 +32,81 @@ const FRAME_H = 1080
 
 type Focus = { sel: string; x: number; y: number; width: number; height: number } | null
 type RecordedBeat = { beat: string; startSeconds: number; endSeconds: number; focus: Focus }
+type SpokenSegment = { beat: string; startSeconds: number; durationSeconds: number; text: string }
 
 const RECORDED = (beatsFile as { beats: RecordedBeat[] }).beats
-const SPOKEN = narration as {
-  segments: Array<{ beat: string; startSeconds: number; durationSeconds: number; text: string }>
+const SPOKEN = narration as { segments: SpokenSegment[] }
+
+type HeldCopy = { marker: string; caption: string }
+
+const HELD_BY_INDEX: HeldCopy[] = [
+  { marker: 'Photograph → live mathematics', caption: 'The page turns a problem image into editable, semantic math.' },
+  { marker: 'The learner stays in the work', caption: 'A repeated mistake unlocks a tutor question, not an answer dump.' },
+  { marker: 'One world, two representations', caption: 'The tutor adds a graph linked to the live equation.' },
+  { marker: 'Agents act inside the world', caption: 'The same handler creates visible, attributed, undoable changes.' },
+  { marker: 'Dependencies stay live', caption: 'Move a point and the construction recomputes.' },
+  { marker: 'Matrices become geometry', caption: 'Edit a cell and linked vectors move with it.' },
+  { marker: 'Eighteen tools. One mathematical world.', caption: 'The page owns the state. Any WebMCP tutor can inhabit it.' },
+]
+
+/** Aliases keep the copy aligned if capture labels use shorter beat names. */
+const HELD_BY_BEAT: Record<string, HeldCopy> = {
+  source: HELD_BY_INDEX[0], setup: HELD_BY_INDEX[0], calculus: HELD_BY_INDEX[0],
+  mistake: HELD_BY_INDEX[1], tutoring: HELD_BY_INDEX[1], attempts: HELD_BY_INDEX[1],
+  graph: HELD_BY_INDEX[2], representation: HELD_BY_INDEX[2],
+  parity: HELD_BY_INDEX[3], agent: HELD_BY_INDEX[3], action: HELD_BY_INDEX[3],
+  geometry: HELD_BY_INDEX[4], construction: HELD_BY_INDEX[4],
+  matrix: HELD_BY_INDEX[5], transformer: HELD_BY_INDEX[5],
+  close: HELD_BY_INDEX[6], closing: HELD_BY_INDEX[6],
 }
 
-/** Held on screen for the beat. Deliberately not a transcript: the voice says the rest. */
-const HELD: Record<string, { marker: string; pull: string }> = {
-  setup: { marker: 'The first line that stopped being true', pull: 'The page marks the first broken line, and nothing after it.' },
-  hold: { marker: 'The verdict is computed, not guessed', pull: 'A computer algebra system wrote that verdict.' },
-  console: { marker: 'The surface an agent sees', pull: '18 tools. 9 read the page. 9 change it.' },
-  mathematics: { marker: 'An agent can check itself first', pull: 'Differentiate, evaluate, compare, against the page engine.' },
-  repair: { marker: 'Agents may write', pull: 'Attribution replaces the refusal.' },
-  receipt: { marker: 'The page reports who did what', pull: 'It also states what it does not prove.' },
-  probe: { marker: 'What this browser actually does', pull: 'Seven features, executed here, just now.' },
-}
+export const SEGMENTS = SPOKEN.segments.map((segment, index) => ({
+  ...segment,
+  ...(HELD_BY_BEAT[segment.beat] ?? HELD_BY_INDEX[index] ?? HELD_BY_INDEX[HELD_BY_INDEX.length - 1]),
+  focus: RECORDED.find((beat) => beat.beat === segment.beat)?.focus ?? RECORDED[index]?.focus ?? null,
+  index,
+}))
 
-export const SEGMENTS = SPOKEN.segments.map((s, i) => ({ ...s, ...HELD[s.beat], index: i }))
-const LAST = SEGMENTS[SEGMENTS.length - 1]
-const BODY_SECONDS = LAST.startSeconds + LAST.durationSeconds
-export const DURATION_IN_FRAMES = Math.round((TITLE_SECONDS + BODY_SECONDS + END_SECONDS) * FPS)
+const lastSegment = SEGMENTS[SEGMENTS.length - 1]
+const BODY_SECONDS = lastSegment ? lastSegment.startSeconds + lastSegment.durationSeconds : 155
+export const DURATION_IN_FRAMES = Math.round(BODY_SECONDS * FPS)
 
-const INK = '#000000'
-const PAPER = '#ffffff'
-const RULE = '#e0e0e0'
-const SOFT = '#444444'
-const MUTED = '#6f6f6f'
+const INK = '#191816'
+const IVORY = '#f5f1e8'
+const PURPLE = '#7c5cff'
 const SERIF = "'STIXTwo', Georgia, 'Times New Roman', serif"
 const MONO = "'FiraCodeVideo', ui-monospace, Consolas, monospace"
 const OUT = Easing.bezier(0.23, 1, 0.32, 1)
+const CARD: CSSProperties = {
+  background: 'rgba(245,241,232,0.94)',
+  border: `1px solid ${INK}`,
+  boxShadow: '8px 8px 0 rgba(25,24,22,0.18)',
+}
 
 const frames = (seconds: number) => Math.round(seconds * FPS)
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
-const mix = (a: number, b: number, t: number) => a + (b - a) * t
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+const mix = (a: number, b: number, amount: number) => a + (b - a) * amount
 
-/** Where the camera sits for a beat: a zoom, and a point in CSS coordinates to centre. */
 type Shot = { zoom: number; cx: number; cy: number }
 
-/**
- * Frames the measured region.
- *
- * The page is two columns across its full width, and that constrains the camera far more
- * than it first appears. Filling the frame with one region necessarily slices both
- * columns: at a 1.5 ceiling the console beat showed the right half of the working beside
- * the left half of the console, and a still at 1.22 was still cutting expressions in half
- * at the left edge. Neither reads as a product.
- *
- * So the rule is narrow, and it is about width:
- *
- *   - A region that already spans most of the page (the working, the receipt) can take a
- *     gentle push and a horizontal move, because moving toward something that wide cannot
- *     cut much off the other side.
- *   - A narrow region (the console is 256 of 1280 CSS pixels) gets no zoom and no
- *     horizontal move at all. The whole page stays on screen and the reticle points.
- *
- * Vertical movement is always allowed: the page is 800 CSS pixels tall in a 720-pixel
- * window, so following a region down the page costs nothing.
- *
- * Directing attention is the reticle's job. The camera's job is to stay out of the way
- * while keeping the interface legible.
- */
-const WIDE_ENOUGH = 0.55
-const MAX_ZOOM_WIDE = 1.15
-
+/** A narrow focus stays at a full-page shot. Broad regions get only a gentle push. */
 function shotFor(focus: Focus): Shot {
   if (!focus) return { zoom: 1, cx: SRC_W / 2, cy: SRC_H / 2 }
   const base = FRAME_W / SRC_W
-  const wide = focus.width >= SRC_W * WIDE_ENOUGH
-  const zoom = wide ? clamp((FRAME_W * 0.78) / (focus.width * base), 1, MAX_ZOOM_WIDE) : 1
+  const wide = focus.width >= SRC_W * 0.52
+  const zoom = wide ? clamp((FRAME_W * 0.82) / (focus.width * base), 1, 1.08) : 1
   const cx = wide ? focus.x + focus.width / 2 : SRC_W / 2
   const visibleCss = FRAME_H / (base * zoom)
-  // A region taller than the window is anchored near its top, where its heading is.
   const cy = focus.height > visibleCss ? focus.y + visibleCss / 2 : focus.y + focus.height / 2
   return { zoom, cx, cy }
 }
 
-const SHOTS = RECORDED.map((b) => ({ beat: b.beat, at: b.startSeconds, shot: shotFor(b.focus), focus: b.focus }))
+const SHOTS = SEGMENTS.map((segment) => ({
+  at: segment.startSeconds,
+  shot: shotFor(segment.focus),
+  focus: segment.focus,
+}))
 
-/** Places the camera so the frame is always covered by picture, never by background. */
 function place({ zoom, cx, cy }: Shot) {
   const scale = (FRAME_W / SRC_W) * zoom
   return {
@@ -139,77 +116,47 @@ function place({ zoom, cx, cy }: Shot) {
   }
 }
 
-/** The current camera, springing between shots rather than cutting between them. */
 function useCamera() {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const seconds = frame / FPS
-
-  let index = 0
-  for (let i = 0; i < SHOTS.length; i += 1) if (seconds >= SHOTS[i].at) index = i
-  const from = SHOTS[Math.max(0, index - 1)].shot
-  const to = SHOTS[index].shot
-  const since = frame - frames(SHOTS[index].at)
-  // 1.4s to travel: long enough to read as a move, short enough to arrive before the
-  // narration reaches the thing it is moving to.
-  const t = index === 0 ? 1 : spring({ frame: since, fps, config: { damping: 200, mass: 1.1 }, durationInFrames: 42 })
-
+  const index = SHOTS.reduce((current, shot, candidate) => seconds >= shot.at ? candidate : current, 0)
+  const from = SHOTS[Math.max(0, index - 1)]?.shot ?? { zoom: 1, cx: SRC_W / 2, cy: SRC_H / 2 }
+  const to = SHOTS[index]?.shot ?? from
+  const since = frame - frames(SHOTS[index]?.at ?? 0)
+  const travel = index === 0 ? 1 : spring({ frame: since, fps, config: { damping: 200, mass: 1.1 }, durationInFrames: 42 })
   const live: Shot = {
-    zoom: mix(from.zoom, to.zoom, t),
-    cx: mix(from.cx, to.cx, t),
-    cy: mix(from.cy, to.cy, t),
+    zoom: mix(from.zoom, to.zoom, travel),
+    cx: mix(from.cx, to.cx, travel),
+    cy: mix(from.cy, to.cy, travel),
   }
-  // A slow push within the shot, so a page that does not animate is never a still image.
-  const drift = interpolate(since, [0, 40 * FPS], [0, 0.022], { extrapolateRight: 'clamp' })
+  const drift = interpolate(since, [0, 40 * FPS], [0, 0.018], { extrapolateRight: 'clamp' })
   return { ...place({ ...live, zoom: live.zoom + drift }), index, since }
 }
 
-/** The product, full bleed. Nothing covers it except the two text cards. */
 function Stage() {
   const { scale, left, top } = useCamera()
   return (
-    <AbsoluteFill style={{ overflow: 'hidden', background: PAPER }}>
+    <AbsoluteFill style={{ overflow: 'hidden', background: INK }}>
       <OffthreadVideo
         src={staticFile('screen.mp4')}
-        style={{ position: 'absolute', width: SRC_W * scale, height: SRC_H * scale, left, top }}
+        style={{ position: 'absolute', display: 'block', width: SRC_W * scale, height: SRC_H * scale, left, top }}
       />
     </AbsoluteFill>
   )
 }
 
-/**
- * A rule drawn around the region the beat is about, for the moment the camera arrives.
- *
- * The coordinates are the ones measured during capture, so it lands on the real element
- * rather than on a guess. It fades once it has done its work. Leaving it up would turn
- * the film into a diagram.
- */
 function Reticle() {
   const { scale, left, top, index, since } = useCamera()
   const { fps } = useVideoConfig()
-  const focus = SHOTS[index].focus
+  const focus = SHOTS[index]?.focus
   if (!focus) return null
-  const draw = spring({ frame: since - 10, fps, config: { damping: 200 }, durationInFrames: 20 })
-  const fade = interpolate(since, [10, 22, 70, 96], [0, 1, 1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: OUT,
-  })
-  const pad = 12
+  const draw = spring({ frame: since - 8, fps, config: { damping: 200 }, durationInFrames: 20 })
+  const fade = interpolate(since, [8, 20, 64, 90], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: OUT })
+  const pad = 10
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      <div
-        style={{
-          position: 'absolute',
-          left: left + focus.x * scale - pad,
-          top: top + focus.y * scale - pad,
-          width: focus.width * scale + pad * 2,
-          height: focus.height * scale + pad * 2,
-          border: `2px solid ${INK}`,
-          opacity: fade * 0.45,
-          transform: `scale(${mix(1.012, 1, draw)})`,
-        }}
-      />
+      <div style={{ position: 'absolute', left: left + focus.x * scale - pad, top: top + focus.y * scale - pad, width: focus.width * scale + pad * 2, height: focus.height * scale + pad * 2, border: `2px solid ${PURPLE}`, opacity: fade * 0.55, transform: `scale(${mix(1.012, 1, draw)})` }} />
     </AbsoluteFill>
   )
 }
@@ -218,140 +165,48 @@ function useEntrance(total: number, delay = 0) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const enter = spring({ frame: frame - delay, fps, config: { damping: 200, mass: 0.6 }, durationInFrames: 18 })
-  const exit = interpolate(frame, [total - 9, total], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: OUT,
-  })
-  return {
-    opacity: enter * exit,
-    transform: `translateY(${interpolate(enter, [0, 1], [8, 0])}px) scale(${interpolate(enter, [0, 1], [0.985, 1])})`,
-  }
+  const exit = interpolate(frame, [total - 9, total], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: OUT })
+  return { opacity: enter * exit, transform: `translateY(${interpolate(enter, [0, 1], [8, 0])}px) scale(${interpolate(enter, [0, 1], [0.985, 1])})` }
 }
 
-const CARD: CSSProperties = {
-  background: 'rgba(255,255,255,0.94)',
-  border: `1px solid ${RULE}`,
-  boxShadow: '0 10px 34px rgba(0,0,0,0.10)',
-}
-
-/** Beat number and name, over the picture rather than in a band beside it. */
 function Marker({ segment, total }: { segment: (typeof SEGMENTS)[number]; total: number }) {
-  const number = useEntrance(total, 0)
-  const name = useEntrance(total, 2)
+  const entrance = useEntrance(total)
   return (
-    <AbsoluteFill style={{ padding: 44, alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-      <div style={{ ...CARD, display: 'flex', alignItems: 'baseline', gap: 20, padding: '16px 26px' }}>
-        <span
-          style={{
-            ...number,
-            fontFamily: MONO,
-            fontSize: 18,
-            letterSpacing: '0.06em',
-            color: MUTED,
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {String(segment.index + 1).padStart(2, '0')} / {String(SEGMENTS.length).padStart(2, '0')}
-        </span>
-        <span style={{ ...name, fontFamily: SERIF, fontSize: 34, fontWeight: 600, letterSpacing: '-0.012em', color: INK }}>
-          {segment.marker}
-        </span>
+    <AbsoluteFill style={{ padding: 40, alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+      <div style={{ ...CARD, ...entrance, display: 'flex', alignItems: 'baseline', gap: 18, padding: '13px 20px' }}>
+        <span style={{ fontFamily: MONO, fontSize: 15, letterSpacing: '0.08em', color: PURPLE, fontVariantNumeric: 'tabular-nums' }}>{String(segment.index + 1).padStart(2, '0')} / {String(SEGMENTS.length).padStart(2, '0')}</span>
+        <span style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, letterSpacing: '-0.012em', color: INK }}>{segment.marker}</span>
       </div>
     </AbsoluteFill>
   )
 }
 
-/** One line, held, bottom left. */
-function Held({ segment, total }: { segment: (typeof SEGMENTS)[number]; total: number }) {
+function Caption({ segment, total }: { segment: (typeof SEGMENTS)[number]; total: number }) {
+  const entrance = useEntrance(total, 4)
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const line = useEntrance(total, 4)
   const grow = spring({ frame: frame - 4, fps, config: { damping: 200, mass: 0.5 }, durationInFrames: 20 })
   return (
-    <AbsoluteFill style={{ padding: 44, paddingBottom: 64, alignItems: 'flex-start', justifyContent: 'flex-end' }}>
-      <div style={{ ...CARD, display: 'flex', alignItems: 'stretch', gap: 18, padding: '16px 26px 16px 0' }}>
-        <div style={{ width: 3, background: INK, transform: `scaleY(${grow})`, transformOrigin: 'top', opacity: line.opacity }} />
-        <span style={{ ...line, fontFamily: SERIF, fontSize: 32, lineHeight: 1.35, color: SOFT }}>{segment.pull}</span>
+    <AbsoluteFill style={{ padding: 40, paddingBottom: 54, alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+      <div style={{ ...CARD, ...entrance, display: 'flex', alignItems: 'stretch', gap: 16, padding: '13px 22px 13px 0', maxWidth: 1320 }}>
+        <div style={{ width: 4, background: PURPLE, transform: `scaleY(${grow})`, transformOrigin: 'top' }} />
+        <span style={{ fontFamily: SERIF, fontSize: 28, lineHeight: 1.3, color: INK }}>{segment.caption}</span>
       </div>
     </AbsoluteFill>
   )
 }
 
-/** Seven segments pinned to the frame edge. The only continuous motion in the film. */
 function Progress({ elapsed }: { elapsed: number }) {
-  const gap = 6
+  const gap = 5
   const each = (FRAME_W - gap * (SEGMENTS.length - 1)) / SEGMENTS.length
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end' }}>
-      <div style={{ display: 'flex', gap, height: 4 }}>
+    <AbsoluteFill style={{ justifyContent: 'flex-end', pointerEvents: 'none' }}>
+      <div style={{ display: 'flex', gap, height: 3 }}>
         {SEGMENTS.map((segment) => {
           const fill = clamp((elapsed - segment.startSeconds) / segment.durationSeconds, 0, 1)
-          return (
-            <div key={segment.beat} style={{ width: each, height: 4, background: 'rgba(0,0,0,0.16)', position: 'relative' }}>
-              <div style={{ position: 'absolute', inset: 0, width: `${fill * 100}%`, background: INK }} />
-            </div>
-          )
+          return <div key={`${segment.beat}-${segment.index}`} style={{ width: each, height: 3, background: 'rgba(25,24,22,0.2)', position: 'relative' }}><div style={{ position: 'absolute', inset: 0, width: `${fill * 100}%`, background: PURPLE }} /></div>
         })}
       </div>
-    </AbsoluteFill>
-  )
-}
-
-function Rise({ children, at = 0 }: { children: ReactNode; at?: number }) {
-  const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
-  const s = spring({ frame: frame - at, fps, config: { damping: 200 }, durationInFrames: 22 })
-  return <div style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [10, 0])}px)` }}>{children}</div>
-}
-
-function TitleCard() {
-  const frame = useCurrentFrame()
-  const total = frames(TITLE_SECONDS)
-  const out = interpolate(frame, [total - 12, total], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: OUT })
-  return (
-    <AbsoluteFill style={{ background: PAPER, paddingLeft: 200, paddingRight: 200, justifyContent: 'center', opacity: out }}>
-      <Rise>
-        <div style={{ fontFamily: MONO, fontSize: 19, letterSpacing: '0.06em', color: MUTED, marginBottom: 24 }}>MATHOS</div>
-      </Rise>
-      <Rise at={5}>
-        <div style={{ fontFamily: SERIF, fontSize: 92, fontWeight: 600, letterSpacing: '-0.024em', lineHeight: 1.04, color: INK }}>
-          Second Try
-        </div>
-      </Rise>
-      <Rise at={11}>
-        <div style={{ fontFamily: SERIF, fontSize: 33, lineHeight: 1.42, color: SOFT, marginTop: 24, maxWidth: 1120 }}>
-          A calculus scratchpad. The page checks the working and marks the first line that
-          stopped being true. Eighteen WebMCP tools let an agent read it, verify against the
-          same engine, and write.
-        </div>
-      </Rise>
-      <Rise at={11}>
-        <div style={{ height: 3, width: 92, background: INK, marginTop: 32 }} />
-      </Rise>
-    </AbsoluteFill>
-  )
-}
-
-function EndCard() {
-  return (
-    <AbsoluteFill style={{ background: PAPER, paddingLeft: 200, paddingRight: 200, justifyContent: 'center' }}>
-      <Rise>
-        <div style={{ fontFamily: SERIF, fontSize: 50, fontWeight: 600, letterSpacing: '-0.018em', color: INK }}>
-          Everything in this film was executed, not staged.
-        </div>
-      </Rise>
-      <Rise at={6}>
-        <div style={{ marginTop: 30, fontFamily: MONO, fontSize: 23, lineHeight: 1.75, color: SOFT }}>
-          <div>github.com/fireheartjerry/mathos-webmcp</div>
-          <div>mathos-second-try.fireheartjerry.chatgpt.site</div>
-        </div>
-      </Rise>
-      <Rise at={6}>
-        <div style={{ marginTop: 32, fontFamily: SERIF, fontSize: 21, color: MUTED }}>
-          MIT licensed. Built for the WebMCP Challenge.
-        </div>
-      </Rise>
     </AbsoluteFill>
   )
 }
@@ -362,33 +217,26 @@ function Body() {
     <AbsoluteFill>
       <Stage />
       <Reticle />
-      {SEGMENTS.map((segment) => {
-        const total = frames(segment.durationSeconds)
-        return (
-          <Sequence key={segment.beat} from={frames(segment.startSeconds)} durationInFrames={total} name={segment.beat}>
-            <Marker segment={segment} total={total} />
-            <Held segment={segment} total={total} />
-            <Audio src={staticFile(`seg${String(segment.index).padStart(2, '0')}.wav`)} />
-          </Sequence>
-        )
-      })}
+      {SEGMENTS.map((segment) => (
+        <Sequence key={`${segment.beat}-${segment.index}`} from={frames(segment.startSeconds)} durationInFrames={frames(segment.durationSeconds)} name={segment.beat}>
+          <Marker segment={segment} total={frames(segment.durationSeconds)} />
+          <Caption segment={segment} total={frames(segment.durationSeconds)} />
+          <Audio src={staticFile(`seg${String(segment.index).padStart(2, '0')}.wav`)} />
+        </Sequence>
+      ))}
       <Progress elapsed={frame / FPS} />
     </AbsoluteFill>
   )
 }
 
 export function Demo() {
-  const bodyStart = frames(TITLE_SECONDS)
-  const bodyFrames = frames(BODY_SECONDS)
   return (
-    <AbsoluteFill style={{ backgroundColor: PAPER }}>
+    <AbsoluteFill style={{ backgroundColor: INK }}>
       <style>{`
         @font-face { font-family: 'STIXTwo'; src: url('${staticFile('stix-two-text-var.woff2')}') format('woff2'); font-weight: 400 700; }
         @font-face { font-family: 'FiraCodeVideo'; src: url('${staticFile('fira-code-var.woff2')}') format('woff2'); font-weight: 300 700; }
       `}</style>
-      <Sequence durationInFrames={bodyStart} name="title"><TitleCard /></Sequence>
-      <Sequence from={bodyStart} durationInFrames={bodyFrames} name="body"><Body /></Sequence>
-      <Sequence from={bodyStart + bodyFrames} name="end"><EndCard /></Sequence>
+      <Body />
     </AbsoluteFill>
   )
 }

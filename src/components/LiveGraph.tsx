@@ -315,8 +315,18 @@ export default function LiveGraph({
   })
   const width = size.width
   const height = size.height
-  const plot = { left: 44, top: 8, right: width - 12, bottom: height - 20 }
+  // Left inset grows with the tick-label width so wide y-values (extra digits,
+  // a leading minus) never clip against the SVG's own edge.
+  const plot = {
+    left: Math.max(48, monoWidth(short(yMax, 2), 11), monoWidth(short(yMin, 2), 11)) + 10,
+    top: 8,
+    right: width - 16,
+    bottom: height - 24,
+  }
   const plotBox: LabelBox = { x: plot.left, y: plot.top, width: Math.max(0, plot.right - plot.left), height: Math.max(0, plot.bottom - plot.top) }
+  // Minimum x-gap (in domain units) that keeps the two shaded-area drag grips
+  // — each a 14px-wide invisible rect — from overlapping at the live scale.
+  const shadeMinGap = Math.max(1e-3, 16 / Math.max(1, (plot.right - plot.left) / Math.max(1e-6, xMax - xMin)))
   const mapX = (x: number) => plot.left + ((x - xMin) / (xMax - xMin)) * (plot.right - plot.left)
   const mapY = (y: number) => plot.bottom - ((y - yMin) / (yMax - yMin)) * (plot.bottom - plot.top)
   const unmapX = (px: number) => xMin + ((px - plot.left) / Math.max(1, plot.right - plot.left)) * (xMax - xMin)
@@ -360,7 +370,7 @@ export default function LiveGraph({
       const current = shadeDraft ?? object.shadeIntegral
       if (!current) return
       const x = Number(clamp(unmapX(local.x), xMin, xMax).toFixed(3))
-      const next: [number, number] = drag.edge === 0 ? [Math.min(x, current[1] - 1e-3), current[1]] : [current[0], Math.max(x, current[0] + 1e-3)]
+      const next: [number, number] = drag.edge === 0 ? [Math.min(x, current[1] - shadeMinGap), current[1]] : [current[0], Math.max(x, current[0] + shadeMinGap)]
       setShadeDraft(next)
     } else {
       const rect = plotRef.current?.getBoundingClientRect()
@@ -530,7 +540,7 @@ export default function LiveGraph({
   const plate: LabelBox = { x: plot.right - labelWidth, y: plot.top + 2, width: labelWidth, height: labels.length * 16 + 6 }
   const legendRows = curves.length > 1 ? curves : []
   const legendWidth = Math.min(plotBox.width, Math.max(...legendRows.map((_, index) => monoWidth(CURVE_INDEX[index] ?? `f${index + 1}`, 11)), 0) + 30)
-  const legendHeight = legendRows.length * 14 + 6
+  const legendHeight = legendRows.length * 16 + 6
   const legend = legendRows.length
     ? placeLabel([
       { x: plot.left + 4, y: plot.top + 2, width: legendWidth, height: legendHeight },
@@ -648,8 +658,8 @@ export default function LiveGraph({
                 <rect className="graph-label-plate" x={legend.x} y={legend.y} width={legend.width} height={legend.height} rx="2" />
                 {legendRows.map((curve, index) => (
                   <g key={`legend-${index}`}>
-                    <line x1={legend.x + 5} x2={legend.x + 19} y1={legend.y + 9 + index * 14} y2={legend.y + 9 + index * 14} style={{ stroke: curve.colour }} />
-                    <text className="graph-legend-label" x={legend.x + 24} y={legend.y + 12 + index * 14}>{CURVE_INDEX[index] ?? `f${index + 1}`}</text>
+                    <line x1={legend.x + 5} x2={legend.x + 19} y1={legend.y + 9 + index * 16} y2={legend.y + 9 + index * 16} style={{ stroke: curve.colour }} />
+                    <text className="graph-legend-label" x={legend.x + 24} y={legend.y + 12 + index * 16}>{CURVE_INDEX[index] ?? `f${index + 1}`}</text>
                   </g>
                 ))}
               </g>

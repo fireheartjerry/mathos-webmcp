@@ -27,6 +27,8 @@ type UseProjectRouteOptions = {
   activeProjectId: string | null
   /** True while the project gallery is showing, which maps to `/`. */
   galleryOpen: boolean
+  /** While true the URL is left alone (a deep link has not been resolved yet). */
+  paused?: boolean
 }
 
 /**
@@ -35,9 +37,11 @@ type UseProjectRouteOptions = {
  * query strings (for example `?film=1`) and hashes are preserved, and no
  * navigation or re-render is triggered.
  */
-export function useProjectRoute({ activeProjectId, galleryOpen }: UseProjectRouteOptions): void {
+export function useProjectRoute({ activeProjectId, galleryOpen, paused }: UseProjectRouteOptions): void {
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // A deep link is still being resolved; rewriting now would discard it.
+    if (paused) return
     const projectId = galleryOpen || activeProjectId === null || activeProjectId === 'main' ? null : activeProjectId
     const nextPath = projectPathFor(projectId)
     const { pathname, search, hash } = window.location
@@ -48,5 +52,5 @@ export function useProjectRoute({ activeProjectId, galleryOpen }: UseProjectRout
       // Sandboxed iframes and opaque origins can refuse history writes; the
       // canvas still works without a synced URL.
     }
-  }, [activeProjectId, galleryOpen])
+  }, [activeProjectId, galleryOpen, paused])
 }

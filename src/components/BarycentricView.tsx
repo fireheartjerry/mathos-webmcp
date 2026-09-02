@@ -40,7 +40,7 @@ const humanPut = (summary: string, object: BarycentricObject): WorldAction => ({
 
 /** Card anatomy in pixels; mirrored by barycentric.css so the SVG stays 1:1 with its viewBox. */
 const HEADER_HEIGHT = 44
-const FOOTER_HEIGHT = 32
+const FOOTER_HEIGHT = 56
 const SIDE_WIDTH = 214
 const POINT_TWEEN_MS = 240
 const PULSE_MS = 700
@@ -138,10 +138,27 @@ export default function BarycentricView({ object, world, run }: Props) {
   const labelT = revealStage(p, 0.75, 1)
   const sideT = revealStage(p, 0, 0.2)
 
-  const clampVertex = (point: Point): Point => ({
-    x: Math.max(12, Math.min(canvasWidth - 12, point.x)),
-    y: Math.max(16, Math.min(canvasHeight - 12, point.y)),
-  })
+  const MIN_VERTEX_SEPARATION = 20
+  const clampVertex = (point: Point, index?: VertexIndex): Point => {
+    let x = Math.max(12, Math.min(canvasWidth - 12, point.x))
+    let y = Math.max(16, Math.min(canvasHeight - 12, point.y))
+    if (index === undefined) return { x, y }
+    for (const otherIndex of [0, 1, 2] as VertexIndex[]) {
+      if (otherIndex === index) continue
+      const other = vertices[otherIndex]
+      const dx = x - other.x
+      const dy = y - other.y
+      const dist = Math.hypot(dx, dy)
+      if (dist === 0) {
+        x = other.x + MIN_VERTEX_SEPARATION
+      } else if (dist < MIN_VERTEX_SEPARATION) {
+        const scale = MIN_VERTEX_SEPARATION / dist
+        x = other.x + dx * scale
+        y = other.y + dy * scale
+      }
+    }
+    return { x, y }
+  }
 
   const localPoint = (event: ReactPointerEvent<SVGElement>): Point => {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -176,7 +193,7 @@ export default function BarycentricView({ object, world, run }: Props) {
     if (active.kind === 'point') setPreviewPoint(clampPointToTriangle(point, vertices))
     else setPreviewVertices((current) => {
       const next = [...(current ?? vertices)] as Triangle
-      next[active.index] = clampVertex(point)
+      next[active.index] = clampVertex(point, active.index)
       return next
     })
   }
@@ -193,7 +210,7 @@ export default function BarycentricView({ object, world, run }: Props) {
       commit(`Moved P to ${formatWeightTriple(weights)}`, next)
     } else {
       const nextVertices = [...(previewVertices ?? vertices)] as Triangle
-      nextVertices[active.index] = clampVertex(point)
+      nextVertices[active.index] = clampVertex(point, active.index)
       const next = { ...object, vertices: nextVertices }
       snapKeyRef.current = stateKey(next)
       commit(`Moved vertex ${object.labels[active.index]}; P follows the same weights`, next)
@@ -216,7 +233,7 @@ export default function BarycentricView({ object, world, run }: Props) {
   const setVertexCoordinate = (index: VertexIndex, axis: 'x' | 'y', value: number) => {
     if (!Number.isFinite(value) || committedVertices[index][axis] === value) return
     const nextVertices = [...committedVertices] as Triangle
-    nextVertices[index] = clampVertex({ ...committedVertices[index], [axis]: value })
+    nextVertices[index] = clampVertex({ ...committedVertices[index], [axis]: value }, index)
     commit(`Set vertex ${object.labels[index]} to (${nextVertices[index].x}, ${nextVertices[index].y})`, { ...object, vertices: nextVertices })
   }
   const renameVertex = (index: VertexIndex, label: string) => {
@@ -294,15 +311,19 @@ export default function BarycentricView({ object, world, run }: Props) {
                   className="barycentric-agent-pulse"
                   cx={pulsePosition.x}
                   cy={pulsePosition.y}
-                  r={14}
+                  r={8}
                   onAnimationEnd={() => setPulse(null)}
                 />
               )}
               {vertices.map((vertex, index) => {
                 const t = revealStage(p, index * 0.1, index * 0.1 + 0.15)
                 if (t <= 0) return null
-                const labelX = vertex.x + (index === 1 ? 11 : index === 0 ? -20 : -5)
-                const labelY = vertex.y + (index === 2 ? -12 : 20)
+                const rawLabelX = vertex.x + (index === 1 ? 11 : index === 0 ? -20 : -5)
+                const rawLabelY = vertex.y + (index === 2 ? -12 : 20)
+                // Keep the label (and its 84x26 rename foreignObject) inside the clip rect
+                // even when the vertex sits at clampVertex's own margin.
+                const labelX = Math.min(Math.max(rawLabelX, 6), canvasWidth - 78)
+                const labelY = Math.min(Math.max(rawLabelY, 15), canvasHeight - 11)
                 return (
                   <g key={`vertex-${index}`}>
                     <circle
@@ -342,6 +363,7 @@ export default function BarycentricView({ object, world, run }: Props) {
                 cx={livePoint.x}
                 cy={livePoint.y}
                 r={8 * pointT}
+                style={vertices.some((vertex) => Math.hypot(vertex.x - livePoint.x, vertex.y - livePoint.y) < 4) ? { pointerEvents: 'none' } : undefined}
                 onPointerDown={beginPointDrag}
                 aria-label="Drag barycentric point P"
               />}

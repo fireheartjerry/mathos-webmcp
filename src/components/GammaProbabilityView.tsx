@@ -148,12 +148,15 @@ export default function GammaProbabilityView({ object, run }: Props) {
   })
   const width = size.width
   const plotHeight = size.height
-  const plot = { left: 46, top: 10, right: width - 18, bottom: plotHeight - 20 }
+  const plot = { left: 48, top: 8, right: width - 16, bottom: plotHeight - 24 }
   const plotBox: LabelBox = { x: plot.left, y: plot.top, width: Math.max(0, plot.right - plot.left), height: Math.max(0, plot.bottom - plot.top) }
   const [xMin, rawXMax] = object.xDomain
   const xMax = Math.max(xMin + 1, rawXMax)
   const [yMin, rawYMax] = object.yDomain
   const yMax = Math.max(yMin + 0.01, rawYMax)
+  // Minimum gap (in x units) kept between the two bin-edge drag grips — each a
+  // 14px-wide invisible rect — so they never overlap at the live px scale.
+  const edgeMinGap = Math.max(EDGE_GAP, 16 / Math.max(1, (plot.right - plot.left) / Math.max(1e-6, xMax - xMin)))
   const committedShape = clamp(object.parameters?.a ?? 4.5, SHAPE_RANGE[0], SHAPE_RANGE[1])
   const committedBound = clamp(object.parameters?.b ?? object.shadeIntegral?.[1] ?? committedShape + 1, xMin, xMax)
   const shape = clamp(draft?.a ?? committedShape, SHAPE_RANGE[0], SHAPE_RANGE[1])
@@ -255,8 +258,8 @@ export default function GammaProbabilityView({ object, run }: Props) {
     const current = edgeDraft ?? [committedEdges[1], committedEdges[2]]
     const x = Number(xFromPointer(event).toFixed(2))
     return index === 1
-      ? [clamp(x, xMin + EDGE_GAP, current[1] - EDGE_GAP), current[1]]
-      : [current[0], clamp(x, current[0] + EDGE_GAP, xMax - EDGE_GAP)]
+      ? [clamp(x, xMin + edgeMinGap, current[1] - edgeMinGap), current[1]]
+      : [current[0], clamp(x, current[0] + edgeMinGap, xMax - edgeMinGap)]
   }
   const movePlot = (event: ReactPointerEvent<SVGSVGElement>) => {
     const drag = dragRef.current
@@ -307,6 +310,8 @@ export default function GammaProbabilityView({ object, run }: Props) {
   const cdfText = `P(X ≤ ${short(bound)}) = ${fmt(shownCdf * finalT)}`
   const cdfWidth = monoWidth(cdfText, 13)
   const boundPx = mapX(drawnBound)
+  const boundHandleY = mapY(gammaDensity(drawnBound, drawnShape))
+  const boundHandleBox: LabelBox = { x: boundPx - 8, y: boundHandleY - 8, width: 16, height: 16 }
   const cdfCandidates: LabelBox[] = [
     { x: boundPx + 10, y: plot.top + 22, width: cdfWidth, height: 14 },
     { x: boundPx - 10 - cdfWidth, y: plot.top + 22, width: cdfWidth, height: 14 },
@@ -315,7 +320,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
     { x: boundPx + 10, y: plot.top + 58, width: cdfWidth, height: 14 },
     { x: boundPx - 10 - cdfWidth, y: plot.top + 58, width: cdfWidth, height: 14 },
   ]
-  const cdfBox = placeLabel(cdfCandidates, binLabels.map((label) => label.box), plotBox)
+  const cdfBox = placeLabel(cdfCandidates, [...binLabels.map((label) => label.box), boundHandleBox], plotBox)
   const modeText = `mode a − 1 = ${short(mode)}`
   const modeWidth = monoWidth(modeText, 11)
   const modePx = mapX(drawnMode)
@@ -341,7 +346,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
       <header className="gamma-header reveal-fade" style={{ opacity: chromeT }}>
         <div className="gamma-header-title">
           <span className="graph-widget-kicker gamma-kicker-text">normalised gamma density · total area 1</span>
-          <h3>Gamma density <span className="gamma-title-meta">a = {short(shape)} · b = {short(bound)}</span></h3>
+          <h3><span className="gamma-title-text">Gamma density</span><span className="gamma-title-meta">a = {short(shape)} · b = {short(bound)}</span></h3>
         </div>
         <div className="gamma-header-equation">
           <Tex latex={DENSITY_LATEX} ariaLabel="g sub a of x equals x to the a minus one times e to the minus x, over Gamma of a" />
@@ -395,7 +400,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
                 className={`gamma-bound-handle${flashes.b ? ' is-flash' : ''}`}
                 data-demo-target="gamma-bound-handle"
                 cx={boundPx}
-                cy={mapY(gammaDensity(drawnBound, drawnShape))}
+                cy={boundHandleY}
                 r="8"
                 onPointerDown={(event) => beginDrag(event, { kind: 'bound', pointerId: event.pointerId })}
                 aria-label="Drag CDF bound"

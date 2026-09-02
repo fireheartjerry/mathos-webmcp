@@ -271,6 +271,8 @@ export default function AttentionView({ object, world, run }: Props) {
             <EditableNumber
               key={`${rowIndex}-${columnIndex}`}
               value={value}
+              min={-3}
+              max={3}
               label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
               className={isHero ? 'is-hero' : undefined}
               demoTarget={isHero ? 'attention-matrix-cell' : undefined}
@@ -308,8 +310,11 @@ export default function AttentionView({ object, world, run }: Props) {
             </defs>
             <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
             <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} pathLength={1} style={revealDash(planeT)} />
-            <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 26} y2={12} pathLength={1} style={revealDash(planeT)} />
-            <text className="attention-plane-kicker" x={12} y={16} style={{ opacity: planeT }}>KEYS k = W_K e · QUERY q = W_Q e · DERIVED</text>
+            <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 26} y2={30} pathLength={1} style={revealDash(planeT)} />
+            <text className="attention-plane-kicker" x={12} y={15} style={{ opacity: planeT }}>
+              <tspan x={12} dy="0">KEYS k = W_K e</tspan>
+              <tspan x={12} dy="11">QUERY q = W_Q e</tspan>
+            </text>
             {arcs.map((arc, index) => (
               <g key={`arc-${index}`} className={`attention-arc${index === strongest ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
                 <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
@@ -331,19 +336,23 @@ export default function AttentionView({ object, world, run }: Props) {
             })}
             {vectorT > 0 && (() => {
               const tip = grow(toPlane(contextT))
+              // Nudge the label further from its tip when it would land on top of a key label.
+              const crowded = keysT.some((key) => { const kt = grow(toPlane(key)); return Math.hypot(kt.x - tip.x, kt.y - tip.y) < 10 })
               return (
                 <g className="attention-context-vector" data-hero-path="context">
                   <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
-                  <text x={tip.x + 7} y={tip.y + 14} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
+                  <text x={tip.x + 7} y={tip.y + (crowded ? 24 : 14)} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
                 </g>
               )
             })()}
             {vectorT > 0 && (() => {
               const tip = grow(toPlane(queryT))
+              // Same guard for the query label, which can coincide with a key tip (e.g. editing W_Q until q≈k).
+              const crowded = keysT.some((key) => { const kt = grow(toPlane(key)); return Math.hypot(kt.x - tip.x, kt.y - tip.y) < 10 })
               return (
                 <g className="attention-query-vector" data-hero-path="query">
                   <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                  <text x={tip.x + 7} y={tip.y - 8} style={{ opacity: vectorT }}>q = W_Q e{subscript(queryIndex)}</text>
+                  <text x={tip.x + 7} y={tip.y + (crowded ? -20 : -8)} style={{ opacity: vectorT }}>q = W_Q e{subscript(queryIndex)}</text>
                 </g>
               )
             })()}
@@ -376,8 +385,8 @@ export default function AttentionView({ object, world, run }: Props) {
                 <button type="button" role="radio" aria-checked={index === queryIndex} onClick={() => chooseQuery(index)} title={`Make ${tokens[index]} the query`}>
                   <i aria-hidden="true" /><span>e{subscript(index)} · {tokens[index]}</span>
                 </button>
-                <EditableNumber value={embedding[0]} label={`Embedding ${tokens[index]} x`} onCommit={(next) => commitEmbedding(index, 0, next)} />
-                <EditableNumber value={embedding[1]} label={`Embedding ${tokens[index]} y`} onCommit={(next) => commitEmbedding(index, 1, next)} />
+                <EditableNumber value={embedding[0]} min={-3} max={3} label={`Embedding ${tokens[index]} x`} onCommit={(next) => commitEmbedding(index, 0, next)} />
+                <EditableNumber value={embedding[1]} min={-3} max={3} label={`Embedding ${tokens[index]} y`} onCommit={(next) => commitEmbedding(index, 1, next)} />
                 <small>{index === queryIndex && index === targetIndex ? 'query · target' : index === queryIndex ? 'query' : index === targetIndex ? 'target' : ''}</small>
               </div>
             ))}
@@ -467,7 +476,7 @@ export default function AttentionView({ object, world, run }: Props) {
       </div>
 
       <footer className="attention-footnote" style={{ opacity: footerT }}>
-        weights, embeddings, temperature and the query/target choice are yours · everything tagged derived is recomputed on every edit · a tiny transformer, not a frontier model
+        weights, embeddings, temperature and the query/target choice are yours · everything tagged derived is recomputed on every edit
       </footer>
     </section>
   )

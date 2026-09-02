@@ -520,7 +520,7 @@ function TwoByTwoPlane({
 
   const plotWidth = width - SIDE_WIDTH
   const plotHeight = height - TOOLBAR_HEIGHT
-  const box = { left: 8, top: 30, right: plotWidth - 8, bottom: plotHeight - 30 }
+  const box = { left: 8, top: 32, right: plotWidth - 8, bottom: plotHeight - 32 }
   const center = { x: plotWidth / 2, y: (box.top + box.bottom) / 2 }
   const vectors = transformVectors({ ...object, values: shown }, world)
   const basis: [Point, Point] = [{ x: shown[0][0], y: shown[1][0] }, { x: shown[0][1], y: shown[1][1] }]
@@ -535,8 +535,8 @@ function TwoByTwoPlane({
   const resultMarker = `matrix-result-${object.id}`
   /** Keep an SVG text label of roughly `textWidth` px inside the plot rectangle. */
   const clampLabel = (x: number, y: number, textWidth: number) => ({
-    x: Math.min(Math.max(x, box.left + 2), box.right - textWidth - 2),
-    y: Math.min(Math.max(y, box.top + 12), box.bottom - 3),
+    x: Math.min(Math.max(x, box.left + 4), box.right - textWidth - 4),
+    y: Math.min(Math.max(y, box.top + 12), box.bottom - 12),
   })
   const eigen = eigenpairs2x2(shown)
 
@@ -638,7 +638,7 @@ function TwoByTwoPlane({
                 const textWidth = text.length * 6.6
                 // Label near the end of the line that points up-right, tucked inside the plot.
                 const tip = ends[1].y <= ends[0].y ? ends[1] : ends[0]
-                const label = clampLabel(tip.x - (tip.x > center.x ? textWidth + 6 : -6), tip.y + (tip.y < center.y ? 14 : -6), textWidth)
+                const label = clampLabel(tip.x - (tip.x > center.x ? textWidth + 8 : -8), tip.y + (tip.y < center.y ? 16 : -8), textWidth)
                 return (
                   <g key={`eigen-${index}`} className="matrix-eigen" style={{ opacity: keyT }}>
                     <line x1={ends[0].x} y1={ends[0].y} x2={ends[1].x} y2={ends[1].y} />
@@ -649,32 +649,54 @@ function TwoByTwoPlane({
               {vectorT > 0 && vectors.map((vector, index) => {
                 const source = grow(draw(vector.source))
                 const transformed = grow(draw(vector.transformed))
-                const label = clampLabel(transformed.x + 6, transformed.y - 6, 22)
+                const text = `v${index + 1}′`
+                const textWidth = text.length * 6.6
+                const label = clampLabel(transformed.x + 8, transformed.y - 8, textWidth)
                 return <g key={vector.id}>
                   <line className="matrix-source-vector" x1={center.x} y1={center.y} x2={source.x} y2={source.y} markerEnd={`url(#${sourceMarker})`} />
                   <line className="matrix-result-vector" x1={center.x} y1={center.y} x2={transformed.x} y2={transformed.y} markerEnd={`url(#${resultMarker})`} />
-                  <text className="matrix-vector-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>v{index + 1}′</text>
+                  <text className="matrix-vector-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>{text}</text>
                 </g>
               })}
-              {vectorT > 0 && basis.map((point, index) => {
-                const column = index as 0 | 1
-                const at = grow(draw(point))
-                const label = clampLabel(at.x + 8, at.y + 4, 22)
-                return <g key={`basis-${column}`}>
-                  <line className="matrix-basis-vector" x1={center.x} y1={center.y} x2={at.x} y2={at.y} />
-                  <circle
-                    className={`matrix-basis-handle${draggingColumn === column ? ' is-dragging' : ''}`}
-                    data-canvas-handle="true"
-                    role="slider"
-                    aria-label={`Basis vector e${column + 1}: (${formatNumber(values[0][column])}, ${formatNumber(values[1][column])})`}
-                    cx={at.x}
-                    cy={at.y}
-                    r={6}
-                    onPointerDown={(event) => beginDrag(event, column)}
-                  />
-                  <text className="matrix-basis-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>e{column + 1}′</text>
-                </g>
-              })}
+              {vectorT > 0 && (() => {
+                const rawBasisPoints = basis.map((point) => grow(draw(point)))
+                // If the two basis handles land on (or near) the same point, fan them out
+                // perpendicular to their direction from the origin so both stay grabbable.
+                const coincide = Math.hypot(
+                  rawBasisPoints[0].x - rawBasisPoints[1].x,
+                  rawBasisPoints[0].y - rawBasisPoints[1].y,
+                ) < 3
+                return basis.map((point, index) => {
+                  const column = index as 0 | 1
+                  const raw = rawBasisPoints[index]
+                  let at = raw
+                  if (coincide) {
+                    const dx = raw.x - center.x
+                    const dy = raw.y - center.y
+                    const length = Math.hypot(dx, dy) || 1
+                    const perp = { x: -dy / length, y: dx / length }
+                    const side = column === 0 ? -1 : 1
+                    at = { x: raw.x + perp.x * 8 * side, y: raw.y + perp.y * 8 * side }
+                  }
+                  const text = `e${column + 1}′`
+                  const textWidth = text.length * 6.6
+                  const label = clampLabel(at.x + 8, at.y + 4, textWidth)
+                  return <g key={`basis-${column}`}>
+                    <line className="matrix-basis-vector" x1={center.x} y1={center.y} x2={at.x} y2={at.y} />
+                    <circle
+                      className={`matrix-basis-handle${draggingColumn === column ? ' is-dragging' : ''}`}
+                      data-canvas-handle="true"
+                      role="slider"
+                      aria-label={`Basis vector e${column + 1}: (${formatNumber(values[0][column])}, ${formatNumber(values[1][column])})`}
+                      cx={at.x}
+                      cy={at.y}
+                      r={6}
+                      onPointerDown={(event) => beginDrag(event, column)}
+                    />
+                    <text className="matrix-basis-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>{text}</text>
+                  </g>
+                })
+              })()}
             </g>
           </svg>
           <div className="matrix-key" style={{ opacity: keyT }}>

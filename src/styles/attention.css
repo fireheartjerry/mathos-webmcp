@@ -8,16 +8,16 @@
 /* ---- shared -------------------------------------------------------------- */
 .reveal-root.attention-view, .reveal-root.training-view {
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 40px minmax(0, 1fr) auto; gap: 8px;
-  width: 100%; height: 100%; padding: 12px 14px; box-sizing: border-box; overflow: hidden;
+  width: 100%; height: 100%; padding: 12px 16px; box-sizing: border-box; overflow: hidden;
   background: var(--paper); color: var(--graphite); font: 12px/1.3 var(--mono);
 }
 .attention-view .attention-header, .training-view .training-header {
-  grid-column: 1 / -1; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; height: 40px; padding-bottom: 6px; box-sizing: border-box; border-bottom: 1px solid var(--line);
+  grid-column: 1 / -1; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; height: 40px; padding-bottom: 8px; box-sizing: border-box; border-bottom: 1px solid var(--line);
 }
 .attention-view .attention-heading, .training-view .training-heading { min-width: 0; display: grid; gap: 4px; }
 .attention-view .attention-heading h3, .training-view .training-heading h3 { margin: 0; overflow: hidden; font: 500 17px/1.05 var(--serif); letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; }
 .attention-view .math-object-kicker, .training-view .math-object-kicker, .attention-view .attention-kicker, .training-view .training-card-heading > span, .training-view .training-metrics small {
-  display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
 }
 .attention-view .attention-kicker { overflow: hidden; text-overflow: ellipsis; }
 .attention-view .derived-tag, .training-view .derived-tag {
@@ -29,7 +29,7 @@
   font: 500 10.5px/1 var(--mono); letter-spacing: 0.04em; text-transform: lowercase;
 }
 .attention-view .attention-footnote, .training-view .training-footnote {
-  grid-column: 1 / -1; display: block; overflow: hidden; padding-top: 8px; text-align: left; background: transparent; color: var(--muted); border-top: 1px solid var(--line); font: 11px/1.3 var(--mono); white-space: nowrap; text-overflow: ellipsis;
+  grid-column: 1 / -1; display: block; padding-top: 8px; text-align: left; background: transparent; color: var(--muted); border-top: 1px solid var(--line); font: 11px/1.3 var(--mono);
 }
 
 /* Inline numeric fields (matrix cells, embeddings, temperature, learning rate). */
@@ -52,7 +52,7 @@
 }
 
 /* ---- attention: header ---------------------------------------------------- */
-.attention-view .attention-meta { flex: 0 1 auto; min-width: 0; display: grid; justify-items: end; gap: 4px; padding-top: 2px; color: var(--muted); font: 11px/1.2 var(--mono); text-align: right; }
+.attention-view .attention-meta { flex: 0 1 auto; min-width: 0; display: grid; justify-items: end; gap: 4px; color: var(--muted); font: 11px/1.2 var(--mono); text-align: right; }
 .attention-view .attention-meta span, .attention-view .attention-meta b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
 .attention-view .attention-meta b { color: var(--graphite); font-weight: 500; font-variant-numeric: tabular-nums; }
 
@@ -61,7 +61,7 @@
 .attention-view .attention-plane-wrap { min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; gap: 8px; }
 .attention-view .attention-plane { width: 100%; height: 100%; min-height: 0; display: block; }
 .attention-view .attention-side { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 8px; }
-.attention-view .attention-section-heading { display: flex; align-items: center; gap: 6px; min-width: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.attention-view .attention-section-heading { display: flex; align-items: center; gap: 8px; min-width: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .attention-view .attention-section-heading > b { margin-left: auto; color: var(--graphite); font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* plane (svg) */
@@ -85,7 +85,7 @@
 .attention-view .attention-tokens { display: grid; gap: 4px; min-width: 0; }
 .attention-view .attention-token { display: grid; grid-template-columns: 112px 58px 58px minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; padding: 0; border: 0; }
 .attention-view .attention-token > button {
-  display: flex; align-items: center; gap: 6px; min-width: 0; height: 24px; padding: 0 6px; color: var(--graphite); background: transparent; border: 1px solid transparent; border-radius: 4px;
+  display: flex; align-items: center; gap: 4px; min-width: 0; height: 24px; padding: 0 6px; color: var(--graphite); background: transparent; border: 1px solid transparent; border-radius: 4px;
   font: 11px/1 var(--mono); text-align: left; cursor: pointer; transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
 }
 .attention-view .attention-token > button > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -99,7 +99,7 @@
 
 /* matrices */
 .attention-view .attention-matrices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0; background: transparent; border: 0; }
-.attention-view .attention-matrix { min-width: 0; display: block; margin: 0; padding: 4px 6px 6px; border: 1px solid var(--line); border-radius: 6px; }
+.attention-view .attention-matrix { min-width: 0; display: block; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
 .attention-view .attention-matrix legend { padding: 0 4px; color: var(--graphite); font: 500 13px/1 var(--serif); }
 .attention-view .attention-matrix legend sub { font-size: 10.5px; }
 .attention-view .attention-matrix-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 0; border: 0; }
@@ -133,10 +133,10 @@
 /* readout: context + loss on the left, next-token probabilities on the right */
 .attention-view .attention-readout { min-height: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; }
 .attention-view .attention-readout-left { min-width: 0; display: grid; grid-template-rows: auto auto; gap: 8px; padding: 0; background: transparent; }
-.attention-view .attention-context, .attention-view .attention-loss, .attention-view .attention-probability-list { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 4px; padding: 6px 8px; background: #f7f5ee; border-radius: 6px; }
+.attention-view .attention-context, .attention-view .attention-loss, .attention-view .attention-probability-list { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 4px; padding: 8px; background: #f7f5ee; border-radius: 6px; }
 .attention-view .attention-context strong { color: var(--graphite); font: 600 11px/1.2 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .attention-view .attention-loss > strong { color: var(--orange); font: 600 18px/1 var(--mono); font-variant-numeric: tabular-nums; }
-.attention-view .attention-loss > span:not(.attention-kicker) { overflow: hidden; color: var(--muted); font: 11px/1.2 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.attention-view .attention-loss > span:not(.attention-kicker) { color: var(--muted); font: 11px/1.3 var(--mono); }
 .attention-view .attention-probability { display: grid; grid-template-columns: 60px minmax(0, 1fr) 40px; align-items: center; gap: 8px; color: var(--muted); font: 11px/1 var(--mono); }
 .attention-view .attention-probability > i { overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
 .attention-view .attention-probability > em { height: 7px; overflow: hidden; background: #e6e4dc; border-radius: 2px; }
@@ -159,10 +159,10 @@
 .training-view .training-actions .training-primary:hover { background: var(--purple-deep); border-color: var(--purple-deep); }
 
 .training-view .training-metrics { grid-column: 1 / -1; display: grid; grid-template-columns: 0.55fr 1.1fr 1fr 1.25fr 1.1fr; gap: 8px; }
-.training-view .training-metrics > div { min-width: 0; display: grid; align-content: start; gap: 4px; height: 64px; padding: 6px 8px; box-sizing: border-box; background: #f7f5ee; border-top: 2px solid var(--graphite); border-radius: 0 0 6px 6px; }
+.training-view .training-metrics > div { min-width: 0; display: grid; align-content: start; gap: 4px; min-height: 64px; padding: 6px 8px; box-sizing: border-box; background: #f7f5ee; border-top: 2px solid var(--graphite); border-radius: 0 0 6px 6px; }
 .training-view .training-metrics small { overflow: hidden; text-overflow: ellipsis; }
 .training-view .training-metrics strong { display: inline-block; align-self: start; color: var(--graphite); font: 600 18px/1 var(--mono); font-variant-numeric: tabular-nums; border-radius: 4px; }
-.training-view .training-metrics span:not(.attention-editable-tag) { overflow: hidden; color: var(--muted); font: 11px/1.2 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.training-view .training-metrics span:not(.attention-editable-tag) { color: var(--muted); font: 11px/1.3 var(--mono); }
 .training-view .training-metrics > div.is-rate { border-top-color: var(--purple); }
 .training-view .training-metrics > div.is-rate .editable-number { width: 72px; height: 22px; font-size: 12px; font-weight: 600; }
 .training-view .training-metrics > div.is-loss { border-top-color: var(--orange); }
@@ -184,7 +184,7 @@
 .training-view .training-probability b { text-align: right; font-variant-numeric: tabular-nums; }
 
 .training-view .training-history { min-width: 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.training-view .training-history-card { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.training-view .training-history-card { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
 .training-view .training-sparkline { width: 100%; height: 100%; min-height: 0; display: block; overflow: visible; cursor: crosshair; }
 .training-view .training-sparkline-base { stroke: var(--line); stroke-width: 1; }
 .training-view .training-sparkline polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -199,15 +199,15 @@
 .training-view .training-sparkline-tip rect { fill: var(--graphite); }
 .training-view .training-sparkline-tip text { fill: var(--ivory); font: 500 11px/1 var(--mono); }
 
-.training-view .training-drift { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 4px; min-width: 0; padding-top: 8px; border-top: 1px solid var(--line); }
+.training-view .training-drift { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 8px; min-width: 0; padding-top: 8px; border-top: 1px solid var(--line); }
 .training-view .training-drift-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .training-view .training-matrix { min-width: 0; font: 11px/1 var(--mono); display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .training-view .training-matrix > span { color: var(--graphite); font: 500 13px/1 var(--serif); }
-.training-view .training-matrix > div { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; padding: 2px 6px; border-left: 1px solid var(--graphite); border-right: 1px solid var(--graphite); }
-.training-view .training-matrix-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 3px; min-width: 0; font: 11px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+.training-view .training-matrix > div { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 4px 8px; border-left: 1px solid var(--graphite); border-right: 1px solid var(--graphite); }
+.training-view .training-matrix-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; min-width: 0; font: 11px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
 .training-view .training-matrix-cell > i { overflow: hidden; color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; }
 .training-view .training-matrix-cell > em { color: var(--muted); font-style: normal; }
-.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 2px; color: var(--muted); border-radius: 3px; font-weight: 400; white-space: nowrap; }
+.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 4px; color: var(--muted); border-radius: 3px; font-weight: 400; white-space: nowrap; }
 .training-view .training-matrix-cell.is-up > b, .training-view .training-matrix-cell.is-down > b { color: var(--graphite); font-weight: 600; }
 .training-view .training-matrix-cell.is-up > em { color: var(--purple); }
 .training-view .training-matrix-cell.is-down > em { color: var(--orange); }
@@ -221,4 +221,4 @@
 }
 
 /* scores block: heading + table */
-.attention-view .attention-scores { min-width: 0; display: grid; gap: 4px; }
+.attention-view .attention-scores { min-width: 0; display: grid; gap: 8px; }
