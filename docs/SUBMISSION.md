@@ -15,7 +15,7 @@ Deadline: **September 3, 2026 at 1:00 PM Pacific Time**
 - [x] Director Review exposes thirteen editable keyframes across the eight scenes.
 - [x] `pnpm typecheck` and `pnpm build` pass.
 
-The submission film lives at `video/out/mathburst-final.mp4` (2560×1440, 60 fps, under 2:42) and is reproduced from source by `docs/video/FILM_REPRODUCTION.md`. Every frame of it is the real product performing the thirteen Director frames; narration describes only what is on screen. Deployment and public hosting remain separate submission-owner steps.
+The submission film lives at `video/out/mathburst-final.mp4` (2560×1440, 60 fps, 2:41) and is reproduced from source by `docs/video/FILM_REPRODUCTION.md`. Every frame of it is the real product performing the thirteen Director frames; narration describes only what is on screen. Deployment and public hosting remain separate submission-owner steps.
 
 Source: <https://github.com/fireheartjerry/mathos-webmcp>
 

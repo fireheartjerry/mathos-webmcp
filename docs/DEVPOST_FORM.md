@@ -38,7 +38,7 @@ Upload `public/og.png` first. It is the real Mathburst interface at 1200×630 an
 
 ## Video
 
-The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, under 2:42, one continuous take of the real product with narration that describes only visible behaviour. Upload it and paste the public URL into the form. Rebuild instructions: `docs/video/FILM_REPRODUCTION.md`.
+The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, 2:41, one continuous take of the real product with narration that describes only visible behaviour. Upload it and paste the public URL into the form. Rebuild instructions: `docs/video/FILM_REPRODUCTION.md`.
 
 Suggested title:
 
