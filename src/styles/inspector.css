@@ -59,7 +59,7 @@
 .inspector-header-meta span { max-width: 220px; overflow: hidden; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; white-space: nowrap; text-overflow: ellipsis; }
 .inspector-header-meta b { color: var(--graphite); font-weight: 500; text-transform: none; }
 
-.inspector-tabs { display: flex; gap: 4px; padding: 4px 8px 0; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.inspector-tabs { display: flex; gap: 4px; padding: 6px 8px 0; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
 .inspector-tabs button,
 .inspector-footer button {
   appearance: none;
@@ -70,7 +70,7 @@
   cursor: pointer;
   transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
 }
-.inspector-tabs button { height: 32px; padding: 0 8px; margin-bottom: -1px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.inspector-tabs button { height: 28px; padding: 0 8px; margin-bottom: -1px; border-bottom: 2px solid transparent; white-space: nowrap; }
 .inspector-tabs button:hover { color: var(--graphite); }
 .inspector-tabs button[aria-selected='true'] { color: var(--graphite); border-bottom-color: var(--purple); }
 .inspector-tabs button:focus-visible,

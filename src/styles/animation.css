@@ -1,14 +1,15 @@
 /* Animation timeline panel: quiet paper panel, 1px lines, mono captions.
-   Third item of the bottom-right column: zoom (34px), activity rail (at most
-   252px), then timelines. Steps left with the column through --right-inset. */
+   Third item of the bottom-right column: zoom (36px + 12px below), activity rail
+   (40px header + 216px list + 2px borders = 258px), then timelines, 12px apart.
+   Steps left with the column through --right-inset. */
 
 .animation-panel {
   position: fixed;
   right: var(--right-inset);
-  bottom: calc(58px + 252px + 12px);
+  bottom: calc(60px + 258px + 12px);
   z-index: var(--z-panel);
   width: var(--activity-w);
-  max-height: calc(100vh - var(--header-h) - 12px - 322px);
+  max-height: calc(100vh - var(--header-h) - 12px - 330px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -52,8 +53,8 @@
 
 .animation-play {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -106,7 +107,9 @@
 .animation-scrubber:hover::-webkit-slider-thumb, .animation-scrubber:focus-visible::-webkit-slider-thumb { transform: scale(1.3); border-color: var(--purple); }
 .animation-scrubber:focus-visible::-moz-range-thumb { border-color: var(--purple); }
 
-.animation-row-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+/* The chips beside the track list squeezed property paths down to ~70px in a
+   268px panel, so the list takes the full width and the chips wrap below it. */
+.animation-row-foot { display: grid; gap: 8px; }
 
 .animation-tracks {
   flex: 1;
@@ -122,9 +125,9 @@
 .animation-tracks li.is-empty { font-style: italic; }
 .animation-tracks li.is-empty::before { content: none; }
 
-.animation-actions { flex: none; display: flex; gap: 4px; }
+.animation-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 .animation-chip {
-  height: 22px;
+  height: 26px;
   padding: 0 8px;
   color: var(--muted);
   background: transparent;

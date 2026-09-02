@@ -48,7 +48,8 @@ export default function WebMCPTrace({
 
   if (!events.length) return null
   const attached = events.filter((event) => positions[event.invocationId])
-  const railed = events.filter((event) => !positions[event.invocationId]).slice(-5)
+  // Four is what the rail fits at 1440 without the newest chip being clipped away.
+  const railed = events.filter((event) => !positions[event.invocationId]).slice(-4)
 
   return (
     <>

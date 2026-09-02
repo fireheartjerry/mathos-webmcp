@@ -578,6 +578,7 @@ button {
   border: 1px solid #4a4942;
   box-shadow: 14px 16px 0 rgba(23, 23, 19, 0.16);
   font-family: var(--mono);
+  animation: chrome-in-down 220ms var(--ease-out) both;
 }
 
 .director-header {
@@ -621,6 +622,7 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   cursor: pointer;
+  animation: chrome-in-down 220ms var(--ease-out) both;
 }
 .director-panel-peek i { width: 7px; height: 7px; border-radius: 50%; background: #8de0a6; box-shadow: 0 0 0 3px rgba(141, 224, 166, 0.12); }
 .director-panel-peek:hover, .director-panel-peek:focus-visible { border-color: var(--purple); outline: none; }
@@ -813,6 +815,17 @@ button {
 
 /* Scrolling regions inside chrome use a thin, quiet scrollbar. */
 .webmcp-groups, .inspector-panel, .agent-console-lines, .tool-ledger-list, .tool-ledger-unused-list, .animation-list, .activity-list, .project-gallery, .project-creator, .director-shot-list, .director-detail, .creation-popover { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+/* One material for every floating panel. --panel is 96% ivory, so without a blur
+   behind it busy canvas content bleeds through and reads as a rendering fault
+   rather than as depth. Declared once here for everything that uses the token. */
+.object-context, .zoom-controls, .activity-rail, .personal-project-navigator,
+.opening-tutor-panel, .reconstruction-panel, .webmcp-trace, .webmcp-inspector,
+.tool-toast, .tool-ledger, .agent-console, .progressive-inspector,
+.creation-popover, .animation-panel {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
 
 /* Application chrome is never text-selectable; double-clicks belong to the canvas. */
 .world-header, .tool-rail, .tool-ledger, .tool-toast, .personal-project-navigator, .activity-rail header, .zoom-controls, .object-context, .agent-console header, .creation-popover, .animation-panel-head { user-select: none; }
@@ -1068,6 +1081,7 @@ button {
   border-radius: 9px;
   opacity: 0.6;
   transition: opacity 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+  animation: chrome-in-up 220ms var(--ease-out) both;
 }
 .zoom-controls:hover, .zoom-controls:focus-within { opacity: 1; box-shadow: var(--shadow-panel); }
 .zoom-controls button {
@@ -1340,7 +1354,7 @@ button {
   top: calc(var(--header-h) + 12px);
   left: var(--chrome-left);
   z-index: var(--z-column);
-  max-width: min(560px, calc(100vw - var(--canvas-left) - var(--canvas-right) - 420px));
+  max-width: min(640px, calc(100vw - var(--canvas-left) - var(--canvas-right) - 420px));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1365,14 +1379,19 @@ button {
   font: 11px/1 var(--mono);
   white-space: nowrap;
 }
-.webmcp-trace-chip i { color: var(--muted); font-style: normal; font-weight: 600; }
+.webmcp-trace-chip { min-width: 0; }
+.webmcp-trace-chip b { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.webmcp-trace-chip i { flex: none; color: var(--muted); font-style: normal; font-weight: 600; }
+.webmcp-trace-chip small { flex: none; }
 .webmcp-trace-chip.is-write i { color: var(--purple); }
 .webmcp-trace-chip small { color: var(--teal); font-size: 11px; }
 .webmcp-trace-chip.is-running small { color: var(--muted); }
 .webmcp-trace-chip.is-error small { color: var(--orange); }
-.mathburst-app:has(.director-panel) .webmcp-trace { left: auto; right: 442px; }
-/* The docked console lists every call itself; the rail steps aside rather than sit under it. */
-.mathburst-app:has(.agent-console.is-docked) .webmcp-trace { display: none; }
+.mathburst-app:has(.director-panel) .webmcp-trace { left: auto; right: var(--right-inset); }
+/* The docked console lists every call itself, and the toast announces the same
+   burst in the same corner; the rail steps aside rather than sit under either. */
+.mathburst-app:has(.agent-console.is-docked) .webmcp-trace,
+.mathburst-app:has(.tool-toast.is-visible) .webmcp-trace { display: none; }
 .webmcp-trace-attached {
   position: fixed;
   z-index: var(--z-overlay);
@@ -1423,7 +1442,7 @@ button {
 }
 .webmcp-inspector > header > div { min-width: 0; }
 .webmcp-inspector > header span { color: rgba(251, 249, 243, 0.6); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-.webmcp-inspector > header h2 { margin: 4px 0 0; overflow: hidden; font: 500 22px/1 var(--serif); white-space: nowrap; text-overflow: ellipsis; }
+.webmcp-inspector > header h2 { margin: 4px 0 0; overflow: hidden; font: 500 22px/1.2 var(--serif); white-space: nowrap; text-overflow: ellipsis; }
 .webmcp-inspector > header h2 b { color: #c9bbff; }
 .webmcp-count { display: inline-flex; align-items: baseline; gap: 6px; }
 .webmcp-inspector > header button {
@@ -1557,10 +1576,10 @@ button {
 
 /* ---- Reduced motion: chrome appears in place, nothing loops --------------- */
 @media (prefers-reduced-motion: reduce) {
-  .object-context, .activity-rail, .personal-project-navigator, .reconstruction-panel, .webmcp-trace, .webmcp-trace-attached, .webmcp-inspector, .webmcp-message, .library-card, .project-creator, .project-creator-backdrop { animation: none; }
+  .object-context, .activity-rail, .zoom-controls, .personal-project-navigator, .reconstruction-panel, .webmcp-trace, .webmcp-trace-attached, .webmcp-inspector, .webmcp-message, .library-card, .project-creator, .project-creator-backdrop, .director-panel, .director-panel-peek { animation: none; }
   .tool-rail, .rail-label, .rail-button, .zoom-controls, .author-pip, .agent-presence { transition: none; }
   /* Global guard for anything not named above; looping animations are stopped per file. */
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
 }
 
 /* ---- Not-found page ---------------------------------------------------- */

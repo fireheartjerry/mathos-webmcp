@@ -104,7 +104,7 @@
   transform: translateX(-50%);
 }
 .reading-indicator-label i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #fff; animation: reading-pulse 1.1s ease-in-out infinite; }
-.reading-indicator-label b { overflow: hidden; font: 500 14px/1 var(--mono); opacity: 0.92; text-overflow: ellipsis; }
+.reading-indicator-label b { overflow: hidden; font: 500 14px/1.2 var(--mono); opacity: 0.92; text-overflow: ellipsis; }
 .reading-indicator-label b::before { content: '\00B7 '; opacity: 0.7; }
 @keyframes reading-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
@@ -126,6 +126,7 @@
   font-family: var(--system);
   overflow: hidden;
   transition: width 220ms var(--ease-out);
+  animation: chrome-fade-in 220ms var(--ease-out) both;
 }
 .tool-ledger-tab {
   display: none;
@@ -269,7 +270,7 @@
 .agent-console-kicker { display: inline-flex; align-items: center; gap: 8px; color: var(--purple); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 .agent-console-kicker i { width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
 .agent-console[data-status='running'] .agent-console-kicker i { animation: reading-pulse 1.1s ease-in-out infinite; }
-.agent-console-header em { overflow: hidden; color: var(--muted); font: 11px/1 var(--system); font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.agent-console-header em { overflow: hidden; color: var(--muted); font: 11px/1.2 var(--system); font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
 .agent-console-close {
   width: 28px;
   height: 28px;
@@ -333,7 +334,7 @@
 .agent-console-controls button:first-child:hover:not(:disabled) { background: var(--purple-deep); border-color: var(--purple-deep); }
 .agent-console-controls button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .agent-console-controls button:disabled { opacity: 0.4; cursor: default; }
-.agent-console-status { min-width: 0; margin-left: auto; overflow: hidden; color: var(--muted); font: 11px/1 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.agent-console-status { min-width: 0; margin-left: auto; overflow: hidden; color: var(--muted); font: 11px/1.2 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
 
 .agent-console-footer { padding: 8px 12px; color: var(--muted); border-top: 1px solid var(--line); font: 11px/1 var(--mono); white-space: nowrap; }
 .agent-console-footer b { color: var(--graphite); font-weight: 600; }
@@ -348,5 +349,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tool-toast, .reading-indicator, .tool-ledger, .tool-ledger-pin, .tool-ledger-progress i, .tool-ledger-unused summary::before { transition: none; }
-  .reading-indicator-scanline, .reading-indicator-label i, .agent-console[data-status='running'] .agent-console-kicker i { animation: none; }
+  .tool-ledger, .reading-indicator-scanline, .reading-indicator-label i, .agent-console[data-status='running'] .agent-console-kicker i { animation: none; }
 }

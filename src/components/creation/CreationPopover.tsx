@@ -5,6 +5,23 @@ import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { CreationOption } from './toolOptions'
 import '../../styles/creation.css'
 
+const GAP = 12
+
+/** Panels that float over the canvas and paint above this popover. */
+const FLOATING_CHROME = [
+  '.progressive-inspector',
+  '.object-context',
+  '.activity-rail',
+  '.zoom-controls',
+  '.personal-project-navigator',
+  '.webmcp-inspector',
+  '.reconstruction-panel',
+  '.agent-console',
+  '.tool-toast',
+  '.webmcp-trace',
+  '.director-panel',
+]
+
 export default function CreationPopover<T extends string>({
   title,
   description,
@@ -30,11 +47,37 @@ export default function CreationPopover<T extends string>({
     const parent = popover?.offsetParent instanceof HTMLElement ? popover.offsetParent : popover?.parentElement
     if (!popover || !parent) return
     const parentRect = parent.getBoundingClientRect()
-    const popoverRect = popover.getBoundingClientRect()
-    const maxX = Math.max(12, parentRect.width - popoverRect.width - 12)
-    const maxY = Math.max(12, parentRect.height - popoverRect.height - 12)
-    const x = Math.max(12, Math.min(anchor.x + 12, maxX))
-    const y = Math.max(12, Math.min(anchor.y + 12, maxY))
+    const { width, height } = popover.getBoundingClientRect()
+
+    // The canvas is the positioning parent, but chrome floats over it and draws
+    // above this popover, so staying inside the canvas is not enough: the popover
+    // also stays inside the viewport and clear of every panel docked over it.
+    const minX = Math.max(GAP, GAP - parentRect.left)
+    const minY = Math.max(GAP, GAP - parentRect.top)
+    const maxX = Math.max(minX, Math.min(parentRect.width, window.innerWidth - parentRect.left) - width - GAP)
+    const maxY = Math.max(minY, Math.min(parentRect.height, window.innerHeight - parentRect.top) - height - GAP)
+
+    let x = Math.max(minX, Math.min(anchor.x + GAP, maxX))
+    let y = Math.max(minY, Math.min(anchor.y + GAP, maxY))
+
+    const obstacles = FLOATING_CHROME.flatMap((selector) => {
+      const el = document.querySelector(selector)
+      return el && el !== popover && !popover.contains(el) ? [el.getBoundingClientRect()] : []
+    })
+    // Lift above an obstacle where there is room, otherwise slide left of it.
+    // Two passes settle the common case of the dock stacked over the zoom row.
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (const obstacle of obstacles) {
+        const left = x + parentRect.left
+        const top = y + parentRect.top
+        if (left + width + GAP <= obstacle.left || left >= obstacle.right + GAP) continue
+        if (top + height + GAP <= obstacle.top || top >= obstacle.bottom + GAP) continue
+        const lifted = obstacle.top - parentRect.top - height - GAP
+        if (lifted >= minY) { y = Math.min(y, lifted); continue }
+        const shifted = obstacle.left - parentRect.left - width - GAP
+        if (shifted >= minX) x = Math.min(x, shifted)
+      }
+    }
     setPosition((current) => current.x === x && current.y === y ? current : { x, y })
   }, [anchor.x, anchor.y])
 
