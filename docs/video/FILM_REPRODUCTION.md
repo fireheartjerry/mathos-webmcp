@@ -4,7 +4,7 @@ Everything in `video/out/mathburst-final.mp4` comes from one continuous take of 
 
 ## Requirements
 
-- Windows with Google Chrome ≥ 146 (the launcher passes `--enable-features=WebMCP`, so all 18 tools register with the browser during the take).
+- Windows with Google Chrome ≥ 146 (the launcher passes `--enable-features=WebMCP`, so all 48 tools register with the browser during the take).
 - Node ≥ 22, pnpm, ffmpeg and ffprobe on `PATH`.
 - Python 3 with `numpy` and `edge-tts` (`pip install edge-tts`). Narration needs network access for the neural voice; the other steps are offline.
 - A display at least 2560 px wide for the capture window (the window is positioned by `product.chromePosition` in the manifest).

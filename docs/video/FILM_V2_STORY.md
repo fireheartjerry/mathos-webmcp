@@ -1,13 +1,13 @@
 # Mathburst film v2 — the story (draft 2, after Jerry's review)
 
-Status: DRAFT 2, 2026-09-02. No timings. Every beat names the frame, the URL in the omnibox, the action, the tools that fire, and the on-screen result. **[BUILD]** marks product work still needed; the parity work (handles, shapes, arrows, graph LaTeX field, geometry toolbar, matrix editor, 47 tools, animation runtime, ledger, toast, agent console, project URLs) is being built now and is assumed present.
+Status: DRAFT 2, 2026-09-02. No timings. Every beat names the frame, the URL in the omnibox, the action, the tools that fire, and the on-screen result. **[BUILD]** marks product work still needed; the parity work (handles, shapes, arrows, graph LaTeX field, geometry toolbar, matrix editor, 48 tools, animation runtime, ledger, toast, agent console, project URLs) is being built now and is assumed present.
 
 ## Rules the whole film obeys
 
-- **The film runs in the ChatGPT desktop app's built-in browser**, with Mathburst deployed as a ChatGPT Site (`<name>.openai.chatgpt.site`, this repo is already linked via `.openai/hosting.json`). ChatGPT (GPT-5.6 Sol or Terra) is the **real agent**: it discovers the 47 site tools from the address bar's **Site tools** menu and calls them live. The chat sits beside the page; the learner's prompt is typed into it on camera. No scripted console: the agent's words are the model's own, so the shot list below is the *prompt plan* (what the learner asks for, act by act) plus the product's guaranteed visual reactions (toast, ledger, aura, animations). Takes are not deterministic; expect several.
+- **The film runs in the ChatGPT desktop app's built-in browser**, with Mathburst deployed as a ChatGPT Site (`<name>.openai.chatgpt.site`, this repo is already linked via `.openai/hosting.json`). ChatGPT (GPT-5.6 Sol or Terra) is the **real agent**: it discovers the 48 site tools from the address bar's **Site tools** menu and calls them live. The chat sits beside the page; the learner's prompt is typed into it on camera. No scripted console: the agent's words are the model's own, so the shot list below is the *prompt plan* (what the learner asks for, act by act) plus the product's guaranteed visual reactions (toast, ledger, aura, animations). Takes are not deterministic; expect several.
 - **The system cursor performs every human action, visibly.** Nothing human happens without the cursor travelling to it first.
 - **The agent is unmistakable.** When the console activates, an intrusive purple pulse sweeps the whole canvas border and the console card slides in. Every tool call fires a large toast ("Used 3 WebMCP tools" + named chips), a purple flash on the object it changed, and a tick in the left-hand ledger. Nothing the agent does is quiet.
-- **Left side of the screen = WebMCP.** The toast, the running totals ("12 / 47 tools · 38 calls"), and the tool-call activity log live in a left column next to the tool rail. The right sidebar is the whiteboard's own (inspector, activity).
+- **Left side of the screen = WebMCP.** The toast, the running totals ("12 / 48 tools · 38 calls"), and the tool-call activity log live in a left column next to the tool rail. The right sidebar is the whiteboard's own (inspector, activity).
 - **Agent console** docks top-centre, below the header (top-left if it collides with the ledger; decide on the first take). Its words are scripted and labelled "Agent replay · scripted words, real tool calls". Its tone: professional, friendly, casual. It teaches in short sentences while it acts.
 - **Purple aura.** Whatever the agent is about to touch gets a purple glow first (point P, a matrix cell, a vertex, an equation), then the tool fires, then the change lands. The aura is the visual grammar of "agent intent".
 - **Every construction is a 3Blue1Brown-style animation** driven by the real animation tools (`create_timeline`, `add_keyframes`, `play_timeline`): objects draw in dependency order, equations morph, colours persist across representations, the camera moves only to establish focus. This is non-negotiable in Acts 2, 4, 6 and 7.
@@ -22,9 +22,9 @@ Status: DRAFT 2, 2026-09-02. No timings. Every beat names the frame, the URL in 
 
 **0.2 New project.** Cursor: **New project** → types `Pipeline` → **Blank canvas**. URL becomes `/p/<id>`. Empty ivory canvas, tool rail left.
 
-**0.3 The left column.** Cursor pins the WebMCP ledger on the **left** (`0 / 47 tools · 0 calls`, empty log) **[BUILD: move ledger + toast to the left column]**.
+**0.3 The left column.** Cursor pins the WebMCP ledger on the **left** (`0 / 48 tools · 0 calls`, empty log) **[BUILD: move ledger + toast to the left column]**.
 
-**0.4 The agent arrives.** Cursor clicks **Agent replay**. Intrusive purple sweep around the canvas, console slides in top-centre. Learner line: *"Walk me through the whole pipeline. Use everything you've got."* Agent: *"On it. Reading the page first."* Toast: `Used 4 · get_world, list_projects, get_scene_catalog, get_session_context`. Reading glow on the canvas. Ledger `4 / 47`.
+**0.4 The agent arrives.** Cursor clicks **Agent replay**. Intrusive purple sweep around the canvas, console slides in top-centre. Learner line: *"Walk me through the whole pipeline. Use everything you've got."* Agent: *"On it. Reading the page first."* Toast: `Used 4 · get_world, list_projects, get_scene_catalog, get_session_context`. Reading glow on the canvas. Ledger `4 / 48`.
 
 ---
 
@@ -110,7 +110,7 @@ Framed as **the agent tidying the page into a lesson sheet** while the human rea
 
 ## Act 8 — Close
 
-**8.1 Ledger.** Left column reads `47 / 47 tools · N calls`. Agent: *"That's every tool, used at least once, all through one shared history."* `Used 2 · get_history, get_world`; the console prints the You / Tutor commit counts.
+**8.1 Ledger.** Left column reads `48 / 48 tools · N calls`. Agent: *"That's every tool, used at least once, all through one shared history."* `Used 2 · get_history, get_world`; the console prints the You / Tutor commit counts.
 
 **8.2 Lockup.** Cursor fits the frame; the title *One mathematical world. Every agent can enter.* is typed into the frame title by the human.
 
