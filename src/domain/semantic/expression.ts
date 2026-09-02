@@ -24,8 +24,8 @@ const FUNCTION_NAMES = new Set([
 
 const UNSAFE_PARAMETER_NAMES = new Set(['__proto__', 'prototype', 'constructor'])
 
-// Greek command names are useful named parameters (`\\alpha`, `\\lambda`),
-// while structural/constant commands should remain invisible to discovery.
+// Only this allow-list of Greek symbol commands is semantic; formatting,
+// operator, and structural TeX commands remain invisible to discovery.
 const GREEK_PARAMETERS = new Set([
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'varepsilon', 'zeta', 'eta',
   'theta', 'vartheta', 'iota', 'kappa', 'varkappa', 'lambda', 'mu', 'nu',

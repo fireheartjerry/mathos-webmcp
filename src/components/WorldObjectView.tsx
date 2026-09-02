@@ -56,7 +56,7 @@ function objectContents(object: WorldObject, world: WorldState, run: (action: Wo
         )
       }
     case 'text':
-      return <p className={object.presentation === 'handwritten' ? 'is-handwritten' : undefined} style={{ color: object.color, fontSize: object.fontSize }}>{object.text}</p>
+      return <p className={object.presentation === 'handwritten' ? 'is-handwritten' : undefined} style={{ color: object.color, fontSize: object.fontSize, textAlign: object.textAlign ?? 'left', width: '100%' }}>{object.text}</p>
     case 'image': {
       if (object.src === 'handwriting://opening-attempt') {
         const preview = handwritingSampleToInk(loadHandwritingSamples(), 'opening-attempt', {
