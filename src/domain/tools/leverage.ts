@@ -262,8 +262,9 @@ export function createLeverageTools(bridge: WorldBridge): WorldTool[] {
     if (args.preset === 'centroid') { weights = [1 / 3, 1 / 3, 1 / 3]; summary = 'Moved P to the centroid [1:1:1]' }
     else if (args.preset === 'attention') {
       const attentionId = object.linkedAttentionId; const linked = attentionId ? world.objects[attentionId] : world.order.map((id) => world.objects[id]).find((candidate) => candidate?.kind === 'attention')
-      if (linked?.kind !== 'attention') throw new Error('No attention card is available in this project to copy weights from.')
-      const pass = evaluateTinyModel(linked.model, linked.bridgeMasses, linked.temperature); weights = [pass.attentionWeights[0], pass.attentionWeights[1], pass.attentionWeights[2]]; summary = `Moved P to the attention weights [${fmt(weights)}]`
+      const live = linked?.kind === 'attention' ? evaluateTinyModel(linked.model, linked.bridgeMasses, linked.temperature).attentionWeights : bridge.getAttentionWeights?.()
+      if (!live || live.length !== 3) throw new Error('No attention card is available to copy weights from; the Tiny Transformer project holds one.')
+      weights = [live[0], live[1], live[2]]; summary = `Moved P to the attention weights [${fmt(weights)}]`
     } else {
       if (!isVector(args.weights, 3)) throw new Error('weights must be three finite numbers, or pass preset.')
       const total = (args.weights as number[]).reduce((sum, value) => sum + value, 0); if (!(total > 0) || (args.weights as number[]).some((value) => value < 0)) throw new Error('weights must be non-negative with a positive sum.')
@@ -336,7 +337,7 @@ export type ProjectSummary = {
 export function summarizeProject(project: { id: string; title: string; description: string; kind: 'built-in' | 'user'; templateId: ProjectId | null; startScene: CatalogSceneId; deletedAt: number | null; updatedAt: number }, activeId: string | null): ProjectSummary {
   return {
     id: project.id, title: project.title, description: project.description, kind: project.kind, templateId: project.templateId, startScene: project.startScene,
-    sceneIds: project.templateId ? [...getProject(project.templateId).sceneIds] : [], active: project.id === activeId, deleted: project.deletedAt !== null, updatedAt: project.updatedAt,
+    sceneIds: project.templateId ? [...getProject(project.templateId).sceneIds] : [], active: project.id === activeId && project.deletedAt === null, deleted: project.deletedAt !== null, updatedAt: project.updatedAt,
   }
 }
 

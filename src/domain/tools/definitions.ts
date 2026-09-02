@@ -54,6 +54,8 @@ export type WorldBridge = {
   createProject?: (title: string, templateId: ProjectId | null) => Promise<ToolResult> | ToolResult
   deleteProject?: (projectId: string) => Promise<ToolResult> | ToolResult
   focusObjects?: (ids: string[]) => Promise<ToolResult> | ToolResult
+  /** Live attention weights from the transformer project, read without opening it. */
+  getAttentionWeights?: () => number[] | null
 }
 
 export type WorldTool = {

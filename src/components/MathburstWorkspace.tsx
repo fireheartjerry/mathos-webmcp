@@ -849,8 +849,21 @@ export default function MathburstWorkspace() {
       if (!project || project.deletedAt !== null) return { ok: false, summary: 'No changes made', error: `Project ${projectId} does not exist.` }
       if (project.kind !== 'user') return { ok: false, summary: 'No changes made', error: 'Built-in projects cannot be deleted.' }
       trashLibraryProject(project)
-      if (activeDocumentIdRef.current === projectId) openProjectGallery()
+      if (activeDocumentIdRef.current === projectId) {
+        // Never leave the agent inside a deleted project: fall back to the first live one.
+        const fallback = libraryProjectsRef.current.find((candidate) => candidate.id !== projectId && candidate.deletedAt === null)
+        if (fallback) openLibraryProject(fallback)
+        else openProjectGallery()
+      }
       return { ok: true, summary: `Moved ${project.title} to deleted projects`, data: { projectId } }
+    },
+    getAttentionWeights: () => {
+      const active = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+      const transformerWorld = active?.templateId === 'tiny-transformer'
+        ? worldRef.current
+        : libraryProjectsRef.current.find((candidate) => candidate.kind === 'built-in' && candidate.id === 'tiny-transformer')?.world
+      const attention = transformerWorld ? Object.values(transformerWorld.objects).find((candidate) => candidate.kind === 'attention') : undefined
+      return attention?.kind === 'attention' ? [...evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights] : null
     },
     focusObjects: (ids) => {
       const current = worldRef.current
