@@ -1114,20 +1114,14 @@ export default function MathburstWorkspace() {
     if (!object) return
     setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
-    else if (object.kind === 'equation') {
-      const entity = createdObject?.id === id
-        ? { kind: 'expression' }
-        : world.entities[object.entityId ?? '']
-      if (!object.entityId || entity?.kind !== 'expression') return
-      setEditorValue(object.latex)
-    }
+    else if (object.kind === 'equation') setEditorValue(object.latex)
     else if (object.kind === 'matrix') setEditorMatrix([
       [...object.values[0]],
       [...object.values[1]],
     ])
     else return
     setEditorId(id)
-  }, [world.entities, world.objects])
+  }, [world.objects])
 
   const saveEditor = () => {
     if (!editorId) return
@@ -1141,9 +1135,6 @@ export default function MathburstWorkspace() {
     let updated: WorldObject = object
     if (object.kind === 'text') updated = { ...object, text: editorValue }
     if (object.kind === 'equation') {
-      if (!object.entityId) return
-      const entity = currentWorld.entities[object.entityId]
-      if (!entity || entity.kind !== 'expression') return
       updated = { ...object, latex: editorValue }
     }
     if (object.kind === 'matrix' && editorMatrix) updated = { ...object, values: editorMatrix }
@@ -1151,8 +1142,7 @@ export default function MathburstWorkspace() {
     const operations: WorldOperation[] = [{ type: 'put', object: updated }]
     if (object.kind === 'equation' && object.entityId) {
       const entity = currentWorld.entities[object.entityId]
-      if (!entity || entity.kind !== 'expression') return
-      operations.unshift({ type: 'putEntity', entity: { ...entity, latex: editorValue } })
+      if (entity?.kind === 'expression') operations.unshift({ type: 'putEntity', entity: { ...entity, latex: editorValue } })
     }
     if (dependents.length) operations.push({ type: 'select', ids: [object.id, ...dependents] })
     run(humanAction(`Edited ${object.kind}`, operations))
