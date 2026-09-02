@@ -76,7 +76,7 @@ export default function WorldCanvas({
   scene: CatalogSceneId
   mode: ToolMode
   run: (action: WorldAction) => void
-  onEditObject: (id: string) => void
+  onEditObject: (id: string, object?: WorldObject) => void
   agentCommitIds?: string[]
   tutorOverlay?: ReactNode
   directorMode?: boolean
@@ -226,9 +226,7 @@ export default function WorldCanvas({
       { type: 'select', ids: [id] },
     ]
     run(makeAction(`Created ${object.kind}`, operations))
-    if (object.kind === 'text' || object.kind === 'equation') {
-      requestAnimationFrame(() => onEditObject(id))
-    }
+    if (object.kind === 'text' || object.kind === 'equation') onEditObject(id, object)
   }
 
   const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {

@@ -1101,8 +1101,10 @@ export default function MathburstWorkspace() {
     run(humanAction('Rotated objects', buildTransformOperations(world, world.selection, { rotate: 15 })))
   }
 
-  const openEditor = useCallback((id: string) => {
-    const object = world.objects[id]
+  const openEditor = useCallback((id: string, createdObject?: WorldObject) => {
+    // Newly created fields are handed over explicitly by the canvas. React has
+    // not necessarily committed the reducer result to `world.objects` yet.
+    const object = createdObject?.id === id ? createdObject : world.objects[id]
     if (!object) return
     setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
