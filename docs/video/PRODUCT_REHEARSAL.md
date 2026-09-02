@@ -1,6 +1,6 @@
 # Mathburst product rehearsal
 
-**Status:** rehearsed live in Chrome on 2026-09-01 at 1280×720 and 2560×1440 (dev server, port 3400).
+**Status:** re-rehearsed 2026-09-02 at 2560×1440 (dev server, port 3400); all thirteen frames measured clean. Previously rehearsed 2026-09-01 at 1280×720 and 2560×1440.
 **Scope:** the thirteen Director frames of `MATHBURST_CINEMATIC_STORYBOARD.md`, performed on the real product without reloading.
 **Not covered:** capture, narration, music, Remotion editing, rendering. Product work is frozen at this document.
 
@@ -74,10 +74,10 @@ Stable ids used below: `opening_attempt`, `opening_annotation_circle`, `opening_
 
 ### 12 · WebMCP crescendo — `webmcp-crescendo`
 - Frame 12 is a camera state over the composite of all four projects. Prepare fires, in order: `get_world`, `get_objects`, `get_selection`, `get_session_context`, `inspect_math`, `get_history`, `create_objects` (note), `update_objects`, `transform_objects`, `set_viewport`, `graph_expression`, `construct_geometry`, `visualize_concept`, three `step_history` undos, `delete_objects`.
-- Expected: chips attach to the hero object of the active project and resolve into rows; the world ends unchanged; the proof chip reads `WebMCP 18 / 18`.
+- Expected: chips attach to the hero object of the active project and resolve into rows; the world ends unchanged; the proof chip reads `WebMCP 48 / 48`.
 
 ### 13 · One mathematical world — `one-world`
-- Camera pulls back over eight islands with the session's graphite and purple edits interleaved. Lockup: **One mathematical world.** *Every agent can enter.* with the `WebMCP 18 / 18` chip. Hold 1.8 s.
+- Camera pulls back over eight islands with the session's graphite and purple edits interleaved. Lockup: **One mathematical world.** *Every agent can enter.* with the `WebMCP 48 / 48` chip. Hold 1.8 s.
 
 ## Truth gates checked on 2026-09-01
 
@@ -92,7 +92,7 @@ Stable ids used below: `opening_attempt`, `opening_annotation_circle`, `opening_
 | partitions | `p(0..19) = 1,1,2,3,5,7,11,15,22,30,42,56,77,101,135,176,231,297,385,490` |
 | `p(5n+4)` | `5, 30, 135, 490` all divisible by 5 |
 | Tutor attribution / undo | every Tutor row shows *Tutor*; undo and redo verified on frames 03, 07 |
-| inspector | header reads `18 / 18 page tools`; registration line reports the browser's `document.modelContext` state honestly |
+| inspector | header reads `48 / 48 page tools`; registration line reports the browser's `document.modelContext` state honestly |
 | Director | thirteen frames selectable, targets repositionable, cameras persisted per canvas size, six bridges previewable, approvals restorable |
 
 ## Recovery
@@ -106,3 +106,27 @@ Stable ids used below: `opening_attempt`, `opening_annotation_circle`, `opening_
 - The Director panel covers the right 400 px while open; hide it with ⛶ before judging composition or use **Preview next**.
 - Director cameras saved at one canvas size are rebased, not re-composed, at another size; reset and re-approve after changing the capture resolution.
 - The trace chips that attach to objects are transient (about five seconds); the activity rail is the durable proof.
+
+## Rehearsal — 2026-09-02
+
+All thirteen Director frames were stepped on a cleared store at 2560×1440 with the
+Director panel hidden, and each was measured for three things: text clipped inside its
+own box, boxes that intersect when they should not, and anything the camera cuts off at
+the canvas edge. The earlier audits only compared canvas objects to each other, so this
+pass added world-space overlays and floating chrome to the comparison — which is where
+every defect below was hiding.
+
+| Frame | Finding | Resolution |
+|---|---|---|
+| 01 | The tutor prompt panel overlapped the frame label by 51×41 px. The panel is 520 px wide but only 493 px of clear space remains beside the label. | The panel is right-aligned to the frame's edge and reduced to one row — kicker and button, mirroring the label at the opposite corner. Its sentence is carried by the button and the narration, and stays in the DOM for screen readers. |
+| 01 | `[data-demo-scene='opening']` never matched: the scene id is `gamma-clinic`, so the intended placement had never applied and the base rule always won. | Dead rule removed; the corrected geometry lives in the base rule. |
+| 09, 12, 13 | The geometry card's title collapsed to **exactly 0 px**. Its uppercase kicker is `flex: 0 0 auto` and, in the crescendo's 220×160 proof tiles, is wider than the heading — so the card showed its label and no name at all. | The heading wraps, the kicker shrinks and ellipsises, and the title holds a floor of `4em`. Below 260 px the kicker steps out entirely so the name survives; below 200 px the selection meta goes too. |
+| 12, 13 | The closing note was authored 40 px tall for `Every agent can enter.` but is rewritten to `One mathematical world.`, which wraps to two lines and needs 46 px — so the film's final card clipped its own last line. | The note is sized for its final text, not its first. |
+| Docs | `DEMO_SCRIPT`, `SUBMISSION`, `PRODUCT_REHEARSAL` and the storyboard all claimed `WebMCP 18 / 18`, stale by thirty tools. | Corrected to 48. The live lockup chip was already right. |
+
+**Result:** thirteen frames, 0 clipped elements, 0 unintended collisions, 0 boxes cut by
+the canvas edge. `pnpm typecheck` and `pnpm build` pass.
+
+Two classes were deliberately excluded from the audit rather than fixed, because both are
+intentional: a panel floating over its own frame's top edge, and `.agent-activation`, the
+full-bleed veil that sweeps on every agent write.

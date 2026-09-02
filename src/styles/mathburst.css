@@ -1208,11 +1208,16 @@ button {
 .personal-project-proof { display: none; }
 
 /* ---- Opening tutor prompt (canvas overlay, holds data-demo-target) -------- */
-.tutor-overlay { position: absolute; left: -560px; top: 22px; z-index: var(--z-canvas-overlay); width: 520px; pointer-events: auto; }
-.world-canvas[data-demo-scene='opening'] .tutor-overlay { left: -195px; top: 20px; }
+/* The panel shares the band above the frame with the frame label, which runs to
+   x -533. Right-aligning to the frame's edge (-510 + 470 = -40) leaves a 23px gap,
+   and the band is only ~44 world px tall, so the panel stays one row: kicker and
+   button, mirroring the label at the opposite corner. The camera fits the frame's
+   own bounds, so anything taller than the band clips at the top of the canvas. */
+.tutor-overlay { position: absolute; left: -510px; top: 30px; z-index: var(--z-canvas-overlay); width: 470px; pointer-events: auto; }
 .opening-tutor-panel {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 8px 8px 8px 12px;
   color: var(--graphite);
@@ -1240,7 +1245,9 @@ button {
 .opening-tutor-panel button:hover:not(:disabled) { background: var(--purple-deep); }
 .opening-tutor-panel button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .opening-tutor-panel button:disabled { opacity: 0.4; cursor: default; }
-.opening-tutor-panel p { flex: 1; min-width: 0; margin: 0; color: var(--muted); font: 12px/1.3 var(--system); }
+/* The band above the frame is one row tall, so the instruction is carried by the
+   button and the narration; it stays in the DOM for screen readers. */
+.opening-tutor-panel p { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tutor-attempt-panel { display: none; }
 
 /* ---- Tutor authorship pip on canvas objects ------------------------------ */

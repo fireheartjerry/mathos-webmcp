@@ -32,7 +32,7 @@ Mathburst is not a chatbot with one decorative browser tool. Its product model i
 - Reconstruction uses a deliberate two-pass agent workflow: semantic proposal, source audit, then learner approval.
 - The inspector invokes the same execute callbacks registered through `document.modelContext`, making the complete surface judge-visible without an embedded chatbot.
 
-The visible proof is immediate: open **WebMCP · 18/18**, run a tool, watch the tutor act on the canvas, then undo it from the learner UI.
+The visible proof is immediate: open **WebMCP · 48/48**, run a tool, watch the tutor act on the canvas, then undo it from the learner UI.
 
 ### 2. Execution
 

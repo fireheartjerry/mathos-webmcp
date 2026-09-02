@@ -69,12 +69,12 @@ and commit. Hold on the transformed grid and linked vectors.
 
 ## 2:25–2:35 — Full surface and closing thesis
 
-**Screen.** Open the **WebMCP · 18/18** inspector. Let the complete eighteen-tool list
+**Screen.** Open the **WebMCP · 48/48** inspector. Let the complete forty-eight-tool list
 settle on screen, then end on the shared world.
 
 **Narration.**
 
-> All eighteen WebMCP tools are here. Mathburst gives learner and tutor one living mathematical world to read, change, and understand together.
+> All forty-eight WebMCP tools are here. Mathburst gives learner and tutor one living mathematical world to read, change, and understand together.
 
 ## Capture checklist
 
@@ -83,4 +83,4 @@ settle on screen, then end on the shared world.
 - Record one uninterrupted product take with audible narration and no music required for
   the story.
 - Verify that the displayed labels, tutor attribution, graph linkage, geometry movement,
-  matrix update, and **WebMCP · 18/18** state are readable in the final render.
+  matrix update, and **WebMCP · 48/48** state are readable in the final render.

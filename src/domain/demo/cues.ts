@@ -477,8 +477,10 @@ function crescendoSteps(activeProject: ProjectId | null): CueThunk[] {
   const noteBounds = (world: WorldState): Bounds => {
     const hero = world.objects[heroId]
     return hero
-      ? { x: hero.bounds.x + hero.bounds.width - 330, y: hero.bounds.y - 48, width: 330, height: 40 }
-      : { x: 300, y: 40, width: 330, height: 40 }
+      // Sized for the note's FINAL text, 'One mathematical world.', which wraps to two
+      // lines at this width; the create call still writes the shorter opening line.
+      ? { x: hero.bounds.x + hero.bounds.width - 330, y: hero.bounds.y - 56, width: 330, height: 48 }
+      : { x: 300, y: 32, width: 330, height: 48 }
   }
   const proofBounds = (world: WorldState, index: number): Bounds => {
     const hero = world.objects[heroId]

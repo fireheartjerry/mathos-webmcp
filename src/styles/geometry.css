@@ -32,10 +32,16 @@
   border-bottom: 1px solid var(--line, rgba(23, 23, 19, 0.16));
 }
 
-.live-geometry.has-toolbar .geometry-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+/* The kicker is a label and the h3 is the card's actual name. Without wrapping, a
+   nowrap kicker wider than the heading column squeezed the h3 to exactly 0px and the
+   card showed no title at all. The title now drops to its own line instead. */
+.live-geometry.has-toolbar .geometry-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
 
 .live-geometry.has-toolbar .geometry-kicker {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted, #7a776d);
   font: 500 10.5px/1 var(--mono, 'Fira Code', monospace);
   letter-spacing: 0.08em;
@@ -45,7 +51,8 @@
 
 .live-geometry.has-toolbar .geometry-heading h3 {
   margin: 0;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 4em;
   color: var(--graphite, #171713);
   font: 500 16px/1 var(--serif, 'STIX Two Text', serif);
   letter-spacing: -0.01em;
@@ -204,6 +211,12 @@
 
 .geometry-toolbar.is-compact .geometry-toolbar-hint { display: none; }
 @container (max-width: 639px) { .geometry-toolbar-hint { display: none; } }
+
+/* The crescendo builds 220x160 proof tiles. Below ~260px the uppercase kicker cannot
+   share the heading with the card's name, so the name wins and the label steps out;
+   below ~200px the selection meta goes too, leaving a legible title and the figure. */
+@container (max-width: 259px) { .live-geometry.has-toolbar .geometry-kicker { display: none; } }
+@container (max-width: 199px) { .live-geometry.has-toolbar .geometry-meta small { display: none; } }
 
 /* ---- Stage ------------------------------------------------------------------ */
 .live-geometry.has-toolbar .geometry-stage {

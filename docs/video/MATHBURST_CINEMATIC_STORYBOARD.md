@@ -195,10 +195,10 @@ the lattice/partition representation; the resulting objects remain selectable an
 
 **Frame.** A rapid traversal of the same world shows representative real calls from all
 tool families: read, create, update, transform, history, viewport, reconstruction, graph,
-geometry, and concept visualization. The full inspector resolves to `18 / 18`.
+geometry, and concept visualization. The full inspector resolves to `48 / 48`.
 
 **Action.** Each transient chip attaches to its affected object and becomes an attributed
-activity row. The film does not pretend all eighteen calls can be understood individually in
+activity row. The film does not pretend all forty-eight calls can be understood individually in
 eleven seconds; instead, every visible product operation has WebMCP coverage and the inspector
 proves the full registered surface.
 
@@ -207,7 +207,7 @@ proves the full registered surface.
 **Frame.** Pull back until Gamma calculus, live probability, transformer training,
 Olympiad geometry, the tetrahedral simplex, and the partition lattice are visible as islands
 on one continuous mathematical world. Human graphite and Tutor purple edits remain
-interleaved. The inspector is open at `18 / 18` without covering the world.
+interleaved. The inspector is open at `48 / 48` without covering the world.
 
 **End lockup.** “One mathematical world. Every agent can enter.” Hold for 1.8 seconds while
 the product remains alive.
