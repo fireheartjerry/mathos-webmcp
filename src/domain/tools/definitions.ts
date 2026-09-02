@@ -9,6 +9,8 @@ import { buildDeleteOperations, buildTransformOperations } from '../world/operat
 import { getProject, getScene } from '../world/projects'
 import type { CatalogSceneId, ProjectId, SceneId } from '../world/projects'
 import { auditReconstruction, proposeReconstruction } from '../world/reconstruction'
+import { createLeverageTools } from './leverage'
+import type { ProjectSummary } from './leverage'
 import type {
   Bounds,
   GeometryPrimitive,
@@ -45,6 +47,13 @@ export type WorldBridge = {
   runAgentAction: (action: WorldAction, targetIds?: string[]) => Promise<ToolResult>
   runHistory: (direction: 'undo' | 'redo') => Promise<ToolResult>
   onTrace?: (event: WorldTraceEvent) => void
+  /** Project library and navigation, provided by the workspace. */
+  listProjects?: () => ProjectSummary[]
+  openProject?: (projectId: string, scene?: SceneId) => Promise<ToolResult> | ToolResult
+  openScene?: (scene: SceneId) => Promise<ToolResult> | ToolResult
+  createProject?: (title: string, templateId: ProjectId | null) => Promise<ToolResult> | ToolResult
+  deleteProject?: (projectId: string) => Promise<ToolResult> | ToolResult
+  focusObjects?: (ids: string[]) => Promise<ToolResult> | ToolResult
 }
 
 export type WorldTool = {
@@ -65,8 +74,8 @@ const KINDS: WorldObject['kind'][] = [
 ]
 const OPERATION_TYPES: WorldOperation['type'][] = ['put', 'remove', 'select', 'viewport', 'order', 'session', 'reconstruction']
 const finite = (...numbers: number[]) => numbers.every(Number.isFinite)
-const isRecord = (value: unknown): value is Values => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-const isPoint = (value: unknown): value is Point => isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number' && finite(value.x, value.y)
+export const isRecord = (value: unknown): value is Values => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+export const isPoint = (value: unknown): value is Point => isRecord(value) && typeof value.x === 'number' && typeof value.y === 'number' && finite(value.x, value.y)
 const isStroke = (value: unknown): value is { points: Point[] } => isRecord(value) && Array.isArray(value.points) && value.points.length > 0 && value.points.every(isPoint)
 const isBounds = (value: unknown): value is Bounds => isRecord(value)
   && typeof value.x === 'number' && typeof value.y === 'number'
@@ -74,11 +83,11 @@ const isBounds = (value: unknown): value is Bounds => isRecord(value)
   && finite(value.x, value.y, value.width, value.height) && value.width > 0 && value.height > 0
 const isPair = (value: unknown): value is [number, number] => Array.isArray(value)
   && value.length === 2 && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
-const isVector = (value: unknown, length: number): value is number[] => Array.isArray(value)
+export const isVector = (value: unknown, length: number): value is number[] => Array.isArray(value)
   && value.length === length && value.every((entry) => typeof entry === 'number' && Number.isFinite(entry))
 const isMatrix2 = (value: unknown): value is [[number, number], [number, number]] => Array.isArray(value)
   && value.length === 2 && value.every((row) => isVector(row, 2))
-const isStringNumberMap = (value: unknown): value is Record<string, number> => isRecord(value)
+export const isStringNumberMap = (value: unknown): value is Record<string, number> => isRecord(value)
   && Object.values(value).every((entry) => typeof entry === 'number' && Number.isFinite(entry))
 const isTinyModel = (value: unknown): boolean => isRecord(value)
   && Array.isArray(value.tokens) && value.tokens.length === 3 && value.tokens.every((entry) => typeof entry === 'string')
@@ -101,7 +110,7 @@ function readInput(input: unknown): Values {
   return input
 }
 
-function values(input: unknown, allowed: string[]): Values {
+export function values(input: unknown, allowed: string[]): Values {
   const result = readInput(input)
   const unexpected = Object.keys(result).find((key) => !allowed.includes(key))
   if (unexpected) throw new Error(`Unexpected argument “${unexpected}”.`)
@@ -120,9 +129,9 @@ function safe(execute: ToolExecutor): (input: unknown) => Promise<ToolResult> {
   }
 }
 
-const emptySchema = { type: 'object', properties: {}, additionalProperties: false }
+export const emptySchema = { type: 'object', properties: {}, additionalProperties: false }
 const pointSchema = { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'], additionalProperties: false }
-const boundsSchema = {
+export const boundsSchema = {
   type: 'object',
   properties: { x: { type: 'number' }, y: { type: 'number' }, width: { type: 'number', exclusiveMinimum: 0 }, height: { type: 'number', exclusiveMinimum: 0 } },
   required: ['x', 'y', 'width', 'height'], additionalProperties: false,
@@ -141,9 +150,9 @@ const primitivesSchema = {
   type: 'array', minItems: 1,
   items: { type: 'object', properties: { kind: { type: 'string' }, id: { type: 'string' } }, required: ['kind', 'id'], additionalProperties: true },
 }
-const schema = (properties: Values, required: string[] = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false })
+export const schema = (properties: Values, required: string[] = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false })
 
-function tool(name: string, title: string, description: string, inputSchema: Record<string, unknown>, readOnly: boolean, execute: ToolExecutor): WorldTool {
+export function tool(name: string, title: string, description: string, inputSchema: Record<string, unknown>, readOnly: boolean, execute: ToolExecutor): WorldTool {
   return { name, title, description, inputSchema, annotations: { readOnlyHint: readOnly, untrustedContentHint: false }, execute: safe(execute) }
 }
 
@@ -220,8 +229,8 @@ function primitives(value: unknown): GeometryPrimitive[] {
   return value as GeometryPrimitive[]
 }
 
-const action = (summary: string, operations: WorldOperation[]): WorldAction => ({ id: crypto.randomUUID(), source: 'agent', summary, operations })
-function changedIds(operations: WorldOperation[]): string[] {
+export const action = (summary: string, operations: WorldOperation[]): WorldAction => ({ id: crypto.randomUUID(), source: 'agent', summary, operations })
+export function changedIds(operations: WorldOperation[]): string[] {
   const ids = new Set<string>()
   for (const operation of operations) {
     if (operation.type === 'put') ids.add(operation.object.id)
@@ -234,7 +243,7 @@ function limit(value: unknown, fallback: number) {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('limit must be a number.')
   return Math.max(1, Math.min(100, Math.floor(value)))
 }
-function requiredString(value: unknown, field: string): string {
+export function requiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`${field} must be a non-empty string.`)
   return value
 }
@@ -496,6 +505,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     getWorld, getObjects, getSelection, getSessionContext, getHistory, inspectMath,
     createObjects, updateObjects, deleteObjects, transformObjects, applyActions, stepHistory, setViewport,
     reconstructProblem, auditReconstructionTool, graphExpression, constructGeometry, visualizeConcept,
+    ...createLeverageTools(bridge),
   ]
 
   if (!bridge.onTrace) return tools

@@ -11,7 +11,7 @@ Mathburst
 ## Elevator pitch
 
 ```text
-Mathburst turns a photographed problem into a live canvas where a learner and WebMCP tutor share 18 tools to read, build, graph, transform, and undo the same mathematical world.
+Mathburst turns a photographed problem into a live canvas where a learner and WebMCP tutor share 34 tools to read, build, graph, transform, and undo the same mathematical world.
 ```
 
 ## Built With
@@ -43,7 +43,7 @@ The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, 2:41
 Suggested title:
 
 ```text
-Mathburst — eight connected mathematical scenes powered by 18 WebMCP tools
+Mathburst — eight connected mathematical scenes powered by 34 WebMCP tools
 ```
 
 Suggested description:
@@ -51,7 +51,7 @@ Suggested description:
 ```text
 A photograph becomes a living mathematical world that a student and any WebMCP tutor can inhabit together.
 
-Mathburst ships four saved projects and eight connected scenes: Gamma probability, attention and deterministic tiny-model training, barycentric and spiral-similarity geometry, and a tetrahedral-to-Ramanujan arithmetic observatory. The page registers exactly 18 WebMCP tools, and every agent edit is visible, attributed, and undoable through the same action kernel as the human interface.
+Mathburst ships four saved projects and eight connected scenes: Gamma probability, attention and deterministic tiny-model training, barycentric and spiral-similarity geometry, and a tetrahedral-to-Ramanujan arithmetic observatory. The page registers exactly 34 WebMCP tools, and every agent edit is visible, attributed, and undoable through the same action kernel as the human interface.
 
 Built as a focused MVP for the 2026 WebMCP Challenge.
 Source: https://github.com/fireheartjerry/mathos-webmcp
@@ -95,13 +95,13 @@ In the judge path, a photograph becomes semantic math, the audit catches a dupli
 
 Humans can draw, type, typeset, import, graph, construct, transform, group, align, layer, duplicate, delete, pan, zoom, edit live matrix and attention values, train the tiny model, drag barycentric geometry, rotate the simplex, change partition bounds, and undo.
 
-An external tutor can read the world, objects, selection, tutoring context, history, and live mathematical structure. It can create, update, transform, delete, batch, undo or redo, move the viewport, reconstruct and audit a photographed problem, graph expressions, construct geometry, and visualize all seven semantic mathematical concepts through the same eighteen tools.
+An external tutor can read the world, objects, selection, tutoring context, history, and live mathematical structure. It can create, update, transform, delete, batch, undo or redo, move the viewport, reconstruct and audit a photographed problem, graph expressions, construct geometry, and visualize all seven semantic mathematical concepts through the same thirty-four tools.
 
 Both operate the same objects through the same action kernel. Ordinary tutor edits execute directly and remain visible, attributed, and reversible. Reconstruction is the one workflow that requires learner approval because it replaces the photograph with the proposed semantic scene.
 
 ## How we implemented WebMCP
 
-Mathburst registers exactly eighteen tools through `document.modelContext.registerTool()`.
+Mathburst registers exactly thirty-four tools through `document.modelContext.registerTool()`.
 
 **Read:** `get_world`, `get_objects`, `get_selection`, `get_session_context`, `get_history`, `inspect_math`.
 
@@ -111,13 +111,13 @@ Mathburst registers exactly eighteen tools through `document.modelContext.regist
 
 The application has one typed `WorldState` scene graph and one canonical mutation path. Human gestures and write tools compile into the same operations, which apply atomically, recompute direct mathematical dependencies, append an attributed history entry, and return a compact result with changed object IDs.
 
-The broad object schemas give an agent exact low-level control without registering a redundant tool for every toolbar icon. The five workflow tools provide clear high-level routes for the most important mathematical actions, including Gamma density, attention, training, barycentrics, spiral similarity, simplex, and partition views. An in-product inspector displays all eighteen and invokes the exact same execute callbacks, so judges can see the whole WebMCP surface and its effects immediately.
+The broad object schemas give an agent exact low-level control without registering a redundant tool for every toolbar icon. The five workflow tools provide clear high-level routes for the most important mathematical actions, including Gamma density, attention, training, barycentrics, spiral similarity, simplex, and partition views. An in-product inspector displays all thirty-four and invokes the exact same execute callbacks, so judges can see the whole WebMCP surface and its effects immediately.
 
 ## Challenges we ran into
 
 The hardest product decision was resisting the urge to build a chatbot. The winning interaction only became obvious when we treated the whiteboard itself as the agent interface.
 
-We also had to make broad creative control legible in only eighteen tools. One tool per toolbar button would be noisy; one generic command would be opaque. The final surface combines six precise read tools, seven direct action tools over a typed object vocabulary, and five high-level mathematical workflows.
+We also had to make broad creative control legible in only thirty-four tools. One tool per toolbar button would be noisy; one generic command would be opaque. The final surface combines six precise read tools, seven direct action tools over a typed object vocabulary, and five high-level mathematical workflows.
 
 Finally, dynamic math forced the world model to preserve relationships instead of drawing pixels. Graphs reference equations, attention and training share a tiny serializable model, geometry stores declarative primitives, and simplex/partition views recompute their invariants. That is what lets a tutor edit the mathematics instead of merely placing an annotation on top of it.
 
@@ -125,7 +125,7 @@ Finally, dynamic math forced the world model to preserve relationships instead o
 
 - A complete photograph → audit → approved live-scene tutoring flow.
 - Exact human/agent parity through one visible, attributed, undoable action kernel.
-- Eighteen discoverable WebMCP tools covering the full submitted interface.
+- Thirty-four discoverable WebMCP tools covering the full submitted interface.
 - Four saved projects and eight connected mathematical scenes running on the same world model.
 - A thirteen-shot Director Review surface with editable targets and camera framing.
 - A whiteboard that remains useful without an agent or backend.
@@ -146,7 +146,7 @@ The challenge build proves the interaction model. It deliberately does not claim
 
 ## Product handoff checklist
 
-- [x] Product copy reflects four projects, eight scenes, thirteen Director Review shots, and 18 WebMCP tools.
+- [x] Product copy reflects four projects, eight scenes, thirteen Director Review shots, and 34 WebMCP tools.
 - [x] Product repository intentionally makes no deployment, video, test, CI/CD, or production-readiness claim.
 - [ ] Publish or record separately if the challenge submission requires those owner-managed artifacts.
 - [ ] Make the repository public before the deadline.

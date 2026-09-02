@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createWorldTools } from '../domain/tools/definitions'
 import type { ToolResult, WorldBridge, WorldTraceEvent } from '../domain/tools/definitions'
 import { registerWorldTools } from '../domain/tools/registry'
+import { summarizeProject } from '../domain/tools/leverage'
 import type { RegistrationStatus } from '../domain/tools/registry'
 import { saveWorld } from '../domain/world/persistence'
 import {
@@ -21,6 +22,7 @@ import { dispatchWorldAction, stepWorldHistory } from '../domain/world/reducer'
 import { migrateWorld } from '../domain/world/migrations'
 import { createSeedWorld, HERO_GRAPH_ID, OPENING_ATTEMPT_ID, OPENING_CORRECTION_ID, SOURCE_IMAGE_ID } from '../domain/world/seed'
 import {
+  getScene,
   getProjectForScene,
   getSceneObjectIds,
   getScenesForProject,
@@ -511,11 +513,24 @@ export default function MathburstWorkspace() {
     run(humanAction(`Added expression parameter ${name}`, operations))
   }, [run])
 
-  const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
-    if (agentBusyRef.current) {
-      resolve({ ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' })
-      return
+  /**
+   * Tool calls arrive back to back from an agent. Rather than failing the
+   * second call while the first one's presence is still settling, wait for
+   * the Tutor to be free (bounded, so a stuck presence cannot hang a call).
+   */
+  const whenTutorFree = (deadlineMs = 4000) => new Promise<boolean>((resolve) => {
+    const started = performance.now()
+    const check = () => {
+      if (!agentBusyRef.current) { resolve(true); return }
+      if (performance.now() - started > deadlineMs) { resolve(false); return }
+      window.setTimeout(check, 30)
     }
+    check()
+  })
+
+  const runAgent = useCallback(async (action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => {
+    if (!(await whenTutorFree())) return { ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' }
+    return new Promise((resolve) => {
 
     const current = worldRef.current
     const target = targetIds.map((id) => current.objects[id]).find(Boolean)
@@ -581,13 +596,12 @@ export default function MathburstWorkspace() {
 
     setPresence({ visible: true, x, y, label: 'Tutor', action: action.summary })
     window.setTimeout(commit, 180)
-  }), [persistActiveViewport])
+  })
+  }, [persistActiveViewport])
 
-  const runHistoryBridge = useCallback((direction: 'undo' | 'redo'): Promise<ToolResult> => new Promise((resolve) => {
-    if (agentBusyRef.current) {
-      resolve({ ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' })
-      return
-    }
+  const runHistoryBridge = useCallback(async (direction: 'undo' | 'redo'): Promise<ToolResult> => {
+    if (!(await whenTutorFree())) return { ok: false, summary: 'No changes made', error: 'Tutor is finishing another action.' }
+    return new Promise((resolve) => {
     const current = worldRef.current
     const commit = (direction === 'undo' ? current.history : current.future).at(-1)
     if (!commit) {
@@ -631,7 +645,8 @@ export default function MathburstWorkspace() {
       setPresence({ visible: true, x, y, label: 'Tutor', action: summary })
       window.setTimeout(applyHistory, 180)
     }
-  }), [persistActiveViewport])
+  })
+  }, [persistActiveViewport])
 
   const history = useCallback((direction: 'undo' | 'redo') => {
     const next = stepWorldHistory(worldRef.current, direction, 'human')
@@ -807,6 +822,42 @@ export default function MathburstWorkspace() {
     },
     runAgentAction: runAgent,
     runHistory: runHistoryBridge,
+    listProjects: () => libraryProjectsRef.current.map((project) => summarizeProject(project, activeDocumentIdRef.current)),
+    openProject: (projectId, scene) => {
+      const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId && candidate.deletedAt === null)
+      if (!project) return { ok: false, summary: 'No changes made', error: `Project ${projectId} does not exist.` }
+      if (scene && project.templateId && !getScenesForProject(project.templateId).some((candidate) => candidate.id === scene)) return { ok: false, summary: 'No changes made', error: `Scene ${scene} does not belong to ${project.title}.` }
+      openLibraryProject(project, scene)
+      return { ok: true, summary: `Opened ${project.title}`, data: { projectId: project.id, scene: scene ?? project.startScene } }
+    },
+    openScene: (scene) => {
+      const project = libraryProjectsRef.current.find((candidate) => candidate.id === activeDocumentIdRef.current)
+      if (!project?.templateId) return { ok: false, summary: 'No changes made', error: 'The active project has no built-in scenes.' }
+      if (!getScenesForProject(project.templateId).some((candidate) => candidate.id === scene)) return { ok: false, summary: 'No changes made', error: `Scene ${scene} belongs to another project; open that project first.` }
+      if (directorOpenRef.current) return { ok: false, summary: 'No changes made', error: 'Director review owns the camera; close it first.' }
+      navigateToScene(scene)
+      return { ok: true, summary: `Opened scene ${getScene(scene).title}`, data: { scene } }
+    },
+    createProject: (title, templateId) => {
+      const before = new Set(libraryProjectsRef.current.map((project) => project.id))
+      createLibraryProject(title, templateId)
+      const created = libraryProjectsRef.current.find((project) => !before.has(project.id))
+      return { ok: true, summary: `Created project ${title}`, data: { projectId: created?.id ?? activeDocumentIdRef.current, templateId } }
+    },
+    deleteProject: (projectId) => {
+      const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId)
+      if (!project || project.deletedAt !== null) return { ok: false, summary: 'No changes made', error: `Project ${projectId} does not exist.` }
+      if (project.kind !== 'user') return { ok: false, summary: 'No changes made', error: 'Built-in projects cannot be deleted.' }
+      trashLibraryProject(project)
+      if (activeDocumentIdRef.current === projectId) openProjectGallery()
+      return { ok: true, summary: `Moved ${project.title} to deleted projects`, data: { projectId } }
+    },
+    focusObjects: (ids) => {
+      const current = worldRef.current
+      const bounds = unionBounds(current, expandTargetIds(current, ids))
+      if (!bounds) return { ok: false, summary: 'No changes made', error: 'Those objects have no bounds to focus on.' }
+      return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Focused on ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds) }] }, ids)
+    },
     onTrace: (event) => {
       setTraceEvents((current) => [
         ...current.filter((existing) => existing.invocationId !== event.invocationId),
@@ -815,7 +866,7 @@ export default function MathburstWorkspace() {
       if (traceTimerRef.current !== null) window.clearTimeout(traceTimerRef.current)
       traceTimerRef.current = window.setTimeout(() => setTraceEvents([]), 5200)
     },
-  }), [runAgent, runHistoryBridge])
+  }), [createLibraryProject, navigateToScene, openLibraryProject, openProjectGallery, runAgent, runHistoryBridge, trashLibraryProject])
   const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
 
   /** Wait for the Tutor presence to settle so consecutive real tool calls never collide. */
