@@ -222,14 +222,17 @@ export function createLeverageTools(bridge: WorldBridge): WorldTool[] {
     return outcome.ok ? { ...outcome, changedIds: outcome.changedIds ?? [], data: { ...(outcome.data ?? {}), projectId } } : outcome
   })
 
-  const focusObjects = tool('focus_objects', 'Focus the camera on objects', 'Pan and zoom so the given objects fill the view. Not a history commit. Use before explaining or editing something the learner cannot see; use spotlight_objects to ring them first.', schema({
+  const focusObjects = tool('focus_objects', 'Focus the camera on objects', 'Pan and zoom so the given objects fill the view. Not a history commit. Use before explaining or editing something the learner cannot see; use spotlight_objects to ring them first. emphasis chooses how much of the surroundings stays in shot.', schema({
     ids: { type: 'array', minItems: 1, items: { type: 'string', minLength: 1, description: 'Object id.' }, description: 'Object ids to bring into view together.' },
+    emphasis: { type: 'string', enum: ['detail', 'feature', 'establish'], description: 'Shot size: detail pushes in on one control, feature frames a card, establish keeps the scene around it. Default feature.' },
   }, ['ids']), false, async (input) => {
-    const args = values(input, ['ids']); if (!Array.isArray(args.ids) || !args.ids.length || !args.ids.every((id) => typeof id === 'string' && id)) throw new Error('ids must be a non-empty array of object id strings, e.g. ["graph-1"].')
+    const args = values(input, ['ids', 'emphasis']); if (!Array.isArray(args.ids) || !args.ids.length || !args.ids.every((id) => typeof id === 'string' && id)) throw new Error('ids must be a non-empty array of object id strings, e.g. ["graph-1"].')
+    const emphasis = args.emphasis === undefined ? 'feature' : args.emphasis
+    if (emphasis !== 'detail' && emphasis !== 'feature' && emphasis !== 'establish') throw new Error('emphasis must be one of "detail", "feature" or "establish".')
     const world = bridge.getWorld(); const missing = (args.ids as string[]).find((id) => !world.objects[id]); if (missing) throw new Error(`Object ${missing} does not exist. Read ids with get_objects.`)
     if (!bridge.focusObjects) return unavailable('Camera focus')
-    const outcome = await bridge.focusObjects(args.ids as string[])
-    return outcome.ok ? { ...outcome, changedIds: outcome.changedIds ?? [], data: { ...(outcome.data ?? {}), ids: args.ids, viewport: bridge.getWorld().viewport } } : outcome
+    const outcome = await bridge.focusObjects(args.ids as string[], emphasis)
+    return outcome.ok ? { ...outcome, changedIds: outcome.changedIds ?? [], data: { ...(outcome.data ?? {}), ids: args.ids, emphasis, viewport: bridge.getWorld().viewport } } : outcome
   })
 
   const annotate = tool('annotate_object', 'Annotate an object', 'Leave a short note (≤ 140 characters) beside an object, typed or handwritten, attributed to the Tutor and undoable. Placed right, below, above or left of the target. Use for marks, hints and corrections, never to solve for the learner. Use edit_text to change it later.', schema({

@@ -1042,11 +1042,12 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       playbackRef.current?.control(timelineId, timelineAction, options)
       return { ok: true, summary: `${timelineAction === 'play' ? 'Played' : timelineAction === 'pause' ? 'Paused' : timelineAction === 'seek' ? 'Sought' : 'Reset'} timeline`, data: { timelineId, action: timelineAction, ...(options ?? {}) } }
     },
-    focusObjects: (ids) => {
+    focusObjects: (ids, emphasis = 'feature') => {
       const current = worldRef.current
       const bounds = unionBounds(current, expandTargetIds(current, ids))
       if (!bounds) return { ok: false, summary: 'No changes made', error: 'Those objects have no bounds to focus on.' }
-      return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Focused on ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds) }] }, ids)
+      const shot = emphasis === 'detail' ? 'a close shot of' : emphasis === 'establish' ? 'a wide shot of' : 'the camera on'
+      return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Framed ${shot} ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds, emphasis) }] }, ids)
     },
     onTrace: (event) => {
       setToolLog((current) => [...current, { ...event, at: Date.now() }].slice(-2000))
@@ -1708,9 +1709,37 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     run(humanAction('Changed zoom', [{ type: 'viewport', viewport: { ...world.viewport, zoom: Math.min(2.5, Math.max(0.25, zoom)) } }]))
   }
 
-  const viewportForBounds = (bounds: { x: number; y: number; width: number; height: number }): Viewport => {
+  /**
+   * How much of the surroundings a shot keeps. Fitting an object's own box makes
+   * every shot look the same and, on something as small as a matrix cell, frames
+   * it with nothing around it -- the viewer loses where they are. Each level
+   * instead frames the object plus a margin scaled to its size and capped, so a
+   * cell and a whole frame both get a shot that reads.
+   */
+  const SHOT_CONTEXT = {
+    detail: { ratio: 0.35, min: 40, cap: 120 },
+    feature: { ratio: 0.9, min: 160, cap: 320 },
+    establish: { ratio: 2, min: 520, cap: 620 },
+  } as const
+
+  const viewportForBounds = (
+    bounds: { x: number; y: number; width: number; height: number },
+    emphasis: keyof typeof SHOT_CONTEXT = 'feature',
+  ): Viewport => {
     const { width, height } = canvasSize()
-    const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.08))
+    const shot = SHOT_CONTEXT[emphasis] ?? SHOT_CONTEXT.feature
+    // The floor is what separates the shots on a small target: proportional margin
+    // alone leaves a matrix cell framed identically at every level. Note the zoom
+    // ceiling of 2.5 still flattens detail and feature for anything under roughly
+    // 1000 world px -- both simply reach maximum zoom.
+    const margin = Math.max(shot.min, Math.min(shot.cap, Math.max(bounds.width, bounds.height) * shot.ratio))
+    bounds = {
+      x: bounds.x - margin,
+      y: bounds.y - margin,
+      width: bounds.width + margin * 2,
+      height: bounds.height + margin * 2,
+    }
+    const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.04))
     const availableWidth = Math.max(1, width - padding * 2)
     const availableHeight = Math.max(1, height - padding * 2)
     const rawZoom = bounds.width > 0 && bounds.height > 0
