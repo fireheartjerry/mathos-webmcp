@@ -34,9 +34,9 @@ export const GAMMA_BOUND = 6
 export const GAMMA_BIN_EDGES: [number, number, number, number] = [0, 3.15, 6.075, 16]
 
 /** Hidden spiral-similarity centre and the fixed similarity used by the construction. */
-export const SPIRAL_CENTER = { x: 640, y: 150 }
+export const SPIRAL_CENTER = { x: 680, y: 360 }
 export const SPIRAL_FACTOR = 0.72
-export const SPIRAL_ANGLE = 38
+export const SPIRAL_ANGLE = 28
 export const HOMOTHETY_FACTOR = 0.58
 
 const frame = (

@@ -425,7 +425,9 @@
 .geometry-point-group.is-H-A .geometry-label, .geometry-point-group.is-H-B .geometry-label, .geometry-point-group.is-H-C .geometry-label { fill: var(--teal); }
 .geometry-point-group.is-S-A .geometry-label, .geometry-point-group.is-S-B .geometry-label, .geometry-point-group.is-S-C .geometry-label { fill: var(--purple); }
 .geometry-legend { left: 14px; right: 14px; bottom: 10px; display: grid; grid-template-columns: repeat(3, auto) minmax(0, 1fr); align-items: center; gap: 12px; color: var(--muted); font: 11px/1.2 var(--mono); text-transform: none; }
-.geometry-legend.has-spiral { grid-template-columns: repeat(5, auto) minmax(0, 1fr); }
+.geometry-legend.has-spiral { grid-template-columns: repeat(5, auto) minmax(0, 1fr); gap: 8px; }
+.geometry-legend.has-spiral .geometry-readout { padding: 3px 6px; }
+.geometry-legend.has-spiral em { font-size: 10px; }
 .geometry-legend i { display: none; }
 .geometry-readout { display: grid; gap: 2px; padding: 4px 8px; background: rgba(251, 249, 243, 0.92); border-left: 2px solid var(--teal); }
 .geometry-readout small { color: var(--muted); font-size: 10px; }

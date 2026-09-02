@@ -396,7 +396,7 @@ const spiralConstructSteps: CueThunk[] = [
     objects: [{
       id: SPIRAL_EQUATION_ID, kind: 'equation',
       latex: `\\frac{SA'}{SA}=\\frac{SB'}{SB}=${SPIRAL_FACTOR},\\qquad \\angle ASA'=\\angle BSB'=${SPIRAL_ANGLE}^\\circ`,
-      color: '#7c5cff', bounds: { x: 560, y: 1256, width: 490, height: 38 }, rotation: 0, author: 'agent', opacity: 1,
+      color: '#7c5cff', bounds: { x: 560, y: 1262, width: 490, height: 36 }, rotation: 0, author: 'agent', opacity: 1,
     }],
   }),
 ]

@@ -659,6 +659,7 @@ export default function MathburstWorkspace() {
   }, [updateLibraryProjects])
 
   const navigateToScene = useCallback((scene: CatalogSceneId) => {
+    if (directorOpenRef.current) return
     const currentProject = stashActiveProject()
     if (!currentProject?.templateId || scene === 'overview') return
     const ownsScene = getScenesForProject(currentProject.templateId).some((candidate) => candidate.id === scene)
@@ -1386,6 +1387,7 @@ export default function MathburstWorkspace() {
         event.preventDefault()
         deleteSelection()
       } else if (/^[0-8]$/.test(event.key)) {
+        if (directorOpenRef.current) return
         if (event.key === '0') {
           openProjectGallery()
         } else {
@@ -1463,6 +1465,16 @@ export default function MathburstWorkspace() {
     [activeDirectorShot.scene, activeDocumentId, directorOpen, libraryProjects, world],
   )
   const canvasWorld = directorOverviewWorld ?? world
+  // A frame is "ready" when its targets exist in the project that owns it,
+  // whichever project is active; the Director walks all four.
+  const directorAvailableObjectIds = useMemo(() => {
+    const ids = new Set<string>()
+    const worlds = [world, ...libraryProjects.filter((project) => project.kind === 'built-in' && project.id !== activeDocumentId).map((project) => project.world)]
+    for (const candidate of worlds) {
+      for (const object of Object.values(candidate.objects)) if (object.opacity > 0) ids.add(object.id)
+    }
+    return ids
+  }, [activeDocumentId, libraryProjects, world])
   const ignoreRun = useCallback((_action: WorldAction) => { /* the overview is a camera state, never a document */ }, [])
   const registeredCount = registrationStatus?.state === 'live' || registrationStatus?.state === 'partial'
     ? `${registrationStatus.registered} / ${registrationStatus.total}`
@@ -1595,7 +1607,7 @@ export default function MathburstWorkspace() {
           state={directorState}
           activeShot={activeDirectorShot}
           controlsHidden={directorControlsHidden}
-          availableObjectIds={new Set(Object.values(world.objects).filter((object) => object.opacity > 0).map((object) => object.id))}
+          availableObjectIds={directorAvailableObjectIds}
           selectedObjectIds={directorSelection}
           onClose={closeDirectorReview}
           onToggleControls={() => setDirectorControlsHidden((hidden) => !hidden)}

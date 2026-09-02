@@ -50,7 +50,11 @@ function arcPath(from: Vector2, to: Vector2, radius: number) {
 }
 
 export default function AttentionView({ object, world, run }: Props) {
-  const [draft, setDraft] = useState<CellDraft | null>(null)
+  const [draft, setDraftState] = useState<CellDraft | null>(null)
+  // The draft also lives in a ref so an Enter commit followed by blur in the
+  // same tick cannot commit the same edit twice.
+  const draftRef = useRef<CellDraft | null>(null)
+  const setDraft = (next: CellDraft | null) => { draftRef.current = next; setDraftState(next) }
   const [heroActive, setHeroActive] = useState(false)
   const heroTimerRef = useRef<number | null>(null)
   const pass = useMemo(
@@ -88,6 +92,7 @@ export default function AttentionView({ object, world, run }: Props) {
   }
 
   const commitCell = (cell: CellDraft) => {
+    if (!draftRef.current) return
     setDraft(null)
     const value = Number(cell.value)
     if (!Number.isFinite(value)) return
@@ -124,7 +129,7 @@ export default function AttentionView({ object, world, run }: Props) {
               step="0.01"
               value={editing ? draft.value : short(value)}
               onChange={(event) => setDraft({ key, row: rowIndex, column: columnIndex, value: event.target.value })}
-              onBlur={() => { if (editing) commitCell(draft) }}
+              onBlur={() => { const pending = draftRef.current; if (pending && pending.key === key && pending.row === rowIndex && pending.column === columnIndex) commitCell(pending) }}
               onKeyDown={(event) => onCellKey(event, { key, row: rowIndex, column: columnIndex, value: editing ? draft.value : event.currentTarget.value })}
             />
           )
