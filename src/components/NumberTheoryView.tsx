@@ -327,7 +327,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
           <div className="number-theory-step number-theory-product">
             <small>finite Euler product, m ≤ {cutoff}</small>
             <Tex latex={`\\prod_{m=1}^{${cutoff}}\\frac{1}{1-q^{m}}=\\sum_{n\\le ${cutoff}} p(n)\\,q^{n}+\\cdots`} />
-            <em>coefficients below are computed from these factors</em>
+            <em>coefficients below are computed here</em>
           </div>
           <div className="number-theory-step ferrers-step">
             <small>Ferrers · {diagram.cellCount} cells</small>
@@ -403,7 +403,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
         </section>
       </div>
 
-      <footer className="lattice-foot" onPointerDown={stop} style={{ display: 'block' }}>
+      <footer className="lattice-foot" onPointerDown={stop}>
         {object.revealTheorem ? (
           <aside className={`ramanujan-reveal ${verification.verified ? 'is-verified' : 'has-counterexample'}${flash.revealTheorem ? ' is-agent-set' : ''}`} style={{ opacity: theoremT }}>
             <div className="ramanujan-statement">
@@ -418,7 +418,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
             <button type="button" onPointerDown={stop} onClick={() => reveal(false)}>hide</button>
           </aside>
         ) : (
-          <button className={`ramanujan-tease${flash.revealTheorem ? ' is-agent-set' : ''}`} type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)} style={{ opacity: theoremT, width: '100%' }}>
+          <button className={`ramanujan-tease${flash.revealTheorem ? ' is-agent-set' : ''}`} type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)} style={{ opacity: theoremT }}>
             <span>?</span> every value in the n ≡ 4 lane is a multiple of five · reveal the theorem
           </button>
         )}

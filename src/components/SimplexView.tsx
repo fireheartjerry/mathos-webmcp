@@ -124,11 +124,21 @@ function NumberField({ label, value, min, max, step, digits, onCommit, className
     setText(null)
     if (Number.isFinite(parsed)) onCommit(clamp(parsed, min, max))
   }
+  // Arrow keys step by the control's own step, not the browser's default of 1:
+  // `step="any"` keeps a 0.589 weight from being reported as an invalid entry.
+  const nudge = (direction: 1 | -1) => {
+    const base = text === null ? value : Number(text)
+    if (!Number.isFinite(base)) return
+    setText(null)
+    const next = clamp(Math.round((base + direction * step) / step) * step, min, max)
+    if (!sameValue(next, value)) onCommit(next)
+  }
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     event.stopPropagation()
     // Enter only blurs: the blur handler commits once, so Enter + blur never double-commit.
     if (event.key === 'Enter') event.currentTarget.blur()
     if (event.key === 'Escape') { setText(null); event.currentTarget.blur() }
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); nudge(event.key === 'ArrowUp' ? 1 : -1) }
   }
   return (
     <input
@@ -139,7 +149,7 @@ function NumberField({ label, value, min, max, step, digits, onCommit, className
       value={text ?? value.toFixed(digits)}
       min={min}
       max={max}
-      step={step}
+      step="any"
       onChange={(event) => setText(event.target.value)}
       onBlur={settle}
       onKeyDown={onKeyDown}
@@ -189,14 +199,23 @@ export default function SimplexView({ object, run }: Props) {
     return () => observer.disconnect()
   }, [])
 
-  // Tool- or slider-set values glide; a live drag is immediate.
-  const tweenedWeights = useTweenedNumbers(object.weights, WEIGHT_TWEEN_MS)
-  const tweenedSection = useTweenedNumber(object.section, SECTION_TWEEN_MS)
-  const tweenedOrbit = useTweenedNumbers([object.rotationX, object.rotationY], ORBIT_TWEEN_MS)
-  const weights = (draft?.weights ?? tweenedWeights) as SimplexWeights
-  const section = clamp(draft?.section ?? tweenedSection, 0, 1)
-  const rotationX = draft?.rotationX ?? tweenedOrbit[0]
-  const rotationY = draft?.rotationY ?? tweenedOrbit[1]
+  // A live draft is fed to the tween with ms = 0, so the hook tracks the pointer
+  // exactly *and* keeps its internal origin in step. On release the committed
+  // value already equals what is drawn, so nothing snaps back: the plane sweeps
+  // over 260 ms only when a tool, the timeline or a typed value moves it.
+  const draftingWeights = draft?.weights !== undefined
+  const draftingSection = draft?.section !== undefined
+  const draftingOrbit = draft?.rotationX !== undefined || draft?.rotationY !== undefined
+  const tweenedWeights = useTweenedNumbers(draft?.weights ?? object.weights, draftingWeights ? 0 : WEIGHT_TWEEN_MS)
+  const tweenedSection = useTweenedNumber(draft?.section ?? object.section, draftingSection ? 0 : SECTION_TWEEN_MS)
+  const tweenedOrbit = useTweenedNumbers(
+    [draft?.rotationX ?? object.rotationX, draft?.rotationY ?? object.rotationY],
+    draftingOrbit ? 0 : ORBIT_TWEEN_MS,
+  )
+  const weights = tweenedWeights as SimplexWeights
+  const section = clamp(tweenedSection, 0, 1)
+  const rotationX = tweenedOrbit[0]
+  const rotationY = tweenedOrbit[1]
   const denominator = clamp(Math.round(object.denominator), MIN_DENOMINATOR, MAX_DENOMINATOR)
   const rotation: EulerRotation = useMemo(() => ({ x: rotationX, y: rotationY, z: 0 }), [rotationX, rotationY])
   const projected = useMemo(() => projectTetrahedron(TETRAHEDRON, rotation, projection), [rotation, projection])
