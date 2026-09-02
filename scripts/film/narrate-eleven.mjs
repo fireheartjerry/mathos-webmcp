@@ -5,12 +5,13 @@
  *   node scripts/film/narrate-eleven.mjs --dry-run       # print the plan, no API calls
  *   node scripts/film/narrate-eleven.mjs                 # synthesise changed clips only
  *
- * Reads `scripts/film/narration-v2.json` ({ voiceId, model, settings, clips }),
+ * Reads `scripts/film/<spec>.json` ({ voiceId, model, settings, clips }); the spec
+ * defaults to narration-v2 and is chosen with --spec=<name>,
  * posts each clip to /v1/text-to-speech/{voiceId} as mp3_44100_128, caches the
  * mp3 by a hash of (text, voice, model, settings), converts to 48 kHz mono WAV
  * with leading/trailing silence trimmed and loudness at -18 LUFS (same chain as
- * narrate.mjs), and writes `video/public/film/narration-v2/<id>.wav` plus
- * `video/public/film/narration-v2/narration-v2.json` with measured durations.
+ * narrate.mjs), and writes `video/public/film/<spec>/<id>.wav` plus
+ * `video/public/film/<spec>/<spec>.json` with measured durations.
  *
  * The API key is read from `.env.film` at the repo root (ELEVENLABS_API_KEY=...)
  * and is never printed.  Node >= 22, no dependencies beyond ffmpeg/ffprobe.
@@ -22,8 +23,13 @@ import { resolve } from 'node:path'
 
 const ROOT = resolve('.')
 const ENV_FILE = resolve(ROOT, '.env.film')
-const SPEC_FILE = resolve(ROOT, 'scripts/film/narration-v2.json')
-const OUT_DIR = resolve(ROOT, 'video/public/film/narration-v2')
+// Which script to voice. Defaults to v2 so existing invocations are unchanged;
+// pass --spec=narration-v3 to render a different draft alongside it rather than
+// over it, so two takes can be compared before one is chosen.
+const SPEC_NAME = (process.argv.slice(2).find((arg) => arg.startsWith('--spec=')) ?? '--spec=narration-v2').slice(7)
+if (!/^[a-z0-9-]+$/.test(SPEC_NAME)) throw new Error(`--spec must be a plain name like narration-v3, got ${SPEC_NAME}`)
+const SPEC_FILE = resolve(ROOT, `scripts/film/${SPEC_NAME}.json`)
+const OUT_DIR = resolve(ROOT, `video/public/film/${SPEC_NAME}`)
 const CACHE_DIR = resolve(OUT_DIR, '.cache')
 const API = 'https://api.elevenlabs.io'
 const PRIMARY_MODEL = 'eleven_v3'
@@ -31,7 +37,7 @@ const FALLBACK_MODEL = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
 const FFMPEG_FILTER = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.12,areverse,loudnorm=I=-18:TP=-2:LRA=9'
 
-const args = new Set(process.argv.slice(2))
+const args = new Set(process.argv.slice(2).filter((arg) => !arg.startsWith('--spec=')))
 const list_voices = args.has('--list-voices')
 const dry_run = args.has('--dry-run')
 
@@ -97,7 +103,7 @@ async function listVoices(key) {
     }
     console.log(`  (${voices.length} voices)`)
   }
-  console.log('\nPick a premade male, low, calm, clearly articulated English voice; record the choice in narration-v2.json and FILM_REPRODUCTION.md.')
+  console.log('\nPick a premade male, low, calm, clearly articulated English voice; record the choice in the spec file and FILM_REPRODUCTION.md.')
 }
 
 function clipHash(clip, voiceId, model, settings) {
@@ -140,7 +146,7 @@ async function main() {
   const spec = JSON.parse(readFileSync(SPEC_FILE, 'utf8'))
   const { voiceId, settings = {}, clips } = spec
   const model = spec.model ?? PRIMARY_MODEL
-  if (!voiceId) throw new Error('narration-v2.json needs a voiceId (run --list-voices to choose one)')
+  if (!voiceId) throw new Error(`${SPEC_NAME}.json needs a voiceId (run --list-voices to choose one)`)
   mkdirSync(CACHE_DIR, { recursive: true })
 
   const words = clips.reduce((n, c) => n + c.text.split(/\s+/).length, 0)
@@ -202,7 +208,7 @@ async function main() {
   }
 
   const after = await subscription(key)
-  writeFileSync(resolve(OUT_DIR, 'narration-v2.json'), JSON.stringify({ voiceId, model: model_used, settings, output_format: OUTPUT_FORMAT, clips: out_clips }, null, 2))
+  writeFileSync(resolve(OUT_DIR, `${SPEC_NAME}.json`), JSON.stringify({ voiceId, model: model_used, settings, output_format: OUTPUT_FORMAT, clips: out_clips }, null, 2))
 
   console.log('id               act   seconds   chars  source')
   let total = 0
@@ -213,7 +219,7 @@ async function main() {
   console.log(`${'total'.padEnd(16)}      ${total.toFixed(2).padStart(7)}  (${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')})`)
   console.log(`\nmodel used: ${model_used}   characters synthesised this run: ${synthesised_chars}${rows.some((r) => r.source === 'synth*') ? '  (* = no x-character-count header, counted from text)' : ''}`)
   if (before && after) console.log(`subscription (${after.tier}): ${before.used} -> ${after.used} of ${after.limit} characters`)
-  console.log(`wrote ${OUT_DIR}/narration-v2.json`)
+  console.log(`wrote ${OUT_DIR}/${SPEC_NAME}.json`)
 }
 
 main().catch((error) => {
