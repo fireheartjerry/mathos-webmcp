@@ -468,8 +468,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     if (!element) return
     const reframe = (width: number, height: number) => {
       // The first measurement is not a no-op: the opening viewport was computed
-      // before this element existed, from the arithmetic fallback, so compare
-      // against that and correct it.
+      // before this element existed, from the arithmetic fallback.
       const previous = canvasMetricsRef.current ?? {
         width: Math.max(1, window.innerWidth - RAIL_WIDTH),
         height: Math.max(1, window.innerHeight - HEADER_HEIGHT),
@@ -477,24 +476,35 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       canvasMetricsRef.current = { width, height }
       if (Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1) return
       if (directorOpenRef.current) return
+      const scene = activeSceneRef.current
+      if (scene === 'overview') return
+      const viewport = cameraViewportForWorld(scene, width, height, worldRef.current)
       const current = worldRef.current
-      const rebased = rebaseSceneViewport(
-        { ...current.viewport, canvasWidth: previous.width, canvasHeight: previous.height },
-        width,
-        height,
-        cameraViewport(activeSceneRef.current, width, height),
-      )
-      const next = { ...current, viewport: rebased }
+      if (Math.abs(current.viewport.x - viewport.x) < 0.5
+        && Math.abs(current.viewport.y - viewport.y) < 0.5
+        && Math.abs(current.viewport.zoom - viewport.zoom) < 0.001) return
+      const next = { ...current, viewport }
       worldRef.current = next
       setWorld(next)
-      persistActiveViewport(rebased)
+      persistActiveViewport(viewport)
     }
-    const observer = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect
-      if (rect && rect.width > 1 && rect.height > 1) reframe(rect.width, rect.height)
+    // Settle on the next frame: pinning the column also runs viewport writes
+    // that measured the canvas before its new width applied, and the camera
+    // must be the last word.
+    let frame: number | null = null
+    const observer = new ResizeObserver(() => {
+      if (frame !== null) cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        frame = null
+        const rect = element.getBoundingClientRect()
+        if (rect.width > 1 && rect.height > 1) reframe(rect.width, rect.height)
+      })
     })
     observer.observe(element)
-    return () => observer.disconnect()
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [galleryOpen, hydrated, persistActiveViewport])
 
   useEffect(() => {
