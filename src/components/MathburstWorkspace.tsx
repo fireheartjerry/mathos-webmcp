@@ -112,8 +112,11 @@ const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport 
   && viewport.zoom > 0,
 )
 
+/** Width of the pinned WebMCP column; the canvas and camera fit exclude it. */
+const LEDGER_COLUMN_WIDTH = 300
+const ledgerColumnWidth = () => (typeof document !== 'undefined' && document.querySelector('.mathburst-app[data-ledger-pinned="true"]') ? LEDGER_COLUMN_WIDTH : 0)
 const canvasSize = () => ({
-  width: Math.max(1, window.innerWidth - 58),
+  width: Math.max(1, window.innerWidth - 58 - ledgerColumnWidth()),
   height: Math.max(1, window.innerHeight - 54),
 })
 
@@ -1717,7 +1720,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       : undefined
 
   return (
-    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen} data-film={filmMode} data-project-switch={projectSwitchPhase ?? undefined}>
+    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen} data-film={filmMode} data-project-switch={projectSwitchPhase ?? undefined} data-ledger-pinned={ledgerPinned && !galleryOpen}>
       {filmMode && <FilmCursor />}
       <header className="world-header">
         <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><BrandMark className="brand-mark" /><span>Mathburst</span></button>

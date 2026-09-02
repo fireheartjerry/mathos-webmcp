@@ -338,3 +338,16 @@
   .tool-ledger { width: min(300px, calc(100vw - var(--sb-rail) - 40px)); }
   .agent-console { width: min(360px, calc(100vw - var(--sb-rail) - 28px)); }
 }
+
+/* A pinned WebMCP column takes real layout width: the canvas, its overlays and the project bar move right. */
+.mathburst-app[data-ledger-pinned='true'] .world-canvas { margin-left: 300px; }
+.mathburst-app[data-ledger-pinned='true'] .project-navigator,
+.mathburst-app[data-ledger-pinned='true'] .personal-project-navigator { left: calc(78px + 300px); }
+.mathburst-app[data-ledger-pinned='true'] .canvas-mode { left: calc(58px + 300px + 16px); }
+/* Centred overlays keep centring on the visible canvas when the column is pinned. */
+.mathburst-app[data-ledger-pinned='true'] .progressive-inspector { left: calc(50% + 150px); width: min(720px, calc(100vw - 300px - 58px - 200px)); }
+.mathburst-app[data-ledger-pinned='true'] .object-context,
+.mathburst-app[data-ledger-pinned='true'] .object-editor { left: calc(50% + 29px + 150px); }
+.mathburst-app[data-ledger-pinned='true'] .agent-console.is-docked { left: calc(50% + 150px); }
+/* Application chrome is never text-selectable; double-clicks belong to the canvas. */
+.world-header, .tool-rail, .tool-ledger, .tool-toast, .project-navigator, .personal-project-navigator, .activity-rail header, .zoom-controls, .object-context, .agent-console header, .creation-popover { user-select: none; }

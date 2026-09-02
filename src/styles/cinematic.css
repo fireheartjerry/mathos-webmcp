@@ -31,9 +31,11 @@
 }
 
 /* ---- Chrome the film needs, restored from the reduction pass -------------- */
-.director-trigger { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; font: 11px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0; text-transform: none; }
-.director-trigger:hover, .director-trigger:focus-visible { color: var(--graphite); border-color: var(--graphite); }
-.director-trigger[aria-pressed='true'] { color: #fff; background: var(--purple); border-color: var(--purple); }
+.director-trigger, .console-trigger, .reset-trigger, .reconstruct-trigger { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; font: 11px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0; text-transform: none; }
+.director-trigger:hover, .director-trigger:focus-visible, .console-trigger:hover, .console-trigger:focus-visible, .reset-trigger:hover, .reset-trigger:focus-visible, .reconstruct-trigger:hover, .reconstruct-trigger:focus-visible { color: var(--graphite); border-color: var(--graphite); }
+.director-trigger[aria-pressed='true'], .console-trigger[aria-pressed='true'] { color: #fff; background: var(--purple); border-color: var(--purple); }
+.reconstruct-trigger { color: var(--graphite); border-color: var(--graphite); }
+.reconstruct-trigger:disabled { color: var(--muted); border-color: var(--line); opacity: 1; }
 
 .author-pip { display: inline-block; right: auto; left: -1px; top: -18px; padding: 3px 6px; color: #fff; background: var(--purple); border-radius: 3px; font: 500 10px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0.04em; opacity: 0; transition: opacity 200ms var(--ease-out); pointer-events: none; }
 .world-object.is-selected > .author-pip, .world-object:hover > .author-pip { opacity: 1; }
@@ -577,3 +579,11 @@
 .mathburst-app[data-film='true'] .cinematic-lockup.is-final small { padding: 10px 16px 10px 12px; font-size: clamp(12px, 0.95vw, 24px); border-radius: 9px; }
 .mathburst-app[data-film='true'] .cinematic-lockup.is-final small strong { font-size: clamp(13px, 1vw, 26px); }
 .mathburst-app[data-film='true'] .cinematic-lockup.is-final small i { width: 11px; height: 11px; }
+
+/* Zoom control: a quiet dark pill with readable labels; nothing runs together. */
+.zoom-controls { gap: 4px; padding: 4px 6px; border-radius: 8px; }
+.zoom-controls button { width: auto; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 5px; font: 11px/1 var(--mono); letter-spacing: 0.02em; }
+.zoom-controls button[aria-label='Zoom out'], .zoom-controls button[aria-label='Zoom in'] { font-size: 15px; padding: 0 6px; }
+.zoom-controls button:hover:not(:disabled), .zoom-controls button:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
+.zoom-controls button:disabled { opacity: 0.4; cursor: default; }
+.zoom-controls span { min-width: 38px; text-align: center; font: 11px/1 var(--mono); color: #bfbbb0; }
