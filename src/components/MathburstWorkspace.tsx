@@ -113,12 +113,23 @@ const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport 
 )
 
 /** Width of the pinned WebMCP column; the canvas and camera fit exclude it. */
-const LEDGER_COLUMN_WIDTH = 300
-const ledgerColumnWidth = () => (typeof document !== 'undefined' && document.querySelector('.mathburst-app[data-ledger-pinned="true"]') ? LEDGER_COLUMN_WIDTH : 0)
-const canvasSize = () => ({
-  width: Math.max(1, window.innerWidth - 58 - ledgerColumnWidth()),
-  height: Math.max(1, window.innerHeight - 54),
-})
+const RAIL_WIDTH = 58
+const HEADER_HEIGHT = 54
+/**
+ * The canvas element is the single source of truth for camera geometry: any
+ * chrome that takes real layout width (the pinned WebMCP column) shrinks it,
+ * and every viewport we compute must agree with what is actually on screen.
+ * The arithmetic fallback only runs before the first paint.
+ */
+const canvasSize = () => {
+  const element = typeof document !== 'undefined' ? document.querySelector('.world-canvas') : null
+  const rect = element?.getBoundingClientRect()
+  if (rect && rect.width > 1 && rect.height > 1) return { width: rect.width, height: rect.height }
+  return {
+    width: Math.max(1, window.innerWidth - RAIL_WIDTH),
+    height: Math.max(1, window.innerHeight - HEADER_HEIGHT),
+  }
+}
 
 const sceneViewportBookmark = (viewport: Viewport, width: number, height: number): SceneViewport => ({
   ...viewport,
@@ -410,6 +421,43 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated])
   useProjectRoute({ activeProjectId: hydrated ? activeDocumentId : (initialProjectId ?? null), galleryOpen: hydrated ? galleryOpen : !initialProjectId })
+
+  /**
+   * Keep the camera honest when the canvas itself changes size: the first paint
+   * (the element does not exist while the opening viewport is computed), a
+   * window resize, and pinning or unpinning the WebMCP column, which takes real
+   * layout width. The scene's world-space centre is preserved; this is a camera
+   * move, never a history commit.
+   */
+  const canvasMetricsRef = useRef<{ width: number; height: number } | null>(null)
+  useEffect(() => {
+    if (!hydrated || galleryOpen) return
+    const element = document.querySelector('.world-canvas')
+    if (!element) return
+    const reframe = (width: number, height: number) => {
+      const previous = canvasMetricsRef.current
+      canvasMetricsRef.current = { width, height }
+      if (!previous || (Math.abs(previous.width - width) < 1 && Math.abs(previous.height - height) < 1)) return
+      if (directorOpenRef.current) return
+      const current = worldRef.current
+      const rebased = rebaseSceneViewport(
+        { ...current.viewport, canvasWidth: previous.width, canvasHeight: previous.height },
+        width,
+        height,
+        cameraViewport(activeSceneRef.current, width, height),
+      )
+      const next = { ...current, viewport: rebased }
+      worldRef.current = next
+      setWorld(next)
+      persistActiveViewport(rebased)
+    }
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect
+      if (rect && rect.width > 1 && rect.height > 1) reframe(rect.width, rect.height)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [galleryOpen, hydrated, persistActiveViewport])
 
   useEffect(() => {
     if (!hydrated) return
@@ -730,8 +778,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     if (!currentProject?.templateId || scene === 'overview') return
     const ownsScene = getScenesForProject(currentProject.templateId).some((candidate) => candidate.id === scene)
     if (!ownsScene) return
-    const canvasWidth = Math.max(1, window.innerWidth - 58)
-    const canvasHeight = Math.max(1, window.innerHeight - 54)
+    const { width: canvasWidth, height: canvasHeight } = canvasSize()
     // Camera navigation is intentionally not a world commit: changing scenes should
     // never pollute learner history or the activity rail.
     const storedViewport = currentProject.sceneViewports[scene]
@@ -755,8 +802,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     directorSceneSnapshotRef.current = null
     const targetProject = libraryProjectsRef.current.find((candidate) => candidate.id === project.id) ?? project
     const targetWorld = targetProject.world
-    const canvasWidth = Math.max(1, window.innerWidth - 58)
-    const canvasHeight = Math.max(1, window.innerHeight - 54)
+    const { width: canvasWidth, height: canvasHeight } = canvasSize()
     const ownScenes = targetProject.templateId ? getScenesForProject(targetProject.templateId) : []
     const requestedOwnedScene = requestedScene && requestedScene !== 'overview'
       ? ownScenes.find((scene) => scene.id === requestedScene)?.id
@@ -1186,8 +1232,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   })
 
   const zoomDirectorCamera = (factor: number) => {
-    const width = Math.max(1, window.innerWidth - 58)
-    const height = Math.max(1, window.innerHeight - 54)
+    const { width, height } = canvasSize()
     const center = { x: width / 2, y: height / 2 }
     const zoom = Math.min(2.5, Math.max(0.25, directorViewport.zoom * factor))
     const focus = {
@@ -1239,7 +1284,8 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const bridgeEndpointsFor = (from: DirectorShot, to: DirectorShot): BridgeEndpoints | null => {
     if (!from.bridge) return null
     const { width, height } = canvasSize()
-    const canvasOrigin = { x: window.innerWidth - width, y: window.innerHeight - height }
+    const canvasRect = document.querySelector('.world-canvas')?.getBoundingClientRect()
+    const canvasOrigin = canvasRect ? { x: canvasRect.left, y: canvasRect.top } : { x: window.innerWidth - width, y: window.innerHeight - height }
     const worldForScene = (scene: CatalogSceneId): WorldState => {
       if (scene === 'overview') return buildOverviewWorld(libraryProjectsRef.current, activeDocumentIdRef.current, worldRef.current)
       const projectId = getProjectForScene(scene).id
@@ -1599,8 +1645,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   }
 
   const viewportForBounds = (bounds: { x: number; y: number; width: number; height: number }): Viewport => {
-    const width = Math.max(1, window.innerWidth - 58)
-    const height = Math.max(1, window.innerHeight - 54)
+    const { width, height } = canvasSize()
     const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.08))
     const availableWidth = Math.max(1, width - padding * 2)
     const availableHeight = Math.max(1, height - padding * 2)
@@ -1623,7 +1668,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     const viewport = bounds
       ? viewportForBounds(bounds)
       : sceneId === 'overview'
-        ? cameraViewport(sceneId, Math.max(1, window.innerWidth - 58), Math.max(1, window.innerHeight - 54))
+        ? cameraViewport(sceneId, canvasSize().width, canvasSize().height)
         : null
     if (!viewport) return
     run(humanAction(`Fit ${sceneId === 'overview' ? 'overview' : 'scene'}`, [{ type: 'viewport', viewport }]))
