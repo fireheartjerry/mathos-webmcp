@@ -351,3 +351,5 @@
 .mathburst-app[data-ledger-pinned='true'] .agent-console.is-docked { left: calc(50% + 150px); }
 /* Application chrome is never text-selectable; double-clicks belong to the canvas. */
 .world-header, .tool-rail, .tool-ledger, .tool-toast, .project-navigator, .personal-project-navigator, .activity-rail header, .zoom-controls, .object-context, .agent-console header, .creation-popover { user-select: none; }
+/* While the agent console is docked top-centre, the selection action bar moves below the header on the right. */
+.mathburst-app:has(.agent-console.is-docked) .object-context { left: auto; right: 190px; transform: none; }
