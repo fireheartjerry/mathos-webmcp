@@ -151,14 +151,14 @@
 .webmcp-count { display: inline-flex; align-items: baseline; gap: 6px; }
 
 /* ---- Cinematic lockup and bridge --------------------------------------------- */
-.cinematic-lockup { position: fixed; left: 7vw; bottom: 9vh; z-index: 140; display: grid; gap: 10px; color: var(--graphite); pointer-events: none; animation: lockup-in 900ms var(--ease-out) both; }
+.cinematic-lockup { position: fixed; left: 7vw; top: 10.5vh; z-index: 140; display: grid; gap: 10px; color: var(--graphite); pointer-events: none; animation: lockup-in 900ms var(--ease-out) both; }
 .cinematic-lockup p { margin: 0; display: grid; gap: 2px; }
 .cinematic-lockup p b { font: 500 clamp(30px, 3.6vw, 54px)/1 var(--serif); letter-spacing: -0.02em; }
 .cinematic-lockup p span { color: var(--muted); font: 400 clamp(18px, 1.9vw, 28px)/1.15 var(--serif); }
 .cinematic-lockup small { display: inline-flex; align-items: center; gap: 8px; width: max-content; padding: 6px 10px 6px 8px; color: var(--graphite); background: rgba(251, 249, 243, 0.94); border: 1px solid var(--line); border-radius: 6px; font: 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .cinematic-lockup small i { width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
 .cinematic-lockup small strong { font: 600 13px/1 var(--mono); color: var(--purple); }
-.cinematic-lockup:not(.is-final) { bottom: auto; top: 66px; left: 50%; transform: translateX(-50%); }
+.cinematic-lockup:not(.is-final) { top: 66px; left: 50%; transform: translateX(-50%); }
 @keyframes lockup-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .cinematic-lockup:not(.is-final) { animation: none; }
 
