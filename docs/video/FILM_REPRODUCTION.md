@@ -44,7 +44,9 @@ npm --prefix video run render:review # video/out/mathburst-review.mp4 (1280×720
 node scripts/film/contact-sheets.mjs # video/out/contact-storyboard.png and contact-transitions.png
 ```
 
-`SHOTS=opening-attempt,opening-tutor node scripts/film/capture.mjs` captures a subset while iterating. `KEEP_FRAMES=1` keeps the raw screencast frames under `.film/frames`.
+`SHOTS=opening-attempt,opening-tutor node scripts/film/capture.mjs` captures a subset of consecutive shots while iterating. `KEEP_FRAMES=1` keeps the raw screencast frames under `.film/frames`. `FILM_OUT=.film/take9 node scripts/film/capture.mjs` writes a take to a side folder so a render already reading `video/public/film/capture.mp4` is never disturbed; copy `capture.mp4` and `timeline.json` across once the take is accepted.
+
+`node scripts/film/qa-sheets.mjs <file.mp4> [stepSeconds]` tiles a render (or a raw take) into timecoded contact sheets under `.film/qa/` for a fast full-length viewing pass.
 
 ## What the capture guarantees
 

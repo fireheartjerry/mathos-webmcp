@@ -167,10 +167,22 @@
           "y": 0.5
         },
         {
+          "at": 4.5,
+          "zoom": 1.14,
+          "x": 0.66,
+          "y": 0.34
+        },
+        {
+          "at": 10.5,
+          "zoom": 1.14,
+          "x": 0.66,
+          "y": 0.34
+        },
+        {
           "at": 14,
-          "zoom": 1.06,
-          "x": 0.47,
-          "y": 0.58
+          "zoom": 1.04,
+          "x": 0.5,
+          "y": 0.54
         }
       ],
       "narration": "The handwriting is reconstructed into live LaTeX, audited against the source, and approved. Ink and equation stay linked.",

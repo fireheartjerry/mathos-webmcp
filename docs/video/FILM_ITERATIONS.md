@@ -48,3 +48,5 @@ Found:
 
 - The film camera sits 1.18× closer than the review camera on every frame except the overview (`FILM_CAMERA_FIT`), keeping each frame's focus point fixed; the composition's pushes remain as authored.
 - The final lockup grows to 4.4 vw at film size, with a larger registered-tools chip, so "One mathematical world." reads at 720p.
+- Take 7 showed the closer camera pushing the clinic's Tutor panel above the top edge, so the learner's "Correct the sign" click missed (34 of 35 commits). The clinic keeps a 1.04× fit; every other frame uses 1.18×. Take 8: 161.5 s, 35 commits, no shot over budget.
+- Render 2 (final + review) is built from take 8.
