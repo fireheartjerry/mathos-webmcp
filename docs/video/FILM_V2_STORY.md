@@ -1,158 +1,146 @@
-# Mathburst film v2 — the story
+# Mathburst film v2 — the story (draft 2, after Jerry's review)
 
-Status: DRAFT for discussion (2026-09-02). No timings. Every beat names the frame (what the camera shows), the URL in Chrome's omnibox, the actions, the WebMCP tools that fire, and the end result the viewer must be able to verify on screen. Beats marked **[BUILD]** need product work before they can be filmed; the list of that work is at the end.
+Status: DRAFT 2, 2026-09-02. No timings. Every beat names the frame, the URL in the omnibox, the action, the tools that fire, and the on-screen result. **[BUILD]** marks product work still needed; the parity work (handles, shapes, arrows, graph LaTeX field, geometry toolbar, matrix editor, 47 tools, animation runtime, ledger, toast, agent console, project URLs) is being built now and is assumed present.
 
-Ground rules that the whole film obeys:
+## Rules the whole film obeys
 
-- One real Chrome window, the user's own profile and tab strip, DevTools closed, `localhost:3400` in the omnibox. The system cursor is the only pointer; it is never hidden.
-- Everything the agent does is a real `document.modelContext` tool call through the registered handlers. The agent's *words* are scripted (a deterministic choreography, labelled "Agent replay" in the product), its *actions* are not.
-- Every tool call is announced on screen the instant it fires: a **tool toast** ("Used 3 WebMCP tools · get_selection, get_objects, create_objects") and a persistent **tool ledger** in the sidebar counting distinct tools used and total calls. The ledger ends at 40+ distinct tools and ≥ 120 calls.
-- The camera never cuts to a card floating on ivory. Cards are always seen inside the full app: rail, header, sidebar, activity log, omnibox.
-- Human and agent alternate. Every capability is shown twice: once by the hand, once by the agent, on the same object.
+- **The film runs in the ChatGPT desktop app's built-in browser**, with Mathburst deployed as a ChatGPT Site (`<name>.openai.chatgpt.site`, this repo is already linked via `.openai/hosting.json`). ChatGPT (GPT-5.6 Sol or Terra) is the **real agent**: it discovers the 47 site tools from the address bar's **Site tools** menu and calls them live. The chat sits beside the page; the learner's prompt is typed into it on camera. No scripted console: the agent's words are the model's own, so the shot list below is the *prompt plan* (what the learner asks for, act by act) plus the product's guaranteed visual reactions (toast, ledger, aura, animations). Takes are not deterministic; expect several.
+- **The system cursor performs every human action, visibly.** Nothing human happens without the cursor travelling to it first.
+- **The agent is unmistakable.** When the console activates, an intrusive purple pulse sweeps the whole canvas border and the console card slides in. Every tool call fires a large toast ("Used 3 WebMCP tools" + named chips), a purple flash on the object it changed, and a tick in the left-hand ledger. Nothing the agent does is quiet.
+- **Left side of the screen = WebMCP.** The toast, the running totals ("12 / 47 tools · 38 calls"), and the tool-call activity log live in a left column next to the tool rail. The right sidebar is the whiteboard's own (inspector, activity).
+- **Agent console** docks top-centre, below the header (top-left if it collides with the ledger; decide on the first take). Its words are scripted and labelled "Agent replay · scripted words, real tool calls". Its tone: professional, friendly, casual. It teaches in short sentences while it acts.
+- **Purple aura.** Whatever the agent is about to touch gets a purple glow first (point P, a matrix cell, a vertex, an equation), then the tool fires, then the change lands. The aura is the visual grammar of "agent intent".
+- **Every construction is a 3Blue1Brown-style animation** driven by the real animation tools (`create_timeline`, `add_keyframes`, `play_timeline`): objects draw in dependency order, equations morph, colours persist across representations, the camera moves only to establish focus. This is non-negotiable in Acts 2, 4, 6 and 7.
+- **Approvals look like Claude's**: when the agent proposes something it shows a card with Accept / Decline and waits; the cursor clicks.
+- **Space**: when the agent needs room it pans itself (`set_viewport` / `focus_objects`), which is the parity of the human's right-drag pan.
 
 ---
 
 ## Act 0 — Cold open
 
-**Frame 0.1 — The browser.** URL `localhost:3400/`. Chrome window, the user's profile avatar and a handful of ordinary tabs visible, Mathburst tab active, gallery page with the four project cards. The cursor drifts in from the tab strip.
-Actions: none yet.
-Result: the viewer knows this is a real browser and a real localhost app.
+**0.1 The browser.** URL: the public site. Chrome with Jerry's profile, ordinary tabs, Mathburst gallery with four cards. Cursor drifts in from the tab strip.
 
-**Frame 0.2 — New project.** Cursor clicks **New project**, types `Gamma → Ramanujan`, picks **Blank canvas**. URL becomes `localhost:3400/p/<id>` **[BUILD: project URLs]**. An empty ivory canvas with the tool rail on the left.
-Result: the entire film happens in a project created on camera.
+**0.2 New project.** Cursor: **New project** → types `Pipeline` → **Blank canvas**. URL becomes `/p/<id>`. Empty ivory canvas, tool rail left.
 
-**Frame 0.3 — Sidebar pinned.** Cursor opens the right sidebar (WebMCP inspector + activity) and clicks the pin so it stays open **[BUILD: pin]**. The sidebar shows `WebMCP · 0 / 40 tools used · 0 calls` and an empty activity log.
-Result: the ledger that will fill up for the rest of the film is on screen from the start.
+**0.3 The left column.** Cursor pins the WebMCP ledger on the **left** (`0 / 47 tools · 0 calls`, empty log) **[BUILD: move ledger + toast to the left column]**.
 
-**Frame 0.4 — The agent arrives.** A small **Agent console** docks top-left inside the app **[BUILD: agent console, honest label "Agent replay"]**. Its first line is the scripted user prompt: *"Follow me through this page. Use every tool you have."* The agent replies: *"Reading the page first."* The tool toast fires: `Used 4 WebMCP tools · get_world, list_projects, get_scene_catalog, get_session_context`. The canvas border glows purple for the duration of the reads **[BUILD: reading indicator]**.
-Result: first WebMCP calls are visible, named, and counted (4 / 40).
+**0.4 The agent arrives.** Cursor clicks **Agent replay**. Intrusive purple sweep around the canvas, console slides in top-centre. Learner line: *"Walk me through the whole pipeline. Use everything you've got."* Agent: *"On it. Reading the page first."* Toast: `Used 4 · get_world, list_projects, get_scene_catalog, get_session_context`. Reading glow on the canvas. Ledger `4 / 47`.
 
 ---
 
 ## Act 1 — The Gamma recurrence (human writes, agent reads and marks)
 
-**Frame 1.1 — Human handwriting.** Cursor picks **Pen**. The learner's saved handwriting of Γ(9/2) = ∫x^{7/2}e^{−x}dx = [−x^{7/2}e^{−x}]₀^∞ − (7/2)Γ(7/2) is replayed as a real stroke animation from the stored samples, pen tip following the cursor **[BUILD: stroke replay through the pen tool, not an SVG overlay]**. The sign error is written on purpose.
-Result: ink objects in the world, authored "You", three commits in the activity log.
+**1.1 Human handwriting.** Cursor picks **Pen** and writes Γ(9/2) = ∫x^{7/2}e^{−x}dx = [−x^{7/2}e^{−x}]₀^∞ − (7/2)Γ(7/2), replayed from the saved sample through the pen tool, pen tip under the cursor, sign error included.
 
-**Frame 1.2 — Agent reads.** Console: *"Let me read what you wrote."* Purple reading border. Toast: `Used 3 · get_objects, get_selection, inspect_math`.
-Result: ledger 7 / 40.
+**1.2 Agent reads.** Agent: *"Let me read that."* Reading glow. Toast: `Used 3 · get_objects, get_selection, inspect_math`.
 
-**Frame 1.3 — Agent marks the break.** Console: *"The sign flips during integration by parts. I'll mark it, not fix it."* Toast: `Used 2 · create_objects, annotate_object`. A purple circle is *drawn* around the lost minus (stroke animation, agent-authored) and the note *v = −e^{−x}. Two negatives.* is handwritten beside it **[BUILD: agent ink drawn progressively, same stroke player as 1.1]**.
-Result: purple "Tutor" pips on both new objects; activity log shows two Tutor commits.
+**1.3 Agent marks the break.** Agent: *"Integration by parts flips a sign here. I'll mark it, you fix it."* Purple aura on the glyph, then `Used 2 · draw_ink, annotate_object`: the circle is drawn stroke by stroke, the note *v = −e^{−x}. Two negatives.* is handwritten beside it.
 
-**Frame 1.4 — Human corrects.** Cursor picks **Pen** and writes the corrected tail (+7/2 Γ(7/2) … = 105√π/16), replayed from samples.
-Result: graphite commit; the page now holds both hands' ink side by side.
+**1.4 Human corrects.** Cursor picks **Pen**, writes the corrected tail down to 105√π/16 (stroke replay). The agent says nothing about it.
 
-**Frame 1.5 — Photo → live math.** Cursor picks **Image**, the OS file dialog opens (real dialog, visible), the learner selects the photographed recurrence. Console: *"I can turn that photo into live math. You approve it."* Toast: `Used 2 · reconstruct_problem, audit_reconstruction`. Semantic draft panel opens at the right, audit passes, cursor clicks **Approve clean conversion**.
-Result: three typeset equations land in the frame; the approval is the human's, on camera.
+**1.5 Agent offers live math.** Agent: *"Want me to turn that into live math?"* with **Accept / Decline**. Cursor clicks Accept. Toast: `Used 1 · create_objects` — an equation object appears **empty**, then the LaTeX is typed into it live by the agent (purple caret) **[BUILD: agent typing animation for equations/text via edit_equation with a `typewriter` option]**, and `Used 1 · transform_objects` scales it up ×1.6 with the resize handles visibly animating. (No photo, no reconstruction: the equation tool is the parity beat.)
 
-**Frame 1.6 — Editing parity.** Cursor selects the photo and uses the **resize handle** to shrink it and the **rotate handle** to straighten it **[BUILD: resize/rotate handles]**. Console: *"Same controls, from my side."* Toast: `Used 1 · transform_objects` and the typeset block nudges into alignment.
-Result: bounds and rotation change from both sides; both appear in the activity log.
+**1.6 Human parity.** Cursor grabs the same equation's corner handle and shrinks it back a little, then rotates it a few degrees and back. Agent: *"Same handles I just used."*
 
 ---
 
-## Act 2 — The Gamma density (agent builds a widget in front of you)
+## Act 2 — The Gamma density (the first 3Blue1Brown construction)
 
-**Frame 2.1 — Agent constructs the graph.** Console: *"The corrected recurrence normalises into a density. Watch me build it."* Toast: `Used 1 · graph_expression`. The graph widget pops in **empty** (axes only), the purple caret types the LaTeX into the widget's own equation field character by character **[BUILD: equation field on the graph widget; agent typing animation driven by the tool, not a fake]**, the curve draws itself left to right **[BUILD: draw track in the animation runtime]**.
-Result: a professional density widget with `g_a(x) = x^{a−1}e^{−x}/Γ(a)` in its header, no overflow, `a = 4.5` slider visible.
+**2.1 Room to work.** Agent: *"I need space below."* `Used 1 · set_viewport` pans the world down (the human equivalent is a right-drag).
 
-**Frame 2.2 — Human plays.** Cursor drags the shape slider to 5.5 and the bound to 4.4; the shaded area and the three bin masses update live.
-Result: two graphite commits; masses shown to three decimals.
+**2.2 Construct the widget.** Agent: *"Your corrected recurrence normalises into a density. I'll build it from nothing."* `Used 1 · graph_expression` creates an **empty** graph widget; the agent types `\frac{x^{a-1}e^{-x}}{\Gamma(a)}` into the widget's own LaTeX field (purple caret); `Used 3 · create_timeline, add_keyframes, play_timeline`: axes draw in, the curve draws left to right, the shaded area fills from 0 to b, the three bin edges rise as dashed lines, the mass labels count up. Widget header reads "NORMALISED GAMMA DENSITY · TOTAL AREA 1".
 
-**Frame 2.3 — Agent explains beside it.** Toast: `Used 3 · explain_object, evaluate_expression, create_objects`. A typed explanation card appears beside the widget: *"Total area is 1. The three bins hold w₁, w₂, w₃; their logs are the scores softmax will see."* with the three numbers evaluated live.
-Result: text object authored Tutor, positioned by the tool, fits inside the frame.
+**2.3 Human plays while the agent explains.** Cursor drags shape a → 5.5 and bound b → 4.4; masses update live. **At the same time** the agent explains: *"The three bins split the area into masses w₁ w₂ w₃. Take logs and you have the scores a softmax will see."* `Used 2 · explain_object, evaluate_expression` prints the three live numbers into a typed note beside the widget (`Used 1 · create_objects`), fitting inside the frame.
 
-**Frame 2.4 — Animation, 3Blue1Brown-style.** Console: *"Here is why the bins matter."* Toast: `Used 3 · create_timeline, add_keyframes, play_timeline` **[BUILD: animation tools + runtime]**. The bin edges slide, the shaded masses re-flow, the equation `w_j = ∫ g_a dx` morphs into `ℓ_j = log w_j` and then `softmax(ℓ)_j = w_j`, colours preserved across the three representations.
-Result: the timeline scrubber in the sidebar shows the track playing; the world returns to its editable state at the end.
+**2.4 The second 3Blue1Brown animation.** Agent: *"Here is the bridge."* `Used 3 · create_timeline, add_keyframes, play_timeline`: the bin edges slide, the shaded masses re-flow, and the equation morphs w_j = ∫g_a dx → ℓ_j = log w_j → softmax(ℓ)_j = w_j, each term keeping its colour. The timeline scrubber is visible in the sidebar; when it ends the widget is editable again (cursor nudges the slider to prove it).
 
 ---
 
-## Act 3 — Attention (agent edits a matrix cell, human trains a step)
+## Act 3 — Attention (agent edits a cell while teaching; human trains eight steps)
 
-**Frame 3.1 — Agent visualises.** Toast: `Used 2 · visualize_concept, focus_objects`. The attention card is created to the right of the density and the camera glides to it.
-Result: card shows the three masses arriving as the softmax inputs.
+**3.1 Space, then the card.** `Used 1 · set_viewport` pans right. `Used 2 · visualize_concept, focus_objects`: the attention card is built (masses flow in as the softmax inputs, drawn in with a timeline).
 
-**Frame 3.2 — Agent edits a cell.** Console: *"I'll raise W_Q[0][0]."* Toast: `Used 1 · set_attention_weight`. The cell highlights, its value ticks to 1.4, every score, weight and probability recomputes.
-Result: weights [0.276, 0.523, 0.201] sum to 1.000, cross-entropy 0.751.
+**3.2 Agent edits a cell, teaching as it goes.** Purple aura on W_Q[0][0]. Agent: *"W_Q turns each token into a query. Raising this entry makes the query lean toward the first embedding dimension, so the dot products with the keys change, and so do the weights."* `Used 1 · set_attention_weight` → 1.4; scores, weights, probabilities recompute in place. Agent: *"Weights still sum to one. That's the softmax doing its job."*
 
-**Frame 3.3 — Human trains.** Cursor clicks **train 1 step** on the training card. Loss falls, target probability rises. Console: *"One honest step: a numerical gradient on the visible parameters."* Toast: `Used 2 · train_model_step, get_history`. The agent takes step 2, then **undoes** it: `Used 1 · step_history`.
-Result: activity log shows You → Tutor → Tutor(undo); the human step survives.
+**3.3 The agent's step, undone; the human's eight steps.** `Used 1 · train_model_step` then `Used 1 · step_history` (undo). Agent: *"My step is undone. Your turn: it's a real widget, so train it yourself."* Cursor clicks **train 1 step** eight times; loss and target probability curves grow point by point. Agent, over the clicks: *"Every click is one honest numerical gradient on the visible parameters. I spawned this widget with a tool; it runs on pure math from here."* Ledger ticks only for agent calls.
 
 ---
 
-## Act 4 — Geometry, GeoGebra-style (human constructs, agent completes)
+## Act 4 — Geometry, led by the agent, built by both (third construction)
 
-**Frame 4.1 — Geometry toolbar.** Cursor picks **Geometry**. A GeoGebra-style contextual toolbar appears above the canvas: point, segment, line, ray, circle, polygon, angle, midpoint, perpendicular, intersection, transformations **[BUILD: geometry toolbar]**. The learner places A, B, C and draws the triangle.
-Result: a live construction object with three draggable base points.
+**4.1 Agent leads.** Agent: *"Let's move to geometry. Pick the Geometry tool and click three points for a triangle."* Cursor picks **Geometry**, the GeoGebra-style toolbar appears, cursor places A, B, C and closes the triangle.
 
-**Frame 4.2 — Agent adds the rest.** Toast: `Used 2 · construct_geometry, move_geometry_point`. Circles tangent at O, the homothety images, and the spiral centre S are added *in dependency order* (points, then segments, then circles, then angles) **[BUILD: staged construction reveal]**. Then the agent drags A by tool and every dependent primitive follows.
-Result: the invariant `SA′/SA = SB′/SB = 0.72, ∠ASA′ = ∠BSB′ = 28°` appears as a typeset object under the frame, fitting inside it.
+**4.2 Agent completes the picture.** `Used 2 · construct_geometry, create_timeline` + `play_timeline`: circles tangent at O, the homothety images, and the spiral centre S draw in dependency order (points, segments, circles, angles). Agent: *"Every mark depends on your three points. Drag one and everything follows."*
 
-**Frame 4.3 — Barycentrics.** Toast: `Used 2 · visualize_concept, set_barycentric_weights (preset: attention)`. P moves to the live attention weights from Act 3; the sub-triangle areas read the same numbers.
-Result: the chain attention → barycentrics is verified on screen with identical decimals.
+**4.3 Barycentrics, connected to attention.** `Used 1 · visualize_concept` (barycentric) beside the triangle. Purple aura on **P**. Agent: *"P is a weighted average of A, B and C. Those weights can be anything that sums to one. Like attention weights."* `Used 1 · set_barycentric_weights (preset: attention)`: P glides to the live attention weights from Act 3, the three sub-triangle areas read the same decimals as the attention card. `Used 1 · move_geometry_point` drags A by tool; P moves by the same rule.
 
 ---
 
-## Act 5 — Shapes, arrows, highlighter, eraser (pure parity beats)
+## Act 5 — Parity beats, made cinematic
 
-**Frame 5.1 — Human draws a polygon and an ellipse.** Cursor picks **Shape → Polygon**, clicks five vertices; then **Ellipse** by drag **[BUILD: polygon + freeform shapes]**. Resizes and rotates the ellipse with handles.
-**Frame 5.2 — Agent mirrors it.** Toast: `Used 2 · create_objects, transform_objects`. The agent creates a matching polygon and scales it by 0.8 and rotates 15°.
-**Frame 5.3 — Arrows.** Human drags an arrow from the density widget to the attention card and re-drags its head **[BUILD: arrow head/tail handles]**. Agent: `Used 1 · update_objects` re-points the arrow's tail.
-**Frame 5.4 — Highlighter and eraser.** Human highlights the softmax row; agent `Used 1 · draw_ink` highlights the matching barycentric weights in the same colour **[BUILD: draw_ink tool with parametric/piecewise curves + highlighter mode]**. Human erases a stray stroke; agent `Used 1 · erase_ink` erases its own circle from Act 1, then `Used 1 · step_history` brings it back **[BUILD: erase_ink]**.
-Result: each parity beat leaves paired commits, one graphite, one purple.
+Framed as **the agent tidying the page into a lesson sheet** while the human reacts, so nothing is random:
 
----
+**5.1 Shapes.** Agent: *"Let me box the three acts."* `Used 1 · create_shape` draws a polygon around Acts 1–2 and an ellipse around Act 3; cursor resizes the ellipse with handles and rotates it slightly; `Used 1 · edit_shape` matches the human's stroke colour.
 
-## Act 6 — Simplex and partitions (agent drives the labs)
+**5.2 Arrows.** Cursor drags an arrow from the density widget to the attention card, then drags its head; `Used 1 · set_arrow` re-points the tail to the exact bin.
 
-**Frame 6.1 — Simplex.** Toast: `Used 2 · visualize_concept, set_simplex_view (section 0.18, denominator 5)`. The tetrahedron appears, the section plane sweeps down to δ = 0.18 and the triangle from Act 4 is recovered inside it.
-**Frame 6.2 — Lattice → partitions.** Toast: `Used 2 · visualize_concept, set_partition_view (cutoff 19, n = 14)`. The lattice tuples become the partition table; p(19) = 490 appears at the end of the row.
-**Frame 6.3 — Ramanujan.** Human drags the cutoff slider; agent `Used 1 · set_partition_view (revealTheorem)` reveals the congruence card *verified for the finite cases, stated as a theorem*.
-Result: honest wording on the card is legible at 720p.
+**5.3 Highlighter, eraser.** Cursor highlights the softmax row; `Used 1 · draw_ink (highlighter)` highlights the matching barycentric weights in the same colour. Cursor erases a stray stroke; `Used 1 · erase_ink` erases the agent's own circle from Act 1, `Used 1 · step_history` brings it back. Agent: *"Everything I do is in your history. Undo works on me too."*
 
 ---
 
-## Act 7 — Matrix editor and the rest of the rail
+## Act 6 — Simplex and partitions (fourth and fifth constructions)
 
-**Frame 7.1 — Matrix.** Cursor picks **Matrix**, chooses 2×2, types values into the cell grid **[BUILD: matrix editor dialog + editable grid]**. Two basis arrows appear and transform live. Agent `Used 1 · update_objects` sets the shear to 0.8.
-**Frame 7.2 — Text and equation edits.** Human double-clicks the explanation card and edits a word; agent `Used 1 · update_objects` edits the LaTeX of one typeset equation; both edits are undone and redone from the rail.
-**Frame 7.3 — Frame and project.** Human draws a **Frame** around the whole journey and titles it. Agent `Used 3 · create_project (template), open_project, open_scene` opens a second project and comes back: `Used 1 · open_project`.
-Result: project isolation is shown: the second project's canvas is untouched by any of this.
+**6.1 Simplex.** `Used 1 · set_viewport` pans to empty space. `Used 3 · visualize_concept, create_timeline, play_timeline`: the tetrahedron draws in edge by edge, the lattice points appear, the section plane sweeps to δ = 0.18 and the triangle from Act 4 is recovered inside it. Agent: *"Four weights instead of three: same simplex idea, one dimension up."* `Used 1 · set_simplex_view`.
+
+**6.2 Lattice → partitions.** `Used 2 · visualize_concept, set_partition_view (cutoff 19, n = 14)`: lattice tuples become the partition table (timeline reveals rows), p(19) = 490 arrives last.
+
+**6.3 Ramanujan.** Cursor drags the cutoff slider; `Used 1 · set_partition_view (revealTheorem)`: the congruence card *verified for the finite cases; the general statement is a theorem* fades in. Agent: *"I can verify cases. I can't prove the theorem, and the card says so."*
+
+---
+
+## Act 7 — Matrix (sixth construction) and the rest of the rail
+
+**7.1 Matrix.** Cursor picks **Matrix → 2 × 2**, types values into the grid. `Used 1 · set_matrix_cells` sets a shear; `Used 3 · create_timeline, add_keyframes, play_timeline` sweeps the lattice from identity to the sheared grid with the basis vectors gliding. Agent: *"Same idea as W_Q: a matrix moves every vector at once."* Cursor drags a basis vector; the cells update.
+
+**7.2 Text and equation.** Cursor double-clicks the explanation note and edits a word; `Used 1 · edit_text` fixes a typo; `Used 1 · edit_equation` retypes one LaTeX term live; both undone and redone from the rail.
+
+**7.3 Frame and projects.** Cursor draws a **Frame** around the whole page and titles it *Pipeline*. `Used 3 · create_project, open_project, open_scene` opens a second project; `Used 1 · open_project` returns. The second canvas is untouched: isolation on camera.
 
 ---
 
 ## Act 8 — Close
 
-**Frame 8.1 — Ledger.** The sidebar ledger reads `40 / 40 tools used · N calls` (N is whatever the take produced; the number is real). Console: *"Every tool, both hands, one world."* Toast: `Used 2 · get_history, get_world`; the agent reads back the whole history and the console prints the count of You vs Tutor commits.
-**Frame 8.2 — Lockup.** The camera fits the frame from 7.3; the title *One mathematical world. Every agent can enter.* is typed by the human into the frame's title, not overlaid.
-**Frame 8.3 — Repo and URL.** Last beat: the omnibox is clicked, the public URL is typed (the deployed site), the same gallery loads.
-Result: judges see the live URL requirement satisfied on camera.
+**8.1 Ledger.** Left column reads `47 / 47 tools · N calls`. Agent: *"That's every tool, used at least once, all through one shared history."* `Used 2 · get_history, get_world`; the console prints the You / Tutor commit counts.
+
+**8.2 Lockup.** Cursor fits the frame; the title *One mathematical world. Every agent can enter.* is typed into the frame title by the human.
+
+**8.3 Link.** Cursor clicks the omnibox: the public URL is already there. Hold.
 
 ---
 
-## Product work this story requires
+## Decisions from the review
 
-Tools (current 34 → target ~42):
+1. **Surface: ChatGPT Sites.** Deploy through the Sites plugin (`codex exec "Deploy this project with Sites…"` from this worktree, or the desktop app). Film inside the ChatGPT desktop browser with the chat beside it. The in-product Agent replay console stays in the product as an offline demo path but is not used in the film.
+2. Console position (for the offline console): top-centre.
+3. Narration: a frontier neural voice (see FILM_REPRODUCTION for the chosen voice once keys are provided).
 
-- `draw_ink` (pen or highlighter; explicit points, parametric `x(t), y(t)` on `[t0, t1]`, or piecewise), `erase_ink` (by ids or by rectangle), `edit_text`, `edit_equation`, `create_timeline`, `add_keyframes`, `play_timeline` (play/pause/seek/reset), `create_shape` (polygon/freeform), `set_matrix_cells`. Fold `set_graph_expression` into `graph_expression` (update mode) or add it.
-- Every tool description ≤ 500 chars, parameter descriptions ≤ 150, names ≤ 30, outputs ≤ 1.5 K (Chrome security guide budgets). Read tools carry `readOnlyHint`; tools that return learner ink or text carry `untrustedContentHint`.
-- Results return `content: [{type:'text'}]` plus `structuredContent` so both Chrome DevTools and MCP-shaped agents read them.
+## Prompt plan (what the learner types into ChatGPT, one message per act)
 
-Editing parity in the UI:
+- Act 0: *"You're looking at Mathburst. Read the page with your site tools and tell me what's on it."*
+- Act 1: *"I wrote the Gamma recurrence by hand and I think I made a sign mistake. Read my ink, circle the exact place it breaks with your pen tool, and leave a short handwritten note. Don't fix it."* Then: *"Offer to turn my corrected line into live math; if I accept, create the equation, type the LaTeX, and scale it up."*
+- Act 2: *"Pan down to empty space, build the normalised Gamma density as a graph widget from nothing, and animate the construction like 3Blue1Brown: axes, curve, shaded area, then the three bins. Explain the masses beside it."* Then: *"Animate the bridge from masses to log-masses to softmax."*
+- Act 3: *"Pan right and create the attention card from the bins. Edit one W_Q cell and teach me what changes. Take one training step, then undo it and let me train."*
+- Act 4: *"Tell me to place three points with the Geometry tool, then complete the tangent circles, the homothety and the spiral centre from my points, animated in dependency order. Then add barycentrics and move P to the attention weights."*
+- Act 5: *"Tidy the page into a lesson sheet: box the acts with shapes, connect them with arrows, highlight the matching weights, and show that I can undo your changes."*
+- Act 6: *"Pan to space and build the four-weight simplex, sweep the section plane to recover the triangle, then turn the lattice into the partition table and verify Ramanujan's congruence for the finite cases."*
+- Act 7: *"Create a 2×2 matrix, shear it, and animate the lattice. Fix one word in your note and one LaTeX term. Create a second project and come back."*
+- Act 8: *"Read the history and tell me how many tools you used and how many changes were mine."*
 
-- Selection handles: resize (8), rotate, for every object kind; arrow head/tail handles; polygon and freeform shapes; graph widget with its own LaTeX equation field; GeoGebra-style geometry toolbar; matrix dimension dialog and cell grid; frame titling.
+## Build list this draft adds
 
-Presentation:
-
-- Tool toast + persistent ledger + activity log of tool calls (names, counts, totals) in the sidebar, pinnable.
-- Reading indicator (purple canvas border while read tools run).
-- Agent console ("Agent replay") inside the product, off by default, scripted lines + real calls.
-- Animation runtime (timeline, tracks, draw/morph/reveal/highlight/camera) with a sidebar scrubber.
-- Gamma density widget restyled as a proper widget; overflow audit on every card at 1440p and 720p.
-- Stroke replay for saved handwriting through the pen tool, both authors.
-- Project URLs (`/p/<id>`), sidebar pin.
-
-Film mechanics:
-
-- Real Chrome window capture (not a headless screencast) with the user's profile, at 2560×1440, cursor visible; under three minutes with the audio covering what was built and how WebMCP was used.
-- Narration: a new voice (decision pending), music without third-party copyright.
+- Move ledger, toast, totals and tool log to a **left column**; keep the right sidebar for the inspector.
+- Intrusive console activation animation; per-call purple flash on changed objects; purple **aura** tool (`focus_objects` gains `highlight: true`, or a new `spotlight_objects` tool).
+- Agent typewriter option on `edit_equation` / `edit_text` / the graph LaTeX field.
+- Accept / Decline proposal cards in the console (`say` steps with `proposal: true`, the runner waits for the click).
+- Timeline presets for: axes+curve draw-in, equation morph chain, attention card draw-in, geometry dependency-order draw, tetrahedron edge draw + section sweep, partition row reveal, matrix lattice sweep.
+- Training card: eight consecutive human steps must stay accepted (learning-rate backoff already guarantees monotone loss).
