@@ -31,6 +31,10 @@ import CreationPopover from './creation/CreationPopover'
 import { matrixCreationOptions, shapeCreationOptions, type MatrixCreationOption, type ShapeCreationOption } from './creation/toolOptions'
 import WorldObjectView, { smoothStrokePath } from './WorldObjectView'
 import '../styles/handles.css'
+import '../styles/transitions.css'
+
+/** Camera travel plus the staggered settle behind it; keep in step with transitions.css. */
+const SCENE_ARRIVAL_MS = 1180
 
 type Gesture =
   | { kind: 'pan'; pointerId: number; client: Point; viewport: Viewport }
@@ -181,6 +185,22 @@ export default function WorldCanvas({
   const [transformPreview, setTransformPreviewState] = useState<Record<string, WorldObject> | null>(null)
   const [pathDraft, setPathDraft] = useState<PathDraft | null>(null)
   const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
+
+  /**
+   * A scene change is choreographed, not cut: the camera travels while the
+   * destination's objects settle the last few pixels into place behind it. The
+   * flag lives just long enough for the arrival to finish, and never fires on the
+   * first paint -- objects appearing on load should already be at rest.
+   */
+  const arrivedSceneRef = useRef(scene)
+  const [sceneArriving, setSceneArriving] = useState(false)
+  useEffect(() => {
+    if (arrivedSceneRef.current === scene) return
+    arrivedSceneRef.current = scene
+    setSceneArriving(true)
+    const timer = window.setTimeout(() => setSceneArriving(false), SCENE_ARRIVAL_MS)
+    return () => window.clearTimeout(timer)
+  }, [scene])
   const [creationPopover, setCreationPopover] = useState<CreationPopoverState | null>(null)
   const [eraserPoint, setEraserPoint] = useState<Point | null>(null)
   const nudgeRef = useRef<{ ids: string[]; delta: Point; timer: number | null } | null>(null)
@@ -1042,6 +1062,7 @@ export default function WorldCanvas({
       data-panning={Boolean(viewportPreview)}
       data-director-mode={directorMode}
       data-camera-preview={cameraPreviewing}
+      data-scene-arrive={sceneArriving || undefined}
       onPointerDownCapture={handleCanvasPointerDownCapture}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
@@ -1202,3 +1223,5 @@ export default function WorldCanvas({
     </section>
   )
 }
+
+

@@ -66,11 +66,18 @@
   --z-film: 130;            /* film cursor */
 }
 
-.world-stage { transition: transform 620ms var(--ease-out); }
-.world-canvas[data-camera-preview='true'] .world-stage { transition: transform 1050ms var(--ease-in-out); }
+/* The camera accelerates, covers ground, then spends its last third settling.
+   --ease-camera is defined in transitions.css alongside the arrival choreography. */
+.world-stage { transition: transform 760ms var(--ease-camera, var(--ease-out)); }
+.world-canvas[data-camera-preview='true'] .world-stage { transition: transform 1050ms var(--ease-camera, var(--ease-in-out)); }
 /* Project switches do not pan across an empty canvas: the outgoing world dims, the incoming one fades in. */
-.mathburst-app[data-project-switch='out'] .world-stage { transition: opacity 300ms var(--ease-in-out); opacity: 0.12; }
-.mathburst-app[data-project-switch='in'] .world-stage { transition: none; animation: cinematic-switch-in 560ms var(--ease-out) both; }
+/* Two projects share no space, so the switch is a directed push rather than a dip:
+   the outgoing world drifts left as it goes, the incoming one arrives from the right.
+   The direction is what makes the cut read as authored instead of as a flicker. */
+.mathburst-app[data-project-switch='out'] .world-stage { transition: opacity 300ms var(--ease-in-out); opacity: 0.12; animation: project-push-out 300ms var(--ease-in-out) both; }
+.mathburst-app[data-project-switch='in'] .world-stage { transition: none; animation: project-push-in 620ms var(--ease-camera, var(--ease-out)) both; }
+@keyframes project-push-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes project-push-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cinematic-switch-in { from { opacity: 0; } to { opacity: 1; } }
 .world-object.is-agent-commit { animation: agent-commit 620ms var(--ease-out) both; }
 @keyframes agent-commit {

@@ -1,0 +1,157 @@
+/* Scene and project transitions.
+
+   The signature move is "the camera arcs, then the world settles". A scene change
+   is not one eased transform: the camera travels on a curve that accelerates and
+   then decelerates, and as it decelerates the destination's objects rise the last
+   few pixels into place in reading order. Nothing here animates layout, filters
+   or colour -- only three registered custom properties that feed each object's
+   own transform, so no frame ever costs a reflow or a repaint of the canvas.
+
+   Objects are positioned with left/top and carry `rotate(var(--obj-rotation))`, so
+   the settle drives --enter-lift and --enter-scale rather than replacing transform;
+   a rotated object still settles at its own angle. Registering both with @property
+   is what makes them interpolate instead of stepping. */
+
+@property --enter-lift {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --enter-slide {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --enter-scale {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+:root {
+  /* Ease-out starts at full velocity, which reads as a snap rather than a camera.
+     This curve leaves slowly, covers ground, and spends its last third settling. */
+  --ease-camera: cubic-bezier(0.62, 0.02, 0.16, 1);
+  /* Overshoot-free arrival with a long tail, so objects land rather than stop. */
+  --ease-settle: cubic-bezier(0.16, 0.84, 0.28, 1);
+  --settle-ms: 520ms;
+  /* Objects begin settling while the camera is still decelerating, never after it
+     has stopped -- a gap between the two reads as two separate events. */
+  --settle-lead: 190ms;
+  --settle-step: 38ms;
+}
+
+/* Motion and scale only, deliberately no fade. These are registered custom
+   properties, so they animate on the main thread rather than the compositor; if
+   a frame budget is ever missed the animation holds its <from> state. Holding a
+   15px offset is a blemish, but holding opacity 0 would mean the object is not
+   on screen at all -- so content never fades in, it only travels the last few
+   pixels. Scene fades belong to the stage, which animates plain opacity. */
+@keyframes scene-settle {
+  from { --enter-lift: 15px; --enter-scale: 0.972; }
+  to { --enter-lift: 0px; --enter-scale: 1; }
+}
+
+/* Frames are the containers, so they travel a shorter distance than the contents
+   that land inside them, and never touch transform -- a rotated frame keeps its
+   angle because the lift rides a custom property instead. */
+@keyframes scene-frame-settle {
+  from { --enter-lift: 8px; }
+  to { --enter-lift: 0px; }
+}
+
+/* Canvas chrome is not a world object and owns its whole transform. */
+@keyframes scene-chrome-settle {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object {
+  animation: scene-settle var(--settle-ms) var(--ease-settle) both;
+  animation-delay: calc(var(--settle-lead) + 10 * var(--settle-step));
+}
+
+/* Reading order: the first objects in the world's own paint order lead. Past the
+   tenth the stagger would outlast the camera, so the tail arrives together. */
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(1) { animation-delay: calc(var(--settle-lead) + 0 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(2) { animation-delay: calc(var(--settle-lead) + 1 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(3) { animation-delay: calc(var(--settle-lead) + 2 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(4) { animation-delay: calc(var(--settle-lead) + 3 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(5) { animation-delay: calc(var(--settle-lead) + 4 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(6) { animation-delay: calc(var(--settle-lead) + 5 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(7) { animation-delay: calc(var(--settle-lead) + 6 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(8) { animation-delay: calc(var(--settle-lead) + 7 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(9) { animation-delay: calc(var(--settle-lead) + 8 * var(--settle-step)); }
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object:nth-child(10) { animation-delay: calc(var(--settle-lead) + 9 * var(--settle-step)); }
+
+/* Frames are the containers the objects land inside, so they arrive first and
+   without the lift -- only the contents should appear to move. */
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object.kind-frame {
+  animation-name: scene-frame-settle;
+  animation-duration: 300ms;
+  animation-delay: 0ms;
+}
+
+.world-canvas[data-scene-arrive='true'] .tutor-overlay,
+.world-canvas[data-scene-arrive='true'] .problem-breadcrumb {
+  animation: scene-chrome-settle 320ms var(--ease-settle) both;
+  animation-delay: calc(var(--settle-lead) + 5 * var(--settle-step));
+}
+
+/* A settling object must not also run its selection or commit chrome. */
+.world-canvas[data-scene-arrive='true'] .world-stage > .world-object.is-agent-commit {
+  animation: scene-settle var(--settle-ms) var(--ease-settle) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-canvas[data-scene-arrive='true'] .world-stage > .world-object,
+  .world-canvas[data-scene-arrive='true'] .world-stage > .world-object.kind-frame,
+  .world-canvas[data-scene-arrive='true'] .world-stage > .world-object.is-agent-commit,
+  .world-canvas[data-scene-arrive='true'] .tutor-overlay,
+  .world-canvas[data-scene-arrive='true'] .problem-breadcrumb {
+    animation: none;
+  }
+}
+
+/* ---- Project switch --------------------------------------------------------
+
+   Two projects share no coordinates, so there is nothing to pan across. The cut
+   is given a direction instead: the outgoing world leaves to the left, the
+   incoming one arrives from the right and settles in reading order. The stage
+   itself only fades -- its transform is the live camera -- so the push rides on
+   the same per-object hooks the scene settle uses. */
+
+@keyframes project-leave {
+  from { --enter-slide: 0px; }
+  to { --enter-slide: -46px; }
+}
+
+@keyframes project-arrive {
+  from { --enter-slide: 54px; --enter-scale: 0.985; }
+  to { --enter-slide: 0px; --enter-scale: 1; }
+}
+
+.mathburst-app[data-project-switch='out'] .world-stage > .world-object {
+  animation: project-leave 300ms var(--ease-in-out) both;
+}
+
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object {
+  animation: project-arrive 560ms var(--ease-settle) both;
+  animation-delay: calc(6 * var(--settle-step));
+}
+
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(1) { animation-delay: 0ms; }
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(2) { animation-delay: calc(1 * var(--settle-step)); }
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(3) { animation-delay: calc(2 * var(--settle-step)); }
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(4) { animation-delay: calc(3 * var(--settle-step)); }
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(5) { animation-delay: calc(4 * var(--settle-step)); }
+.mathburst-app[data-project-switch='in'] .world-stage > .world-object:nth-child(6) { animation-delay: calc(5 * var(--settle-step)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mathburst-app[data-project-switch='out'] .world-stage > .world-object,
+  .mathburst-app[data-project-switch='in'] .world-stage > .world-object {
+    animation: none;
+  }
+}

@@ -372,7 +372,7 @@ export default function WorldObjectView({
     height: object.bounds.height,
     '--obj-rotation': `${object.rotation}deg`,
     '--obj-opacity': opacity,
-    transform: 'rotate(var(--obj-rotation)) scale(var(--enter-scale, 1))',
+    transform: 'translate3d(var(--enter-slide, 0px), var(--enter-lift, 0px), 0) rotate(var(--obj-rotation)) scale(var(--enter-scale, 1))',
     opacity: 'calc(var(--obj-opacity) * var(--enter-opacity, 1))',
     pointerEvents: object.opacity <= 0.02 ? 'none' : undefined,
   } as CSSProperties
