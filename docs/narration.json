@@ -1,51 +1,48 @@
 {
-  "engine": "kokoro-82M (open weights, local, no API key)",
-  "voice": "am_michael",
-  "langCode": "a",
-  "speed": 0.95,
-  "note": "Narration for the beats in scripts/record-demo.mjs. Built by scripts/narrate.py with Kokoro-82M running locally. Each segment starts when its beat starts and is padded to the beat length, so speech never runs into the next beat. Written to ASD-STE100 rules: no sentence over 25 words, no em-dash, no semicolon, active voice, one new fact per sentence.",
+  "voice": "Microsoft David Desktop",
+  "rate": 1,
   "segments": [
     {
       "beat": "setup",
       "startSeconds": 0,
-      "durationSeconds": 27.2,
-      "text": "This is a calculus scratchpad. A learner writes the working line by line. This work is half finished. No server has ever seen it, because nobody has submitted it. An agent asked the page to check the work. The page marked line three. It marked nothing after line three, because every later line follows from a mistake."
+      "durationSeconds": 15,
+      "text": "A photograph becomes a living mathematical world that a student and any WebMCP tutor can inhabit together. Here the photographed calculus is reconstructed, audited, and approved as editable mathematics."
     },
     {
-      "beat": "hold",
-      "startSeconds": 27.2,
-      "durationSeconds": 11.9,
-      "text": "A language model did not write that verdict. A computer algebra system inside the page wrote it. The page owns the answer."
+      "beat": "attempts",
+      "startSeconds": 15,
+      "durationSeconds": 33,
+      "text": "The learner tries the next step and checks it. A second attempt shows the same difficulty. Ask Tutor responds with one diagnostic question beside the mathematics, so the learner keeps ownership of the next move."
     },
     {
-      "beat": "console",
-      "startSeconds": 39.1,
-      "durationSeconds": 22.1,
-      "text": "This is the whole WebMCP surface. It has eighteen tools. Nine tools read the page. Nine tools change it. The console groups them, so you can see the size of the surface without a click. Every group shows its own count. Each tool also says what it must not be used for."
+      "beat": "graph",
+      "startSeconds": 48,
+      "durationSeconds": 30,
+      "text": "The tutor changes representation by creating a graph linked to the live equation. Edit the source equation, and the graph changes with it. This is a relationship between mathematical objects, not a picture placed over the page."
     },
     {
-      "beat": "mathematics",
-      "startSeconds": 61.2,
-      "durationSeconds": 17.9,
-      "text": "These four tools do mathematics. An agent can differentiate an expression, evaluate it, and compare two expressions. It uses the same engine as the page. It can test its own answer before it writes to a learner's work."
+      "beat": "agent-edit",
+      "startSeconds": 78,
+      "durationSeconds": 24,
+      "text": "A tutor can create objects, group them, and transform them through the same world as the learner. The activity rail attributes the change to Tutor. Undo reverses that visible commit from the learner interface."
     },
     {
-      "beat": "repair",
-      "startSeconds": 79.1,
-      "durationSeconds": 25.5,
-      "text": "Now the agent repairs the line it broke. It then writes the final answer. The page allows this. Earlier, this page refused every agent write. We removed that refusal, because a permission check in our own code cannot bind an agent outside the page. The page records who wrote each line instead."
+      "beat": "geometry",
+      "startSeconds": 102,
+      "durationSeconds": 23,
+      "text": "In Olympiad Geometry, point A is live. Drag it, and the homothety and tangent circles recompute. The construction remains connected while the learner explores it."
     },
     {
-      "beat": "receipt",
-      "startSeconds": 104.6,
-      "durationSeconds": 30.6,
-      "text": "The round is closed. The learner finished a second problem without help. The receipt reports what happened. It names who wrote each line, and how many checks ran. It also states what it does not prove. It does not prove that the learner understands the topic. It says so in the same size text as every other claim. It records how many times this session restarted, because a restart erases the rounds before it."
+      "beat": "matrix",
+      "startSeconds": 125,
+      "durationSeconds": 20,
+      "text": "Matrix Space makes the same idea concrete. Change one value in the editable matrix and commit it. The coordinate grid and linked vectors transform together on the canvas."
     },
     {
-      "beat": "probe",
-      "startSeconds": 135.2,
-      "durationSeconds": 28.1,
-      "text": "The page also tests this browser. It ran seven WebMCP features here, just now. Three of them work. Chrome accepts two of them and then ignores them. One is missing from Chrome completely. The page reports what the browser does, not what the specification promises. Origin scoping is one of the two. A page that trusted it would ship a security promise the browser does not keep."
+      "beat": "close",
+      "startSeconds": 145,
+      "durationSeconds": 10,
+      "text": "All eighteen WebMCP tools are here. Mathburst gives learner and tutor one living mathematical world to read, change, and understand together."
     }
   ]
 }

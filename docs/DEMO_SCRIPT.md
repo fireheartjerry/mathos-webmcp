@@ -1,309 +1,86 @@
-# Demo script — Second Try
+# Mathburst demo script
 
-**Required by the challenge:** a public YouTube video, **under 3 minutes**, with audio,
-showing a clear demo of the project functioning. Judges score WebMCP Leverage, Execution,
-Potential Impact, and Creativity & Ambition.
-
-**Target length: 2:35.** Narration is ~380 words, about 2:32 at 150 wpm, leaving the
-rest for held verdicts. Re-count with the command in "Timing" below after any edit.
+**Target length:** 2:35. The product fills the frame from the first shot. The seven
+beats below are the complete camera and narration plan.
 
 ## Hard rules
 
-- **No title card, no logo, no slide.** Frame one is the product, mid-use.
-- The first 20 seconds must contain the whole mechanism, not a preamble.
-- Never cut away during a verdict. The badge changing on screen *is* the evidence.
-- Every tool name spoken is a real tool, said exactly as it appears.
-- Keep the pointer still unless it is explaining something.
-- Say nothing the page cannot be seen doing.
+- Start on the functioning Mathburst workspace. Do not show a title card, slide, terminal,
+  repository, or Devpost page.
+- Narration must describe only actions and results visible in the product.
+- Keep the learner's edits, tutor edits, attribution, and undo visible long enough to read.
+- Do not claim production readiness, general OCR, automated tests, or hidden behavior.
 
-## The video is assembled, not filmed
+## 0:00–0:15 — Photograph to approved live scene
 
-The submission video is built by a **Remotion** composition in [`video/`](../video/) from
-three things, none of them staged:
-
-1. **The picture** — `scripts/record-demo.mjs` drives the *production build* through its
-   own WebMCP tools and captures the screen. Every state change in it went through
-   `executeTool`; nothing is mocked for the camera.
-2. **The voice** — `scripts/build-narration.ps1` synthesises `docs/narration.json` offline,
-   one file per beat, each measured against its own time budget.
-3. **The composition** — `video/src/Demo.tsx` keeps the screencast as the subject and adds
-   a caption carrying the sentence being spoken plus a quiet marker naming the beat. Black
-   and white, one serif, because the product is.
-
-```bash
-FPS=6 HOLD_SCALE=8.5 node scripts/record-demo.mjs     # picture
-pwsh -File scripts/build-narration.ps1                # voice
-cd video && npx remotion render src/index.ts Demo out/demo.mp4 --concurrency=4   --browser-executable="C:/Program Files/Google/Chrome/Application/chrome.exe"
-```
-
-See [`video/README.md`](../video/README.md) for the full rebuild, and for how to swap the
-synthetic voice for a human one without touching any code.
-
-Three things caught earlier attempts out, all now handled:
-
-- CDP's screencast only emits frames when the page **paints**, and this product has no
-  animation — a first take compressed the whole demo into four seconds. Frames are now
-  captured on a timer.
-- A background tab does not paint at all. The tab must be active.
-- A first full-length take ran 2:15 against a 2:37 narration, which would have run the
-  voice off the end of the picture. `HOLD_SCALE` stretches the beats; 8.5 gives 2:43.
-
-The narration below is the older, longer script, kept because it is the better piece of
-writing and worth reading if the video is ever re-cut with more beats. What is actually
-spoken in the current video is `docs/narration.json`, which is aligned to the beats that
-were filmed.
-
-## Capture setup
-
-Chrome 151 with `chrome://flags/#enable-webmcp-testing`, window sized so the viewport is
-1440×900. `/learn` on the left at ~62% of frame, the agent conversation on the right at
-~38%. Open on a **fresh session** so the first problem is the deterministic one and the
-heading reads *Product rule*. Narration at ~150 words per minute.
-
----
-
-## 0:00–0:22 — The mechanism, whole, immediately
-
-**Screen.** The scratchpad with three lines of working already written. The agent pane on
-the right. The agent calls `get_scratchpad`, then `check_work`. Line 3 gets its badge:
-**Does not follow**, with the diagnosis beneath it. Line 3 is the last line in this
-derivation, so there is nothing below it to mark; had there been, those lines would read
-**After the first break** rather than being called wrong, because they were never judged.
+**Screen.** Open Mathburst on the seeded calculus photograph. Press **Reconstruct photo**,
+then **AI double-check**, then **Approve clean conversion**. Hold on the approved editable
+equations.
 
 **Narration.**
-> A maths scratchpad. The working is real and half-finished — never submitted, so no
-> server has ever seen it. The agent just asked the page to check it, and the page marked
-> the first line that stopped being true, and nothing after it.
 
-**Why this shot is first.** It is the falsifiable claim. Everything else is commentary.
+> A photograph becomes a living mathematical world that a student and any WebMCP tutor can inhabit together. Here the photographed calculus is reconstructed, audited, and approved as editable mathematics.
 
----
+## 0:15–0:48 — Two attempts unlock one useful question
 
-## 0:22–0:50 — The agent is not the one grading
-
-**Screen.** Slow scroll to the Agent Console. Six group rows with counts: Read 3, Write 3,
-Review 4, Session 3, Mathematics 4, Platform 1. Header reads **18 page tools available**.
-Open **Mathematics**.
+**Screen.** Enter an attempted next step and press **Check step**. Enter a second attempt
+and check it. Press **Ask Tutor**. Hold on the diagnostic question beside the work.
 
 **Narration.**
-> Eighteen tools, nine read and nine write. The agent never grades — it cannot. Every
-> verdict comes from the page's computer algebra system, not from the model.
->
-> These four are why: the agent can differentiate, evaluate and compare against the page's
-> engine *before* touching a learner's work. Every agent we pointed here used them
-> unprompted.
 
----
+> The learner tries the next step and checks it. A second attempt shows the same difficulty. Ask Tutor responds with one diagnostic question beside the mathematics, so the learner keeps ownership of the next move.
 
-## 0:50–1:20 — The agent teaches the exact line
+## 0:48–1:18 — A linked graph follows the equation
 
-**Screen.** The agent calls `annotate_step` on line 3. The explanation lands beside that
-line, not in the chat. Then the learner rewrites line 3 and presses **Check my work**;
-every badge turns sound.
+**Screen.** Show the tutor creating a graph linked to the live equation. Edit the source
+equation and commit it. Hold while the graph and its displayed values change.
 
 **Narration.**
-> The agent explains the step that broke, beside that line, in the learner's own working
-> — not in a chat window the work has to be copied out of. The learner fixes it. The page
-> knows which step went wrong, the agent supplies the language, the person does the
-> mathematics.
 
----
+> The tutor changes representation by creating a graph linked to the live equation. Edit the source equation, and the graph changes with it. This is a relationship between mathematical objects, not a picture placed over the page.
 
-## 1:20–1:50 — Agents can do everything, and the page says who did
+## 1:18–1:42 — Agent parity, grouping, transform, undo
 
-**Screen.** The agent calls `add_step`, then `check_work`, then `new_problem`, then
-`get_receipt`. Hold on the receipt: `linesWritten: {agent: 5}` and the `limits` list.
+**Screen.** In the inspector, run a tool that creates objects. Select them, group them,
+and transform the group. Hold on the Tutor attribution in the activity rail, then press
+**Undo** and show the same objects return.
 
 **Narration.**
-> An agent can do anything a learner can. This page used to refuse that; we withdrew the
-> refusal, because a permission check in our own code never bound anything outside this
-> page. What replaces it is attribution — here the agent wrote every line, and the receipt
-> says so, unprompted.
->
-> It also states what it cannot show: it records who typed, not who reasoned. We would
-> rather publish that than imply the number means more than it does.
 
----
+> A tutor can create objects, group them, and transform them through the same world as the learner. The activity rail attributes the change to Tutor. Undo reverses that visible commit from the learner interface.
 
-## 1:50–2:25 — What this browser actually does
+## 1:42–2:05 — Dynamic geometry
 
-**Screen.** Press **Probe this browser**. Seven rows fill in with statuses and
-observations. Rest on `exposedTo` — *accepted but not honoured* — and on
-`requestUserInteraction` — *absent*.
+**Screen.** Navigate to **Olympiad Geometry**. Drag point **A**. Hold on the homothety and
+tangent circles recomputing around the moved point.
 
 **Narration.**
-> Each of these is executed live, not read from a table. Three work. Two — origin scoping
-> and cross-origin reads — Chrome accepts and silently does not honour. A page that
-> believed origin scoping worked would be shipping a security assumption the browser does
-> not implement.
->
-> And the spec's own primitive for asking a person to confirm an action is absent here, so
-> the page carries that obligation: a proposed replacement waits for the learner.
->
-> We also probed how many tools WebMCP takes. A thousand registered without complaint. The
-> limit is not the browser — it is how many distinct things this product does. Eighteen.
 
----
+> In Olympiad Geometry, point A is live. Drag it, and the homothety and tangent circles recompute. The construction remains connected while the learner explores it.
 
-## 2:25–2:45 — Close on the honest claim
+## 2:05–2:25 — Matrix transformation
 
-**Screen.** Back to the finished derivation with every line sound, receipt visible.
+**Screen.** Navigate to **Matrix Space**. Double-click a matrix cell, change its value,
+and commit. Hold on the transformed grid and linked vectors.
 
 **Narration.**
-> The page owns the model of the learner and the verification; the agent supplies the
-> language. Before WebMCP that model had to live inside the agent, vendor-locked and gone
-> when you switch.
->
-> This is a session, not a curriculum. It does not claim anyone learned anything — and it
-> says so on screen, in the same type size as everything else it claims.
 
----
+> Matrix Space makes the same idea concrete. Change one value in the editable matrix and commit it. The coordinate grid and linked vectors transform together on the canvas.
 
-## Timing
+## 2:25–2:35 — Full surface and closing thesis
 
-Narration length is the binding constraint, and it is easy to overrun by writing well.
-Count it rather than estimating:
+**Screen.** Open the **WebMCP · 18/18** inspector. Let the complete eighteen-tool list
+settle on screen, then end on the shared world.
 
-```bash
-python -c "import io,re; s=io.open('docs/DEMO_SCRIPT.md',encoding='utf-8').read(); n=sum(len(l.split()) for l in re.findall(r'^> (.*)$', s, flags=re.M)); print(n,'words ->', round(n/150*60),'seconds at 150 wpm')"
-```
+**Narration.**
 
-The first draft of this script ran to 516 words — 3:26 of pure speech, over the hard
-limit before a single pause. Anything above roughly 400 words will not fit.
+> All eighteen WebMCP tools are here. Mathburst gives learner and tutor one living mathematical world to read, change, and understand together.
 
-## Shot checklist
+## Capture checklist
 
-| | Shot | Must be visible |
-|---|---|---|
-| 1 | First break marked | Badge on the failing line, later lines unchecked |
-| 2 | Console groups | `18 page tools available`, six counts |
-| 3 | Mathematics group open | Four read-only CAS tools |
-| 4 | Annotation beside the line | Not in a chat pane |
-| 5 | All sound after the rewrite | Every badge changed on camera |
-| 6 | Receipt | `linesWritten` with an agent count, and `limits` |
-| 7 | Platform probe | Seven rows, at least one `partial` and one `unsupported` |
-
-## What not to do
-
-- Do not speed up a verdict. If the check takes a beat, keep the beat.
-- Do not say "AI tutor". The page is the tutor; the agent is the voice.
-- Do not show the Devpost page, a terminal, or the repository. Product only.
-- Do not claim mastery, proof, or understanding anywhere in the narration.
-
-## The delivered file
-
-`docs/video/second-try-demo.mp4` — 1920×1080, H.264, AAC 48 kHz stereo, **2:44.1**
-(164.1 s against the rules' 180 s limit), 4920 frames, `faststart`.
-
-## The script is written to a standard
-
-Every line of narration follows ASD-STE100, the controlled English that aerospace
-maintenance manuals use. The rules that bite here:
-
-- No sentence over 25 words.
-- No em-dash and no semicolon.
-- Active voice, simple tenses, one new fact per sentence.
-- No hedging modals. `can`, `will` and `must` only.
-- One word for one thing, through the whole script.
-
-`scripts/narrate.mjs --measure` prints spoken length against beat length for all seven
-segments, so a rewrite that no longer fits is a number rather than a surprise at render
-time.
-
-## The camera
-
-The film is not a deck with a screenshot in the middle. The product fills the frame and a
-camera moves over it.
-
-The camera is not hand-placed. `record-demo.mjs` measures the bounding box of the region
-each beat is about, at capture time, and writes it to `video/public/beats.json`.
-`Demo.tsx` turns those rectangles into a zoom and a centre. Measuring rather than
-hard-coding means the camera cannot drift off the subject when the layout changes, and a
-selector that stops matching is reported at capture time rather than discovered in the
-finished film.
-
-Two rules decide the framing:
-
-- **Width drives the zoom, not height.** Several regions are taller than the viewport
-  (the console is 894 CSS pixels in an 800-pixel one), so fitting their height would
-  demand a zoom below 1 and pull back to show background around the picture. An earlier
-  cut took `min(byWidth, byHeight)` floored at 1.06, and could pan only 115 of the 1920
-  pixels the console beat needed.
-- **The ceiling is 1.5.** Past that the source is being upscaled rather than framed.
-
-Moves are springs, so a move interrupted by the next beat continues from where it was
-instead of snapping back.
-
-## Resolution
-
-The page is captured at **2560x1600**: a 1280x800 CSS viewport at `deviceScaleFactor: 2`.
-Everything downscales into a 1920x1080 or 2560x1440 frame, so the picture is sharp even
-when the camera is at its 1.5x limit.
-
-Two traps, both now checked rather than remembered:
-
-- **Emulation overrides belong to the CDP session that set them.** A prep script that set
-  the pixel ratio and then closed its socket left the tab at 1x, and the take was captured
-  at 1280x800. `record-demo.mjs` sets the viewport itself.
-- **Chrome clamps a screenshot to the browser window.** A 1400px window silently produced
-  1.5x instead of 2x. The recorder now takes one probe frame, compares it to what was
-  asked for, and refuses to record a take at the wrong resolution, naming the window size
-  to relaunch with.
-
-## The voice
-
-**Kokoro-82M**, voice `am_michael`, running locally on CPU. Open weights, no API key, no
-account, and nothing leaves the machine.
-
-Three voices were tried in order. Windows SAPI (`Microsoft Zira Desktop`) is a
-concatenative voice and sounded like one. Microsoft Edge's neural voices through
-`edge-tts` are much better but still read as a screen reader. Kokoro is the first of the
-three that sounds like a person reading a script.
-
-```bash
-pip install kokoro soundfile
-python scripts/narrate.py --measure   # spoken vs beat length, writes nothing
-python scripts/narrate.py             # writes video/public/seg00.wav ... seg06.wav
-```
-
-Each segment is rendered at its natural rate and then padded to its beat length. Padding
-rather than time-stretching keeps the speech unhurried, and the silence lands at the end
-of a beat where a viewer is reading the held line anyway.
-
-**The picture is the current build.** The screencast is re-recorded whenever the product
-changes; an earlier cut still showed the platform list repeating one sentence under all
-seven rows, which the console had stopped doing. `record-demo.mjs` now encodes at the rate
-frames were actually captured rather than the rate it asked for - `Page.captureScreenshot`
-does not always return within the period, and a take that ran 163 real seconds produced
-1700 frames, which at a nominal 12fps is 141 seconds of picture running visibly fast under
-a narration timed in real seconds. It also puts the tab into a painting state itself via
-focus emulation, instead of requiring that its window be the one in front.
-
-**Three bands, and they cannot collide.** The composition is a marker band, the
-screencast, and a caption band, with every offset derived from `MARKER_TOP`,
-`MARKER_BAND` and `VIDEO_HEIGHT`. The marker used to be placed independently, 44px from
-the top of the frame while the video began at 56px, which was invisible until a label was
-long enough to reach the video's left edge at x=370 - and one was: *"Agents may write. We
-withdrew the refusal."* ran straight across the product, on the beat that carries the
-whole argument. Found by extracting frames from the finished file rather than by watching
-it, which is the only way anyone was going to see it.
-
-Loudness was measured rather than assumed:
-
-```bash
-ffmpeg -i docs/video/second-try-demo.mp4 -af loudnorm=I=-16:TP=-1.5:print_format=json -f null -
-#  input_i  = -15.98 LUFS   (target -16)
-#  input_tp =  -1.43 dBTP   (ceiling -1.5)
-```
-
-Remotion wrote the audio at 96 kHz. That is legal AAC and every desktop player handles it,
-but a transcode on somebody else's server is not a thing to find out about after the
-deadline, so the track was resampled to 48 kHz with the video stream copied:
-
-```bash
-ffmpeg -i in.mp4 -c:v copy -c:a aac -ar 48000 -b:a 192k -movflags +faststart out.mp4
-```
-
-`-c:v copy` matters: the picture is bit-identical, and the frame count and duration were
-checked afterwards to prove it (4920 frames, 164.1 s, both unchanged). Re-encoding video to
-fix an audio problem would have thrown away quality for nothing.
+- Use a fresh local document and the seeded calculus, geometry, and matrix scenes.
+- Keep the whiteboard and its inspector visible. The product is the subject of every shot.
+- Record one uninterrupted product take with audible narration and no music required for
+  the story.
+- Verify that the displayed labels, tutor attribution, graph linkage, geometry movement,
+  matrix update, and **WebMCP · 18/18** state are readable in the final render.

@@ -159,7 +159,7 @@ export const SHOT_CONTRACTS: readonly ShotContract[] = [
   {
     id: 'webmcp-crescendo', cue: 'webmcp-crescendo', beats: [], scene: 'overview',
     requiredObjectIds: [],
-    visibleInvariant: 'Show the inspector at exactly `34 / 34`.',
+    visibleInvariant: 'Show the inspector at exactly `48 / 48`.',
     gesture: 'Fire the crescendo cue; every chip attaches to its object and resolves into an activity row.',
   },
   {

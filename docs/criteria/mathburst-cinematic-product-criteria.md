@@ -33,9 +33,9 @@ computed value, or state change must be real.
 
 - **G1. App health.** The product type-checks and builds after every round.  
   *Check:* run `pnpm typecheck` and `pnpm build`; both must exit successfully.
-- **G2. WebMCP integrity.** Exactly thirty-four page tools remain discoverable and every tool
+- **G2. WebMCP integrity.** Exactly forty-eight page tools remain discoverable and every tool
   shown invokes its real registered handler.
-  *Check:* Browser discovery and inspector expose the same thirty-four names; invoke every
+  *Check:* Browser discovery and inspector expose the same forty-eight names; invoke every
   storyboard tool and confirm the corresponding visible result.
 - **G3. Mathematical truth.** No displayed recurrence, integral/CDF value, matrix transform,
   attention weight, loss, gradient-step claim, barycentric coordinate, homothety ratio,
@@ -189,7 +189,7 @@ every act adds a distinct real capability with no theater.
 ## Constraints
 
 - Preserve the React/TypeScript/Vinext stack, canonical world reducer, shared undo/history,
-  and exactly thirty-four WebMCP tools.
+  and exactly forty-eight WebMCP tools.
 - Preserve Mathburst's ivory/graphite/purple identity; use a temporary dark focus field only
   where it materially clarifies dense number-theory or 3D geometry.
 - Every visible storyboard feature must function, but its implementation should be the

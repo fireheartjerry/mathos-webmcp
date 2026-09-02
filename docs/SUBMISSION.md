@@ -8,7 +8,7 @@ Deadline: **September 3, 2026 at 1:00 PM Pacific Time**
 
 - [x] Mathburst opens directly into the working local product.
 - [x] Four saved projects expose eight connected mathematical scenes.
-- [x] Exactly 34 page tools register and are visible in the in-product inspector.
+- [x] Exactly 48 page tools register and are visible in the in-product inspector.
 - [x] Photograph reconstruction, audit, and approval work on the seeded Gamma scene.
 - [x] Human and agent actions use the same world kernel, authorship, history, and undo.
 - [x] Gamma probability, attention, deterministic tiny-model training, barycentrics, spiral similarity, simplex, and partition views are implemented.
@@ -25,7 +25,7 @@ Source: <https://github.com/fireheartjerry/mathos-webmcp>
 
 Mathburst is not a chatbot with one decorative browser tool. Its product model is the tool surface.
 
-- It registers exactly thirty-four discoverable tools: six reads, seven direct actions, five high-level mathematical workflows, six project and scene tools, four tutoring tools, and six per-lab controls.
+- It registers exactly forty-eight discoverable tools: reads, direct object actions, mathematical workflows, project and scene navigation, tutoring (focus, explain, evaluate, annotate, spotlight), per-lab controls, ink and shapes, text and math editing, and animation timelines.
 - The tools expose the whole typed object vocabulary: ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplex, number theory, frames, and groups.
 - Every write compiles into the same canonical operations used by the learner interface. Tool calls never bypass the world reducer.
 - Tool results produce visible commits: a tutor cursor, target reveal, attributed activity, changed IDs, and global undo.
@@ -70,7 +70,7 @@ The eight-scene mathematical spine makes the ambition concrete: one WebMCP comma
 4. **Geometric invariant:** attention weights locate a barycentric point and remain invariant under spiral similarity.
 5. **Arithmetic lift:** the projected simplex displays its integer lattice count and finite partition/Ramanujan verification.
 6. **Agent parity:** the inspector runs the same handlers registered to WebMCP; activity is labeled Tutor and can be undone by the learner.
-7. **Full surface:** the inspector reports 34 page tools in nine compact groups.
+7. **Full surface:** the inspector reports 48 page tools in twelve compact groups.
 8. **Director Review:** all thirteen keyframes are reachable, editable, and independently approvable.
 
 Do not claim general OCR, long-term memory, multiplayer, cloud sync, or production readiness. They are not part of this submission.
@@ -85,7 +85,7 @@ Do not claim general OCR, long-term memory, multiplayer, cloud sync, or producti
 - An Olympiad construction: homothety with tangent circles, plus a spiral-similarity centre computed from four points that survives dragging the source.
 - A projected tetrahedral probability simplex with a ratio-preserving weight slider, a section plane that recovers the barycentric triangle, and the Pascal lattice count.
 - A finite Euler-product partition observatory that verifies p(5n+4) ≡ 0 (mod 5) for the computed range and labels the general statement as a theorem.
-- Exactly thirty-four WebMCP tools across nine families, an inspector that runs the registered handlers, attached trace chips, and Tutor attribution in the shared history.
+- Exactly forty-eight WebMCP tools across twelve families, an inspector that runs the registered handlers, attached trace chips, and Tutor attribution in the shared history.
 - Director review: thirteen editable frames, deterministic cues and Tutor beats, camera bookmarks per canvas size, product-side match transitions, and a film mode for capture.
 
 ## Final owner actions
