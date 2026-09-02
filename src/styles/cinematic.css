@@ -50,6 +50,7 @@
   --rail-w: 44px;
   --rail-w-pinned: 188px;
   --ledger-w: 300px;
+  --ledger-tab-w: 40px;           /* the ledger at rest: wide enough for the vertical WEBMCP n/48 tab */
   --inspector-w: 320px;
   /* Layers, low to high. Canvas objects and handles stack inside .world-stage
      (its transform makes a local context); everything below is app-level. */

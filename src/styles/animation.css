@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 12px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
@@ -45,7 +45,7 @@
   transition: background-color 160ms var(--ease-out);
 }
 .animation-row:last-child { border-bottom: none; }
-.animation-row:focus-visible { background: var(--purple-soft); box-shadow: inset 2px 0 0 var(--purple); }
+.animation-row:focus-visible { background: var(--purple-soft); box-shadow: inset 2px 0 0 var(--purple); outline: 2px solid var(--purple); outline-offset: -2px; }
 .animation-row.is-playing .animation-name { color: var(--purple); }
 
 .animation-row-head { display: flex; align-items: center; gap: 8px; }

@@ -30,13 +30,13 @@
 .tool-toast {
   position: fixed;
   top: calc(var(--header-h) + 12px);
-  left: calc(var(--rail-w) + 12px);
+  left: var(--chrome-left);
   z-index: var(--z-toast);
   display: grid;
   justify-items: start;
   gap: 8px;
   width: max-content;
-  max-width: min(420px, calc(100vw - var(--rail-w) - 40px));
+  max-width: min(420px, calc(100vw - var(--canvas-left) - var(--ledger-lane) - var(--canvas-right) - 28px));
   padding: 12px 16px 14px;
   color: var(--graphite);
   background: var(--panel);
@@ -63,7 +63,7 @@
 .reading-indicator {
   position: fixed;
   top: var(--header-h);
-  left: var(--rail-w);
+  left: var(--canvas-left);
   right: 0;
   bottom: 0;
   z-index: var(--z-overlay);
@@ -141,11 +141,13 @@
   text-orientation: mixed;
 }
 .tool-ledger-tab:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; }
-.tool-ledger-tab span { color: var(--purple); font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-.tool-ledger-tab b { font: 500 12px/1 var(--mono); }
+.tool-ledger-tab span { color: var(--purple); font: 500 10.5px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+/* Rotated by the vertical writing mode: the line box is the tab's width, so it
+   needs the leading the glyphs actually occupy or they clip against the edge. */
+.tool-ledger-tab b { font: 500 12px/1.2 var(--mono); }
 .tool-ledger-body { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
-.tool-ledger.is-tab:not(:hover):not(:focus-within) { width: 34px; box-shadow: none; }
+.tool-ledger.is-tab:not(:hover):not(:focus-within) { width: var(--ledger-tab-w); box-shadow: none; }
 .tool-ledger.is-tab:not(:hover):not(:focus-within) .tool-ledger-tab { display: flex; }
 .tool-ledger.is-tab:not(:hover):not(:focus-within) .tool-ledger-body { display: none; }
 
@@ -208,11 +210,15 @@
 .tool-ledger-changed { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .tool-ledger-changed span { padding: 2px 5px; color: var(--purple); background: var(--purple-soft); border: 1px solid rgba(124, 92, 255, 0.35); border-radius: 4px; font: 500 10.5px/1 var(--mono); letter-spacing: 0.02em; }
 
-.tool-ledger-unused { flex: none; border-top: 1px solid var(--line); }
+/* Open, the unused list used to be pushed past the bottom of the fixed column and
+   clipped away entirely. It now claims at most half the body and scrolls inside it,
+   so the call list above simply gives up the room. */
+.tool-ledger-unused { flex: none; min-height: 0; max-height: 50%; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
 .tool-ledger-unused summary {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: none;
   min-height: 32px;
   padding: 0 12px;
   color: var(--muted);
@@ -224,11 +230,11 @@
 }
 .tool-ledger-unused summary:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; }
 .tool-ledger-unused summary::-webkit-details-marker { display: none; }
-.tool-ledger-unused summary::before { content: '\25B8'; font-size: 9px; transition: transform 160ms var(--ease-out); }
+.tool-ledger-unused summary::before { content: '\25B8'; font-size: 10.5px; transition: transform 160ms var(--ease-out); }
 .tool-ledger-unused[open] summary::before { transform: rotate(90deg); }
 .tool-ledger-unused summary b { color: var(--graphite); font: 500 11px/1 var(--mono); letter-spacing: 0; }
 .tool-ledger-unused p { margin: 0; padding: 0 12px 12px; color: var(--muted); font: 12px/1.4 var(--system); }
-.tool-ledger-unused-list { display: flex; flex-wrap: wrap; gap: 4px; max-height: 180px; padding: 0 12px 12px; overflow-y: auto; }
+.tool-ledger-unused-list { flex: 1 1 auto; min-height: 0; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; max-height: 180px; padding: 0 12px 12px; overflow-y: auto; overscroll-behavior: contain; }
 .tool-ledger-unused-list span { padding: 3px 6px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; font: 11px/1 var(--mono); }
 
 /* ---- Agent console ------------------------------------------------------ */
@@ -236,7 +242,7 @@
 .agent-console {
   position: fixed;
   top: calc(var(--header-h) + 12px);
-  left: calc(var(--rail-w) + var(--ledger-w) + 12px);
+  left: var(--chrome-left);
   z-index: var(--z-console);
   display: flex;
   flex-direction: column;
@@ -325,7 +331,7 @@
 .agent-console-controls button:first-child { color: #fff; background: var(--purple); border-color: var(--purple); }
 .agent-console-controls button:hover:not(:disabled) { border-color: var(--graphite); }
 .agent-console-controls button:first-child:hover:not(:disabled) { background: var(--purple-deep); border-color: var(--purple-deep); }
-.agent-console-controls button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.agent-console-controls button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .agent-console-controls button:disabled { opacity: 0.4; cursor: default; }
 .agent-console-status { min-width: 0; margin-left: auto; overflow: hidden; color: var(--muted); font: 11px/1 var(--mono); white-space: nowrap; text-overflow: ellipsis; }
 

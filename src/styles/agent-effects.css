@@ -89,7 +89,7 @@
   --ae-veil: 500ms;       /* veil fade, starts when the perimeter closes */
   position: fixed;
   top: var(--header-h);
-  left: var(--rail-w);
+  left: var(--canvas-left);
   right: 0;
   bottom: 0;
   z-index: var(--z-overlay);

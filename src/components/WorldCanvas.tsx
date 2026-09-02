@@ -11,6 +11,7 @@ import {
   expandTargetIds,
   resizeBoundsFromHandle,
   rotatePoint,
+  sameObjectGeometry,
   unionBounds,
   withEditedNodes,
   worldToObjectLocal,
@@ -427,7 +428,10 @@ export default function WorldCanvas({
       { type: 'put', object },
       { type: 'select', ids: [id] },
     ]
-    run(makeAction(`Created ${object.kind}`, operations))
+    // Name the thing that was made: 'Created rectangle', not 'Created shape',
+    // so the rail reads the same way as the polygon and freeform paths.
+    const created = object.kind === 'shape' ? object.shape : object.kind
+    run(makeAction(`Created ${created}`, operations))
     if (object.kind === 'equation') onEditObject(id, object)
   }
 
@@ -525,6 +529,7 @@ export default function WorldCanvas({
   }
 
   const handleCanvasPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (nudgeRef.current) commitNudge()
     const target = typeof Element !== 'undefined' && event.target instanceof Element ? event.target : null
     const objectElement = target?.closest('[data-object-id]')
     const objectId = objectElement?.getAttribute('data-object-id')
@@ -611,7 +616,9 @@ export default function WorldCanvas({
     if (!nudge) return
     nudgeRef.current = null
     if (nudge.timer !== null) window.clearTimeout(nudge.timer)
-    setDragPreview(null)
+    // A pointer gesture that has already taken over owns the preview; only clear
+    // it here when the nudge is still the thing driving it.
+    if (!gestureRef.current) setDragPreview(null)
     if (Math.hypot(nudge.delta.x, nudge.delta.y) < 0.5) return
     const { world: currentWorld, run: currentRun } = keyStateRef.current
     currentRun(makeAction('Nudged objects', buildTransformOperations(currentWorld, nudge.ids, { translate: nudge.delta })))
@@ -650,16 +657,15 @@ export default function WorldCanvas({
       nudgeRef.current = { ids, delta, timer: window.setTimeout(commitNudge, NUDGE_SETTLE_MS) }
       setDragPreview({ ids, delta })
     }
-    const onKeyUp = (event: KeyboardEvent) => {
-      if (event.key.startsWith('Arrow') && nudgeRef.current) commitNudge()
-    }
+    // Deliberately no keyup commit: the settle timer is what makes a burst of
+    // taps one entry in the rail. A pointer gesture flushes it early instead.
     window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
-    }
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [commitNudge])
+
+  // A nudge still inside its settle window is committed when the canvas goes
+  // away, so leaving a scene never silently discards it.
+  useEffect(() => commitNudge, [commitNudge])
 
   /* ---------------------------------------------------------------------- */
   /* Handle gestures: resize, rotate, node                                   */
@@ -837,8 +843,10 @@ export default function WorldCanvas({
       setDragPreview(null)
     } else if (gesture.kind === 'resize' || gesture.kind === 'rotate' || gesture.kind === 'node') {
       const preview = transformPreviewRef.current
+      // Value comparison, not identity: a gesture that lands back on the geometry
+      // it started from must not file a commit the reader cannot see.
       const changed = preview
-        ? Object.values(preview).filter((object) => object !== world.objects[object.id])
+        ? Object.values(preview).filter((object) => !sameObjectGeometry(object, world.objects[object.id]))
         : []
       if (changed.length > 0) {
         const summary = gesture.kind === 'resize'

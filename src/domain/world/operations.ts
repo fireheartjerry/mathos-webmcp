@@ -271,3 +271,58 @@ export function withEditedNodes(object: WorldObject, nodes: Point[], refit: bool
   }
   return object
 }
+
+/* ------------------------------------------------------------------------ */
+/* No-op detection for direct-manipulation gestures                          */
+/* ------------------------------------------------------------------------ */
+
+/** Sub-pixel tolerance: below this a transform is not visible and must not commit. */
+const GEOMETRY_EPSILON = 1e-3
+
+function samePoint(a: Point | undefined, b: Point | undefined): boolean {
+  if (!a || !b) return a === b
+  return Math.abs(a.x - b.x) < GEOMETRY_EPSILON && Math.abs(a.y - b.y) < GEOMETRY_EPSILON
+}
+
+function samePoints(a: Point[] | undefined, b: Point[] | undefined): boolean {
+  if (!a || !b) return a === b
+  if (a.length !== b.length) return false
+  return a.every((point, index) => samePoint(point, b[index]))
+}
+
+function sameBounds(a: Bounds, b: Bounds): boolean {
+  return Math.abs(a.x - b.x) < GEOMETRY_EPSILON
+    && Math.abs(a.y - b.y) < GEOMETRY_EPSILON
+    && Math.abs(a.width - b.width) < GEOMETRY_EPSILON
+    && Math.abs(a.height - b.height) < GEOMETRY_EPSILON
+}
+
+/**
+ * Whether a previewed object is geometrically indistinguishable from the committed
+ * one. A resize, rotate or node drag that lands back where it started -- a rotation
+ * that Shift snaps to the angle it already had, a handle nudged and returned --
+ * produces a fresh object instance with identical geometry, and identity comparison
+ * would file it as a real commit. Compare the values instead so the activity rail
+ * only ever records changes the reader can see.
+ */
+export function sameObjectGeometry(candidate: WorldObject, committed: WorldObject | undefined): boolean {
+  if (!committed) return false
+  if (candidate === committed) return true
+  if (candidate.kind !== committed.kind) return false
+  if (Math.abs(candidate.rotation - committed.rotation) >= GEOMETRY_EPSILON) return false
+  if (!sameBounds(candidate.bounds, committed.bounds)) return false
+  if (candidate.kind === 'arrow' && committed.kind === 'arrow') {
+    return samePoint(candidate.from, committed.from) && samePoint(candidate.to, committed.to)
+  }
+  if (candidate.kind === 'shape' && committed.kind === 'shape') {
+    return samePoints(candidate.points, committed.points)
+  }
+  if (candidate.kind === 'ink' && committed.kind === 'ink') {
+    if (!samePoints(candidate.points, committed.points)) return false
+    const a = candidate.strokes
+    const b = committed.strokes
+    if (!a || !b) return a === b
+    return a.length === b.length && a.every((stroke, index) => samePoints(stroke.points, b[index]?.points))
+  }
+  return true
+}

@@ -569,7 +569,7 @@ button {
   right: 16px;
   bottom: 16px;
   z-index: var(--z-director);
-  width: clamp(340px, 25vw, 410px);
+  width: var(--director-w);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -695,7 +695,7 @@ button {
 .director-target-chip.is-selected i { background: #fff; }
 .director-target-chip.is-missing { color: #6f6c64; border-style: dashed; cursor: default; }
 .director-target-chip.is-missing i { background: #5e5b54; }
-.director-target-chip small { color: #8c887e; font-size: 10px; text-transform: uppercase; }
+.director-target-chip small { color: #8c887e; font-size: 10.5px; text-transform: uppercase; }
 .director-empty-targets { color: #77736b; font-size: 11px; }
 
 .director-prepare {
@@ -725,7 +725,19 @@ button {
 .director-zoom-controls button { width: 34px; height: 34px; }
 .director-zoom-controls span { color: #88847b; font-size: 11px; text-transform: uppercase; }
 
-.director-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: auto; padding: 12px 14px 14px; }
+/* Approve is the panel's primary action and the detail column scrolls, so the
+   footer sticks to the bottom of the scroll area instead of falling below it. */
+.director-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: auto;
+  padding: 12px 14px 14px;
+  background: rgba(23, 23, 19, 0.985);
+  border-top: 1px solid #383832;
+}
 .director-actions button { min-height: 36px; padding: 0 9px; font: 11px/1 var(--mono); text-transform: uppercase; cursor: pointer; }
 .director-secondary-action { color: #c8c4ba; background: #292925; border: 1px solid #4b4a43; }
 .director-approve-action { grid-column: 1 / -1; color: #fff; background: var(--purple); border: 1px solid var(--purple); }
@@ -764,10 +776,13 @@ button {
   --right-top-inset: 12px;        /* right edge for top-right chrome; grows for the reconstruction panel too */
   --canvas-left: var(--rail-w);   /* left edge of the visible canvas (rail, pinned rail, pinned ledger) */
   --canvas-right: 0px;            /* width taken from the right by an open column */
+  --ledger-lane: 0px;             /* the resting WebMCP tab floats over the canvas; left-hand chrome clears it */
   --canvas-centre: calc(50% + (var(--canvas-left) - var(--canvas-right)) / 2);
   /* The selection dock (action bar + inspector) is centred in the space left of the
      bottom-right column (activity rail, 268px), so nothing stacks on anything. */
   --activity-w: 268px;
+  --director-w: clamp(340px, 25vw, 410px);  /* matches .director-panel */
+  --reconstruction-w: 380px;               /* matches .reconstruction-panel */
   --inspector-h: 264px;
   --dock-right: calc(var(--right-inset) + var(--activity-w) + 12px);
   --dock-width: calc(100vw - var(--canvas-left) - 12px - var(--dock-right));
@@ -784,14 +799,20 @@ button {
 }
 .mathburst-app:has(.tool-rail.is-pinned) { grid-template-columns: var(--rail-w-pinned) minmax(0, 1fr); }
 .mathburst-app:has(.tool-rail.is-pinned) { --canvas-left: var(--rail-w-pinned); }
-.mathburst-app[data-ledger-pinned='true'] { --canvas-left: calc(var(--rail-w) + var(--ledger-w)); }
+/* Unpinned, the ledger rests as a 34px tab against the rail (sidebar.css). It sits
+   above the canvas, so left-hand chrome is pushed clear of it; pinned, its whole
+   width is already inside --canvas-left and the lane collapses. */
+.mathburst-app:has(.tool-ledger) { --ledger-lane: var(--ledger-tab-w); }
+.mathburst-app[data-ledger-pinned='true'] { --canvas-left: calc(var(--rail-w) + var(--ledger-w)); --ledger-lane: 0px; }
 .mathburst-app[data-ledger-pinned='true']:has(.tool-rail.is-pinned) { --canvas-left: calc(var(--rail-w-pinned) + var(--ledger-w)); }
+/* Everything anchored to the left edge of the usable canvas. */
+.mathburst-app { --chrome-left: calc(var(--canvas-left) + var(--ledger-lane) + 12px); }
 .mathburst-app:has(.webmcp-inspector) { --right-inset: calc(12px + var(--inspector-w) + 12px); --right-top-inset: calc(12px + var(--inspector-w) + 12px); --canvas-right: calc(var(--inspector-w) + 24px); }
-.mathburst-app:has(.director-panel) { --right-inset: 442px; --right-top-inset: 442px; --canvas-right: 442px; }
-.mathburst-app:has(.reconstruction-panel) { --right-top-inset: calc(var(--right-inset) + 380px + 12px); }
+.mathburst-app:has(.director-panel) { --right-inset: calc(var(--director-w) + 28px); --right-top-inset: calc(var(--director-w) + 28px); --canvas-right: calc(var(--director-w) + 28px); }
+.mathburst-app:has(.reconstruction-panel) { --right-top-inset: calc(var(--right-inset) + var(--reconstruction-w) + 12px); }
 
 /* Scrolling regions inside chrome use a thin, quiet scrollbar. */
-.webmcp-groups, .inspector-panel, .agent-console-lines, .tool-ledger-list, .tool-ledger-unused-list, .animation-list, .project-gallery, .project-creator, .director-shot-list, .director-detail, .creation-popover { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.webmcp-groups, .inspector-panel, .agent-console-lines, .tool-ledger-list, .tool-ledger-unused-list, .animation-list, .activity-list, .project-gallery, .project-creator, .director-shot-list, .director-detail, .creation-popover { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 
 /* Application chrome is never text-selectable; double-clicks belong to the canvas. */
 .world-header, .tool-rail, .tool-ledger, .tool-toast, .personal-project-navigator, .activity-rail header, .zoom-controls, .object-context, .agent-console header, .creation-popover, .animation-panel-head { user-select: none; }
@@ -874,7 +895,7 @@ button {
 /* ---- WebMCP launcher, centred in the header ----------------------------- */
 .webmcp-launcher {
   position: fixed;
-  top: 12px;
+  top: 13px;
   left: 50%;
   z-index: calc(var(--z-chrome) + 1);
   display: flex;
@@ -883,7 +904,7 @@ button {
 }
 .webmcp-inspector-trigger {
   position: relative;
-  height: 30px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -903,9 +924,9 @@ button {
 .webmcp-inspector-trigger b { font-weight: 600; }
 .webmcp-inspector-trigger em { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; border-left: 1px solid rgba(255, 255, 255, 0.28); font-style: normal; font-weight: 400; opacity: 0.85; }
 .webmcp-inspector-trigger em strong { font-weight: 600; }
-.webmcp-inspector-trigger u { width: 22px; height: 22px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.16); border-radius: 4px; font: 500 11px/1 var(--mono); text-decoration: none; }
+.webmcp-inspector-trigger u { width: 20px; height: 20px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.16); border-radius: 4px; font: 500 11px/1 var(--mono); text-decoration: none; }
 .webmcp-inspector-trigger:hover, .webmcp-inspector-trigger[aria-expanded='true'] { background: var(--purple-deep); border-color: var(--purple-deep); }
-.webmcp-inspector-trigger:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.webmcp-inspector-trigger:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 @media (max-width: 1180px) { .webmcp-inspector-trigger em span { display: none; } }
 @media (max-width: 940px) { .webmcp-inspector-trigger em { display: none; } }
 
@@ -1072,7 +1093,7 @@ button {
 .activity-rail {
   position: fixed;
   right: var(--right-inset);
-  bottom: 58px; /* zoom control 34px + 12px above + 12px below */
+  bottom: 60px; /* zoom control 36px + 12px below it + 12px between the two */
   z-index: var(--z-panel);
   width: var(--activity-w);
   overflow: hidden;
@@ -1083,7 +1104,7 @@ button {
   box-shadow: var(--shadow-panel);
   animation: chrome-in-up 220ms var(--ease-out) both;
 }
-.activity-rail > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; height: 36px; border-bottom: 1px solid var(--line); }
+.activity-rail > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 40px; border-bottom: 1px solid var(--line); }
 .activity-toggle, .activity-undo { color: var(--graphite); background: transparent; border: 0; font: 500 12px/1 var(--system); letter-spacing: 0; text-transform: none; cursor: pointer; }
 .activity-toggle { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 12px; text-align: left; }
 .activity-toggle b { min-width: 18px; padding: 3px 5px; color: var(--muted); background: var(--chip); border-radius: 4px; font: 500 11px/1 var(--mono); text-align: center; }
@@ -1092,7 +1113,7 @@ button {
 .activity-undo:hover:not(:disabled) { color: #fff; background: var(--purple); }
 .activity-undo:disabled { color: var(--muted); opacity: 0.5; cursor: default; }
 .activity-toggle:focus-visible, .activity-undo:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; }
-.activity-list { max-height: 216px; overflow: hidden; }
+.activity-list { max-height: 216px; overflow-y: auto; overscroll-behavior: contain; }
 .activity-list > p { margin: 0; padding: 12px; color: var(--muted); font: 12px/1.4 var(--system); }
 .activity-item {
   display: grid;
@@ -1115,11 +1136,13 @@ button {
 .activity-rail.is-compact { width: 260px; }
 .activity-rail.is-compact .activity-list { max-height: 36px; }
 .activity-rail.is-compact .activity-item:not(:first-child) { display: none; }
+/* Director review takes the zoom control away, so nothing is left to sit above. */
+.mathburst-app:has(.director-panel) .activity-rail { bottom: 12px; }
 
 /* ---- Project navigator (bottom left, 40px) -------------------------------- */
 .personal-project-navigator {
   position: fixed;
-  left: calc(var(--canvas-left) + 12px);
+  left: var(--chrome-left);
   bottom: 12px;
   z-index: var(--z-panel);
   height: 40px;
@@ -1193,7 +1216,7 @@ button {
   transition: background-color 160ms var(--ease-out);
 }
 .opening-tutor-panel button:hover:not(:disabled) { background: var(--purple-deep); }
-.opening-tutor-panel button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.opening-tutor-panel button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .opening-tutor-panel button:disabled { opacity: 0.4; cursor: default; }
 .opening-tutor-panel p { flex: 1; min-width: 0; margin: 0; color: var(--muted); font: 12px/1.3 var(--system); }
 .tutor-attempt-panel { display: none; }
@@ -1224,7 +1247,7 @@ button {
   right: var(--right-inset);
   top: calc(var(--header-h) + 12px);
   z-index: var(--z-panel);
-  width: 380px;
+  width: var(--reconstruction-w);
   padding: 16px;
   color: var(--graphite);
   background: var(--panel);
@@ -1289,7 +1312,7 @@ button {
 .approve-button { background: var(--graphite); border-color: var(--graphite); }
 .reject-button { color: var(--graphite); background: transparent; border-color: var(--line); }
 .reject-button:hover:not(:disabled) { border-color: var(--graphite); }
-.reconstruction-panel footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.reconstruction-panel footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .reconstruction-panel footer button:disabled { opacity: 0.45; cursor: default; }
 .reconstruction-panel > small { display: block; margin-top: 12px; color: var(--muted); font: 11px/1.4 var(--system); }
 
@@ -1315,7 +1338,7 @@ button {
 .webmcp-trace {
   position: fixed;
   top: calc(var(--header-h) + 12px);
-  left: calc(var(--canvas-left) + 12px);
+  left: var(--chrome-left);
   z-index: var(--z-column);
   max-width: min(560px, calc(100vw - var(--canvas-left) - var(--canvas-right) - 420px));
   display: flex;
@@ -1417,23 +1440,23 @@ button {
 }
 .webmcp-inspector > header button:hover { color: #fff; border-color: rgba(251, 249, 243, 0.5); }
 .webmcp-inspector > header button:focus-visible { color: #fff; outline: 2px solid var(--purple); outline-offset: 1px; }
+/* The failure text ("browser has no document.modelContext") is the whole point of
+   this strip, so it wraps to a second line rather than ellipsising away. */
 .webmcp-registration {
-  height: 32px;
+  min-height: 32px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 0 16px;
-  overflow: hidden;
+  padding: 8px 16px;
   color: var(--teal);
   background: var(--teal-soft);
   border-bottom: 1px solid rgba(47, 143, 136, 0.2);
-  font: 500 10.5px/1 var(--mono);
+  font: 500 10.5px/1.4 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
 }
-.webmcp-registration span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.webmcp-registration i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
+.webmcp-registration span { min-width: 0; }
+.webmcp-registration i { width: 7px; height: 7px; flex: none; margin-top: 4px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
 .webmcp-registration.is-unsupported, .webmcp-registration.is-checking { color: var(--muted); background: var(--chip); border-bottom-color: var(--line); }
 .webmcp-registration.is-unsupported i, .webmcp-registration.is-checking i { background: var(--muted); box-shadow: 0 0 0 3px var(--line); }
 .webmcp-registration.is-partial, .webmcp-registration.is-failed { color: var(--orange); background: var(--orange-soft); border-bottom-color: rgba(212, 107, 76, 0.2); }
@@ -1513,8 +1536,9 @@ button {
 
 /* ---- Layout offsets: pinned rail, pinned WebMCP column, open right columns -- */
 .mathburst-app[data-ledger-pinned='true'] .world-canvas { margin-left: var(--ledger-w); }
-.mathburst-app:has(.tool-rail.is-pinned) .tool-ledger, .mathburst-app:has(.tool-rail.is-pinned) .reading-indicator, .mathburst-app:has(.tool-rail.is-pinned) .agent-activation { left: var(--rail-w-pinned); }
-.mathburst-app:has(.tool-rail.is-pinned) .tool-toast { left: calc(var(--rail-w-pinned) + 12px); }
+/* The ledger is the column itself, so it stays against the rail; the reading ring and
+   the activation sweep frame the canvas and follow --canvas-left in sidebar.css. */
+.mathburst-app:has(.tool-rail.is-pinned) .tool-ledger { left: var(--rail-w-pinned); }
 /* Centred overlays (selection bar, console, inspector) centre on the visible canvas via --canvas-centre. */
 
 /* ---- Small viewports ------------------------------------------------------ */
@@ -1524,7 +1548,7 @@ button {
 }
 @media (max-width: 760px) {
   .header-actions { display: none; }
-  .webmcp-inspector { left: calc(var(--rail-w) + 12px); right: 12px; width: auto; }
+  .webmcp-inspector { left: var(--chrome-left); right: 12px; width: auto; }
   .webmcp-trace { max-width: none; right: 12px; }
   .activity-rail { display: none; }
   .personal-project-navigator { max-width: calc(100vw - var(--rail-w) - 24px); }
@@ -1619,7 +1643,7 @@ button {
 }
 .new-project-button svg { width: 16px; height: 16px; }
 .new-project-button:hover { background: var(--graphite-hover); border-color: var(--graphite-hover); }
-.new-project-button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.new-project-button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 
 .project-gallery-toolbar { min-height: 44px; display: flex; align-items: stretch; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line); }
 .project-gallery-toolbar > div { display: flex; gap: 24px; }
@@ -1643,7 +1667,7 @@ button {
 .project-gallery-toolbar button:hover { color: var(--graphite); }
 .project-gallery-toolbar button[aria-selected='true'] { color: var(--graphite); border-bottom-color: var(--graphite); }
 .project-gallery-toolbar button[aria-selected='true'] b { color: var(--graphite); }
-.project-gallery-toolbar button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.project-gallery-toolbar button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .project-gallery-toolbar > span { display: none; }
 
 .project-gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 16px; padding-top: 24px; }
@@ -1682,7 +1706,7 @@ button {
   cursor: pointer;
 }
 .library-card-open:disabled { cursor: default; }
-.library-card-open:focus-visible { outline: 2px solid var(--purple); outline-offset: -4px; border-radius: 9px 9px 0 0; }
+.library-card-open:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; border-radius: 9px 9px 0 0; }
 .library-card-glyph { display: grid; place-items: center; overflow: hidden; color: var(--graphite); font: 500 clamp(30px, 3vw, 44px)/1 var(--serif); letter-spacing: -0.04em; }
 .library-card-copy { min-width: 0; display: grid; align-content: start; gap: 8px; }
 .library-card-copy small { display: none; }
@@ -1710,7 +1734,7 @@ button {
 .library-card > footer button:last-child { border-right: 0; }
 .library-card > footer button svg { width: 15px; height: 15px; }
 .library-card > footer button:hover { color: var(--graphite); background: var(--chip); }
-.library-card > footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: -3px; }
+.library-card > footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; }
 .library-card > footer .library-restore { color: var(--graphite); background: var(--chip); }
 .library-card > footer .library-delete-forever:hover { color: var(--orange); }
 .library-add-card {
@@ -1731,13 +1755,13 @@ button {
 .library-add-card strong { color: var(--graphite); font: 500 16px/1.2 var(--serif); }
 .library-add-card small { font: 12px/1.4 var(--system); letter-spacing: 0; text-transform: none; }
 .library-add-card:hover { color: var(--graphite); background: var(--paper); border-color: var(--graphite); }
-.library-add-card:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.library-add-card:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .project-gallery-empty { min-height: 360px; display: grid; place-content: center; justify-items: center; gap: 8px; border-bottom: 1px solid var(--line); text-align: center; }
 .project-gallery-empty > svg { width: 48px; height: 48px; color: var(--muted); stroke-width: 1.25; }
 .project-gallery-empty h2 { margin: 0; font: 500 26px/1.1 var(--serif); }
 .project-gallery-empty p { margin: 0; color: var(--muted); font: 13px/1.45 var(--system); }
 .project-gallery-empty button { margin-top: 12px; height: 36px; padding: 0 16px; color: #fff; background: var(--graphite); border: 0; border-radius: 6px; font: 500 13px/1 var(--system); cursor: pointer; }
-.project-gallery-empty button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.project-gallery-empty button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 
 /* New-project dialog */
 .project-creator-backdrop { position: fixed; inset: 0; z-index: var(--z-dialog); display: grid; place-items: center; padding: 24px; background: rgba(23, 23, 19, 0.55); animation: chrome-fade-in 160ms var(--ease-out) both; }
@@ -1817,7 +1841,7 @@ button {
   transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
 }
 .project-creator > footer button:hover:not(:disabled) { border-color: var(--graphite); }
-.project-creator > footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.project-creator > footer button:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
 .project-creator > footer .project-create-submit { color: #fff; background: var(--graphite); border-color: var(--graphite); }
 .project-creator > footer .project-create-submit:hover:not(:disabled) { background: var(--graphite-hover); border-color: var(--graphite-hover); }
 .project-creator > footer .project-create-submit:disabled { opacity: 0.45; cursor: default; }
