@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
 import type { DirectorObjectOverride } from '../domain/world/director'
@@ -8,12 +8,20 @@ import type { CatalogSceneId } from '../domain/world/projects'
 import type { Point, Viewport, WorldAction, WorldObject, WorldState } from '../domain/world/types'
 import type { ToolMode } from './ToolRail'
 import { isCanvasControlTarget, useCanvasInputRouter } from './canvas/useCanvasInputRouter'
+import CreationPopover from './creation/CreationPopover'
+import { matrixCreationOptions, shapeCreationOptions, type ShapeCreationOption } from './creation/toolOptions'
 import WorldObjectView from './WorldObjectView'
 
 type Gesture =
   | { kind: 'pan'; pointerId: number; client: Point; viewport: Viewport }
   | { kind: 'drag'; pointerId: number; start: Point; ids: string[] }
   | { kind: 'ink'; pointerId: number; points: Point[]; highlighter: boolean }
+
+type CreationPopoverState = {
+  kind: 'shape' | 'matrix'
+  point: Point
+  anchor: Point
+}
 
 const makeAction = (summary: string, operations: WorldAction['operations']): WorldAction => ({
   id: crypto.randomUUID(),
@@ -88,6 +96,7 @@ export default function WorldCanvas({
   const [dragPreview, setDragPreview] = useState<{ ids: string[]; delta: Point } | null>(null)
   const [inkPreview, setInkPreview] = useState<{ points: Point[]; highlighter: boolean } | null>(null)
   const [viewportPreview, setViewportPreview] = useState<Viewport | null>(null)
+  const [creationPopover, setCreationPopover] = useState<CreationPopoverState | null>(null)
   const effectiveViewport = directorMode && directorViewport ? directorViewport : world.viewport
   const effectiveSelection = directorMode ? directorSelection : world.selection
   const routeInput = useCanvasInputRouter(mode)
@@ -132,7 +141,18 @@ export default function WorldCanvas({
     capture(event.pointerId)
   }
 
-  const createAt = (point: Point) => {
+  const closeCreationPopover = useCallback(() => setCreationPopover(null), [])
+
+  const createAt = (point: Point, anchor = point, selectedShape?: ShapeCreationOption['id']) => {
+    if (mode === 'shape' && !selectedShape) {
+      setCreationPopover({ kind: 'shape', point, anchor })
+      return
+    }
+    if (mode === 'matrix' && !selectedShape) {
+      setCreationPopover({ kind: 'matrix', point, anchor })
+      return
+    }
+
     const id = crypto.randomUUID()
     const base = { id, rotation: 0, author: 'human' as const, opacity: 1 }
     let object: WorldObject | null = null
@@ -140,11 +160,13 @@ export default function WorldCanvas({
     if (mode === 'graph') {
       const equationId = crypto.randomUUID()
       const graphId = crypto.randomUUID()
+      const entityId = `entity:${equationId}`
       const equation: WorldObject = {
         ...base,
         id: equationId,
         kind: 'equation',
-        latex: 'a(x^2-4x+3)',
+        entityId,
+        latex: '',
         color: '#171713',
         bounds: { x: point.x, y: point.y - 60, width: 330, height: 48 },
       }
@@ -152,16 +174,15 @@ export default function WorldCanvas({
         ...base,
         id: graphId,
         kind: 'graph',
+        entityId,
         equationId,
-        xDomain: [-1, 5],
-        yDomain: [-2, 8],
+        xDomain: [-5, 5],
+        yDomain: [-5, 5],
         color: '#7c5cff',
-        parameters: { a: 1 },
-        showTangentAt: 2,
-        shadeIntegral: [1, 3],
         bounds: { x: point.x, y: point.y, width: 480, height: 330 },
       }
-      run(makeAction('Created a live linked graph', [
+      run(makeAction('Created an empty linked graph', [
+        { type: 'putEntity', entity: { id: entityId, kind: 'expression', latex: '', parameters: {} } },
         { type: 'put', object: equation },
         { type: 'put', object: graph },
         { type: 'select', ids: [graphId] },
@@ -175,60 +196,36 @@ export default function WorldCanvas({
         kind: 'geometry',
         accent: '#7c5cff',
         bounds: { x: point.x, y: point.y, width: 430, height: 330 },
-        primitives: [
-          { kind: 'point', id: 'A', at: { x: 66, y: 264 }, label: 'A', draggable: true },
-          { kind: 'point', id: 'B', at: { x: 360, y: 258 }, label: 'B', draggable: true },
-          { kind: 'point', id: 'C', at: { x: 208, y: 62 }, label: 'C', draggable: true },
-          { kind: 'polygon', id: 'triangle', points: ['A', 'B', 'C'] },
-          { kind: 'segment', id: 'base-segment', from: 'A', to: 'B' },
-          { kind: 'line', id: 'base-line', through: ['A', 'B'] },
-          { kind: 'midpoint', id: 'M', of: ['A', 'B'], label: 'M' },
-          { kind: 'circle', id: 'mid-circle', center: 'M', through: 'A' },
-          { kind: 'perpendicular', id: 'altitude', through: 'C', to: 'base-line' },
-          { kind: 'intersection', id: 'D', lines: ['base-line', 'altitude'], label: 'D' },
-          { kind: 'segment', id: 'altitude-segment', from: 'C', to: 'D' },
-          { kind: 'angle', id: 'angle-A', a: 'B', vertex: 'A', b: 'C' },
-          { kind: 'homothety', id: 'C2', center: 'M', source: 'C', factor: 0.55, label: 'C′' },
-        ],
+        primitives: [],
       }
     }
 
     if (mode === 'matrix') {
-      const vectors: WorldObject[] = [
-        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: 2, y: 1 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
-        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: -1, y: 2 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
-        { ...base, id: crypto.randomUUID(), kind: 'arrow', from: { x: 0, y: 0 }, to: { x: 2.5, y: -1.4 }, color: '#171713', opacity: 0, bounds: { x: point.x, y: point.y, width: 1, height: 1 } },
-      ]
-      const matrix: WorldObject = {
-        ...base,
-        kind: 'matrix',
-        values: [[1, 0.8], [0, 1]],
-        sourceIds: vectors.map((vector) => vector.id),
-        accent: '#7c5cff',
-        bounds: { x: point.x, y: point.y, width: 500, height: 330 },
-      }
-      run(makeAction('Created a live matrix transformation', [
-        ...vectors.map((vector) => ({ type: 'put' as const, object: vector })),
-        { type: 'put', object: matrix },
-        { type: 'select', ids: [matrix.id] },
-      ]))
       return
     }
 
     if (mode === 'text') {
-      object = { ...base, kind: 'text', text: 'Double-click to write', color: '#171713', fontSize: 24, bounds: { x: point.x, y: point.y, width: 230, height: 72 } }
+      object = { ...base, kind: 'text', text: '', color: '#171713', fontSize: 24, bounds: { x: point.x, y: point.y, width: 230, height: 72 } }
     } else if (mode === 'equation') {
-      object = { ...base, kind: 'equation', latex: 'x^2+y^2=1', color: '#171713', bounds: { x: point.x, y: point.y, width: 230, height: 78 } }
+      object = { ...base, kind: 'equation', entityId: `entity:${id}`, latex: '', color: '#171713', bounds: { x: point.x, y: point.y, width: 230, height: 78 } }
     } else if (mode === 'shape') {
-      object = { ...base, kind: 'shape', shape: 'rectangle', fill: '#f4f0e6', stroke: '#171713', bounds: { x: point.x, y: point.y, width: 170, height: 110 } }
+      if (selectedShape !== 'rectangle' && selectedShape !== 'ellipse' && selectedShape !== 'triangle') return
+      object = { ...base, kind: 'shape', shape: selectedShape, fill: '#f4f0e6', stroke: '#171713', bounds: { x: point.x, y: point.y, width: 170, height: 110 } }
     } else if (mode === 'arrow') {
       object = { ...base, kind: 'arrow', from: { x: 8, y: 102 }, to: { x: 172, y: 8 }, color: '#171713', bounds: { x: point.x, y: point.y, width: 180, height: 110 } }
     } else if (mode === 'frame') {
-      object = { ...base, kind: 'frame', title: 'New frame', childIds: [], bounds: { x: point.x, y: point.y, width: 520, height: 360 } }
+      object = { ...base, kind: 'frame', title: 'Untitled', childIds: [], bounds: { x: point.x, y: point.y, width: 520, height: 360 } }
     }
 
     if (!object) return
-    run(makeAction(`Created ${object.kind}`, [{ type: 'put', object }, { type: 'select', ids: [id] }]))
+    const operations: WorldAction['operations'] = [
+      ...(object.kind === 'equation'
+        ? [{ type: 'putEntity' as const, entity: { id: object.entityId!, kind: 'expression' as const, latex: object.latex, parameters: {} } }]
+        : []),
+      { type: 'put', object },
+      { type: 'select', ids: [id] },
+    ]
+    run(makeAction(`Created ${object.kind}`, operations))
     if (object.kind === 'text' || object.kind === 'equation') {
       requestAnimationFrame(() => onEditObject(id))
     }
@@ -245,6 +242,10 @@ export default function WorldCanvas({
     }
     if (event.button !== 0) return
     const point = screenToWorld(event.clientX, event.clientY)
+    if (creationPopover) {
+      setCreationPopover(null)
+      return
+    }
 
     if (mode === 'pen' || mode === 'highlighter') {
       startInk(event)
@@ -265,7 +266,8 @@ export default function WorldCanvas({
       return
     }
 
-    createAt(point)
+    const rect = canvasRef.current!.getBoundingClientRect()
+    createAt(point, { x: event.clientX - rect.left, y: event.clientY - rect.top })
   }
 
   const handleCanvasPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -522,6 +524,21 @@ export default function WorldCanvas({
       </div>
       {directorMode && <div className="director-safe-frame" aria-hidden="true"><span>title safe · 7%</span></div>}
       <div className="canvas-mode"><b>{mode}</b><span>right-drag to pan</span></div>
+      {creationPopover && (
+        <CreationPopover
+          title={creationPopover.kind === 'shape' ? 'Choose a shape' : 'Matrix editor coming next'}
+          description={creationPopover.kind === 'shape' ? 'Pick the annotation to place here.' : 'Matrix dimensions and values arrive in the next editor task.'}
+          anchor={creationPopover.anchor}
+          options={creationPopover.kind === 'shape' ? shapeCreationOptions : matrixCreationOptions}
+          onSelect={(option) => {
+            if (creationPopover.kind === 'shape') {
+              setCreationPopover(null)
+              createAt(creationPopover.point, creationPopover.anchor, option as ShapeCreationOption['id'])
+            }
+          }}
+          onCancel={closeCreationPopover}
+        />
+      )}
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImage} />
     </section>
   )

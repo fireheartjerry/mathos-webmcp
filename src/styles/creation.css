@@ -1,0 +1,28 @@
+.creation-popover {
+  position: absolute;
+  z-index: 30;
+  width: 240px;
+  padding: 13px;
+  color: #171713;
+  background: #fffdf6;
+  border: 1px solid rgba(23, 23, 19, .18);
+  border-radius: 12px;
+  box-shadow: 0 14px 38px rgba(23, 23, 19, .17);
+  font-family: 'Fira Code', monospace;
+}
+
+.creation-popover-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.creation-popover-kicker { color: #7c5cff; font-size: 9px; letter-spacing: .11em; text-transform: uppercase; }
+.creation-popover h2 { margin: 4px 0 0; font: 600 15px/1.1 'STIX Two Text', Georgia, serif; }
+.creation-popover p { margin: 5px 0 0; color: #706e64; font: 10px/1.35 'Fira Code', monospace; }
+.creation-popover-close { padding: 0 2px; color: #706e64; background: transparent; border: 0; font-size: 20px; line-height: 1; cursor: pointer; }
+.creation-popover-options { display: grid; gap: 6px; margin-top: 12px; }
+.creation-option { display: grid; gap: 2px; padding: 8px 9px; color: #171713; text-align: left; background: #f4f0e6; border: 1px solid transparent; border-radius: 7px; cursor: pointer; }
+.creation-option:hover:not(:disabled), .creation-option:focus-visible { border-color: #7c5cff; outline: none; }
+.creation-option:disabled { color: #979388; cursor: not-allowed; opacity: .78; }
+.creation-option span { font: 600 11px/1.2 'Fira Code', monospace; }
+.creation-option small { color: #706e64; font: 9px/1.2 'Fira Code', monospace; }
+.creation-option:disabled small { color: #aaa69b; }
+.creation-popover-cancel { width: 100%; margin-top: 10px; padding: 6px; color: #706e64; background: transparent; border: 1px solid rgba(23, 23, 19, .14); border-radius: 6px; font: 10px 'Fira Code', monospace; cursor: pointer; }
+.creation-popover-cancel:hover, .creation-popover-cancel:focus-visible { color: #171713; border-color: #7c5cff; outline: none; }
+.creation-popover kbd { padding: 1px 4px; border: 1px solid rgba(23, 23, 19, .14); border-radius: 3px; font: 9px 'Fira Code', monospace; }
