@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
+import { normalizeWeights } from '../../domain/math/barycentric'
 import type { WorldObject } from '../../domain/world/types'
 import InspectorField from './InspectorField'
 import type { InspectorFieldSpec, InspectorStatus, InspectorTab, ProgressiveInspectorProps } from './types'
@@ -116,13 +117,16 @@ function InlineNumberEditor({
   value,
   ariaLabel,
   onCommit,
+  validate,
 }: {
   value: number
   ariaLabel: string
   onCommit: (value: number) => void
+  validate?: (value: number) => boolean
 }) {
   const [draft, setDraft] = useState(() => formatValue(value))
   const focused = useRef(false)
+  const cancelOnBlur = useRef(false)
   const committedValue = useRef<number | null>(null)
 
   useEffect(() => {
@@ -132,6 +136,11 @@ function InlineNumberEditor({
   const commit = () => {
     const parsed = parseFinite(draft)
     if (parsed === null) {
+      committedValue.current = null
+      setDraft(formatValue(value))
+      return
+    }
+    if (validate && !validate(parsed)) {
       committedValue.current = null
       setDraft(formatValue(value))
       return
@@ -148,7 +157,7 @@ function InlineNumberEditor({
       inputMode="decimal"
       value={draft}
       aria-label={ariaLabel}
-      onFocus={() => { focused.current = true; committedValue.current = null }}
+      onFocus={() => { focused.current = true; cancelOnBlur.current = false; committedValue.current = null }}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
@@ -158,6 +167,7 @@ function InlineNumberEditor({
         } else if (event.key === 'Escape') {
           event.preventDefault()
           event.stopPropagation()
+          cancelOnBlur.current = true
           committedValue.current = null
           setDraft(formatValue(value))
           event.currentTarget.blur()
@@ -165,6 +175,12 @@ function InlineNumberEditor({
       }}
       onBlur={() => {
         focused.current = false
+        if (cancelOnBlur.current) {
+          cancelOnBlur.current = false
+          committedValue.current = null
+          setDraft(formatValue(value))
+          return
+        }
         commit()
       }}
     />
@@ -186,13 +202,16 @@ function InlineTupleEditor({
   values,
   ariaLabel,
   onCommit,
+  normalize,
 }: {
   values: NumericTuple
   ariaLabel: string
   onCommit: (values: number[]) => void
+  normalize?: (values: number[]) => number[] | null
 }) {
   const [draft, setDraft] = useState(() => formatValue(values))
   const focused = useRef(false)
+  const cancelOnBlur = useRef(false)
   const committedValues = useRef<string | null>(null)
 
   useEffect(() => {
@@ -206,11 +225,17 @@ function InlineTupleEditor({
       setDraft(formatValue(values))
       return
     }
-    const key = parsed.join('|')
-    setDraft(formatValue(parsed))
+    const normalized = normalize ? normalize(parsed) : parsed
+    if (!normalized || normalized.length !== values.length || normalized.some((value) => !Number.isFinite(value))) {
+      committedValues.current = null
+      setDraft(formatValue(values))
+      return
+    }
+    const key = normalized.join('|')
+    setDraft(formatValue(normalized))
     if (committedValues.current === key) return
     committedValues.current = key
-    if (parsed.some((value, index) => !Object.is(value, values[index]))) onCommit(parsed)
+    if (normalized.some((value, index) => !Object.is(value, values[index]))) onCommit(normalized)
   }
 
   return (
@@ -219,7 +244,7 @@ function InlineTupleEditor({
       inputMode="decimal"
       value={draft}
       aria-label={ariaLabel}
-      onFocus={() => { focused.current = true; committedValues.current = null }}
+      onFocus={() => { focused.current = true; cancelOnBlur.current = false; committedValues.current = null }}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
@@ -229,6 +254,7 @@ function InlineTupleEditor({
         } else if (event.key === 'Escape') {
           event.preventDefault()
           event.stopPropagation()
+          cancelOnBlur.current = true
           committedValues.current = null
           setDraft(formatValue(values))
           event.currentTarget.blur()
@@ -236,6 +262,12 @@ function InlineTupleEditor({
       }}
       onBlur={() => {
         focused.current = false
+        if (cancelOnBlur.current) {
+          cancelOnBlur.current = false
+          committedValues.current = null
+          setDraft(formatValue(values))
+          return
+        }
         commit()
       }}
     />
@@ -246,15 +278,21 @@ function InlineRangeEditor({
   values,
   ariaLabel,
   onCommit,
+  validate,
 }: {
   values: [number, number]
   ariaLabel: string
   onCommit: (values: [number, number]) => void
+  validate?: (values: [number, number]) => boolean
 }) {
+  const commit = (next: [number, number]) => {
+    if (validate && !validate(next)) return
+    onCommit(next)
+  }
   return (
     <div className="inspector-range-editor">
-      <InlineNumberEditor value={values[0]} ariaLabel={`${ariaLabel} start`} onCommit={(next) => onCommit([next, values[1]])} />
-      <InlineNumberEditor value={values[1]} ariaLabel={`${ariaLabel} end`} onCommit={(next) => onCommit([values[0], next])} />
+      <InlineNumberEditor value={values[0]} ariaLabel={`${ariaLabel} start`} validate={(next) => validate?.([next, values[1]]) ?? true} onCommit={(next) => commit([next, values[1]])} />
+      <InlineNumberEditor value={values[1]} ariaLabel={`${ariaLabel} end`} validate={(next) => validate?.([values[0], next]) ?? true} onCommit={(next) => commit([values[0], next])} />
     </div>
   )
 }
@@ -331,6 +369,7 @@ export default function ProgressiveInspector({
   onValueChange,
   onMatrixChange,
   onPatchObject,
+  onSemanticEdit,
   onSave,
   onCancel,
 }: ProgressiveInspectorProps) {
@@ -341,6 +380,7 @@ export default function ProgressiveInspector({
   const bindingIds = bindingIdsFor(object, world, entityId)
   const linkedViewIds = linkedViewIdsFor(object, world)
   const dependentObjectIds = dependentObjectIdsFor(object, world, entityId)
+  const relatedObjectIds = [...new Set([...linkedViewIds, ...dependentObjectIds])]
 
   const inputKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && isEditing) onCancel()
@@ -361,11 +401,12 @@ export default function ProgressiveInspector({
     status: InspectorStatus,
     patch: (next: number) => Record<string, unknown>,
     summary: string,
+    commit?: (next: number) => void,
   ): InspectorFieldSpec => ({
     label,
     value: formatValue(value),
     status,
-    children: <InlineNumberEditor value={value} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+    children: <InlineNumberEditor value={value} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => (commit ? commit(next) : onPatchObject(object.id, patch(next), summary))} />,
   })
 
   const tupleField = (
@@ -374,11 +415,12 @@ export default function ProgressiveInspector({
     status: InspectorStatus,
     patch: (next: number[]) => Record<string, unknown>,
     summary: string,
+    normalize?: (values: number[]) => number[] | null,
   ): InspectorFieldSpec => ({
     label,
     value: formatValue(values),
     status,
-    children: <InlineTupleEditor values={values} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+    children: <InlineTupleEditor values={values} ariaLabel={`${label} for ${object.id}`} normalize={normalize} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
   })
 
   const rangeField = (
@@ -387,11 +429,12 @@ export default function ProgressiveInspector({
     status: InspectorStatus,
     patch: (next: [number, number]) => Record<string, unknown>,
     summary: string,
+    validate?: (values: [number, number]) => boolean,
   ): InspectorFieldSpec => ({
     label,
     value: `[${formatValue(values[0])}, ${formatValue(values[1])}]`,
     status,
-    children: <InlineRangeEditor values={values} ariaLabel={`${label} for ${object.id}`} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
+    children: <InlineRangeEditor values={values} ariaLabel={`${label} for ${object.id}`} validate={validate} onCommit={(next) => onPatchObject(object.id, patch(next), summary)} />,
   })
 
   const valueFields = useMemo<InspectorFieldSpec[]>(() => {
@@ -427,14 +470,17 @@ export default function ProgressiveInspector({
             `Parameter ${name}`,
             value,
             'free',
-            (next) => ({ parameters: { ...(object.parameters ?? {}), [name]: next } }),
+            (next) => ({ parameters: { [name]: next } }),
             `Changed graph parameter ${name}`,
+            entityId && world.entities[entityId]?.kind === 'expression'
+              ? (next) => onSemanticEdit({ entityId, path: `parameters.${name}`, value: next }, `Changed graph parameter ${name}`)
+              : undefined,
           ))
         const fields: InspectorFieldSpec[] = [
           { label: 'Equation view', value: object.equationId, status: 'derived' },
           ...parameters,
-          rangeField('X domain', object.xDomain, 'constrained', (next) => ({ xDomain: next }), 'Changed graph X domain'),
-          rangeField('Y domain', object.yDomain, 'constrained', (next) => ({ yDomain: next }), 'Changed graph Y domain'),
+          rangeField('X domain', object.xDomain, 'constrained', (next) => ({ xDomain: next }), 'Changed graph X domain', ([minimum, maximum]) => minimum < maximum),
+          rangeField('Y domain', object.yDomain, 'constrained', (next) => ({ yDomain: next }), 'Changed graph Y domain', ([minimum, maximum]) => minimum < maximum),
         ]
         if (typeof object.showTangentAt === 'number' && Number.isFinite(object.showTangentAt)) {
           fields.push(numericField('Tangent', object.showTangentAt, 'free', (next) => ({ showTangentAt: next }), 'Changed graph tangent'))
@@ -478,27 +524,30 @@ export default function ProgressiveInspector({
         ]
       case 'barycentric':
         return [
-          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed barycentric weights'),
+          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed barycentric weights', normalizeWeights),
           { label: 'Weight sum', value: formatValue(object.weights.reduce((sum, value) => sum + value, 0)), status: 'computed' },
           { label: 'Labels', value: object.labels.join(' · '), status: 'derived' },
         ]
       case 'simplex':
         return [
-          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed simplex weights'),
+          tupleField('Weights', object.weights, 'free', (next) => ({ weights: next }), 'Changed simplex weights', normalizeWeights),
           numericField('Rotation X', object.rotationX, 'free', (next) => ({ rotationX: next }), 'Changed simplex X rotation'),
           numericField('Rotation Y', object.rotationY, 'free', (next) => ({ rotationY: next }), 'Changed simplex Y rotation'),
-          numericField('Section', object.section, 'constrained', (next) => ({ section: next }), 'Changed simplex section'),
+          numericField('Section', object.section, 'constrained', (next) => ({ section: Math.min(1, Math.max(0, next)) }), 'Changed simplex section'),
           numericField('Denominator', object.denominator, 'constrained', (next) => ({ denominator: Math.max(1, Math.round(next)) }), 'Changed simplex denominator'),
           { label: 'Lattice', value: formatValue(object.showLattice), status: 'free' },
         ]
       case 'numberTheory':
         return [
           numericField('Selected N', object.selectedN, 'free', (next) => {
-            const selectedN = Math.max(0, Math.min(Math.round(next), object.maxN))
-            return { selectedN, finiteCutoff: Math.max(object.finiteCutoff, selectedN) }
+            const selectedN = Math.max(1, Math.min(Math.round(next), object.maxN))
+            return { selectedN, finiteCutoff: Math.max(selectedN, Math.min(object.finiteCutoff, object.maxN)) }
           }, 'Changed selected partition N'),
-          numericField('Max N', object.maxN, 'constrained', (next) => ({ maxN: Math.max(object.selectedN, Math.round(next)) }), 'Changed partition max N'),
-          numericField('Finite cutoff', object.finiteCutoff, 'constrained', (next) => ({ finiteCutoff: Math.max(object.selectedN, Math.round(next)) }), 'Changed Euler product cutoff'),
+          numericField('Max N', object.maxN, 'constrained', (next) => {
+            const maxN = Math.max(1, object.selectedN, Math.round(next))
+            return { maxN, finiteCutoff: Math.min(maxN, Math.max(object.selectedN, object.finiteCutoff)) }
+          }, 'Changed partition max N'),
+          numericField('Finite cutoff', object.finiteCutoff, 'constrained', (next) => ({ finiteCutoff: Math.min(object.maxN, Math.max(1, object.selectedN, Math.round(next))) }), 'Changed Euler product cutoff'),
           { label: 'Theorem', value: object.revealTheorem ? 'revealed' : 'hidden', status: 'derived' },
         ]
       case 'frame':
@@ -555,6 +604,9 @@ export default function ProgressiveInspector({
 
   const activeTab = supportedTabs.includes(tab) ? tab : supportedTabs[0]
   const hasInlineEditors = valueFields.some((field) => Boolean(field.children))
+  const inspectorKey = object.id.replace(/[^a-zA-Z0-9_-]/g, '-')
+  const activeTabId = `inspector-tab-${inspectorKey}-${activeTab}`
+  const panelId = `inspector-panel-${inspectorKey}`
 
   const panel: ReactNode = activeTab === 'values' ? (
     <div className="inspector-fields">{valueFields.map((field) => <InspectorField key={field.label} {...field} />)}</div>
@@ -585,17 +637,17 @@ export default function ProgressiveInspector({
         <div className="inspector-header-meta">
           {entityId && <span>entity <b>{entityId}</b></span>}
           {bindingIds.length > 0 && <span>{bindingIds.length} binding{bindingIds.length === 1 ? '' : 's'}</span>}
-          {linkedViewIds.length + dependentObjectIds.length > 0 && <span>{linkedViewIds.length + dependentObjectIds.length} linked view{linkedViewIds.length + dependentObjectIds.length === 1 ? '' : 's'}</span>}
+          {relatedObjectIds.length > 0 && <span>{relatedObjectIds.length} linked object{relatedObjectIds.length === 1 ? '' : 's'}</span>}
         </div>
       </header>
 
       <nav className="inspector-tabs" aria-label="Inspector sections" role="tablist">
         {tabs.filter((item) => supportedTabs.includes(item.id)).map((item) => (
-          <button key={item.id} type="button" role="tab" aria-selected={activeTab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>
+          <button key={item.id} id={`inspector-tab-${inspectorKey}-${item.id}`} type="button" role="tab" aria-controls={panelId} aria-selected={activeTab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>
         ))}
       </nav>
 
-      <section className="inspector-panel" aria-label={`${activeTab} properties`}>
+      <section id={panelId} className="inspector-panel" role="tabpanel" aria-labelledby={activeTabId} aria-label={`${activeTab} properties`}>
         <div className="inspector-panel-heading"><span>{activeTab}</span>{activeTab === 'values' && <small>{canEdit ? 'edit text or matrix values' : hasInlineEditors ? 'inline numbers · Enter or blur to commit' : 'read-only view'}</small>}</div>
         {panel}
       </section>

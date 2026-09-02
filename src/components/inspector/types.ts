@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { SemanticEdit } from '../../domain/semantic/transactions'
 import type { WorldObject, WorldState } from '../../domain/world/types'
 
 export type InspectorStatus = 'free' | 'constrained' | 'derived' | 'computed'
@@ -22,6 +23,7 @@ export type ProgressiveInspectorProps = {
   onValueChange: (value: string) => void
   onMatrixChange: (row: 0 | 1, column: 0 | 1, value: number) => void
   onPatchObject: (id: string, patch: Record<string, unknown>, summary?: string) => void
+  onSemanticEdit: (edit: SemanticEdit, summary?: string) => void
   onSave: () => void
   onCancel: () => void
 }

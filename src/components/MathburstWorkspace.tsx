@@ -30,6 +30,7 @@ import {
 } from '../domain/world/projects'
 import { DIRECTOR_SHOTS, EMPTY_DIRECTOR_REVIEW, loadDirectorReview, saveDirectorReview } from '../domain/world/director'
 import type { DirectorShotEdit, DirectorShotViewport } from '../domain/world/director'
+import type { SemanticEdit } from '../domain/semantic/transactions'
 import { handwritingSampleToInk, loadHandwritingSamples, type HandwritingSample } from '../domain/world/handwriting'
 import { findDependentIds } from '../domain/world/dependencies'
 import {
@@ -41,6 +42,7 @@ import {
 import {
   buildDeleteOperations,
   buildDuplicateOperations,
+  buildSemanticEditAction,
   buildTransformOperations,
   expandTargetIds,
   unionBounds,
@@ -305,7 +307,17 @@ export default function MathburstWorkspace() {
     const object = worldRef.current.objects[id]
     if (!object) return
     const next = { ...object, ...patch, id: object.id, kind: object.kind, author: object.author } as WorldObject
+    if (object.kind === 'graph' && typeof patch.parameters === 'object' && patch.parameters !== null && !Array.isArray(patch.parameters)) {
+      const graph = next as Extract<WorldObject, { kind: 'graph' }>
+      graph.parameters = { ...(object.parameters ?? {}), ...(patch.parameters as Record<string, number>) }
+    }
     run(humanAction(summary, [{ type: 'put', object: next }]))
+  }, [run])
+
+  const applySemanticEdit = useCallback((edit: SemanticEdit, summary?: string) => {
+    const action = buildSemanticEditAction(worldRef.current, edit, 'human')
+    if (summary) action.summary = summary
+    run(action)
   }, [run])
 
   const runAgent = useCallback((action: WorldAction, targetIds: string[] = []): Promise<ToolResult> => new Promise((resolve) => {
@@ -1423,6 +1435,7 @@ export default function MathburstWorkspace() {
           onValueChange={setEditorValue}
           onMatrixChange={updateMatrixCell}
           onPatchObject={patchObject}
+          onSemanticEdit={applySemanticEdit}
           onSave={saveEditor}
           onCancel={() => { setEditorId(null); setEditorMatrix(null) }}
         />
