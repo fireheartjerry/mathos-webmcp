@@ -73,12 +73,18 @@ try {
       await wait(16)
     }
   }
+  // Wait for the element, then for it to stop moving (camera transitions
+  // last about a second): two measurements 140 ms apart must agree.
   const rectOf = async (selector, text, timeoutMs = 8000) => {
     const started = Date.now()
     let rect = null
-    while (!rect && Date.now() - started < timeoutMs) {
+    let previous = null
+    while (Date.now() - started < timeoutMs) {
       rect = await measure(selector, text)
-      if (!rect) await wait(120)
+      if (rect && previous && Math.abs(rect.x - previous.x) < 0.75 && Math.abs(rect.y - previous.y) < 0.75) break
+      previous = rect
+      rect = null
+      await wait(140)
     }
     if (!rect) {
       const state = await page.evaluate("const w = window.__mathburstFilm.getWorld(); return { status: w.session.reconstructionStatus, draft: Boolean(w.reconstruction), activity: w.activity.slice(-3).map((c) => c.action.summary), panel: document.querySelector('.reconstruction-panel')?.textContent?.slice(0, 160), buttons: [...document.querySelectorAll('.reconstruction-panel footer button')].map((b) => [b.className, b.disabled]) }")
@@ -240,6 +246,7 @@ try {
     }
     shots.push({ id: shot.id, title: shot.title, start: shotStart, end: shotEnd, budget: shot.seconds, transitionAt, transitionOut: shot.transitionOut })
     const commits = await page.evaluate('return window.__mathburstFilm.getWorld().activity.map((c) => ({ id: c.action.id, at: c.at, source: c.action.source, summary: c.action.summary }))')
+    log(`  commits in world: ${commits.length}; new: ${commits.filter((c) => !seenCommits.has(c.id)).length}`)
     for (const commit of commits) {
       if (seenCommits.has(commit.id)) continue
       seenCommits.add(commit.id)
@@ -253,6 +260,16 @@ try {
   await page.send('Page.stopScreencast')
   const takeEnd = now() - takeStart
   events.push({ t: takeEnd, kind: 'take', label: 'end' })
+  // Authoritative commit list: every project's own history, read once at the end.
+  const allCommits = await page.evaluate('return window.__mathburstFilm.getCommits()')
+  for (const commit of allCommits) {
+    if (seenCommits.has(commit.id)) continue
+    seenCommits.add(commit.id)
+    const t = commit.at / 1000 - takeStart
+    if (t >= 0 && t <= takeEnd) events.push({ t, kind: commit.source === 'agent' ? 'tutor' : 'human', label: commit.summary })
+  }
+  events.sort((a, b) => a.t - b.t)
+  log(`commits logged: ${events.filter((event) => event.kind === 'tutor' || event.kind === 'human').length}`)
   page.close()
   log(`captured ${frames.length} frames over ${takeEnd.toFixed(1)}s`)
 

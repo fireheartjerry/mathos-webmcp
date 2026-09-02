@@ -64,7 +64,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 300
+          "wait": 1300
         },
         {
           "cue": "gamma-tutor"
@@ -95,6 +95,9 @@
       "approved": true,
       "steps": [
         {
+          "wait": 850
+        },
+        {
           "click": "[data-demo-target=correct-sign]"
         }
       ],
@@ -119,11 +122,11 @@
     {
       "id": "reconstruction",
       "title": "Ink becomes semantic math",
-      "seconds": 15,
+      "seconds": 14,
       "approved": true,
       "steps": [
         {
-          "wait": 900
+          "wait": 1300
         },
         {
           "click": ".reconstruct-trigger"
@@ -164,7 +167,7 @@
           "y": 0.5
         },
         {
-          "at": 15,
+          "at": 14,
           "zoom": 1.06,
           "x": 0.47,
           "y": 0.58
@@ -177,7 +180,7 @@
     {
       "id": "gamma-probability",
       "title": "Area becomes probability",
-      "seconds": 20,
+      "seconds": 19,
       "approved": true,
       "steps": [
         {
@@ -221,7 +224,7 @@
           "y": 0.5
         },
         {
-          "at": 20,
+          "at": 19,
           "zoom": 1.05,
           "x": 0.5,
           "y": 0.56
@@ -288,11 +291,11 @@
     {
       "id": "training-step",
       "title": "One honest training step",
-      "seconds": 10,
+      "seconds": 13,
       "approved": true,
       "steps": [
         {
-          "wait": 700
+          "wait": 1300
         },
         {
           "click": "[data-demo-target=train-step]"
@@ -333,7 +336,7 @@
           "y": 0.5
         },
         {
-          "at": 10,
+          "at": 13,
           "zoom": 1.06,
           "x": 0.5,
           "y": 0.5
@@ -350,7 +353,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1200
+          "wait": 1300
         },
         {
           "drag": "[data-demo-target=barycentric-point]",
@@ -412,7 +415,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1000
+          "wait": 1300
         },
         {
           "drag": "[data-demo-target=geometry-vertex-a]",
@@ -474,7 +477,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 1200
+          "wait": 1300
         },
         {
           "slider": "[data-demo-target=simplex-weight-delta]",
@@ -526,7 +529,7 @@
     {
       "id": "ramanujan",
       "title": "Integer lattice to Ramanujan",
-      "seconds": 20,
+      "seconds": 19,
       "approved": true,
       "steps": [
         {
@@ -567,7 +570,7 @@
           "y": 0.56
         },
         {
-          "at": 20,
+          "at": 19,
           "zoom": 1.04,
           "x": 0.5,
           "y": 0.6
@@ -584,7 +587,7 @@
       "approved": true,
       "steps": [
         {
-          "wait": 500
+          "wait": 1300
         },
         {
           "cue": "webmcp-crescendo"

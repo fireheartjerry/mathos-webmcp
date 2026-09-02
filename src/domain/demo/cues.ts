@@ -54,6 +54,8 @@ export type CueThunk = (world: WorldState) => CueStep | null
 export type PreparedCue = {
   steps: CueThunk[]
   selectIds?: string[]
+  /** Multiplier on the runner's pauses between steps; long montages run tighter. */
+  pace?: number
 }
 
 export type CueContext = {
@@ -396,7 +398,7 @@ const spiralConstructSteps: CueThunk[] = [
     objects: [{
       id: SPIRAL_EQUATION_ID, kind: 'equation',
       latex: `\\frac{SA'}{SA}=\\frac{SB'}{SB}=${SPIRAL_FACTOR},\\qquad \\angle ASA'=\\angle BSB'=${SPIRAL_ANGLE}^\\circ`,
-      color: '#7c5cff', bounds: { x: 560, y: 1262, width: 490, height: 36 }, rotation: 0, author: 'agent', opacity: 1,
+      color: '#7c5cff', bounds: { x: 430, y: 1262, width: 640, height: 36 }, rotation: 0, author: 'agent', opacity: 1,
     }],
   }),
 ]
@@ -426,7 +428,7 @@ const simplexTutorSteps: CueThunk[] = [
     if (!simplex || APPROXIMATELY(simplex.weights[3], SIMPLEX_TUTOR_DELTA, 1e-6)) return null
     return tool('update_objects', {
       summary: `Tutor set δ to ${SIMPLEX_TUTOR_DELTA}; α, β, γ keep their ratios`,
-      updates: [{ id: SIMPLEX_ID, patch: { weights: setSimplexWeight(simplex.weights, 3, SIMPLEX_TUTOR_DELTA), section: SIMPLEX_TUTOR_DELTA } }],
+      updates: [{ id: SIMPLEX_ID, patch: { weights: setSimplexWeight(simplex.weights, 3, SIMPLEX_TUTOR_DELTA) } }],
     })
   },
 ]
@@ -575,7 +577,7 @@ export function prepareDemoCue(id: DemoCueId, world: WorldState, context: CueCon
     case 'partition-reveal':
       return { steps: partitionRevealSteps, selectIds: [NUMBER_THEORY_ID] }
     case 'webmcp-crescendo':
-      return { steps: crescendoSteps(context.activeProject), selectIds: [] }
+      return { steps: crescendoSteps(context.activeProject), selectIds: [], pace: 0.45 }
     case 'one-world':
       return { steps: [], selectIds: [] }
   }

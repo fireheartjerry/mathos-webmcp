@@ -843,16 +843,17 @@ export default function MathburstWorkspace() {
         : undefined
       const prepared = prepareDemoCue(cue, worldRef.current, { samples, activeProject: project?.templateId ?? null, attentionWeights })
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const pace = prepared.pace ?? 1
       for (const thunk of prepared.steps) {
         const step = thunk(worldRef.current)
         if (!step) continue
         if (step.kind === 'pause') {
-          if (!reduceMotion) await sleep(step.ms)
+          if (!reduceMotion) await sleep(step.ms * pace)
           continue
         }
         if (step.kind === 'human') {
           run(step.action)
-          if (!reduceMotion) await sleep(240)
+          if (!reduceMotion) await sleep(240 * pace)
           continue
         }
         const tool = webMcpTools.find((candidate) => candidate.name === step.name)
@@ -864,7 +865,7 @@ export default function MathburstWorkspace() {
           break
         }
         await waitForTutor()
-        if (!reduceMotion) await sleep(tool.annotations.readOnlyHint ? 180 : 320)
+        if (!reduceMotion) await sleep((tool.annotations.readOnlyHint ? 180 : 320) * pace)
       }
       // Leave a clean stage: no editing chrome after a cue, in either mode.
       setDirectorSelection([])
@@ -1509,6 +1510,20 @@ export default function MathburstWorkspace() {
         undo: () => history('undo'),
         redo: () => history('redo'),
         getWorld: () => worldRef.current,
+        /** Every commit across the built-in projects plus the live document, for the film's sound design. */
+        getCommits: () => {
+          const seen = new Map<string, { id: string; at: number; source: string; summary: string; project: string }>()
+          const worlds = [
+            { id: activeDocumentIdRef.current, world: worldRef.current },
+            ...libraryProjectsRef.current.map((project) => ({ id: project.id, world: project.world })),
+          ]
+          for (const { id, world } of worlds) {
+            for (const commit of world.activity) {
+              if (!seen.has(commit.action.id)) seen.set(commit.action.id, { id: commit.action.id, at: commit.at, source: commit.action.source, summary: commit.action.summary, project: id })
+            }
+          }
+          return [...seen.values()].sort((left, right) => left.at - right.at)
+        },
         isBusy: () => agentBusyRef.current || Boolean(cueRunningRef.current),
         activeShot: () => activeDirectorShot.id,
       },
