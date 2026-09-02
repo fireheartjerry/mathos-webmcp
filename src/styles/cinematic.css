@@ -537,6 +537,26 @@
 .ramanujan-tease span { display: grid; place-items: center; width: 22px; height: 22px; color: #fff; background: var(--purple); border-radius: 50%; font-weight: 600; }
 .ramanujan-tease:hover { border-color: var(--purple); }
 
+/* ---- Film mode: the product, nothing else ------------------------------------- */
+[data-film='true'] .director-safe-frame,
+[data-film='true'] .director-panel-peek,
+[data-film='true'] .director-trigger,
+[data-film='true'] .reset-trigger,
+[data-film='true'] .canvas-mode,
+[data-film='true'] .zoom-controls { display: none !important; }
+[data-film='true'] .tool-rail:hover, [data-film='true'] .tool-rail:has(:focus-visible) { width: 44px; background: var(--ivory); border-right-color: transparent; }
+[data-film='true'] .tool-rail:hover .rail-label { opacity: 0; }
+[data-film='true'] .tool-rail:hover { padding-bottom: 10px; }
+[data-film='true'] .world-object > .author-pip { transition: none; }
+.film-cursor { position: fixed; left: 0; top: 0; z-index: 400; width: 22px; height: 30px; pointer-events: none; opacity: 0; transform: translate(-2px, -2px); transition: opacity 240ms var(--ease-out); }
+.film-cursor.is-visible { opacity: 1; }
+.film-cursor svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 1.5px rgba(23, 23, 19, 0.35)); }
+.film-cursor svg path { fill: var(--graphite); stroke: var(--ivory); stroke-width: 1.4; stroke-linejoin: round; }
+.film-cursor.is-pressed svg { transform: scale(0.92); transform-origin: 3px 3px; }
+.film-cursor i { position: absolute; left: -6px; top: -6px; width: 30px; height: 30px; border: 1.5px solid var(--purple); border-radius: 50%; opacity: 0; transform: scale(0.4); }
+.film-cursor.is-pressed i { animation: film-press 480ms var(--ease-out) both; }
+@keyframes film-press { 0% { opacity: 0.7; transform: scale(0.4); } 100% { opacity: 0; transform: scale(1.1); } }
+
 /* ---- Reduced motion ------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
   .world-stage, .attention-ribbon em, .training-probability em, .attention-probability-list > span > em b { transition: none; }

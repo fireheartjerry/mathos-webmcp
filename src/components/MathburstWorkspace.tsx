@@ -72,6 +72,10 @@ import ProgressiveInspector from './inspector/ProgressiveInspector'
 import WebMCPInspector from './WebMCPInspector'
 import WebMCPTrace from './WebMCPTrace'
 import WorldCanvas from './WorldCanvas'
+import FilmCursor from './FilmCursor'
+
+/** `?film=1` hides Director chrome and exposes the in-page film driver hook. */
+const detectFilmMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('film')
 
 const humanAction = (summary: string, operations: WorldOperation[]): WorldAction => ({
   id: crypto.randomUUID(),
@@ -281,6 +285,8 @@ export default function MathburstWorkspace() {
   const [directorSelection, setDirectorSelection] = useState<string[]>([])
   const [directorCameraPreviewing, setDirectorCameraPreviewing] = useState(false)
   const [directorControlsHidden, setDirectorControlsHidden] = useState(false)
+  const [filmMode, setFilmMode] = useState(false)
+  useEffect(() => { setFilmMode(detectFilmMode()) }, [])
   const directorSceneSnapshotRef = useRef<{ scene: CatalogSceneId; viewport: SceneViewport } | null>(null)
   const directorOpenRef = useRef(false)
   const directorPreviewFrameRef = useRef<number | null>(null)
@@ -988,7 +994,7 @@ export default function MathburstWorkspace() {
       viewport: sceneViewportBookmark(worldRef.current.viewport, width, height),
     }
     directorOpenRef.current = true
-    setDirectorControlsHidden(false)
+    setDirectorControlsHidden(filmMode)
     setDirectorOpen(true)
     selectDirectorShot(allowedShot.id)
   }
@@ -1480,6 +1486,35 @@ export default function MathburstWorkspace() {
     ? `${registrationStatus.registered} / ${registrationStatus.total}`
     : `${webMcpTools.length} / ${webMcpTools.length}`
 
+  // The film driver (scripts/film/capture.mjs) drives the real product through
+  // this hook: project navigation, Director frames, cues, tools. It adds no
+  // behaviour of its own and exists only when the page is opened with ?film=1.
+  useEffect(() => {
+    if (!filmMode) return
+    Object.assign(window, {
+      __mathburstFilm: {
+        openProject: (projectId: string) => {
+          const project = libraryProjectsRef.current.find((candidate) => candidate.id === projectId && candidate.deletedAt === null)
+          if (project) openLibraryProject(project)
+          return Boolean(project)
+        },
+        openGallery: openProjectGallery,
+        openDirector: openDirectorReview,
+        closeDirector: closeDirectorReview,
+        selectShot: selectDirectorShot,
+        previewNext: previewNextDirectorShot,
+        runCue: (cue: DemoCueId) => runDemoCue(cue),
+        runTool: (name: string, input: unknown) => webMcpTools.find((tool) => tool.name === name)?.execute(input),
+        navigateScene: navigateToScene,
+        undo: () => history('undo'),
+        redo: () => history('redo'),
+        getWorld: () => worldRef.current,
+        isBusy: () => agentBusyRef.current || Boolean(cueRunningRef.current),
+        activeShot: () => activeDirectorShot.id,
+      },
+    })
+  })
+
   const projectBreadcrumb = activeLibraryProject?.templateId && activeScene !== 'overview'
     ? {
         number: String(Math.max(0, getScenesForProject(activeLibraryProject.templateId).findIndex((scene) => scene.id === activeScene)) + 1).padStart(2, '0'),
@@ -1491,7 +1526,8 @@ export default function MathburstWorkspace() {
       : undefined
 
   return (
-    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen}>
+    <main className="mathburst-app" id="main" data-hydrated={hydrated} data-gallery-open={galleryOpen} data-film={filmMode}>
+      {filmMode && <FilmCursor />}
       <header className="world-header">
         <button type="button" className="wordmark" onClick={openProjectGallery} aria-label="Open Mathburst project gallery"><BrandMark className="brand-mark" /><span>Mathburst</span></button>
         <div className="world-title"><b>{galleryOpen ? 'Projects' : activeLibraryProject?.title ?? 'Mathburst'}</b>{!galleryOpen && <><span>/</span><em>{activeLibraryProject?.templateId && activeScene !== 'overview' ? SCENES[activeScene].title : 'Blank canvas'}</em></>}</div>

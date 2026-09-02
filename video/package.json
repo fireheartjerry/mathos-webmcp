@@ -1,12 +1,14 @@
 {
-  "name": "second-try-video",
+  "name": "mathburst-video",
   "private": true,
   "version": "0.1.0",
-  "description": "Remotion composition for the Second Try demo video. Kept out of the app's package.json so `pnpm install` at the root stays fast for anyone reviewing the source.",
+  "description": "Remotion composition for the Mathburst WebMCP demo video. Kept out of the app's package.json so the root install stays focused on the product.",
   "type": "module",
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Demo out/demo.mp4 --concurrency=2"
+    "render": "remotion render src/index.ts Demo out/demo.mp4 --concurrency=2",
+    "render:film": "remotion render src/index.ts Film out/mathburst-final.mp4 --codec=h264 --crf=16 --concurrency=4 --jpeg-quality=95",
+    "render:review": "remotion render src/index.ts Film out/mathburst-review.mp4 --codec=h264 --crf=22 --scale=0.5 --concurrency=4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.400",
