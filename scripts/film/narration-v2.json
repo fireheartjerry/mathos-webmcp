@@ -1,0 +1,23 @@
+{
+  "voiceId": "nPczCjzI2devNBz1zQrb",
+  "model": "eleven_v3",
+  "settings": { "stability": 0.5, "similarity_boost": 0.8, "style": 0.2, "speed": 1.0 },
+  "clips": [
+    { "id": "01-open", "act": 0, "text": "A new project on Mathburst, ledger at zero. The learner asks for the whole pipeline. The agent reads the page first, through the site tools." },
+    { "id": "02-handwriting", "act": 1, "text": "The learner writes the Gamma recurrence by hand. There's a sign error in it... left in on purpose." },
+    { "id": "03-mark", "act": 1, "text": "The agent reads the ink, circles where integration by parts flips the sign, and leaves a note. It marks. It doesn't fix." },
+    { "id": "04-live-math", "act": 1, "text": "The learner corrects the tail and accepts live math. The LaTeX is typed into a fresh equation, then scaled with real handles." },
+    { "id": "05-density", "act": 2, "text": "It pans down and builds the Gamma density from nothing. Axes, then the curve, then the area, split into three masses." },
+    { "id": "06-bridge", "act": 2, "text": "Drag the shape and the bound; the masses follow. Then the bridge: masses, log masses, softmax, each keeping its colour." },
+    { "id": "07-attention", "act": 3, "text": "Attention. The agent raises one entry of W Q and explains as it goes. The weights move, and still sum to one." },
+    { "id": "08-training", "act": 3, "text": "One training step by the agent, undone. Eight by the learner. Every click is one honest gradient on the visible parameters." },
+    { "id": "09-geometry", "act": 4, "text": "Geometry. The learner places three points. Tangent circles, the homothety and the spiral centre draw in dependency order." },
+    { "id": "10-barycentric", "act": 4, "text": "P is a weighted average of A, B and C. Weights that sum to one... like attention weights. So P glides to them." },
+    { "id": "11-tidy", "act": 5, "text": "Tidy-up. Shapes box the acts, arrows connect them, highlighter matches the weights. The agent erases its own circle, then undoes it." },
+    { "id": "12-simplex", "act": 6, "text": "Four weights instead of three. The tetrahedron draws in, the section recovers the triangle, and the lattice becomes the partition table." },
+    { "id": "13-ramanujan", "act": 6, "text": "The learner drags the cutoff. Ramanujan's congruence is verified for these finite cases. The general statement is a theorem, and the card says so." },
+    { "id": "14-matrix", "act": 7, "text": "A two by two matrix, typed by hand, sheared by tool. The lattice sweeps across. A matrix moves every vector at once." },
+    { "id": "15-projects", "act": 7, "text": "One typo fixed, one LaTeX term retyped. Then a second project opens, untouched. Isolation, on camera." },
+    { "id": "16-close", "act": 8, "text": "Every tool, used at least once, through one shared history. [calm] Forty-eight tools. Both hands. One world." }
+  ]
+}

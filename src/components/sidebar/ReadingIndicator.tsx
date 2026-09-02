@@ -6,7 +6,9 @@ import '../../styles/sidebar.css'
 export type ReadingRect = { top: number; left: number; width: number; height: number }
 
 /**
- * A non-interactive purple glow around the canvas while the Tutor reads. By
+ * A non-interactive purple glow around the canvas while the Tutor reads: a
+ * 3px inset ring, a deep inner glow, a 15px label and a thin scanline that
+ * sweeps top to bottom on a 1.4 s loop so reading looks like reading. By
  * default it covers the canvas area (below the 54px header, right of the 58px
  * rail); pass `rect` to match a measured element instead. Fades over 220 ms.
  */
@@ -25,6 +27,7 @@ export default function ReadingIndicator({
   const [head, ...tail] = label.split(' · ')
   return (
     <div className={`reading-indicator${active ? ' is-active' : ''}`} style={style} aria-hidden={!active}>
+      {active && <i className="reading-indicator-scanline" aria-hidden />}
       <span className="reading-indicator-label" role={active ? 'status' : undefined}>
         <i aria-hidden />
         <span>{head}</span>

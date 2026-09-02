@@ -62,3 +62,23 @@ node scripts/film/contact-sheets.mjs # video/out/contact-storyboard.png and cont
 4. `pnpm typecheck`, `pnpm build`, and `git diff --check` pass.
 
 Generated media under `video/out/` and `video/public/` is ignored by git on purpose; the sources that reproduce it are tracked.
+
+## Narration v2 (ElevenLabs)
+
+The v2 film (`docs/video/FILM_V2_STORY.md`) is narrated with ElevenLabs instead of edge-tts. The pipeline is `scripts/film/narrate-eleven.mjs` (Node 22+, no dependencies beyond `fetch`, `ffmpeg` and `ffprobe`) and the script is `scripts/film/narration-v2.json`.
+
+**Key.** Put the API key in `.env.film` at the repo root as `ELEVENLABS_API_KEY=...`. The script reads that file directly (it does not use the shell environment) and never prints the key. `.env.film` is not tracked.
+
+**Commands** (run from the worktree root):
+
+```powershell
+node scripts/film/narrate-eleven.mjs --list-voices   # account voices + the male/English library voices, with labels
+node scripts/film/narrate-eleven.mjs --dry-run       # prints every clip, its character count and cache state; no API calls
+node scripts/film/narrate-eleven.mjs                 # synthesises, converts, measures, writes narration-v2.json
+```
+
+**Voice.** `Brian - Deep, Resonant and Comforting`, premade, `voice_id nPczCjzI2devNBz1zQrb` (male, American, middle-aged): low, calm, clearly articulated, and conversational rather than broadcast-formal, which fits the short teaching sentences. Model `eleven_v3` (the script falls back to `eleven_multilingual_v2` if v3 is rejected, stripping v3 audio tags such as `[calm]` in that case). Settings: stability 0.5, similarity 0.8, style 0.2, speed 1.0; output `mp3_44100_128`.
+
+**Processing.** Each mp3 is converted with the same ffmpeg chain as `narrate.mjs`: 48 kHz mono WAV, leading/trailing silence trimmed at -45 dB, `loudnorm` to -18 LUFS (TP -2, LRA 9). Outputs land in `video/public/film/narration-v2/<id>.wav`, and `video/public/film/narration-v2/narration-v2.json` records the voice, model, settings and each clip's measured duration and text. The run prints a table of clip id, act, seconds and characters, and the subscription's character usage before and after (`/v1/user/subscription`).
+
+**Caching.** The raw mp3 is cached under `video/public/film/narration-v2/.cache/<hash>.mp3`, where the hash covers the clip text, voice id, model and settings. A per-clip stamp `<id>.json` records the hash used for the WAV. Re-running only calls the API for clips whose text, voice, model or settings changed; unchanged clips are re-measured from the existing WAV. Delete `.cache/` to force a full re-synthesis. Everything under `video/public/` is gitignored.

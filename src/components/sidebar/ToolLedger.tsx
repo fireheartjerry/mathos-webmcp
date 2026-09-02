@@ -35,13 +35,17 @@ export function useLedgerPin(initial = false): [boolean, () => void] {
   return [pinned, toggle]
 }
 
+/** Object ids are UUIDs more often than not; eight characters is enough to tell them apart on screen. */
+const shortId = (id: string) => (id.length > 10 ? id.slice(0, 8) : id)
 const phaseGlyph = (phase: LedgerEvent['phase']) => phase === 'running' ? '…' : phase === 'complete' ? '✓' : '!'
 
 /**
  * The persistent WebMCP ledger: distinct tools used over the total, finished
- * calls, a newest-first list of every invocation, and the tools not yet
- * called. Pinned, it stays open; unpinned, it is a slim tab on the right edge
- * that expands on hover or keyboard focus.
+ * calls, a newest-first list of every invocation (with the object ids each
+ * write changed), and the tools not yet called. It lives in a column on the
+ * LEFT, immediately right of the tool rail. Pinned, it stays open; unpinned,
+ * it is a 34px vertical tab hugging the rail that expands on hover or focus.
+ * Totals always come from `tools.length`, never a constant.
  */
 export default function ToolLedger({
   events,
@@ -76,15 +80,16 @@ export default function ToolLedger({
   }, [])
   useEffect(() => { setNow(Date.now()) }, [events.length])
 
-  const complete = summary.totalTools > 0 && summary.distinctUsed >= summary.totalTools
-  const ratio = summary.totalTools ? Math.min(1, summary.distinctUsed / summary.totalTools) : 0
-  const headline = `${summary.distinctUsed} / ${summary.totalTools} tools used · ${summary.totalCalls} ${summary.totalCalls === 1 ? 'call' : 'calls'}`
+  const totalTools = tools.length
+  const complete = totalTools > 0 && summary.distinctUsed >= totalTools
+  const ratio = totalTools ? Math.min(1, summary.distinctUsed / totalTools) : 0
+  const headline = `${summary.distinctUsed} / ${totalTools} tools · ${summary.totalCalls} ${summary.totalCalls === 1 ? 'call' : 'calls'}`
 
   return (
     <aside className={`tool-ledger${pinned ? ' is-pinned' : ' is-tab'}`} aria-label="WebMCP tool ledger">
       <button type="button" className="tool-ledger-tab" aria-label={`WebMCP ledger, ${headline}`} onClick={onTogglePin}>
         <span>WebMCP</span>
-        <b>{summary.distinctUsed}/{summary.totalTools}</b>
+        <b>{summary.distinctUsed}/{totalTools}</b>
       </button>
       <div className="tool-ledger-body">
         <header className="tool-ledger-header">
@@ -101,7 +106,7 @@ export default function ToolLedger({
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><path d="M4 1h4v1L7 3v3l2 2v1H6.5v2L6 12l-.5-1V9H3V8l2-2V3L4 2z" /></svg>
           </button>
         </header>
-        <div className={`tool-ledger-progress${complete ? ' is-complete' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={summary.totalTools} aria-valuenow={summary.distinctUsed}>
+        <div className={`tool-ledger-progress${complete ? ' is-complete' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={totalTools} aria-valuenow={summary.distinctUsed}>
           <i style={{ width: `${ratio * 100}%` }} />
         </div>
         <ol className="tool-ledger-list">
@@ -115,6 +120,12 @@ export default function ToolLedger({
               </div>
               <small>{phaseGlyph(event.phase)}</small>
               <time>{relativeTime(event.at, now)}</time>
+              {event.changedIds && event.changedIds.length > 0 && (
+                <div className="tool-ledger-changed" aria-label="Changed objects">
+                  {event.changedIds.slice(0, 6).map((id) => <span key={id} title={id}>{shortId(id)}</span>)}
+                  {event.changedIds.length > 6 && <span>+{event.changedIds.length - 6}</span>}
+                </div>
+              )}
             </li>
           ))}
         </ol>

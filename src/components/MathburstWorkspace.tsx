@@ -79,6 +79,8 @@ import FilmCursor from './FilmCursor'
 import AnimationTimeline from './animation/AnimationTimeline'
 import { useTimelinePlayback } from './animation/useTimelinePlayback'
 import AgentConsole from './sidebar/AgentConsole'
+import AgentAura from './sidebar/AgentAura'
+import AgentActivation, { useOneShot } from './sidebar/AgentActivation'
 import ReadingIndicator from './sidebar/ReadingIndicator'
 import ToolLedger, { useLedgerPin } from './sidebar/ToolLedger'
 import ToolToast from './sidebar/ToolToast'
@@ -297,6 +299,13 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const [toolLog, setToolLog] = useState<LedgerEvent[]>([])
   const [ledgerPinned, toggleLedgerPinned] = useLedgerPin(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
+  /** Agent intent: purple auras around objects the agent is about to touch. */
+  const [spotlightTargets, setSpotlightTargets] = useState<Array<{ id: string; until: number; label?: string }>>([])
+  /** Render-only typewriter preview for a text or equation field while a tool types it live. */
+  const [typingPreview, setTypingPreview] = useState<{ objectId: string; field: 'latex' | 'text'; value: string } | null>(null)
+  /** Bumped to fire the one-shot activation sweep (console start, agent write). */
+  const [activationTick, setActivationTick] = useState(0)
+  const [activationKind, setActivationKind] = useState<'console' | 'call'>('console')
   const handwritingSamplesRef = useRef<Record<string, HandwritingSample>>({})
   const [directorOpen, setDirectorOpen] = useState(false)
   const [directorState, setDirectorState] = useState(EMPTY_DIRECTOR_REVIEW)
@@ -602,7 +611,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
           changedIds,
           data: { source: 'agent' },
         }), 0)
-        finish(reduceMotion ? 120 : 320)
+        finish(reduceMotion ? 120 : 920)
       } catch (error) {
         agentBusyRef.current = false
         setAgentBusy(false)
@@ -893,6 +902,28 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       const attention = transformerWorld ? Object.values(transformerWorld.objects).find((candidate) => candidate.kind === 'attention') : undefined
       return attention?.kind === 'attention' ? [...evaluateTinyModel(attention.model, attention.bridgeMasses, attention.temperature).attentionWeights] : null
     },
+    spotlight: (ids, seconds, label) => {
+      const present = ids.filter((id) => worldRef.current.objects[id])
+      if (!present.length) return { ok: false, summary: 'No changes made', error: 'None of those objects exist.' }
+      const until = Date.now() + Math.max(500, Math.min(6000, seconds * 1000))
+      setSpotlightTargets((current) => [...current.filter((target) => !present.includes(target.id) && target.until > Date.now()), ...present.map((id) => ({ id, until, label }))])
+      window.setTimeout(() => setSpotlightTargets((current) => current.filter((target) => target.until > Date.now())), until - Date.now() + 50)
+      return { ok: true, summary: `Spotlighted ${present.length} object${present.length === 1 ? '' : 's'}`, data: { ids: present, seconds, label: label ?? null } }
+    },
+    typewrite: (objectId, field, value, ms) => new Promise<void>((resolve) => {
+      const object = worldRef.current.objects[objectId]
+      if (!object) { resolve(); return }
+      const total = Math.max(200, Math.min(6000, ms))
+      const started = performance.now()
+      const step = () => {
+        const fraction = Math.min(1, (performance.now() - started) / total)
+        const count = Math.max(1, Math.round(value.length * fraction))
+        setTypingPreview({ objectId, field, value: value.slice(0, count) })
+        if (fraction < 1) { window.setTimeout(step, 28); return }
+        window.setTimeout(() => { setTypingPreview(null); resolve() }, 80)
+      }
+      step()
+    }),
     controlTimeline: (timelineId, timelineAction, options) => {
       if (!worldRef.current.timelines[timelineId]) return { ok: false, summary: 'No changes made', error: `Timeline ${timelineId} does not exist.` }
       playbackRef.current?.control(timelineId, timelineAction, options)
@@ -906,6 +937,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     },
     onTrace: (event) => {
       setToolLog((current) => [...current, { ...event, at: Date.now() }].slice(-2000))
+      if (event.phase === 'running' && !event.readOnly) { setActivationKind('call'); setActivationTick((tick) => tick + 1) }
       setTraceEvents((current) => [
         ...current.filter((existing) => existing.invocationId !== event.invocationId),
         event,
@@ -919,6 +951,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const playbackRef = useRef(playback)
   playbackRef.current = playback
   const ledgerBursts = useMemo(() => groupBurst(toolLog), [toolLog])
+  const activationActive = useOneShot(activationTick)
   const readingEvent = useMemo(() => collapseInvocations(toolLog).find((event) => event.readOnly && event.phase === 'running') ?? null, [toolLog])
   const ledgerCounts = useMemo(() => Object.fromEntries(Object.entries(summarizeLedger(toolLog, webMcpTools).perTool).map(([name, entry]) => [name, entry.calls])), [toolLog, webMcpTools])
 
@@ -1606,7 +1639,15 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       : null,
     [activeDirectorShot.scene, activeDocumentId, directorOpen, libraryProjects, world],
   )
-  const canvasWorld = playback.derivedWorld(directorOverviewWorld ?? world)
+  const canvasWorld = useMemo(() => {
+    const base = playback.derivedWorld(directorOverviewWorld ?? world)
+    if (!typingPreview) return base
+    const target = base.objects[typingPreview.objectId]
+    if (!target) return base
+    if (typingPreview.field === 'latex' && target.kind === 'equation') return { ...base, objects: { ...base.objects, [target.id]: { ...target, latex: typingPreview.value } } }
+    if (typingPreview.field === 'text' && target.kind === 'text') return { ...base, objects: { ...base.objects, [target.id]: { ...target, text: typingPreview.value } } }
+    return base
+  }, [directorOverviewWorld, playback, typingPreview, world])
   // A frame is "ready" when its targets exist in the project that owns it,
   // whichever project is active; the Director walks all four.
   const directorAvailableObjectIds = useMemo(() => {
@@ -1702,7 +1743,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
               >
                 {world.session.reconstructionStatus === 'approved' ? '✓ live scene' : 'Reconstruct photo'}
               </button>}
-              <button type="button" className="console-trigger" aria-pressed={consoleOpen} onClick={() => setConsoleOpen((open) => !open)}>{consoleOpen ? 'Close agent' : 'Agent replay'}</button>
+              <button type="button" className="console-trigger" aria-pressed={consoleOpen} onClick={() => setConsoleOpen((open) => { if (!open) { setActivationKind('console'); setActivationTick((tick) => tick + 1) } return !open })}>{consoleOpen ? 'Close agent' : 'Agent replay'}</button>
               <button type="button" className="reset-trigger" onClick={resetDemo}>{activeLibraryProject ? 'Reset project' : 'Reset demo'}</button>
             </>
           )}
@@ -1846,6 +1887,8 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       <ToolToast bursts={ledgerBursts} />
       {!galleryOpen && <ToolLedger events={toolLog} tools={webMcpTools} pinned={ledgerPinned} onTogglePin={toggleLedgerPinned} />}
       <ReadingIndicator active={Boolean(readingEvent)} label={readingEvent ? `Tutor is reading · ${readingEvent.toolName}` : undefined} />
+      <AgentAura targets={spotlightTargets} world={canvasWorld} viewport={directorOpen ? directorViewport : world.viewport} />
+      <AgentActivation active={activationActive} kind={activationKind} />
       <AgentConsole open={consoleOpen && !galleryOpen} onClose={() => setConsoleOpen(false)} tools={webMcpTools} />
       {!galleryOpen && <AnimationTimeline world={world} playbacks={playback.playbacks} control={playback.control} onDeleteTimeline={(id) => run(humanAction('Deleted timeline', [{ type: 'removeTimeline', id }]))} />}
       {bridgePlay && (

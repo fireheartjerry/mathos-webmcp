@@ -28,3 +28,4 @@ video/public/
 
 # film working takes and QA sheets
 .film/
+.env.film

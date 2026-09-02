@@ -13,7 +13,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   { id: 'text-math', label: 'Text & math', purpose: 'Edit text, equations, graphs, matrices', tools: ['edit_text', 'edit_equation', 'set_graph', 'set_matrix_cells'] },
   { id: 'animation', label: 'Animation', purpose: 'Author and drive timelines', tools: ['create_timeline', 'add_keyframes', 'play_timeline', 'get_timelines'] },
   { id: 'projects', label: 'Projects', purpose: 'Library and navigation', tools: ['list_projects', 'get_scene_catalog', 'open_project', 'open_scene', 'create_project', 'delete_project'] },
-  { id: 'tutoring', label: 'Tutoring', purpose: 'Focus, explain, evaluate, annotate', tools: ['focus_objects', 'explain_object', 'evaluate_expression', 'annotate_object'] },
+  { id: 'tutoring', label: 'Tutoring', purpose: 'Focus, explain, evaluate, annotate', tools: ['focus_objects', 'spotlight_objects', 'explain_object', 'evaluate_expression', 'annotate_object'] },
   { id: 'labs', label: 'Labs', purpose: 'Drive each lab from its own controls', tools: ['train_model_step', 'set_attention_weight', 'set_barycentric_weights', 'move_geometry_point', 'set_simplex_view', 'set_partition_view'] },
 ] as const
 
