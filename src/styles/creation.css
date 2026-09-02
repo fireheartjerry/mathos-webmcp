@@ -2,6 +2,9 @@
   position: absolute;
   z-index: 30;
   width: 240px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  overflow: auto;
   padding: 13px;
   color: #171713;
   background: #fffdf6;

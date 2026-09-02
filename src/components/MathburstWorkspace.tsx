@@ -183,6 +183,7 @@ export default function MathburstWorkspace() {
   const libraryStorageNeedsRepairRef = useRef(false)
   const [activeScene, setActiveScene] = useState<CatalogSceneId>('gamma-clinic')
   const activeSceneRef = useRef<CatalogSceneId>('gamma-clinic')
+  const [canvasNavigationRevision, setCanvasNavigationRevision] = useState(0)
   const [mode, setMode] = useState<ToolMode>('select')
   const [editorId, setEditorId] = useState<string | null>(null)
   const [editorValue, setEditorValue] = useState('')
@@ -217,6 +218,7 @@ export default function MathburstWorkspace() {
   const changeActiveScene = useCallback((scene: CatalogSceneId) => {
     activeSceneRef.current = scene
     setActiveScene(scene)
+    setCanvasNavigationRevision((current) => current + 1)
   }, [])
 
   const cancelDirectorPreview = useCallback(() => {
@@ -539,6 +541,7 @@ export default function MathburstWorkspace() {
     setDirectorSelection([])
     changeActiveScene(targetScene)
     setMode('select')
+    setCanvasNavigationRevision((current) => current + 1)
     setEditorId(null)
     setEditorMatrix(null)
   }, [cancelDirectorPreview, changeActiveScene, stashActiveProject])
@@ -552,6 +555,7 @@ export default function MathburstWorkspace() {
     setDirectorOpen(false)
     setDirectorSelection([])
     setMode('select')
+    setCanvasNavigationRevision((current) => current + 1)
     setEditorId(null)
     setEditorMatrix(null)
   }, [cancelDirectorPreview, stashActiveProject])
@@ -598,6 +602,7 @@ export default function MathburstWorkspace() {
       setActiveDocumentId('main')
       worldRef.current = mainWorldRef.current
       setWorld(mainWorldRef.current)
+      setCanvasNavigationRevision((current) => current + 1)
     }
   }, [markLibraryStorageRepaired, updateLibraryProjects])
 
@@ -1012,6 +1017,7 @@ export default function MathburstWorkspace() {
     }
     worldRef.current = centered
     setWorld(centered)
+    setCanvasNavigationRevision((current) => current + 1)
     if (personalProject) {
       markLibraryStorageRepaired()
       updateLibraryProjects((projects) => projects.map((project) => project.id === personalProject.id
@@ -1108,28 +1114,48 @@ export default function MathburstWorkspace() {
     if (!object) return
     setEditorMatrix(null)
     if (object.kind === 'text') setEditorValue(object.text)
-    else if (object.kind === 'equation') setEditorValue(object.latex)
+    else if (object.kind === 'equation') {
+      const entity = createdObject?.id === id
+        ? { kind: 'expression' }
+        : world.entities[object.entityId ?? '']
+      if (!object.entityId || entity?.kind !== 'expression') return
+      setEditorValue(object.latex)
+    }
     else if (object.kind === 'matrix') setEditorMatrix([
       [...object.values[0]],
       [...object.values[1]],
     ])
     else return
     setEditorId(id)
-  }, [world.objects])
+  }, [world.entities, world.objects])
 
   const saveEditor = () => {
     if (!editorId) return
-    const object = world.objects[editorId]
-    if (!object) return
+    const currentWorld = worldRef.current
+    const object = currentWorld.objects[editorId]
+    if (!object) {
+      setEditorId(null)
+      setEditorMatrix(null)
+      return
+    }
     let updated: WorldObject = object
     if (object.kind === 'text') updated = { ...object, text: editorValue }
-    if (object.kind === 'equation') updated = { ...object, latex: editorValue }
+    if (object.kind === 'equation') {
+      if (!object.entityId) return
+      const entity = currentWorld.entities[object.entityId]
+      if (!entity || entity.kind !== 'expression') return
+      updated = { ...object, latex: editorValue }
+    }
     if (object.kind === 'matrix' && editorMatrix) updated = { ...object, values: editorMatrix }
-    const dependents = object.kind === 'equation' ? findDependentIds(world, [object.id]) : []
-    run(humanAction(`Edited ${object.kind}`, [
-      { type: 'put', object: updated },
-      ...(dependents.length ? [{ type: 'select' as const, ids: [object.id, ...dependents] }] : []),
-    ]))
+    const dependents = object.kind === 'equation' ? findDependentIds(currentWorld, [object.id]) : []
+    const operations: WorldOperation[] = [{ type: 'put', object: updated }]
+    if (object.kind === 'equation' && object.entityId) {
+      const entity = currentWorld.entities[object.entityId]
+      if (!entity || entity.kind !== 'expression') return
+      operations.unshift({ type: 'putEntity', entity: { ...entity, latex: editorValue } })
+    }
+    if (dependents.length) operations.push({ type: 'select', ids: [object.id, ...dependents] })
+    run(humanAction(`Edited ${object.kind}`, operations))
     setEditorId(null)
     setEditorMatrix(null)
   }
@@ -1299,6 +1325,7 @@ export default function MathburstWorkspace() {
       <WorldCanvas
         world={world}
         scene={activeScene}
+        navigationKey={canvasNavigationRevision}
         mode={directorOpen ? (mode === 'hand' ? 'hand' : 'select') : mode}
         run={run}
         onEditObject={openEditor}

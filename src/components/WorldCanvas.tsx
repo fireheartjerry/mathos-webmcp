@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent } from 'react'
 import { buildTransformOperations, expandTargetIds } from '../domain/world/operations'
 import type { DirectorObjectOverride } from '../domain/world/director'
@@ -57,6 +57,7 @@ const sceneBreadcrumbs: Record<CatalogSceneId, { number: string; title: string; 
 export default function WorldCanvas({
   world,
   scene,
+  navigationKey,
   mode,
   run,
   onEditObject,
@@ -74,6 +75,7 @@ export default function WorldCanvas({
 }: {
   world: WorldState
   scene: CatalogSceneId
+  navigationKey?: string | number
   mode: ToolMode
   run: (action: WorldAction) => void
   onEditObject: (id: string, object?: WorldObject) => void
@@ -101,6 +103,13 @@ export default function WorldCanvas({
   const effectiveSelection = directorMode ? directorSelection : world.selection
   const routeInput = useCanvasInputRouter(mode)
 
+  // A pending click belongs to the tool and canvas it was opened in. Ordinary
+  // world commits deliberately do not appear here, so they cannot invalidate
+  // a popover while React is simply rerendering the canvas.
+  useEffect(() => {
+    setCreationPopover(null)
+  }, [mode, navigationKey, scene])
+
   const withDirectorOverride = (object: WorldObject): WorldObject => {
     if (!directorMode) return object
     const override = directorOverrides[object.id]
@@ -124,6 +133,7 @@ export default function WorldCanvas({
   }
 
   const startPan = (event: ReactPointerEvent) => {
+    setCreationPopover(null)
     gestureRef.current = {
       kind: 'pan',
       pointerId: event.pointerId,
