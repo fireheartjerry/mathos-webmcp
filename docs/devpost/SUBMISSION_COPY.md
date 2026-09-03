@@ -156,8 +156,8 @@ reverses it. A guard runs at load and rejects any tool name over 30 characters.
 A budget violation fails before registration instead of vanishing into the
 browser.
 
-Twenty-eight of those tools earn their keep for a reason that has nothing to do
-with the count.
+Twenty-eight of those tools earn their keep for a reason that never mentions the
+count.
 
 ## What we learned
 
@@ -170,7 +170,7 @@ chatbot with extra steps.
 
 Accounts and sync, so a canvas follows a student across devices rather than
 staying in one browser. More subjects on the same kernel, since nothing in the
-world model depends on calculus or geometry. Several agents on one canvas, each
+world model ties it to calculus or geometry. Several agents on one canvas, each
 attributed separately.
 ```
 
@@ -208,9 +208,10 @@ surface. A student's reasoning takes the shape of a graph, a construction, and a
 half-finished line of algebra. None of that survives a description in a message.
 
 WebMCP puts the tools on the page that already owns those objects. The tutor
-never receives a picture of the work and sends back a suggestion. It calls
-`inspect_math` on the actual equation, then `annotate_object` to leave a note
-beside the term that went wrong.
+never receives a picture of the work and sends back a suggestion. It reads the
+actual strokes with `get_objects`, then rings the wrong one with
+`create_objects`. On a live equation it reads the expression with `inspect_math`
+first.
 
 The page also sets the limits. Every canvas edit an agent makes compiles to the
 operation the toolbar produces. So the page decides what an agent may do, and the
