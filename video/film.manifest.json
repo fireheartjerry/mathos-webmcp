@@ -37,7 +37,7 @@
           }
         },
         {
-          "wait": 2600
+          "wait": 3200
         },
         {
           "pointer": {
@@ -46,13 +46,22 @@
           }
         },
         {
-          "wait": 1800
+          "wait": 2600
+        },
+        {
+          "pointer": {
+            "x": 0.62,
+            "y": 0.44
+          }
+        },
+        {
+          "wait": 2400
         },
         {
           "click": "[aria-label=\"Open Gamma Function\"]"
         },
         {
-          "wait": 2600
+          "wait": 3400
         },
         {
           "pointer": {
@@ -61,7 +70,16 @@
           }
         },
         {
-          "wait": 3200
+          "wait": 4200
+        },
+        {
+          "pointer": {
+            "x": 0.42,
+            "y": 0.62
+          }
+        },
+        {
+          "wait": 3400
         },
         {
           "click": ".webmcp-inspector-trigger"
@@ -74,12 +92,21 @@
         },
         {
           "pointer": {
-            "x": 0.42,
-            "y": 0.6
+            "x": 0.2,
+            "y": 0.5
           }
         },
         {
-          "wait": 3400
+          "wait": 4200
+        },
+        {
+          "pointer": {
+            "x": 0.2,
+            "y": 0.7
+          }
+        },
+        {
+          "wait": 4600
         },
         {
           "click": ".webmcp-inspector-trigger"
@@ -94,7 +121,7 @@
           "selectShot": "opening-attempt"
         },
         {
-          "wait": 900
+          "wait": 700
         }
       ],
       "camera": [
