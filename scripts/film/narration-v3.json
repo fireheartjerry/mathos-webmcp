@@ -5,9 +5,9 @@
     "stability": 0.5,
     "similarity_boost": 0.8,
     "style": 0.2,
-    "speed": 1.0
+    "speed": 1
   },
-  "notes": "Draft 3. The v2 script narrated what the picture already showed, which served Execution and left Potential Impact unscored and 'how you used WebMCP' -- an explicit rule requirement -- barely covered. This one spends its first 40 seconds on what Mathburst is, the problem it solves, and how WebMCP is actually wired in, and pays for it by cutting the play-by-play roughly in half. Target: 2:52 picture, about 2:20 of speech, so the demo can breathe. Each clip now names the shot it plays over and its offset within that shot, so the spec is the single source for the words and the manifest owns only timing, steps and camera. 13-simplex was dropped with the simplex scene.",
+  "notes": "Draft 3. The v2 script narrated what the picture already showed, which served Execution and left Potential Impact unscored and 'how you used WebMCP' -- an explicit rule requirement -- barely covered. This one spends its first 40 seconds on what Mathburst is, the problem it solves, and how WebMCP is actually wired in, and pays for it by cutting the play-by-play roughly in half. Target: 2:52 picture, about 2:20 of speech, so the demo can breathe. Each clip now names the shot it plays over and its offset within that shot, so the spec is the single source for the words and the manifest owns only timing, steps and camera. 13-simplex was dropped with the simplex scene. Draft 3b: the close claimed every edit in the film went through a tool. The timeline records 27 tutor commits and 11 human ones, so that was false and it also erased the parity the film exists to show. runDemoCue routes agent steps through tool.execute and human steps through run(), so the corrected line states exactly that.",
   "clips": [
     {
       "id": "01-what",
@@ -21,14 +21,14 @@
       "act": 0,
       "text": "Today a tutor can only talk about your work. Your actual reasoning is trapped in a photograph, or a canvas it has no way to reach. So it explains around the problem instead of touching it.",
       "shot": "cold-open",
-      "offset": 10.0
+      "offset": 10
     },
     {
       "id": "03-webmcp",
       "act": 0,
       "text": "Mathburst registers forty-eight WebMCP tools on the page itself. The tutor calls them the way you use the toolbar: the same reducer, the same history. Every edit it makes is attributed, visible, and undoable.",
       "shot": "cold-open",
-      "offset": 21.0
+      "offset": 21
     },
     {
       "id": "04-handwriting",
@@ -63,7 +63,7 @@
       "act": 2,
       "text": "Drag the shape and the masses follow. Log masses, then softmax. The same three numbers, arrived at twice.",
       "shot": "gamma-probability",
-      "offset": 10.0
+      "offset": 10
     },
     {
       "id": "09-attention",
@@ -77,7 +77,7 @@
       "act": 3,
       "text": "One gradient step by the tutor, undone. Then eight by the student. Every click is real arithmetic on the parameters you can see.",
       "shot": "training-step",
-      "offset": 1.0
+      "offset": 1
     },
     {
       "id": "11-geometry",
@@ -117,7 +117,7 @@
     {
       "id": "17-close",
       "act": 8,
-      "text": "Forty-eight tools registered on the page, and every edit you just watched went through one of them. [calm] A tutor that can enter the work instead of describing it. One mathematical world. Every agent can enter.",
+      "text": "Forty-eight tools registered on the page. Every tutor edit you just watched went through one of them. [calm] The student's edits reached the same reducer. One history. One keystroke reverses either side. Every agent can enter.",
       "shot": "one-world",
       "offset": 0.15
     }

@@ -95,8 +95,14 @@ for (const clip of ordered) {
   clips.push({ shot: clip.id, file: clip.file, duration: clip.duration, offset: start, text: clip.text, overShot: clip.shot })
 }
 
-const overrun = previousEnd - filmSeconds
-if (overrun > 0) problems.push(`narration runs ${overrun.toFixed(2)}s past the ${filmSeconds}s film -- lengthen a shot or cut words`)
+// The closing lockup holds the last frame, so a final line that runs past the last
+// shot lengthens the film rather than getting cut off; Film.tsx measures its tail
+// from the last WORD for exactly this reason. The only hard limit is the rules'
+// three minutes, so that is what this checks.
+const filmEnd = Math.max(filmSeconds, previousEnd + TAIL_SECONDS)
+const overrun = filmEnd - manifest.output.maxSeconds
+if (overrun > 0) problems.push(`film runs ${overrun.toFixed(2)}s past the ${manifest.output.maxSeconds}s limit -- cut words or a shot`)
+if (previousEnd > filmSeconds) console.log(`closing line runs ${(previousEnd - filmSeconds).toFixed(2)}s past the last shot; the lockup holds to ${filmEnd.toFixed(1)}s`)
 
 if (problems.length) {
   console.error('narration does not fit the manifest:')

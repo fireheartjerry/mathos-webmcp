@@ -44,7 +44,17 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 /** The closing lockup holds this long after the last word. Shared with build-narration-manifest.mjs. */
 const TAIL_SECONDS = 1.6
 export const FILM_START = Math.max(0, timeline.shots[0].start)
-export const FILM_SECONDS = Math.min(manifest.output.maxSeconds, cutlist.filmSeconds + TAIL_SECONDS)
+/**
+ * Where the narration actually stops. The tail used to run from the last SHOT,
+ * which is a different moment: the closing line plays over a 13.1s shot and runs
+ * 15.5s, so a shot-measured tail ended the film mid-sentence. The last frame holds
+ * the closing lockup either way, so extending it costs nothing but the hold.
+ */
+const LAST_WORD_ENDS = Math.max(...narration.clips.map((clip) => clip.offset + clip.duration))
+export const FILM_SECONDS = Math.min(
+  manifest.output.maxSeconds,
+  Math.max(cutlist.filmSeconds, LAST_WORD_ENDS) + TAIL_SECONDS,
+)
 export const FILM_FRAMES = Math.round(FILM_SECONDS * FILM_FPS)
 
 const SHOTS = cutlist.shots.map((shot) => {
@@ -188,9 +198,13 @@ function Narration() {
   return (
     <>
       {narration.clips.map((clip) => {
-        const shot = SHOTS.find((candidate) => candidate.id === clip.shot)
-        if (!shot) return null
-        const from = Math.round((shot.filmStart + clip.offset) * FILM_FPS)
+        // `offset` is ALREADY absolute film time: build-narration-manifest.mjs resolves
+        // each clip's shot-relative offset against the cut list and enforces the no-two-
+        // voices-at-once gap there. This used to look the shot up by `clip.shot` and add
+        // its filmStart, but since the v3 spec `clip.shot` holds the CLIP's id and the
+        // shot id moved to `overShot`, so the lookup matched nothing, every clip returned
+        // null, and the film rendered with no narration at all.
+        const from = Math.round(clip.offset * FILM_FPS)
         const duration = Math.round(clip.duration * FILM_FPS) + 6
         if (from >= FILM_FRAMES) return null
         return (

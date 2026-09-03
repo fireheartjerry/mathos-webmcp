@@ -27,6 +27,7 @@ TIMELINE = ROOT / 'video/public/film/timeline.json'
 MANIFEST = ROOT / 'video/film.manifest.json'
 CUTLIST = ROOT / 'video/public/film/cutlist.json'
 OUT = ROOT / 'video/public/film'
+NARRATION = ROOT / 'video/public/film/narration.json'
 SR = 48_000
 
 
@@ -99,14 +100,22 @@ def film_clock(cutlist: dict | None):
     return to_film
 
 
-def music(timeline: dict, seed: int, total: float, to_film) -> np.ndarray:
+def music(timeline: dict, seed: int, total: float, to_film, cutlist: dict | None = None) -> np.ndarray:
     rng = np.random.default_rng(seed)
     n = int(total * SR)
     left = np.zeros(n)
     right = np.zeros(n)
-    shots = timeline['shots']
-    # One chord per two shots, changing on shot starts, resolving on the lockup.
-    boundaries = [b for b in (to_film(shots[i]['start']) for i in range(0, len(shots), 3)) if b is not None] + [total]
+    # One chord per three shots, changing on shot starts, resolving on the lockup.
+    # Take the starts from the cut list, which already states each shot's position in
+    # the finished film. Mapping the RAW shot start through to_film instead returned
+    # None for every shot the cut list starts late (a camera arrival skips its pan), so
+    # most boundaries were dropped and the bed stayed silent for the first sixty
+    # seconds of the film.
+    if cutlist and cutlist.get('shots'):
+        starts = [float(shot['filmStart']) for shot in cutlist['shots']]
+    else:
+        starts = [b for b in (to_film(shot['start']) for shot in timeline['shots']) if b is not None]
+    boundaries = [starts[i] for i in range(0, len(starts), 3)] + [total]
     boundaries = sorted(set(max(0.0, b) for b in boundaries))
     for index in range(len(boundaries) - 1):
         start, end = boundaries[index], boundaries[index + 1]
@@ -179,9 +188,17 @@ def main() -> None:
     cutlist = json.loads(CUTLIST.read_text(encoding='utf-8')) if CUTLIST.exists() else None
     to_film = film_clock(cutlist)
     # Generate for the FILM's length, not the raw take's, or the bed runs on past the end.
-    total = (float(cutlist['filmSeconds']) if cutlist else float(timeline['seconds'])) + 1.8
+    # The film ends at the later of the last shot and the last word: the closing line
+    # runs past the shot it plays over, and a bed cut to the last shot leaves the final
+    # sentence playing dry.
+    shots_end = float(cutlist['filmSeconds']) if cutlist else float(timeline['seconds'])
+    words_end = 0.0
+    if NARRATION.exists():
+        clips = json.loads(NARRATION.read_text(encoding='utf-8')).get('clips', [])
+        words_end = max((float(c['offset']) + float(c['duration']) for c in clips), default=0.0)
+    total = max(shots_end, words_end) + 1.8
     OUT.mkdir(parents=True, exist_ok=True)
-    write_wav(OUT / 'music.wav', music(timeline, int(manifest['music'].get('seed', 7)), total, to_film))
+    write_wav(OUT / 'music.wav', music(timeline, int(manifest['music'].get('seed', 7)), total, to_film, cutlist))
     write_wav(OUT / 'sfx.wav', sfx(timeline, total, to_film), peak_db=-12.0)
     kept = sum(1 for e in timeline['events'] if e['kind'] in ('human', 'tutor') and to_film(e['t']) is not None)
     dropped = sum(1 for e in timeline['events'] if e['kind'] in ('human', 'tutor')) - kept
