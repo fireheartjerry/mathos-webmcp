@@ -25,6 +25,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 TIMELINE = ROOT / 'video/public/film/timeline.json'
 MANIFEST = ROOT / 'video/film.manifest.json'
+CUTLIST = ROOT / 'video/public/film/cutlist.json'
 OUT = ROOT / 'video/public/film'
 SR = 48_000
 
@@ -75,14 +76,37 @@ CHORDS = [
 ]
 
 
-def music(timeline: dict, seed: int, total: float) -> np.ndarray:
+def film_clock(cutlist: dict | None):
+    """Map a raw-take timestamp onto the finished film's clock.
+
+    The film is cut: the camera pans between scenes are excised and over-long shot
+    tails are capped. Sound design is event-locked, so placing a tick at the time the
+    capture logged puts it wherever that moment USED to be -- by the end of this film
+    that is about thirty-four seconds adrift, which is a tick landing on nothing.
+
+    Returns a function raw -> film seconds, or None for a moment that was cut out.
+    """
+    if not cutlist:
+        return lambda raw: raw
+    spans = cutlist['shots']
+
+    def to_film(raw: float):
+        for span in spans:
+            if span['srcStart'] <= raw <= span['srcEnd']:
+                return span['filmStart'] + (raw - span['srcStart'])
+        return None
+
+    return to_film
+
+
+def music(timeline: dict, seed: int, total: float, to_film) -> np.ndarray:
     rng = np.random.default_rng(seed)
     n = int(total * SR)
     left = np.zeros(n)
     right = np.zeros(n)
     shots = timeline['shots']
     # One chord per two shots, changing on shot starts, resolving on the lockup.
-    boundaries = [shots[i]['start'] for i in range(0, len(shots), 3)] + [shots[-1]['start'], total]
+    boundaries = [b for b in (to_film(shots[i]['start']) for i in range(0, len(shots), 3)) if b is not None] + [total]
     boundaries = sorted(set(max(0.0, b) for b in boundaries))
     for index in range(len(boundaries) - 1):
         start, end = boundaries[index], boundaries[index + 1]
@@ -125,7 +149,7 @@ def swell(seconds: float = 1.15) -> np.ndarray:
     return (np.sin(2 * math.pi * 73.4 * t) + 0.5 * np.sin(2 * math.pi * 110 * t)) * env * 0.14
 
 
-def sfx(timeline: dict, total: float) -> np.ndarray:
+def sfx(timeline: dict, total: float, to_film) -> np.ndarray:
     n = int(total * SR)
     left = np.zeros(n)
     right = np.zeros(n)
@@ -139,21 +163,29 @@ def sfx(timeline: dict, total: float) -> np.ndarray:
         right[s:e] += sample[: e - s] * pan * 1.4
 
     for event in timeline['events']:
+        at = to_film(event['t'])
+        if at is None:
+            continue  # this moment was cut out of the film; a tick for it would land on nothing
         if event['kind'] in ('human', 'tutor'):
-            place(tick(event['kind']), event['t'], 0.56 if event['kind'] == 'tutor' else 0.44)
+            place(tick(event['kind']), at, 0.56 if event['kind'] == 'tutor' else 0.44)
         elif event['kind'] == 'bridge':
-            place(swell(), event['t'])
+            place(swell(), at)
     return np.stack([left, right], axis=1)
 
 
 def main() -> None:
     timeline = json.loads(TIMELINE.read_text(encoding='utf-8'))
     manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
-    total = float(timeline['seconds']) + 0.5
+    cutlist = json.loads(CUTLIST.read_text(encoding='utf-8')) if CUTLIST.exists() else None
+    to_film = film_clock(cutlist)
+    # Generate for the FILM's length, not the raw take's, or the bed runs on past the end.
+    total = (float(cutlist['filmSeconds']) if cutlist else float(timeline['seconds'])) + 1.8
     OUT.mkdir(parents=True, exist_ok=True)
-    write_wav(OUT / 'music.wav', music(timeline, int(manifest['music'].get('seed', 7)), total))
-    write_wav(OUT / 'sfx.wav', sfx(timeline, total), peak_db=-12.0)
-    print(f'wrote music.wav and sfx.wav for {total:.1f}s; {sum(1 for e in timeline["events"] if e["kind"] in ("human", "tutor"))} commit ticks')
+    write_wav(OUT / 'music.wav', music(timeline, int(manifest['music'].get('seed', 7)), total, to_film))
+    write_wav(OUT / 'sfx.wav', sfx(timeline, total, to_film), peak_db=-12.0)
+    kept = sum(1 for e in timeline['events'] if e['kind'] in ('human', 'tutor') and to_film(e['t']) is not None)
+    dropped = sum(1 for e in timeline['events'] if e['kind'] in ('human', 'tutor')) - kept
+    print(f'wrote music.wav and sfx.wav for {total:.1f}s of FILM time; {kept} commit ticks placed, {dropped} dropped as cut')
 
 
 if __name__ == '__main__':
