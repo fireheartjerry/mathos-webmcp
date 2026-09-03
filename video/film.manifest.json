@@ -61,7 +61,7 @@
           "click": "[aria-label=\"Open Gamma Function\"]"
         },
         {
-          "wait": 3400
+          "wait": 2448
         },
         {
           "pointer": {
@@ -70,7 +70,7 @@
           }
         },
         {
-          "wait": 4200
+          "wait": 3024
         },
         {
           "pointer": {
@@ -79,7 +79,22 @@
           }
         },
         {
-          "wait": 3400
+          "wait": 2448
+        },
+        {
+          "pointer": {
+            "x": 0.012,
+            "y": 0.06
+          }
+        },
+        {
+          "wait": 900
+        },
+        {
+          "click": ".rail-pin"
+        },
+        {
+          "wait": 2600
         },
         {
           "click": ".webmcp-inspector-trigger"
@@ -88,7 +103,7 @@
           "waitFor": ".webmcp-launcher"
         },
         {
-          "wait": 4200
+          "wait": 3024
         },
         {
           "pointer": {
@@ -97,7 +112,7 @@
           }
         },
         {
-          "wait": 4200
+          "wait": 3024
         },
         {
           "pointer": {
@@ -106,13 +121,19 @@
           }
         },
         {
-          "wait": 4600
+          "wait": 3312
         },
         {
           "click": ".webmcp-inspector-trigger"
         },
         {
           "wait": 900
+        },
+        {
+          "click": ".rail-pin"
+        },
+        {
+          "wait": 700
         },
         {
           "openDirector": true
@@ -646,10 +667,22 @@
       "approved": true,
       "steps": [
         {
+          "click": ".rail-pin"
+        },
+        {
+          "wait": 1800
+        },
+        {
           "wait": 780
         },
         {
           "cue": "webmcp-crescendo"
+        },
+        {
+          "click": ".rail-pin"
+        },
+        {
+          "wait": 500
         }
       ],
       "camera": [
