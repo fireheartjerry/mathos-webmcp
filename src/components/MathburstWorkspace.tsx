@@ -1867,9 +1867,16 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     return ids
   }, [activeDocumentId, libraryProjects, world])
   const ignoreRun = useCallback((_action: WorldAction) => { /* the overview is a camera state, never a document */ }, [])
+  /**
+   * How many tools are REGISTERED with the browser. Deliberately not rendered as
+   * "n / m": the ledger rail shows "distinct used / total" in that exact shape, and
+   * a frame review found the two reading as a contradiction in the closing shot --
+   * "48 / 48" beside "18/48" looks like the film disagreeing with itself when the
+   * two are simply counting different things.
+   */
   const registeredCount = registrationStatus?.state === 'live' || registrationStatus?.state === 'partial'
-    ? `${registrationStatus.registered} / ${registrationStatus.total}`
-    : `${webMcpTools.length} / ${webMcpTools.length}`
+    ? `${registrationStatus.registered}`
+    : `${webMcpTools.length}`
 
   // The film driver (scripts/film/capture.mjs) drives the real product through
   // this hook: project navigation, Director frames, cues, tools. It adds no
@@ -2115,7 +2122,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       {directorOpen && (activeDirectorShot.id === 'one-world' || activeDirectorShot.id === 'webmcp-crescendo') && (
         <div className={`cinematic-lockup${activeDirectorShot.id === 'one-world' ? ' is-final' : ''}`} aria-live="polite">
           {activeDirectorShot.id === 'one-world' && <p><b>One mathematical world.</b><span>Every agent can enter.</span></p>}
-          <small><i aria-hidden="true" />WebMCP <strong>{registeredCount}</strong></small>
+          <small><i aria-hidden="true" />WebMCP <strong>{registeredCount}</strong> tools registered</small>
         </div>
       )}
 

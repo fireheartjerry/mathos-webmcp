@@ -89,7 +89,7 @@ export default function ToolLedger({
     <aside className={`tool-ledger${pinned ? ' is-pinned' : ' is-tab'}`} aria-label="WebMCP tool ledger">
       <button type="button" className="tool-ledger-tab" aria-label={`WebMCP ledger, ${headline}`} onClick={onTogglePin}>
         <span>WebMCP</span>
-        <b>{summary.distinctUsed}/{totalTools}</b>
+        <b>{summary.distinctUsed}/{totalTools} used</b>
       </button>
       <div className="tool-ledger-body">
         <header className="tool-ledger-header">
