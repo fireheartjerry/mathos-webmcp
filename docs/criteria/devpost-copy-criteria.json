@@ -1,0 +1,112 @@
+{
+  "criteria": [
+    {
+      "id": "cold_open_comprehension",
+      "name": "Cold-open and comprehension specificity",
+      "weight": 12,
+      "howToCheck": "Read only the elevator pitch, the first sentence of every heading and bolded mini-header in the story (Inspiration, What it does, How we built it, Challenges, Accomplishments, What we learned, What's next, plus each of the four project bullets), and the first 3 sentences of 'What it does' specifically. For the What-it-does sample, list every verb+object pair describing a user action and count how many are concrete, physically enactable actions ('writes by hand', 'the tutor edits the same document') versus abstract claims ('is transformative', 'enables collaboration') or table-of-contents announcements ('This section covers...'). For every other sampled opener, mark CONCRETE (names a specific object, number, action, or scene) or ABSTRACT. Score = concrete count / total sampled.",
+      "fullMarks": "80% or more of sampled openers are CONCRETE, and the What-it-does sample yields at least 4 concrete action pairs with none requiring a glossary, so a reader can state in one sentence what the student does and what the tutor does.",
+      "zeroMarks": "Fewer than half of sampled openers are concrete, or a reader cannot restate in one sentence what the student does versus what the tutor does after reading only the sampled text."
+    },
+    {
+      "id": "fact_adjective_ratio",
+      "name": "Facts stated plainly outrank adjectives claiming impact (the core tension)",
+      "weight": 16,
+      "howToCheck": "This is the direct test of the brief's central instruction: reward striking facts stated plainly, punish adjectives asserting impact. Across the full document, count tokens that are numerals, named technologies or proper nouns, or named UI elements (48, 18, React 19, KaTeX, MathLive, Cortex, activity rail, toast, ring, ledger, kernel, and similar). Separately count purely evaluative, self-grading adjectives describing the product, team, or demo from this combined list: powerful, revolutionary, amazing, incredible, game-changing, transformative, seamless, robust, cutting-edge, groundbreaking, epic, unprecedented, stunning, extraordinary, remarkable, next-level, world-class, mind-blowing, jaw-dropping, sophisticated, dynamic, intelligent, smart, advanced, rich. Quote every adjective hit with its full sentence.",
+      "fullMarks": "Concrete-fact count exceeds evaluative-adjective count by at least 10 to 1, and the adjective count is zero.",
+      "zeroMarks": "The ratio falls below 3 to 1, or any sentence's only content is an adjective asserting the product's power with no adjacent number or named object to back it."
+    },
+    {
+      "id": "self_correction",
+      "name": "Self-correction as a credibility device",
+      "weight": 10,
+      "howToCheck": "Search the full story text for explicit statements of a limit, a caught error, or a stated boundary on a claim (markers such as 'does not', 'is not', 'corrected the claim', 'found... defects', 'not proved here', 'distrust our own checks', 'only X of Y'). Count distinct instances, excluding restatements of the same instance (the 18-vs-48 correction counts once even if mentioned twice).",
+      "fullMarks": "At least 3 distinct instances, spread across at least 2 of the 6 story headers.",
+      "zeroMarks": "Zero instances anywhere; the draft only claims success and states no limit or caught error."
+    },
+    {
+      "id": "mechanism_paired",
+      "name": "Every capability claim is paired with a mechanism",
+      "weight": 12,
+      "howToCheck": "Walk 'What it does' and 'How we built it' sentence by sentence. Flag every sentence asserting a capability (verbs like reads, changes, produces, reverses, marks, compiles, verifies, registers). For each, check whether that sentence or the next contains a concrete noun: a named API (registerTool, modelContext), a number, or a named UI element (activity rail, toast, ring, ledger, kernel). Compute paired/total and quote every unpaired sentence verbatim (for example a bare 'both sides have the same powers' with no mechanism nearby is unpaired).",
+      "fullMarks": "90% or more of capability-asserting sentences are paired with a mechanism in the same or next sentence, with zero unpaired sentences in 'What it does'.",
+      "zeroMarks": "Fewer than half of capability-asserting sentences are paired, or a central claim like tutor/student parity is asserted with no mechanism anywhere nearby."
+    },
+    {
+      "id": "tool_count_audited",
+      "name": "The 48-tool count is audited, not a bare marketing number",
+      "weight": 10,
+      "howToCheck": "Find every occurrence of '48' in the document. For each, check whether the same paragraph gives a per-category number (e.g. '9 reads, 14 edits...') that could plausibly sum to 48, or an explicit, checkable pointer to the full list (a file name, table, or registry name). The team already had to retract one inflated tool-count claim (48 claimed vs 18 used in the video), so a bare unbacked 48 in the written copy repeats that exact failure shape.",
+      "fullMarks": "At least one occurrence of '48' is accompanied by a per-category breakdown summing to 48, or by a named, checkable pointer to the full tool list.",
+      "zeroMarks": "Every occurrence of '48' is a bare total with no breakdown and no pointer anywhere in the document."
+    },
+    {
+      "id": "sentence_mechanics",
+      "name": "Sentence mechanics: short, active, and varied, not a drone",
+      "weight": 16,
+      "howToCheck": "Split the story body on '.', '!', '?' and compute words per sentence; report percent at or under 20 words and quote any sentence over 30 words. For each paragraph, list every finite verb and mark stative ('to be' forms, existential 'there is/are') versus active; flag any paragraph exceeding roughly 30% stative verbs or with 3+ consecutive sentences opening on a stative construction, quoting them. Flag any run of 3+ consecutive sentences within 2 words of each other in length AND sharing the same subject-verb opening shape, unless clearly a marked parallel-cadence list. Search for hedge/filler words (very, really, actually, basically, simply, just, quite, somewhat, kind of, sort of, essentially, in order to, the fact that) and list each hit's sentence, excluding load-bearing uses argued in one sentence.",
+      "fullMarks": "90% or more of sentences at or under 20 words, zero sentences over 30, zero flagged stative-verb paragraphs, zero flagged same-shape runs, and zero non-load-bearing hedge words.",
+      "zeroMarks": "Multiple sentences over 30 words, a paragraph that is majority stative verbs (as in a chain of 'is / is rendered / there is' sentences), or hedge words on nearly every line."
+    },
+    {
+      "id": "cliche_absence",
+      "name": "Hackathon-cliché absence",
+      "weight": 6,
+      "howToCheck": "Search the full document, case-insensitive, for this fixed phrase list: 'passionate about', 'we wanted to solve', 'changing the way', 'next generation', 'at the intersection of', 'democratize', 'for everyone', 'the future of', 'powerful tool', 'take it to the next level', 'excited to', 'we believe', 'imagine a world'. Count total hits across all fields.",
+      "fullMarks": "Zero hits.",
+      "zeroMarks": "Three or more hits across the document."
+    },
+    {
+      "id": "section_pull",
+      "name": "Section-to-section pull",
+      "weight": 6,
+      "howToCheck": "Read the last sentence of each of the first five story sections (Inspiration, What it does, How we built it, Challenges, Accomplishments). Mark PULL if it ends on a specific unresolved detail, example, or number the next section pays off, or CLOSED if it summarizes or restates what was just said. Score = PULL count / 5.",
+      "fullMarks": "4 or 5 of 5 sections end on PULL.",
+      "zeroMarks": "0 or 1 of 5 sections end on PULL; most sections close their own thought before handing off to the next."
+    },
+    {
+      "id": "audience_and_boundary",
+      "name": "Tutor/student boundary and audience honesty",
+      "weight": 6,
+      "howToCheck": "Search 'What it does' and 'How we built it' for sentences naming a specific boundary between tutor action and student action (e.g. 'It marks the error. It does not fix it. The student corrects it.'), counting distinct boundary statements beyond the one generic parity claim ('every tool call compiles to the same operation'). Separately, list every audience/level word used anywhere (student, grade or course name, classroom, or their absence) and the difficulty level of each demoed canvas example (gamma function, transformer attention, olympiad geometry, partition congruences currently all read advanced or graduate level). If 'student' appears unqualified while none of the demoed examples are introductory, mark the audience half FAIL.",
+      "fullMarks": "At least 2 distinct tutor/student boundary statements exist beyond the generic parity claim, and the copy either explicitly scopes itself to advanced learners or pairs 'student' with a qualifier consistent with the examples shown.",
+      "zeroMarks": "Zero specific boundary statements beyond the generic parity claim, or the copy implies general classroom use via unqualified 'student' while every demoed example is advanced or competition level."
+    },
+    {
+      "id": "webmcp_api_named",
+      "name": "The WebMCP API surface is named inside a technical claim",
+      "weight": 6,
+      "howToCheck": "Search the text for literal API identifiers: document.modelContext.registerTool, modelContext, registerTool, reducer, kernel. Count occurrences outside the 'How we built it' section header itself, and confirm at least one sits inside a sentence making a specific technical claim (e.g. about what a tool call compiles to) rather than a bare name-drop.",
+      "fullMarks": "At least 2 distinct API identifiers appear, and at least one sits inside a sentence stating a specific technical claim (e.g. 'every agent tool call compiles to the same typed operation a toolbar click makes').",
+      "zeroMarks": "No literal API identifiers appear anywhere, or they appear only as a bare name-drop with no claim attached."
+    }
+  ],
+  "gates": [
+    {
+      "id": "em_dash_gate",
+      "gate": "Any em dash character (—, or '--' used as one) appears anywhere in any field.",
+      "check": "Search all fields for the em dash character and for '--' used as a dash substitute. A single instance anywhere fails the copy regardless of quality elsewhere, per the author's own absolute rule."
+    },
+    {
+      "id": "banned_word_gate",
+      "gate": "Any word or phrase from the author's explicit banned list appears anywhere: leverage, seamless, robust, delve, unlock, empower, game-changing, revolutionize, cutting-edge, 'in today's world', 'it's worth noting'.",
+      "check": "Case-insensitive search of every field for each listed term. A single hit anywhere is an instant fail regardless of surrounding quality."
+    },
+    {
+      "id": "tbd_field_gate",
+      "gate": "Any required Devpost field, including all four 'Additional info' fields (why the use case fits WebMCP, better user experience, what people and agents can do together, how WebMCP was implemented), is left as 'TBD' or empty at judging time.",
+      "check": "Open every required field in the submission and confirm each contains real prose, not the placeholder 'TBD' or blank text. A judge scoring WebMCP Leverage cannot credit an explanation that is not there; this is a missing answer to a scored question, not a style flaw."
+    },
+    {
+      "id": "internal_contradiction_gate",
+      "gate": "Any factual or numeric claim in the copy is contradicted elsewhere in the same document, including an unqualified claim that all 48 tools are demoed, used, or shown when another field or the video implies a smaller number, or a math claim (e.g. the Ramanujan congruence) stated as proven in general when the copy itself says only finite cases are verified.",
+      "check": "Cross-reference every number and every strong claim (tool counts, 'all N tools used', 'proven', 'verified') against every other field and section for consistency. The team already had to retract one claim of exactly this shape (48 vs 18); any surviving or new instance is disqualifying regardless of how good the surrounding prose is."
+    },
+    {
+      "id": "long_sentence_gate",
+      "gate": "Any single sentence in the copy exceeds 30 words.",
+      "check": "Split the full story body on '.', '!', '?' and count words per sentence. Any sentence over 30 words fails this gate outright, per the author's own explicit 'short sentences' rule and independent of any other criterion's scoring."
+    }
+  ],
+  "notes": "Merged the four reviewer sets into 10 weighted criteria (sum = 100) plus 5 binary gates. Overlap resolution: judge's cold-open + teacher's 15-second comprehension + editor's section-opener check collapsed into one criterion (cold_open_comprehension); judge's verifiable-specificity-density + editor's concrete-anchor + engineer's adjective-ban + engineer's concrete-noun-ratio + teacher's noun/adjective ratio collapsed into one criterion (fact_adjective_ratio), which is the explicit resolution of the simple-vs-epic tension the brief demands — facts must outnumber evaluative adjectives 10:1. Editor's stative-verb check + rhythm/burst check + hedge-word check + judge's word-count check collapsed into one sentence_mechanics criterion (kept the editor's sharper stative-verb and rhythm mechanics alongside judge's percentage threshold). Teacher's tutor/student-boundary check and grade-level-honesty check share one criterion since both test whether the copy is honest about who is in the loop and who it is for. Judge's self-correction, judge's cliche-absence, judge's section-pull, engineer's mechanism-pairing, engineer's tool-count-audit, and engineer's API-surface-naming each stood alone as distinct, non-overlapping angles and were kept separate.\n\nFAIL candidate: tool_count_audited — the engineer's own review states the draft currently lists 7 category names after '48 tools' with no per-category count and no pointer, which is exactly what this criterion requires for any credit; as drafted this criterion plausibly scores at or near zero.\n\nPASS candidate: self_correction — the judge's own review states this angle is \"genuinely strong... already,\" citing the 18-vs-48 correction as a credibility asset; this criterion plausibly scores at or near full credit as currently drafted.\n\nGates were deduplicated the same way: one em-dash gate, one banned-word gate, one TBD/empty-field gate, one internal-contradiction gate (folding in the teacher's specific 48-tools-demoed variant and the math-proof-overclaim variant as named examples of the same failure shape), and the editor's 30-word sentence gate kept separate from the sentence_mechanics scored criterion since the author's brief treats it as an absolute rule, not a gradient."
+}
