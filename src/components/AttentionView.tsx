@@ -137,7 +137,9 @@ export function EditableNumber({ value, onCommit, label, min, max, step = 0.01, 
 }
 
 /** Tag for a read-only value that is recomputed from the editable inputs. */
-export const Derived = () => <i className="derived-tag" title="Recomputed from the inputs; not editable">derived</i>
+export const Derived = ({ style }: { style?: CSSProperties } = {}) => (
+  <i className="derived-tag" style={style} title="Recomputed from the inputs; not editable">derived</i>
+)
 
 // ---------------------------------------------------------------------------
 
@@ -288,6 +290,132 @@ export default function AttentionView({ object, world, run }: Props) {
   const arcs = keysT.map((key, index) => arcPath(queryT, key, 30 + index * 13))
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
 
+  // ---- Label collision avoidance for the plane's crowded corner --------------
+  // Same idea throughout the plane: a label only moves when its actual text
+  // box would overlap a vector tip or a label already claimed -- never on a
+  // hunch. Bounding boxes (not just anchor points) matter here because the
+  // labels vary a lot in length ("k₁" vs "e₂ · target"), so a fixed-radius
+  // point check either over- or under-reacts depending which pair it's
+  // looking at.
+  //
+  // Resolution order runs widest/hardest-to-move first, *not* paint order:
+  // the context and query vector labels are the longest strings here and
+  // must still hug their own tip, so they claim their spot first, while the
+  // one- and two-letter key labels -- easiest to nudge a few px in any
+  // direction -- go find a gap around them. Embedding dots come next (fixed
+  // regardless of any edit, so it's their last chance to dodge). Angle labels
+  // go last because they're the one purely decorative annotation here -- they
+  // can always slide further out along their own radial line into open
+  // space, so they're the ones that give way once every label anchored to a
+  // real data point has claimed its spot.
+  const CHAR_W = 6.6 // approx glyph advance for the 11px mono label font
+  const LABEL_H = 12
+  type Point = { x: number; y: number }
+  type Box = { x: number; y: number; w: number; h: number }
+  const boxFor = (anchor: Point, text: string, align: 'start' | 'middle' = 'start'): Box => {
+    const w = text.length * CHAR_W
+    return { x: align === 'middle' ? anchor.x - w / 2 : anchor.x, y: anchor.y - LABEL_H + 3, w, h: LABEL_H }
+  }
+  const overlapsBox = (a: Box, b: Box, pad = 2) =>
+    a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y
+
+  const keyTipsPlane = keysT.map((key) => grow(toPlane(key)))
+  const queryTipPlane = grow(toPlane(queryT))
+  const contextTipPlane = grow(toPlane(contextT))
+  const embeddingPointsPlane = embeddingsT.map((embedding) => toPlane(embedding))
+  const keyTipBoxes = keyTipsPlane.map((tip) => ({ x: tip.x - 3, y: tip.y - 3, w: 6, h: 6 }))
+  const claimedBoxes: Box[] = []
+  const isCrowded = (box: Box) => keyTipBoxes.some((other) => overlapsBox(box, other)) || claimedBoxes.some((other) => overlapsBox(box, other))
+  /**
+   * Natural spot unless it overlaps something already on the page, in which case
+   * step through `fallbacks` in order and take the first clear one -- a single
+   * fallback can itself land on whatever it was dodging (two labels escaping in
+   * the same direction meet again at the same new spot), so this keeps trying
+   * until one actually clears, falling back to the last candidate if none do.
+   * Either way, claims the box it lands on.
+   */
+  const place = (
+    natural: Point,
+    text: string,
+    align: 'start' | 'middle',
+    fallbacks: Array<(natural: Point) => Point>,
+  ) => {
+    let point = natural
+    let box = boxFor(point, text, align)
+    if (isCrowded(box)) {
+      for (const fallback of fallbacks) {
+        point = fallback(natural)
+        box = boxFor(point, text, align)
+        if (!isCrowded(box)) break
+      }
+    }
+    claimedBoxes.push(box)
+    return point
+  }
+
+  // Context and query vector labels: the widest strings on the plane, so they
+  // get first pick -- nudge further from the tip, then to its other side,
+  // when the usual spot is already taken.
+  const contextLabelText = 'c = Σ αⱼ vⱼ'
+  const contextLabel = place({ x: contextTipPlane.x + 7, y: contextTipPlane.y + 14 }, contextLabelText, 'start', [
+    () => ({ x: contextTipPlane.x + 7, y: contextTipPlane.y + 24 }),
+    () => ({ x: contextTipPlane.x - 7, y: contextTipPlane.y + 24 }),
+    () => ({ x: contextTipPlane.x - 30, y: contextTipPlane.y + 34 }),
+    () => ({ x: contextTipPlane.x + 7, y: contextTipPlane.y - 20 }),
+    () => ({ x: contextTipPlane.x + 40, y: contextTipPlane.y + 14 }),
+    () => ({ x: contextTipPlane.x + 7, y: contextTipPlane.y - 34 }),
+  ])
+  const queryLabelText = `q = W_Q e${subscript(queryIndex)}`
+  const queryLabel = place({ x: queryTipPlane.x + 7, y: queryTipPlane.y - 8 }, queryLabelText, 'start', [
+    () => ({ x: queryTipPlane.x + 7, y: queryTipPlane.y - 20 }),
+    () => ({ x: queryTipPlane.x + 7, y: queryTipPlane.y + 24 }),
+    () => ({ x: queryTipPlane.x + 7, y: queryTipPlane.y - 34 }),
+  ])
+
+  // Key labels: short and easy to nudge, so they go last of the tip-anchored
+  // labels -- drop below the arrowhead, then further right, when the context
+  // or query label already claimed the usual spot above it.
+  const keyLabels = keyTipsPlane.map((tip, index) =>
+    place({ x: tip.x + 6, y: tip.y - 6 }, `k${subscript(index)}`, 'start', [
+      () => ({ x: tip.x + 6, y: tip.y + 19 }),
+      () => ({ x: tip.x + 18, y: tip.y + 19 }),
+      () => ({ x: tip.x + 6, y: tip.y - 19 }),
+      () => ({ x: tip.x + 46, y: tip.y - 6 }),
+    ]))
+
+  // Embedding dot labels: fixed points, so they get the widest search --
+  // above, further right, right-and-above, down-right into open space, or
+  // finally to the dot's other side -- before falling back to whichever
+  // candidate collides least.
+  const embeddingLabels = embeddingPointsPlane.map((at, index) => {
+    const text = `e${subscript(index)} · ${tokens[index]}`
+    return place({ x: at.x + 7, y: at.y + 4 }, text, 'start', [
+      () => ({ x: at.x + 7, y: at.y - 20 }),
+      () => ({ x: at.x + 34, y: at.y + 4 }),
+      () => ({ x: at.x + 34, y: at.y - 20 }),
+      () => ({ x: at.x + 50, y: at.y + 22 }),
+      () => ({ x: at.x - text.length * CHAR_W - 7, y: at.y + 4 }),
+      () => ({ x: at.x + 90, y: at.y + 26 }),
+      () => ({ x: at.x - text.length * CHAR_W - 7, y: at.y - 20 }),
+    ])
+  })
+
+  // Angle labels: the last, most flexible kind -- slide further out along
+  // their own radial line, past everything else already claimed, trying two
+  // escalating distances into the open space beyond the vertex cluster.
+  const pushFromOrigin = (point: Point, extra: number) => {
+    const dx = point.x - ORIGIN.x, dy = point.y - ORIGIN.y
+    const dist = Math.hypot(dx, dy) || 1
+    return { x: ORIGIN.x + (dx / dist) * (dist + extra), y: ORIGIN.y + (dy / dist) * (dist + extra) }
+  }
+  const arcLabels = arcs.map((arc) => place(arc.label, `${short(arc.degrees, 0)}°`, 'middle', [
+    (natural) => pushFromOrigin(natural, 16),
+    (natural) => pushFromOrigin(natural, 34),
+    (natural) => pushFromOrigin(natural, 52),
+    (natural) => pushFromOrigin(natural, 68),
+    (natural) => pushFromOrigin(natural, 90),
+  ]))
+
   return (
     <section className={`attention-view reveal-root${heroActive ? ' is-hero-active' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
       <header className="attention-header reveal-fade" style={{ opacity: headerT }}>
@@ -318,53 +446,37 @@ export default function AttentionView({ object, world, run }: Props) {
             {arcs.map((arc, index) => (
               <g key={`arc-${index}`} className={`attention-arc${index === strongest ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
                 <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
-                <text x={arc.label.x} y={arc.label.y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
+                <text x={arcLabels[index].x} y={arcLabels[index].y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
               </g>
             ))}
             {vectorT > 0 && valuesT.map((value, index) => {
               const tip = grow(toPlane(value))
               return <line key={`v-${index}`} className="attention-value-vector" x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} />
             })}
-            {vectorT > 0 && keysT.map((key, index) => {
-              const tip = grow(toPlane(key))
-              return (
-                <g key={`k-${index}`} className="attention-key-vector">
-                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                  <text x={tip.x + 6} y={tip.y - 6} style={{ opacity: vectorT }}>k{subscript(index)}</text>
-                </g>
-              )
-            })}
-            {vectorT > 0 && (() => {
-              const tip = grow(toPlane(contextT))
-              // Nudge the label further from its tip when it would land on top of a key label.
-              const crowded = keysT.some((key) => { const kt = grow(toPlane(key)); return Math.hypot(kt.x - tip.x, kt.y - tip.y) < 10 })
-              return (
-                <g className="attention-context-vector" data-hero-path="context">
-                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${contextMarkerId})`} />
-                  <text x={tip.x + 7} y={tip.y + (crowded ? 24 : 14)} style={{ opacity: vectorT }}>c = Σ αⱼ vⱼ</text>
-                </g>
-              )
-            })()}
-            {vectorT > 0 && (() => {
-              const tip = grow(toPlane(queryT))
-              // Same guard for the query label, which can coincide with a key tip (e.g. editing W_Q until q≈k).
-              const crowded = keysT.some((key) => { const kt = grow(toPlane(key)); return Math.hypot(kt.x - tip.x, kt.y - tip.y) < 10 })
-              return (
-                <g className="attention-query-vector" data-hero-path="query">
-                  <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                  <text x={tip.x + 7} y={tip.y + (crowded ? -20 : -8)} style={{ opacity: vectorT }}>q = W_Q e{subscript(queryIndex)}</text>
-                </g>
-              )
-            })()}
-            {embeddingsT.map((embedding, index) => {
-              const at = toPlane(embedding)
-              return (
-                <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
-                  <circle cx={at.x} cy={at.y} r="4" />
-                  <text x={at.x + 7} y={at.y + 4}>e{subscript(index)} · {tokens[index]}</text>
-                </g>
-              )
-            })}
+            {vectorT > 0 && keyTipsPlane.map((tip, index) => (
+              <g key={`k-${index}`} className="attention-key-vector">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
+                <text x={keyLabels[index].x} y={keyLabels[index].y} style={{ opacity: vectorT }}>k{subscript(index)}</text>
+              </g>
+            ))}
+            {vectorT > 0 && (
+              <g className="attention-context-vector" data-hero-path="context">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={contextTipPlane.x} y2={contextTipPlane.y} markerEnd={`url(#${contextMarkerId})`} />
+                <text x={contextLabel.x} y={contextLabel.y} style={{ opacity: vectorT }}>{contextLabelText}</text>
+              </g>
+            )}
+            {vectorT > 0 && (
+              <g className="attention-query-vector" data-hero-path="query">
+                <line x1={ORIGIN.x} y1={ORIGIN.y} x2={queryTipPlane.x} y2={queryTipPlane.y} markerEnd={`url(#${markerId})`} />
+                <text x={queryLabel.x} y={queryLabel.y} style={{ opacity: vectorT }}>{queryLabelText}</text>
+              </g>
+            )}
+            {embeddingPointsPlane.map((at, index) => (
+              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
+                <circle cx={at.x} cy={at.y} r="4" />
+                <text x={embeddingLabels[index].x} y={embeddingLabels[index].y}>e{subscript(index)} · {tokens[index]}</text>
+              </g>
+            ))}
           </svg>
 
           <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
@@ -464,7 +576,11 @@ export default function AttentionView({ object, world, run }: Props) {
               </div>
             </div>
             <div className="attention-probability-list">
-              <span className="attention-kicker">NEXT TOKEN p <Derived /></span>
+              <span className="attention-kicker">
+                {/* This column is narrower than CONTEXT/LOSS's, so the label -- not the pill -- gives way: the pill keeps the same fixed width as its siblings and the short label ellipsises instead. */}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: '1 1 auto' }}>NEXT TOKEN p</span>
+                <Derived style={{ flex: '0 0 auto' }} />
+              </span>
               {probabilitiesT.map((probability, index) => (
                 <div className={`attention-probability${index === targetIndex ? ' is-target' : ''}`} key={index} data-hero-path={index === targetIndex ? 'target' : undefined}>
                   <i>{tokens[index]}</i><em><b style={{ width: `${(Math.max(0, probability) * 100 * readoutT).toFixed(2)}%` }} /></em><strong>{fmt(probability * readoutT)}</strong>

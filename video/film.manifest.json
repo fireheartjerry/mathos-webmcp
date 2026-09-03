@@ -168,6 +168,9 @@
       "approved": true,
       "steps": [
         {
+          "navigateScene": "gamma-clinic"
+        },
+        {
           "pointer": {
             "x": 0.55,
             "y": 0.96
@@ -200,6 +203,9 @@
       "approved": true,
       "steps": [
         {
+          "navigateScene": "gamma-clinic"
+        },
+        {
           "wait": 1300
         },
         {
@@ -229,6 +235,9 @@
       "approved": true,
       "steps": [
         {
+          "navigateScene": "gamma-clinic"
+        },
+        {
           "wait": 850
         },
         {
@@ -257,6 +266,9 @@
       "seconds": 11,
       "approved": true,
       "steps": [
+        {
+          "navigateScene": "gamma-clinic"
+        },
         {
           "wait": 780
         },
@@ -326,6 +338,9 @@
       "approved": true,
       "steps": [
         {
+          "navigateScene": "gamma-probability"
+        },
+        {
           "wait": 1400
         },
         {
@@ -381,6 +396,9 @@
       "approved": true,
       "steps": [
         {
+          "navigateScene": "attention-geometry"
+        },
+        {
           "wait": 1400
         },
         {
@@ -432,6 +450,9 @@
       "seconds": 13,
       "approved": true,
       "steps": [
+        {
+          "navigateScene": "train-from-scratch"
+        },
         {
           "wait": 780
         },
@@ -488,6 +509,9 @@
       "seconds": 11,
       "approved": true,
       "steps": [
+        {
+          "navigateScene": "attention-barycentrics"
+        },
         {
           "wait": 780
         },
@@ -548,6 +572,9 @@
       "seconds": 12,
       "approved": true,
       "steps": [
+        {
+          "navigateScene": "spiral-similarity"
+        },
         {
           "wait": 780
         },
@@ -610,6 +637,9 @@
       "steps": [
         {
           "selectShot": "ramanujan"
+        },
+        {
+          "navigateScene": "partition-observatory"
         },
         {
           "wait": 700

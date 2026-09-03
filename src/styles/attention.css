@@ -206,11 +206,11 @@
 .training-view .training-drift-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .training-view .training-matrix { min-width: 0; font: 11px/1 var(--mono); display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .training-view .training-matrix > span { color: var(--graphite); font: 500 13px/1 var(--serif); }
-.training-view .training-matrix > div { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 4px 8px; border-left: 1px solid var(--graphite); border-right: 1px solid var(--graphite); }
-.training-view .training-matrix-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; min-width: 0; font: 11px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+.training-view .training-matrix > div { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 4px; padding: 4px 4px; border-left: 1px solid var(--graphite); border-right: 1px solid var(--graphite); }
+.training-view .training-matrix-cell { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 2px; min-width: 0; font: 11px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
 .training-view .training-matrix-cell > i { overflow: hidden; color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; line-height: 1.2;}
 .training-view .training-matrix-cell > em { color: var(--muted); font-style: normal; }
-.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 4px; color: var(--muted); border-radius: 4px; font-weight: 400; white-space: nowrap; line-height: 1.2;}
+.training-view .training-matrix-cell > b { overflow: hidden; padding: 0 4px 0 1px; color: var(--muted); border-radius: 4px; font-weight: 400; white-space: nowrap; line-height: 1.2;}
 .training-view .training-matrix-cell.is-up > b, .training-view .training-matrix-cell.is-down > b { color: var(--graphite); font-weight: 600; }
 .training-view .training-matrix-cell.is-up > em { color: var(--purple); }
 .training-view .training-matrix-cell.is-down > em { color: var(--orange); }

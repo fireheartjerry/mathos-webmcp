@@ -91,6 +91,50 @@ export function smoothStrokePath(points: { x: number; y: number }[]) {
   return path
 }
 
+/**
+ * Attribution-pip geometry, mirrored from the `[data-author='agent'] >
+ * .author-pip` rule in agent-effects.css (top: -24px, left: -1px, ~13px
+ * type). Kept as constants here so the collision check below stays in sync
+ * with what actually paints.
+ */
+const PIP_LEFT_OFFSET = 1
+const PIP_TOP_OFFSET = 24
+const PIP_WIDTH = 64
+const PIP_HEIGHT = 22
+
+type Rect = { x: number; y: number; width: number; height: number }
+
+function pipRect(object: WorldObject): Rect {
+  return { x: object.bounds.x - PIP_LEFT_OFFSET, y: object.bounds.y - PIP_TOP_OFFSET, width: PIP_WIDTH, height: PIP_HEIGHT }
+}
+
+function rectsOverlap(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+}
+
+/**
+ * A multi-object agent commit (e.g. a circled minus sign plus its underline)
+ * places each object's "Tutor" pip just above its own bounds -- fine in
+ * isolation, but when the objects sit close together one pip lands on the
+ * next object, or the two pips land on each other, reading as a duplicated
+ * badge. Only the topmost object in such a cluster renders a pip -- the
+ * group still reads as agent-authored, just with one badge instead of a
+ * stack of identical ones.
+ */
+function showsAuthorPip(object: WorldObject, world: WorldState): boolean {
+  if (object.author !== 'agent') return false
+  const mine = pipRect(object)
+  for (const other of Object.values(world.objects)) {
+    if (other.id === object.id || other.author !== 'agent') continue
+    const collides = rectsOverlap(mine, pipRect(other)) || rectsOverlap(mine, other.bounds)
+    if (!collides) continue
+    const otherIsHigher = other.bounds.y < object.bounds.y
+      || (other.bounds.y === object.bounds.y && other.id < object.id)
+    if (otherIsHigher) return false
+  }
+  return true
+}
+
 /** Transient reveal fraction; undefined or >= 1 means fully drawn. */
 function drawFraction(object: WorldObject): number | undefined {
   const progress = object.drawProgress
@@ -400,7 +444,7 @@ export default function WorldObjectView({
     >
       {objectContents(object, world, run)}
       {object.locked && <LockGlyph />}
-      {object.author === 'agent' && <span className="author-pip" aria-label="Created by the Tutor">Tutor</span>}
+      {showsAuthorPip(object, world) && <span className="author-pip" aria-label="Created by the Tutor">Tutor</span>}
     </div>
   )
 }

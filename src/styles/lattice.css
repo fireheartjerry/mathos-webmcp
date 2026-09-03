@@ -146,8 +146,16 @@
 
 /* ---- partitions ------------------------------------------------------------------ */
 .number-theory-view.lattice-card { grid-template-rows: auto minmax(0, 1fr) auto; }
-.number-theory-view .lattice-foot { display: block; }
-.nt-body { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; min-height: 0; }
+/* The theorem/verified panel sits in this footer row. Its height is `auto`, so a
+   longer reveal (or word-wrap at a narrow card width) can shrink the sibling
+   `minmax(0, 1fr)` rows above it to nothing before it ever touches them -- the
+   congruence table then has no room left and clips its own highlighted row right
+   at the boundary, reading as a zero-gap collision. `margin-top` gives the panel
+   real, constant clearance from whatever is above it regardless of that squeeze,
+   and the reserved floor below on `.nt-body`/`.residue-lanes` keeps the table
+   itself from ever compressing past a readable line height. */
+.number-theory-view .lattice-foot { display: block; margin-top: 8px; }
+.nt-body { display: grid; grid-template-rows: auto auto minmax(112px, 1fr); gap: 8px; min-height: 0; }
 .nt-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .lattice-card .nt-controls .lattice-field { grid-template-columns: auto 72px 44px; width: auto; }
 .lattice-card .nt-controls .lattice-field .lattice-num { width: 44px; }
@@ -206,7 +214,9 @@
 .coefficient-readout .is-silent { color: var(--field-muted); }
 
 .lattice-card .residue-observatory { min-height: 0; overflow: hidden; }
-.lattice-card .residue-lanes { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 3px; height: 100%; min-height: 0; }
+/* 18px floor: the smallest a lane row can get before its 11px/1.2 text (and the
+   descenders on "p", "≡") starts losing pixels to the row's own overflow:hidden. */
+.lattice-card .residue-lanes { display: grid; grid-template-rows: repeat(5, minmax(18px, 1fr)); gap: 3px; height: 100%; min-height: 0; }
 .lattice-card .residue-lane { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 0; padding: 0 8px; border-radius: 4px; overflow: hidden; transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
 .lattice-card .residue-lane-label { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lattice-card .residue-lane-values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; min-width: 0; overflow: hidden; }
@@ -229,7 +239,10 @@
 .lattice-card .ramanujan-statement h4 { font-size: 15px; }
 .lattice-card .math-object-kicker { font-size: 10.5px; letter-spacing: 0.08em; }
 .lattice-card .ramanujan-evidence b { font-size: 10.5px; }
-.lattice-card .ramanujan-evidence span { font-size: 11px; }
+/* Clamp to 2 lines: at the card's narrowest width this line wraps (cinematic.css
+   sets it to `white-space: normal`), and an unbounded wrap grows the footer row,
+   which is exactly what steals the congruence table's clearance below. */
+.lattice-card .ramanujan-evidence span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 11px; line-height: 1.3; }
 .lattice-card .ramanujan-evidence small { font-size: 11px; line-height: 1.3; white-space: normal; overflow: visible; text-overflow: clip; }
 .lattice-card .ramanujan-reveal button { height: 22px; font-size: 11px; }
 .lattice-card .ramanujan-tease { width: 100%; min-height: 34px; padding: 0 12px; font-size: 11px; white-space: normal; overflow-wrap: anywhere; transition: border-color 160ms var(--ease-out); }

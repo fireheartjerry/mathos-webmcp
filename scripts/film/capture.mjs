@@ -244,6 +244,10 @@ try {
       else if (step.openGallery) { await page.evaluate('window.__mathburstFilm.openGallery(); return true'); await wait(700) }
       else if (step.openProject) { await page.evaluate(`window.__mathburstFilm.openProject(${JSON.stringify(step.openProject)}); return true`); await wait(900) }
       else if (step.openDirector) { await page.evaluate('window.__mathburstFilm.openDirector(); return true'); await wait(500) }
+      // selectShot opens the PROJECT that owns a shot's scene, not the scene itself, so a
+      // shot whose scene is the project's second one lands on the first. That is how the
+      // ramanujan shot ended up performing its partition cue over the simplex picture.
+      else if (step.navigateScene) { await page.evaluate(`window.__mathburstFilm.navigateScene(${JSON.stringify(step.navigateScene)}); return true`); await wait(900) }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
     const elapsed = now() - takeStart - shotStart
