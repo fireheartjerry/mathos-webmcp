@@ -771,7 +771,18 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
 
     const commit = () => {
       try {
-        const next = dispatchWorldAction(worldRef.current, action)
+        // Same transient rule the human path applies in `run`: selection and camera
+        // are not mathematical work, so they never enter history. Without this the
+        // agent's own camera tools committed while the learner's identical pan did
+        // not, which broke the parity this whole design rests on, contradicted
+        // focus_objects' own description ("Not a history commit"), and let a framing
+        // shot intercept the next undo instead of the edit it introduced.
+        const transient = action.operations.every((operation) => operation.type === 'select' || operation.type === 'viewport')
+        const current = worldRef.current
+        const dispatched = dispatchWorldAction(current, action)
+        const next = transient
+          ? { ...dispatched, history: current.history, future: current.future, activity: current.activity }
+          : dispatched
         worldRef.current = next
         setWorld(next)
         if (action.operations.some((operation) => operation.type === 'viewport')) persistActiveViewport(next.viewport)
