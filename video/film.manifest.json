@@ -561,6 +561,12 @@
       "approved": true,
       "steps": [
         {
+          "selectShot": "ramanujan"
+        },
+        {
+          "wait": 700
+        },
+        {
           "wait": 960
         },
         {

@@ -77,9 +77,20 @@ function cameraAt(shot: (typeof SHOTS)[number], t: number): CameraKey {
 function Segment({ shot, opacity, push }: { shot: (typeof SHOTS)[number]; opacity: number; push: number }) {
   const seconds = useCurrentFrame() / FILM_FPS
   const camera = cameraAt(shot, Math.max(0, seconds))
-  const zoom = clamp(camera.zoom, 1, 1.35) * push
-  const left = clamp(FILM_W / 2 - camera.x * FILM_W * zoom, FILM_W - FILM_W * zoom, 0)
-  const top = clamp(FILM_H / 2 - camera.y * FILM_H * zoom, FILM_H - FILM_H * zoom, 0)
+  // Never scale above 1. A composition zoom crops the captured frame, and what it
+  // crops is the app's own chrome -- the wordmark, the tool rail, the WebMCP badge,
+  // the activity panel. A frame review found the header sliced to a stray "st" and
+  // the tool rail gone entirely in shots that zoomed to 1.35. The cinematography now
+  // lives in the product's own camera, so the composition does not need its own.
+  // Scaling BELOW 1 is safe and is what the transition push uses: the composition
+  // background is the same cream as the canvas, so a receding frame shows paper.
+  const zoom = Math.min(1, clamp(camera.zoom, 1, 1.35) * push)
+  const left = zoom >= 1
+    ? clamp(FILM_W / 2 - camera.x * FILM_W * zoom, FILM_W - FILM_W * zoom, 0)
+    : (FILM_W - FILM_W * zoom) / 2
+  const top = zoom >= 1
+    ? clamp(FILM_H / 2 - camera.y * FILM_H * zoom, FILM_H - FILM_H * zoom, 0)
+    : (FILM_H - FILM_H * zoom) / 2
   const style: CSSProperties = { position: 'absolute', display: 'block', width: FILM_W * zoom, height: FILM_H * zoom, left, top }
   return (
     <AbsoluteFill style={{ overflow: 'hidden', opacity }}>
@@ -124,8 +135,8 @@ function Stage() {
     if (shot.kind === 'bridge') {
       // The product is animating a real match underneath; a plain cross-dissolve
       // lets one representation become the other without fighting it.
-      layers.push({ shot, opacity: 1 - eased, push: 1 + 0.012 * eased })
-      layers.push({ shot: next, opacity: eased, push: 1 + 0.012 * (1 - eased) })
+      layers.push({ shot, opacity: 1 - eased, push: 1 - 0.012 * eased })
+      layers.push({ shot: next, opacity: eased, push: 1 - 0.012 * (1 - eased) })
     } else {
       // Two unrelated scenes superimposed on cream paper just reads muddy -- both are
       // light, busy and low-contrast, so a 50/50 frame is a smear rather than a blend.
@@ -137,8 +148,8 @@ function Stage() {
       // Capped below 1: at full strength the paper holds for about nine frames, which
       // reads as a flash rather than a breath. Leaving a ghost keeps the cut continuous.
       veil = 0.88 * Math.sin(Math.PI * eased)
-      layers.push({ shot, opacity: 1 - out, push: 1 + 0.075 * eased })
-      layers.push({ shot: next, opacity: incoming, push: 1 + 0.075 * (1 - eased) })
+      layers.push({ shot, opacity: 1 - out, push: 1 - 0.038 * eased })
+      layers.push({ shot: next, opacity: incoming, push: 1 - 0.038 * (1 - eased) })
     }
   } else {
     layers.push({ shot, opacity: 1, push: 1 })
