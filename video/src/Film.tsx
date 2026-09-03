@@ -171,7 +171,16 @@ function Stage() {
         <Sequence
           key={layer.shot.id}
           from={Math.round(layer.shot.filmStart * FILM_FPS)}
-          durationInFrames={Math.max(1, Math.round((layer.shot.seconds + 1) * FILM_FPS))}
+          // The closing shot runs to the end of the film, not to its own length. The
+          // film now ends on the last WORD, which is later than the last shot, and a
+          // Sequence sized to the shot left the final 3.3 seconds on empty background
+          // while the closing line was still speaking. The capture has 14 seconds of
+          // held lockup after this shot's srcEnd, so there is real footage to run on.
+          durationInFrames={
+            layer.shot.id === SHOTS.at(-1)?.id
+              ? Math.max(1, FILM_FRAMES - Math.round(layer.shot.filmStart * FILM_FPS))
+              : Math.max(1, Math.round((layer.shot.seconds + 1) * FILM_FPS))
+          }
           layout="none"
           name={`shot ${layer.shot.id}`}
         >
