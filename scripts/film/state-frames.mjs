@@ -30,8 +30,12 @@ const arg = (name, fallback) => {
 }
 /** How long after an event the app has settled. */
 const SETTLE = arg('settle', 0.7)
-/** Mean pixel difference below which two frames are "the same picture". */
-const DISTINCT = arg('distinct', 3.0)
+/**
+ * Mean pixel difference below which two EVENT frames are the same picture. Low on
+ * purpose: a change can occupy a small part of a large canvas and still be the whole
+ * point of the beat.
+ */
+const DISTINCT = arg('distinct', 0.9)
 
 if (!existsSync(FILM)) throw new Error(`missing ${FILM} -- render first`)
 rmSync(OUT, { recursive: true, force: true })
@@ -86,7 +90,12 @@ for (const moment of wanted) {
   if (previous && moment.at - previous.at < 0.34) continue
   const name = `s${String(index).padStart(3, '0')}_${shotAt(moment.at)}`
   const file = grab(moment.at, name)
-  if (previous && difference(previous.file, file) < DISTINCT) {
+  // A shot's own begin and end are always kept. Deduping them by pixel difference
+  // loses whole shots: the tutor's mark is a small purple annotation on a mostly
+  // empty 2560x1440 canvas, so it moves the mean by well under a point while being
+  // a completely different state. Only event frames are deduped, and gently.
+  const structural = moment.kind === 'shot-begin' || moment.kind === 'shot-end'
+  if (!structural && previous && difference(previous.file, file) < DISTINCT) {
     rmSync(file, { force: true })
     continue
   }
