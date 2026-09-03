@@ -338,7 +338,13 @@
       "approved": true,
       "steps": [
         {
-          "navigateScene": "gamma-probability"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "graph_integrand"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 1400
@@ -396,7 +402,13 @@
       "approved": true,
       "steps": [
         {
-          "navigateScene": "attention-geometry"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "attention_mechanism"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 1400
@@ -451,7 +463,13 @@
       "approved": true,
       "steps": [
         {
-          "navigateScene": "train-from-scratch"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "training_panel"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 780
@@ -510,7 +528,13 @@
       "approved": true,
       "steps": [
         {
-          "navigateScene": "attention-barycentrics"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "barycentric_geometry"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 780
@@ -573,7 +597,13 @@
       "approved": true,
       "steps": [
         {
-          "navigateScene": "spiral-similarity"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "geometry_construction"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 780
@@ -639,7 +669,13 @@
           "selectShot": "ramanujan"
         },
         {
-          "navigateScene": "partition-observatory"
+          "runTool": "focus_objects",
+          "input": {
+            "ids": [
+              "partition_observatory"
+            ],
+            "emphasis": "establish"
+          }
         },
         {
           "wait": 700

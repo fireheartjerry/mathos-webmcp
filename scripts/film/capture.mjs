@@ -247,6 +247,13 @@ try {
       // selectShot opens the PROJECT that owns a shot's scene, not the scene itself, so a
       // shot whose scene is the project's second one lands on the first. That is how the
       // ramanujan shot ended up performing its partition cue over the simplex picture.
+      // Force the camera with a real tool call. navigateScene is a no-op while the
+      // Director is open (navigateToScene returns early on directorOpenRef), and
+      // selectShot's own framing gets overwritten when activateProjectForScene
+      // re-opens the project underneath it. focus_objects goes through the world
+      // reducer, so nothing can quietly undo it -- and it is a visible WebMCP call,
+      // which is what this film is about anyway.
+      else if (step.runTool) { await page.evaluate(`window.__mathburstFilm.runTool(${JSON.stringify(step.runTool)}, ${JSON.stringify(step.input ?? {})}); return true`); await wait(1100) }
       else if (step.navigateScene) { await page.evaluate(`window.__mathburstFilm.navigateScene(${JSON.stringify(step.navigateScene)}); return true`); await wait(900) }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
