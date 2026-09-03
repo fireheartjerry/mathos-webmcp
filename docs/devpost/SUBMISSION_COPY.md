@@ -288,3 +288,35 @@ before registration instead of vanishing into the browser.
 The in-product inspector calls the same registered handlers, so anyone can open
 it and run any of them with no agent connected.
 ```
+
+---
+
+## Live Devpost form state (verified in the form, 2026-09-03)
+
+The four "Additional info" essays above were written against the challenge rules'
+questions. The actual Devpost form asks a different set, so those essays feed the
+story rather than a field of their own. Saved and verified in the live draft:
+
+**Project details (step 3)** — About the project: saved, 6853 characters.
+Built with: 10 tags saved. Try it out: repo URL saved.
+Video demo link: EMPTY, required.
+
+**Additional info (step 4)** — Submitter type, country, organization, app status:
+already set. What you updated during the period: saved. Testing instructions:
+saved. Public code repo: saved. AI tools used: saved. Level of learning:
+Significant. Career value: Yes.
+Live URL judges can access: EMPTY, required.
+Which agents or clients you tested the tools with: EMPTY, required.
+
+**Three fields still need Jerry.**
+
+1. **Live URL that judges can access.** No deployment exists.
+   `docs/video/FILM_V2_SPEC_TRACE.md:9` records the ChatGPT Sites deploy as not
+   yet run, and it would replace the existing Second Try site, so it needs an
+   explicit yes. The judging checklist opens with this link, and the copy invites
+   judges to open the inspector, which a repo link does not let them do.
+2. **Video demo link.** Waiting on the YouTube upload.
+3. **Which agents or clients you tested the tools with.** Only Jerry knows what
+   was actually driven end to end. The repo shows the in-product inspector and a
+   WebMCP-capable browser; it does not record an agent session, so nothing was
+   written here rather than guess at a claim judges will check.
