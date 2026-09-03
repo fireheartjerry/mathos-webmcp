@@ -278,11 +278,11 @@ export default function TrainingView({ object, world, run }: Props) {
         </div>
         <div className="training-history">
           <div className="training-history-card is-loss reveal-fade" style={{ opacity: historyT(0) }}>
-            <div className="training-card-heading"><span>LOSS · {lossHistory.length} point{lossHistory.length === 1 ? '' : 's'}</span><b>{lossHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
+            <div className="training-card-heading"><span>LOSS · {lossHistory.length} point{lossHistory.length === 1 ? '' : 's'}</span><b style={{ flexShrink: 0 }}>{lossHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
             <Sparkline values={lossHistory} tone="loss" label="Loss history" draw={sparkT} />
           </div>
           <div className="training-history-card is-probability reveal-fade" style={{ opacity: historyT(1) }}>
-            <div className="training-card-heading"><span>TARGET PROBABILITY · {probabilityHistory.length} point{probabilityHistory.length === 1 ? '' : 's'}</span><b>{probabilityHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
+            <div className="training-card-heading"><span>P(TARGET) · {probabilityHistory.length} point{probabilityHistory.length === 1 ? '' : 's'}</span><b style={{ flexShrink: 0 }}>{probabilityHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
             <Sparkline values={probabilityHistory} tone="probability" label="Target probability history" draw={sparkT} />
           </div>
         </div>

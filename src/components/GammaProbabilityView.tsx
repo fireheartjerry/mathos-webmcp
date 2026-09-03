@@ -331,7 +331,10 @@ export default function GammaProbabilityView({ object, run }: Props) {
     { x: modePx + 8, y: Math.min(plot.bottom - 14, modePeakY + 12), width: modeWidth, height: 12 },
     { x: modePx - 8 - modeWidth, y: Math.min(plot.bottom - 14, modePeakY + 12), width: modeWidth, height: 12 },
   ]
-  const modeBox = placeLabel(modeCandidates, [...binLabels.map((label) => label.box), cdfBox], plotBox)
+  // The bound handle (a filled circle, not text) is a real obstacle too: when
+  // b sits near the mode the handle and this label's default slot coincide,
+  // so it must be listed alongside the other label boxes.
+  const modeBox = placeLabel(modeCandidates, [...binLabels.map((label) => label.box), cdfBox, boundHandleBox], plotBox)
 
   const shapeField = (next: number) => commit(`Changed the shape a to ${short(next)}`, { a: next })
   const boundField = (next: number) => commit(`Moved the CDF bound b to ${short(next)}`, { b: next })

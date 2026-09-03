@@ -60,7 +60,7 @@
 .attention-view .attention-body { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: 392px minmax(0, 1fr); gap: 12px; }
 .attention-view .attention-plane-wrap { min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; gap: 8px; }
 .attention-view .attention-plane { width: 100%; height: 100%; min-height: 0; display: block; }
-.attention-view .attention-side { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 8px; }
+.attention-view .attention-side { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 4px; }
 .attention-view .attention-section-heading { display: flex; align-items: center; gap: 8px; min-width: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .attention-view .attention-section-heading > b { margin-left: auto; color: var(--graphite); font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -102,14 +102,14 @@
 
 /* matrices */
 .attention-view .attention-matrices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0; background: transparent; border: 0; }
-.attention-view .attention-matrix { min-width: 0; display: block; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.attention-view .attention-matrix { min-width: 0; display: block; margin: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
 .attention-view .attention-matrix legend { padding: 0 4px; color: var(--graphite); font: 500 13px/1 var(--serif); }
 .attention-view .attention-matrix legend sub { font-size: 10.5px; }
 .attention-view .attention-matrix-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 0; border: 0; }
 .attention-view .attention-matrix-grid input.is-hero { border-color: var(--purple); background: var(--purple-soft); font-weight: 600; }
 
 /* controls: temperature slider + value, target picker */
-.attention-view .attention-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.attention-view .attention-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .attention-view .attention-temperature { min-width: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) 58px; grid-template-rows: auto 24px; align-items: center; gap: 4px 8px; }
 .attention-view .attention-temperature > .attention-kicker { grid-column: 1 / -1; }
 .attention-view .attention-temperature input[type='range'] { min-width: 0; width: 100%; height: 24px; margin: 0; accent-color: var(--purple); cursor: pointer; }
@@ -134,9 +134,9 @@
 .attention-view .attention-score-table td.is-weight { color: var(--purple); font-weight: 600; }
 
 /* readout: context + loss on the left, next-token probabilities on the right */
-.attention-view .attention-readout { min-height: 0; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; }
-.attention-view .attention-readout-left { min-width: 0; display: grid; grid-template-rows: auto auto; gap: 8px; padding: 0; background: transparent; }
-.attention-view .attention-context, .attention-view .attention-loss, .attention-view .attention-probability-list { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 4px; padding: 8px; background: #f7f5ee; border-radius: 6px; }
+.attention-view .attention-readout { min-height: 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 8px; }
+.attention-view .attention-readout-left { min-width: 0; display: grid; grid-template-rows: auto auto; gap: 4px; padding: 0; background: transparent; }
+.attention-view .attention-context, .attention-view .attention-loss, .attention-view .attention-probability-list { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 4px; padding: 4px 8px; background: #f7f5ee; border-radius: 6px; }
 .attention-view .attention-context strong { color: var(--graphite); font: 600 11px/1.2 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .attention-view .attention-loss > strong { color: var(--orange); font: 600 18px/1 var(--mono); font-variant-numeric: tabular-nums; }
 .attention-view .attention-loss > span:not(.attention-kicker) { color: var(--muted); font: 11px/1.3 var(--mono); }
