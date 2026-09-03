@@ -112,6 +112,52 @@ const quietPresence: AgentPresenceState = { visible: false, x: 0, y: 0, label: '
  * camera is the fallback while the frame is missing (the overview, a blank
  * project, or the first paint before the world hydrates).
  */
+/**
+ * The canvas is not all usable. Fixed chrome floats over it -- the activity rail
+ * and zoom controls bottom-right, the project navigator along the bottom, the
+ * WebMCP ledger tab on the left -- and content centred in the full canvas ends up
+ * underneath them. A frame review of the film found this in 25 places: the
+ * activity rail clipping a table's sum to "1.00", the "train 1 step" button cut to
+ * "train 1 ste" at the right edge, panel titles sliced by an overlay.
+ *
+ * Framing against this inset rect instead puts the content where nothing covers it.
+ * The insets are read from the live chrome so they cannot drift from the CSS.
+ */
+const chromeInsets = () => {
+  if (typeof document === 'undefined') return { left: 0, right: 0, top: 0, bottom: 0 }
+  const canvas = document.querySelector('.world-canvas')?.getBoundingClientRect()
+  if (!canvas) return { left: 0, right: 0, top: 0, bottom: 0 }
+  const measure = (selector: string) => {
+    const element = document.querySelector(selector)
+    if (!element) return null
+    const style = getComputedStyle(element)
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return null
+    const rect = element.getBoundingClientRect()
+    return rect.width > 4 && rect.height > 4 ? rect : null
+  }
+  let right = 0
+  let bottom = 0
+  let left = 0
+  for (const selector of ['.activity-rail', '.zoom-controls', '.animation-panel']) {
+    const rect = measure(selector)
+    if (!rect) continue
+    right = Math.max(right, canvas.right - rect.left)
+    bottom = Math.max(bottom, canvas.bottom - rect.top)
+  }
+  const navigator = measure('.personal-project-navigator')
+  if (navigator) bottom = Math.max(bottom, canvas.bottom - navigator.top)
+  const ledger = measure('.tool-ledger')
+  if (ledger) left = Math.max(left, ledger.right - canvas.left)
+  // A little air beyond the chrome itself, and never let the insets eat the canvas.
+  const gutter = 16
+  return {
+    left: Math.min(canvas.width * 0.25, Math.max(0, left) + (left ? gutter : 0)),
+    right: Math.min(canvas.width * 0.3, Math.max(0, right) + (right ? gutter : 0)),
+    top: 0,
+    bottom: Math.min(canvas.height * 0.28, Math.max(0, bottom) + (bottom ? gutter : 0)),
+  }
+}
+
 const cameraViewportForWorld = (
   scene: CatalogSceneId,
   width: number,
@@ -125,13 +171,17 @@ const cameraViewportForWorld = (
   // Pad by the same fraction on both axes so a wide frame and a tall frame sit
   // in the picture identically.
   const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.06))
+  const inset = chromeInsets()
+  const usableWidth = Math.max(120, width - inset.left - inset.right)
+  const usableHeight = Math.max(120, height - inset.top - inset.bottom)
   const zoom = clampZoom(Math.min(
-    Math.max(1, width - padding * 2) / frame.bounds.width,
-    Math.max(1, height - padding * 2) / frame.bounds.height,
+    Math.max(1, usableWidth - padding * 2) / frame.bounds.width,
+    Math.max(1, usableHeight - padding * 2) / frame.bounds.height,
   ))
+  // Centre on the usable rect, not the canvas, so nothing lands under the chrome.
   return {
-    x: width / 2 - (frame.bounds.x + frame.bounds.width / 2) * zoom,
-    y: height / 2 - (frame.bounds.y + frame.bounds.height / 2) * zoom,
+    x: inset.left + usableWidth / 2 - (frame.bounds.x + frame.bounds.width / 2) * zoom,
+    y: inset.top + usableHeight / 2 - (frame.bounds.y + frame.bounds.height / 2) * zoom,
     zoom,
   }
 }
@@ -1741,15 +1791,16 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       height: bounds.height + margin * 2,
     }
     const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.04))
-    const availableWidth = Math.max(1, width - padding * 2)
-    const availableHeight = Math.max(1, height - padding * 2)
+    const inset = chromeInsets()
+    const availableWidth = Math.max(1, width - inset.left - inset.right - padding * 2)
+    const availableHeight = Math.max(1, height - inset.top - inset.bottom - padding * 2)
     const rawZoom = bounds.width > 0 && bounds.height > 0
       ? Math.min(availableWidth / bounds.width, availableHeight / bounds.height)
       : 1
     const zoom = clampZoom(rawZoom)
     return {
-      x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
-      y: height / 2 - (bounds.y + bounds.height / 2) * zoom,
+      x: inset.left + (width - inset.left - inset.right) / 2 - (bounds.x + bounds.width / 2) * zoom,
+      y: inset.top + (height - inset.top - inset.bottom) / 2 - (bounds.y + bounds.height / 2) * zoom,
       zoom,
     }
   }
