@@ -38,6 +38,9 @@ export type DemoCueId =
   | 'simplex-tutor-weight'
   | 'partition-live'
   | 'partition-reveal'
+  | 'parity-shapes'
+  | 'parity-shapes-match'
+  | 'parity-ink-erase'
   | 'webmcp-crescendo'
   | 'one-world'
 

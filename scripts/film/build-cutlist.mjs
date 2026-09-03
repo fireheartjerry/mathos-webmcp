@@ -31,10 +31,15 @@ if (!existsSync(TIMELINE_FILE)) throw new Error(`missing ${TIMELINE_FILE} -- run
 const timeline = JSON.parse(readFileSync(TIMELINE_FILE, 'utf8'))
 const manifest = JSON.parse(readFileSync(MANIFEST_FILE, 'utf8'))
 
-/** How long each kind of join takes, and how much of the outgoing shot it overlaps. */
+/**
+ * How long each kind of join takes, and how much of the outgoing shot it overlaps.
+ * Both are zero: the film cuts straight between shots. An overlap only exists to give
+ * a transition something to blend across, and there is no transition any more, so a
+ * non-zero value here would silently eat the end of every outgoing shot instead.
+ */
 const TRANSITION = {
-  camera: 0.68,
-  bridge: 0.40,
+  camera: 0,
+  bridge: 0,
 }
 /** Never cut a shot shorter than this, however aggressive the excision maths gets. */
 const MIN_SHOT_SECONDS = 1.6
@@ -65,6 +70,13 @@ for (const clip of spec.clips) {
 const TAIL_ROOM = 3.2
 /** Never remove more than this share of a shot; beyond it we are cutting the beat. */
 const MAX_TRIM_SHARE = 0.34
+/**
+ * The browser waits for real reducer commits and camera settles during capture, so
+ * the measured take is intentionally slower than the finished film. A modest global
+ * speed-up preserves every captured action while recovering the time those waits add.
+ * Narration is mixed separately at normal speed.
+ */
+const PLAYBACK_RATE = 1.2
 
 const shots = []
 for (let index = 0; index < timeline.shots.length; index += 1) {
@@ -92,7 +104,16 @@ for (let index = 0; index < timeline.shots.length; index += 1) {
     if (cap < srcEnd) srcEnd = cap
   }
 
-  shots.push({ id: shot.id, title: shot.title, srcStart, srcEnd, kind, excised: +(srcStart - shot.start).toFixed(3), trimmed: +(shot.end - srcEnd).toFixed(3) })
+  shots.push({
+    id: shot.id,
+    title: shot.title,
+    srcStart,
+    srcEnd,
+    kind,
+    playbackRate: PLAYBACK_RATE,
+    excised: +(srcStart - shot.start).toFixed(3),
+    trimmed: +(shot.end - srcEnd).toFixed(3),
+  })
 }
 
 // Lay the segments out with each transition overlapping the two shots it joins.
@@ -100,7 +121,7 @@ let cursor = 0
 for (let index = 0; index < shots.length; index += 1) {
   const shot = shots[index]
   shot.filmStart = +cursor.toFixed(3)
-  shot.seconds = +(shot.srcEnd - shot.srcStart).toFixed(3)
+  shot.seconds = +((shot.srcEnd - shot.srcStart) / shot.playbackRate).toFixed(3)
   shot.filmEnd = +(shot.filmStart + shot.seconds).toFixed(3)
   const overlap = index < shots.length - 1 ? (TRANSITION[shot.kind] ?? 0) : 0
   shot.transitionSeconds = overlap

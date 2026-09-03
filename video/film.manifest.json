@@ -24,9 +24,91 @@
   },
   "shots": [
     {
+      "id": "new-project",
+      "title": "A new project",
+      "seconds": 12,
+      "stage": "gallery",
+      "approved": false,
+      "steps": [
+        {
+          "pointer": {
+            "x": 0.5,
+            "y": 0.56
+          }
+        },
+        {
+          "wait": 1200
+        },
+        {
+          "click": ".new-project-button"
+        },
+        {
+          "waitFor": "#new-project-title"
+        },
+        {
+          "wait": 700
+        },
+        {
+          "type": "#new-project-title",
+          "value": "Pipeline",
+          "settleMs": 500,
+          "enter": false
+        },
+        {
+          "wait": 500
+        },
+        {
+          "click": ".project-template-grid button",
+          "text": "Blank canvas"
+        },
+        {
+          "wait": 700
+        },
+        {
+          "click": ".project-create-submit"
+        },
+        {
+          "waitFor": ".tool-ledger"
+        },
+        {
+          "wait": 2200
+        },
+        {
+          "pointer": {
+            "x": 0.03,
+            "y": 0.42
+          }
+        },
+        {
+          "wait": 1200
+        },
+        {
+          "click": ".wordmark"
+        },
+        {
+          "wait": 1100
+        }
+      ],
+      "camera": [
+        {
+          "at": 0,
+          "zoom": 1.04,
+          "x": 0.5,
+          "y": 0.5
+        },
+        {
+          "at": 12,
+          "zoom": 1,
+          "x": 0.5,
+          "y": 0.5
+        }
+      ],
+      "transitionOut": "camera"
+    },
+    {
       "id": "cold-open",
       "title": "What this is",
-      "seconds": 38,
+      "seconds": 22,
       "stage": "gallery",
       "approved": false,
       "steps": [
@@ -40,28 +122,16 @@
           "wait": 3200
         },
         {
-          "pointer": {
-            "x": 0.31,
-            "y": 0.44
-          }
+          "wait": 1200
         },
         {
-          "wait": 2600
-        },
-        {
-          "pointer": {
-            "x": 0.62,
-            "y": 0.44
-          }
-        },
-        {
-          "wait": 2400
+          "wait": 1200
         },
         {
           "click": "[aria-label=\"Open Gamma Function\"]"
         },
         {
-          "wait": 2448
+          "wait": 1200
         },
         {
           "pointer": {
@@ -94,7 +164,7 @@
           "click": ".rail-pin"
         },
         {
-          "wait": 2600
+          "wait": 1200
         },
         {
           "click": ".webmcp-inspector-trigger"
@@ -103,7 +173,7 @@
           "waitFor": ".webmcp-launcher"
         },
         {
-          "wait": 3024
+          "wait": 1200
         },
         {
           "pointer": {
@@ -154,7 +224,7 @@
         },
         {
           "at": 36,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }
@@ -189,7 +259,7 @@
         },
         {
           "at": 5,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }
@@ -215,7 +285,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -253,7 +323,7 @@
         },
         {
           "at": 3,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }
@@ -263,7 +333,7 @@
     {
       "id": "reconstruction",
       "title": "Ink becomes semantic math",
-      "seconds": 11,
+      "seconds": 9,
       "approved": true,
       "steps": [
         {
@@ -306,7 +376,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -334,7 +404,7 @@
     {
       "id": "gamma-probability",
       "title": "Area becomes probability",
-      "seconds": 19,
+      "seconds": 16,
       "approved": true,
       "steps": [
         {
@@ -376,7 +446,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -398,7 +468,7 @@
     {
       "id": "attention",
       "title": "Attention geometry",
-      "seconds": 12,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -431,7 +501,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -449,7 +519,7 @@
         },
         {
           "at": 19,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }
@@ -459,7 +529,7 @@
     {
       "id": "training-step",
       "title": "One honest training step",
-      "seconds": 13,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -508,7 +578,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -577,7 +647,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -593,7 +663,7 @@
     {
       "id": "homothety",
       "title": "Homothety and spiral similarity",
-      "seconds": 12,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -646,7 +716,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -660,9 +730,190 @@
       "transitionOut": "bridge"
     },
     {
+      "id": "parity-shapes",
+      "title": "The same shape, from both sides",
+      "seconds": 15,
+      "stage": "gallery",
+      "approved": false,
+      "steps": [
+        {
+          "closeDirector": true
+        },
+        {
+          "openProject": "gamma-lab"
+        },
+        {
+          "navigateScene": "gamma-probability"
+        },
+        {
+          "wait": 900
+        },
+        {
+          "cue": "parity-shapes"
+        },
+        {
+          "wait": 600
+        },
+        {
+          "click": ".rail-button[aria-label=Select]"
+        },
+        {
+          "click": ".world-object.kind-shape:has(ellipse)"
+        },
+        {
+          "waitFor": "[data-handle=se]"
+        },
+        {
+          "drag": "[data-handle=se]",
+          "px": {
+            "dx": 64,
+            "dy": 38
+          },
+          "durationMs": 1100
+        },
+        {
+          "wait": 350
+        },
+        {
+          "drag": "[data-handle=rotate]",
+          "px": {
+            "dx": 54,
+            "dy": 0
+          },
+          "durationMs": 1000
+        },
+        {
+          "wait": 400
+        },
+        {
+          "cue": "parity-shapes-match"
+        },
+        {
+          "wait": 500
+        },
+        {
+          "pointer": {
+            "x": 0.55,
+            "y": 0.94
+          }
+        }
+      ],
+      "camera": [
+        {
+          "at": 0,
+          "zoom": 1,
+          "x": 0.5,
+          "y": 0.5
+        },
+        {
+          "at": 15,
+          "zoom": 1.04,
+          "x": 0.52,
+          "y": 0.48
+        }
+      ],
+      "transitionOut": "camera"
+    },
+    {
+      "id": "parity-ink",
+      "title": "Undo works on me too",
+      "seconds": 16,
+      "stage": "gallery",
+      "approved": false,
+      "steps": [
+        {
+          "click": ".rail-button[aria-label=Highlighter]"
+        },
+        {
+          "wait": 400
+        },
+        {
+          "drag": "[data-object-id=\"graph_integrand\"] tr.is-softmax th",
+          "px": {
+            "dx": 320,
+            "dy": 0
+          },
+          "durationMs": 1100
+        },
+        {
+          "wait": 600
+        },
+        {
+          "click": ".rail-button[aria-label=Pen]"
+        },
+        {
+          "drag": "[data-object-id=\"gamma_bridge_equation\"]",
+          "px": {
+            "dx": 150,
+            "dy": -46
+          },
+          "durationMs": 900
+        },
+        {
+          "wait": 400
+        },
+        {
+          "click": ".rail-button[aria-label=Eraser]"
+        },
+        {
+          "drag": "[data-object-id=\"gamma_bridge_equation\"]",
+          "px": {
+            "dx": 150,
+            "dy": -46
+          },
+          "durationMs": 900
+        },
+        {
+          "wait": 500
+        },
+        {
+          "click": ".rail-button[aria-label=Select]"
+        },
+        {
+          "navigateScene": "gamma-clinic"
+        },
+        {
+          "wait": 900
+        },
+        {
+          "cue": "parity-ink-erase"
+        },
+        {
+          "wait": 1400
+        },
+        {
+          "openDirector": true
+        },
+        {
+          "wait": 500
+        }
+      ],
+      "camera": [
+        {
+          "at": 0,
+          "zoom": 1.04,
+          "x": 0.52,
+          "y": 0.48
+        },
+        {
+          "at": 9,
+          "zoom": 1.06,
+          "x": 0.44,
+          "y": 0.46
+        },
+        {
+          "at": 16,
+          "zoom": 1,
+          "x": 0.5,
+          "y": 0.5
+        }
+      ],
+      "transitionOut": "camera"
+    },
+    {
       "id": "ramanujan",
       "title": "Integer lattice to Ramanujan",
-      "seconds": 13,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -707,7 +958,7 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
@@ -729,7 +980,7 @@
     {
       "id": "webmcp-crescendo",
       "title": "WebMCP crescendo",
-      "seconds": 13,
+      "seconds": 10,
       "approved": true,
       "steps": [
         {
@@ -754,13 +1005,13 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
         {
           "at": 11,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }
@@ -770,7 +1021,7 @@
     {
       "id": "one-world",
       "title": "One mathematical world",
-      "seconds": 14,
+      "seconds": 11,
       "approved": true,
       "steps": [
         {
@@ -786,13 +1037,13 @@
       "camera": [
         {
           "at": 0,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         },
         {
           "at": 8,
-          "zoom": 1.0,
+          "zoom": 1,
           "x": 0.5,
           "y": 0.5
         }

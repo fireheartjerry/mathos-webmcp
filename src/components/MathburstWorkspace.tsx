@@ -138,7 +138,10 @@ const chromeInsets = () => {
   let right = 0
   let bottom = 0
   let left = 0
-  for (const selector of ['.activity-rail', '.zoom-controls', '.animation-panel']) {
+  // The agent console is docked to the right in film mode and the progressive
+  // inspector floats over the bottom of the canvas. Neither was measured, so a
+  // framed object was fitted to a box that these two were sitting on top of.
+  for (const selector of ['.activity-rail', '.zoom-controls', '.animation-panel', '.agent-console']) {
     const rect = measure(selector)
     if (!rect) continue
     right = Math.max(right, canvas.right - rect.left)
@@ -148,6 +151,8 @@ const chromeInsets = () => {
   if (navigator) bottom = Math.max(bottom, canvas.bottom - navigator.top)
   const ledger = measure('.tool-ledger')
   if (ledger) left = Math.max(left, ledger.right - canvas.left)
+  const inspector = measure('.progressive-inspector')
+  if (inspector) bottom = Math.max(bottom, canvas.bottom - inspector.top)
   // A little air beyond the chrome itself, and never let the insets eat the canvas.
   const gutter = 16
   return {
@@ -1907,6 +1912,31 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
         selectShot: selectDirectorShot,
         previewNext: previewNextDirectorShot,
         runCue: (cue: DemoCueId) => runDemoCue(cue),
+        /**
+         * Draw the learner's Gamma recurrence, by hand, as a HUMAN commit.
+         *
+         * The replay runs in a blank Pipeline project, so there was no ink on the
+         * canvas for the agent to read: `get_objects {kinds:['ink']}` returned zero
+         * and the whole "read the handwriting, mark the lost sign" opening silently
+         * did nothing. The script only ever described the writing in a console note.
+         * This puts the real captured strokes on the canvas, attributed to the
+         * learner, before the agent starts reading.
+         */
+        writeOpeningInk: () => {
+          const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
+          const ink = handwritingSampleToInk(samples, 'opening-attempt', {
+            id: 'replay_opening_attempt',
+            bounds: { x: 120, y: 210, width: 900, height: 250 },
+            color: '#171713',
+            width: 3.4,
+            rotation: 0,
+            author: 'human',
+            opacity: 1,
+          })
+          if (!ink) return false
+          run(humanAction('Wrote the Gamma recurrence by hand', [{ type: 'put', object: ink }]))
+          return true
+        },
         runTool: (name: string, input: unknown) => webMcpTools.find((tool) => tool.name === name)?.execute(input),
         navigateScene: navigateToScene,
         undo: () => history('undo'),

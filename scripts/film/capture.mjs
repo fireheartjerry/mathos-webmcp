@@ -16,7 +16,8 @@ import { resolve } from 'node:path'
 import { connectPage, launchChrome, wait } from './chrome.mjs'
 
 const ROOT = resolve('.')
-const MANIFEST = JSON.parse(readFileSync(resolve(ROOT, 'video/film.manifest.json'), 'utf8'))
+const MANIFEST_FILE = resolve(ROOT, process.env.FILM_MANIFEST ?? 'video/film.manifest.json')
+const MANIFEST = JSON.parse(readFileSync(MANIFEST_FILE, 'utf8'))
 const FRAMES = resolve(ROOT, '.film/frames')
 const OUT_DIR = resolve(ROOT, process.env.FILM_OUT ?? 'video/public/film')
 const CAPTURE = resolve(OUT_DIR, 'capture.mp4')
@@ -99,6 +100,12 @@ try {
       const element = ${text ? `candidates.find((item) => (item.textContent || '').includes(${JSON.stringify(text)}))` : 'candidates[0]'}
       if (!element) return null
       const rect = element.getBoundingClientRect()
+      // A display:none element still measures, as an all-zero rect. That rect is a
+      // truthy object, so rectOf's stability loop compares 0 against 0, returns
+      // immediately, and the caller clicks screen coordinate (0, 0) believing it hit
+      // the target. The gallery keeps .world-canvas and .tool-rail in the DOM while
+      // hidden, so this is reachable. Treat a zero-area rect as not present.
+      if (rect.width === 0 && rect.height === 0) return null
       const svg = element.closest('svg')
       const viewBox = svg?.getAttribute('viewBox')?.split(' ').map(Number)
       return { x: rect.left, y: rect.top, width: rect.width, height: rect.height, svgScale: svg && viewBox ? svg.getBoundingClientRect().width / viewBox[2] : 1 }
@@ -165,7 +172,13 @@ try {
     await mouse('mouseReleased', { button: 'left', buttons: 0, clickCount: 1 })
     await wait(160)
   }
-  const typeInto = async (selector, value, settleMs = 700) => {
+  /**
+   * `enter` is optional because Enter means opposite things in the two places this is
+   * used. Renaming a frame commits on Enter, but the new-project dialog is a <form>, so
+   * Enter there submits it early and the cursor never reaches the template tile or the
+   * create button.
+   */
+  const typeInto = async (selector, value, settleMs = 700, enter = true) => {
     await click(selector)
     await page.evaluate('document.activeElement?.select?.(); return true')
     await wait(220)
@@ -174,9 +187,37 @@ try {
       await wait(140)
     }
     await wait(settleMs)
-    await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
-    await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+    if (enter) {
+      await page.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
+      await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+      await wait(120)
+    }
+  }
+  /** A frame title only opens on double click, and `click` always sends clickCount 1. */
+  const doubleClick = async (selector, text) => {
+    const rect = await rectOf(selector, text)
+    const x = rect.x + rect.width / 2
+    const y = rect.y + rect.height / 2
+    await moveTo(x, y, travel(x, y))
     await wait(120)
+    for (const clickCount of [1, 2]) {
+      await mouse('mousePressed', { button: 'left', buttons: 1, clickCount })
+      await wait(40)
+      await mouse('mouseReleased', { button: 'left', buttons: 0, clickCount })
+      await wait(60)
+    }
+    await wait(160)
+  }
+  /** Click a point on the canvas rather than an element: placing a frame needs a spot. */
+  const clickAt = async (fx, fy) => {
+    const x = WIDTH * fx
+    const y = HEIGHT * fy
+    await moveTo(x, y, travel(x, y))
+    await wait(120)
+    await mouse('mousePressed', { button: 'left', buttons: 1, clickCount: 1 })
+    await wait(90)
+    await mouse('mouseReleased', { button: 'left', buttons: 0, clickCount: 1 })
+    await wait(140)
   }
   const activityCount = () => page.evaluate('const w = window.__mathburstFilm.getWorld(); return { count: w.activity.length, last: w.activity.at(-1) ? { source: w.activity.at(-1).action.source, summary: w.activity.at(-1).action.summary } : null }')
   const awaitIdle = async (timeoutMs = 60_000) => {
@@ -231,11 +272,13 @@ try {
     for (const step of shot.steps ?? []) {
       if (step.wait) await wait(step.wait)
       else if (step.cue) { await page.evaluate(`window.__mathburstFilm.runCue(${JSON.stringify(step.cue)}); return true`); await wait(200); await awaitIdle() }
+      else if (step.doubleClick) await doubleClick(step.doubleClick, step.text)
+      else if (step.clickAt) await clickAt(step.clickAt.x, step.clickAt.y)
       else if (step.click) await click(step.click, step.text)
       else if (step.drag && step.px) await dragBy(step.drag, step.px.dx, step.px.dy, step.durationMs)
       else if (step.drag && step.svgUnits) { const rect = await rectOf(step.drag); await dragBy(step.drag, step.svgUnits.dx * rect.svgScale, step.svgUnits.dy * rect.svgScale, step.durationMs) }
       else if (step.slider) await slider(step.slider, step.value, step.durationMs)
-      else if (step.type) await typeInto(step.type, step.value, step.settleMs)
+      else if (step.type) await typeInto(step.type, step.value, step.settleMs, step.enter !== false)
       else if (step.pointer) await moveTo(WIDTH * step.pointer.x, HEIGHT * step.pointer.y, 700)
       else if (step.collapseActivity !== undefined) await page.evaluate(`const t = document.querySelector('.activity-toggle'); if (t && (t.getAttribute('aria-expanded') === 'true') === ${Boolean(step.collapseActivity)}) t.click(); return true`)
       else if (step.selectShot) await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(step.selectShot)}); return true`)
@@ -244,6 +287,8 @@ try {
       else if (step.openGallery) { await page.evaluate('window.__mathburstFilm.openGallery(); return true'); await wait(700) }
       else if (step.openProject) { await page.evaluate(`window.__mathburstFilm.openProject(${JSON.stringify(step.openProject)}); return true`); await wait(900) }
       else if (step.openDirector) { await page.evaluate('window.__mathburstFilm.openDirector(); return true'); await wait(500) }
+      else if (step.writeInk) { await page.evaluate('return Boolean(window.__mathburstFilm.writeOpeningInk())'); await wait(step.wait ?? 1400) }
+      else if (step.closeDirector) { await page.evaluate('window.__mathburstFilm.closeDirector(); return true'); await wait(500) }
       // selectShot opens the PROJECT that owns a shot's scene, not the scene itself, so a
       // shot whose scene is the project's second one lands on the first. That is how the
       // ramanujan shot ended up performing its partition cue over the simplex picture.
@@ -255,6 +300,26 @@ try {
       // which is what this film is about anyway.
       else if (step.runTool) { await page.evaluate(`window.__mathburstFilm.runTool(${JSON.stringify(step.runTool)}, ${JSON.stringify(step.input ?? {})}); return true`); await wait(1100) }
       else if (step.navigateScene) { await page.evaluate(`window.__mathburstFilm.navigateScene(${JSON.stringify(step.navigateScene)}); return true`); await wait(900) }
+      else if (step.runReplay) {
+        await click('.console-trigger')
+        await wait(500)
+        await click('.agent-console-controls button[aria-label="Run"]')
+        const deadline = Date.now() + (step.timeoutMs ?? 150_000)
+        while (Date.now() < deadline) {
+          const state = await page.evaluate(`return {
+            status: document.querySelector('.agent-console')?.getAttribute('data-status'),
+            proposal: Boolean(document.querySelector('.agent-console-proposal .is-accept:not(:disabled)')),
+          }`)
+          if (state.proposal) {
+            await click('.agent-console-proposal .is-accept:not(:disabled)')
+            await wait(350)
+          } else if (state.status === 'done') break
+          else if (state.status === 'stopped') throw new Error('Agent replay stopped before completion')
+          else await wait(120)
+        }
+        const finished = await page.evaluate(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'done'`)
+        if (!finished) throw new Error('Timed out waiting for Agent replay')
+      }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
     const elapsed = now() - takeStart - shotStart

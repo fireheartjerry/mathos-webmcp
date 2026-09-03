@@ -13,22 +13,22 @@
       "id": "01-what",
       "act": 0,
       "text": "This is Mathburst. An infinite canvas where a student and an AI tutor do mathematics inside the same document.",
-      "shot": "cold-open",
-      "offset": 1.2
+      "shot": "new-project",
+      "offset": 1.4
     },
     {
       "id": "02-problem",
       "act": 0,
-      "text": "Today a tutor can only talk about your work. Your actual reasoning is trapped in a photograph, or a canvas it has no way to reach. So it explains around the problem instead of touching it.",
+      "text": "Today a tutor can only talk about your work. Your reasoning sits in a photograph it cannot reach, so it explains around the problem instead of touching it.",
       "shot": "cold-open",
-      "offset": 10
+      "offset": 0.8
     },
     {
       "id": "03-webmcp",
       "act": 0,
-      "text": "Mathburst registers forty-eight WebMCP tools on the page itself. The tutor calls them the way you use the toolbar: the same reducer, the same history. Every edit it makes is attributed, visible, and undoable.",
+      "text": "Mathburst registers forty-eight WebMCP tools on the page. The tutor calls them the way you use the toolbar: one reducer, one history.",
       "shot": "cold-open",
-      "offset": 21
+      "offset": 11.5
     },
     {
       "id": "04-handwriting",
@@ -87,6 +87,20 @@
       "offset": 1.2
     },
     {
+      "id": "13-parity-shape",
+      "act": 5,
+      "text": "The tutor rings the density with create shape. Then the student takes that same ellipse by its handles and turns it.",
+      "shot": "parity-shapes",
+      "offset": 1
+    },
+    {
+      "id": "13b-parity-ink",
+      "act": 5,
+      "text": "The student highlights, draws, erases. Then the tutor erases the circle it drew itself, and one undo brings it back. [calm] Undo works on the tutor too.",
+      "shot": "parity-ink",
+      "offset": 1.2
+    },
+    {
       "id": "12-barycentric",
       "act": 4,
       "text": "P is a weighted average of A, B and C. Weights that sum to one, like attention weights. So P glides to them.",
@@ -110,14 +124,14 @@
     {
       "id": "16-isolation",
       "act": 8,
-      "text": "A second project opens, untouched. Isolation, on camera.",
+      "text": "A graph, a construction, an edit. Then three undos walk the page backwards.",
       "shot": "webmcp-crescendo",
       "offset": 7.2
     },
     {
       "id": "17-close",
       "act": 8,
-      "text": "Forty-eight tools registered on the page. Every tutor edit you just watched went through one of them. [calm] The student's edits reached the same reducer. One history. One keystroke reverses either side. Every agent can enter.",
+      "text": "Forty-eight tools registered on the page. Every tutor edit you just saw went through one of them, and the student reached the same reducer. [calm] One history holds them both.",
       "shot": "one-world",
       "offset": 0.15
     }

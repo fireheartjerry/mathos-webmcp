@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "output": {
+    "width": 2560,
+    "height": 1440,
+    "fps": 60,
+    "maxSeconds": 180
+  },
+  "product": {
+    "url": "http://localhost:3000/?film=1",
+    "resetStorage": true,
+    "chromePosition": "1707,0"
+  },
+  "narration": {
+    "voice": "en-US-AndrewMultilingualNeural",
+    "rate": "-6%",
+    "pitch": "-2Hz",
+    "gainDb": -1
+  },
+  "music": {
+    "gainDb": -16,
+    "duckDb": -7,
+    "seed": 7
+  },
+  "shots": [
+    {
+      "id": "new-project",
+      "title": "Create Pipeline",
+      "seconds": 10,
+      "stage": "gallery",
+      "steps": [
+        {
+          "pointer": {
+            "x": 0.5,
+            "y": 0.56
+          }
+        },
+        {
+          "wait": 500
+        },
+        {
+          "click": ".new-project-button"
+        },
+        {
+          "waitFor": "#new-project-title"
+        },
+        {
+          "type": "#new-project-title",
+          "value": "Pipeline",
+          "settleMs": 350,
+          "enter": false
+        },
+        {
+          "click": ".project-template-grid button",
+          "text": "Blank canvas"
+        },
+        {
+          "click": ".project-create-submit"
+        },
+        {
+          "waitFor": ".tool-ledger"
+        },
+        {
+          "wait": 1200
+        }
+      ],
+      "transitionOut": "bridge"
+    },
+    {
+      "id": "agent-replay",
+      "title": "One shared mathematical world",
+      "seconds": 132,
+      "steps": [
+        {
+          "click": ".rail-pin"
+        },
+        {
+          "wait": 500
+        },
+        {
+          "writeInk": true
+        },
+        {
+          "wait": 1500
+        },
+        {
+          "runReplay": true,
+          "timeoutMs": 150000
+        },
+        {
+          "wait": 3200
+        }
+      ],
+      "transitionOut": "end"
+    }
+  ],
+  "narrationSpec": "scripts/film/narration-v3.json"
+}

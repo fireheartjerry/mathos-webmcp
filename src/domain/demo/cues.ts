@@ -295,6 +295,73 @@ const gammaTutorShapeSteps: CueThunk[] = [
 ]
 
 // ---------------------------------------------------------------------------
+// Act 5 · parity beats
+//
+// The storyboard's Act 5 exists to show that the agent's verbs and the learner's
+// verbs are the same verbs. Shapes, arrows, ink and the eraser are the four the
+// film never demonstrated, and the last of them carries the thesis: the agent
+// erases its OWN mark, and one undo brings it back.
+// ---------------------------------------------------------------------------
+
+/**
+ * The agent's own shapes, found by kind and author rather than by a minted id:
+ * `create_shape` mints a uuid, so the manifest cannot name it and a later
+ * `edit_shape` has to rediscover it from the live world.
+ */
+const agentShape = (world: WorldState, shape: 'polygon' | 'ellipse'): Extract<WorldObject, { kind: 'shape' }> | null => {
+  for (const id of world.order) {
+    const object = world.objects[id]
+    if (object?.kind === 'shape' && object.shape === shape && object.author === 'agent') return object
+  }
+  return null
+}
+
+const parityShapeSteps: CueThunk[] = [
+  (world) => (world.objects[OPENING_FRAME_ID] ? tool('get_objects', { ids: [OPENING_FRAME_ID] }) : null),
+  frameShot([HERO_GRAPH_ID], 'establish'),
+  (world) => (agentShape(world, 'ellipse')
+    ? null
+    : tool('create_shape', {
+      shape: 'ellipse',
+      summary: 'Ringed the density widget',
+      bounds: { x: 235, y: 168, width: 830, height: 424 },
+      fill: 'none',
+      stroke: '#7c5cff',
+      strokeWidth: 3,
+    })),
+]
+
+/**
+ * Runs after the learner has resized and rotated the agent's ellipse by hand.
+ * Matching the learner's graphite proves the agent is editing the same object
+ * through the same operation, not drawing a second one on top.
+ */
+const parityShapeMatchSteps: CueThunk[] = [
+  (world) => {
+    const ellipse = agentShape(world, 'ellipse')
+    if (!ellipse) return null
+    const graphite = '#171713'
+    return ellipse.stroke === graphite ? null : tool('edit_shape', { objectId: ellipse.id, stroke: graphite, strokeWidth: 3 })
+  },
+]
+
+/**
+ * The thesis. `erase_ink` removes the circle the agent itself drew in Act 1, then
+ * one `step_history` undo restores it.
+ *
+ * Both steps must stay inside ONE cue. The cue runner appends a `Cleared selection`
+ * commit when a cue finishes, and `step_history` undoes the latest commit, so an
+ * undo issued as a separate manifest step would reverse the selection clear and
+ * leave the circle erased.
+ */
+const parityInkEraseSteps: CueThunk[] = [
+  (world) => (world.objects.opening_annotation_circle ? frameShot(['opening_annotation_circle'], 'detail')(world) : null),
+  (world) => (world.objects.opening_annotation_circle ? tool('erase_ink', { ids: ['opening_annotation_circle'] }) : null),
+  constant(pause(900)),
+  constant(tool('step_history', { direction: 'undo' })),
+]
+
+// ---------------------------------------------------------------------------
 // Shots 6–7 · attention and training
 // ---------------------------------------------------------------------------
 
@@ -620,6 +687,12 @@ export function prepareDemoCue(id: DemoCueId, world: WorldState, context: CueCon
       return { steps: [partitionRestStep], selectIds: [NUMBER_THEORY_ID] }
     case 'partition-reveal':
       return { steps: partitionRevealSteps, selectIds: [NUMBER_THEORY_ID] }
+    case 'parity-shapes':
+      return { steps: parityShapeSteps, selectIds: [] }
+    case 'parity-shapes-match':
+      return { steps: parityShapeMatchSteps, selectIds: [] }
+    case 'parity-ink-erase':
+      return { steps: parityInkEraseSteps, selectIds: [] }
     case 'webmcp-crescendo':
       return { steps: crescendoSteps(context.activeProject), selectIds: [], pace: 0.45 }
     case 'one-world':

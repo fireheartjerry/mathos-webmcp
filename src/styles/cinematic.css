@@ -525,3 +525,34 @@
 .mathburst-app[data-film='true'] .cinematic-lockup.is-final small strong { font-size: clamp(13px, 1vw, 26px); }
 .mathburst-app[data-film='true'] .cinematic-lockup.is-final small i { width: 11px; height: 11px; }
 
+
+/* ---------------------------------------------------------------------------
+   Film layout. The console is the best thing on screen and the learner asked to
+   keep it, but docked top-centre it sits directly on the work. In film mode the
+   right column carries the agent's own chrome and the left column carries the
+   evidence (ledger, toasts, activity, timelines), which is where the spec always
+   wanted them. That leaves one uninterrupted band in the middle for the maths,
+   and chromeInsets() now measures these so focus_objects frames into it.
+   --------------------------------------------------------------------------- */
+[data-film='true'] .agent-console.is-docked {
+  left: auto;
+  right: 16px;
+  transform: none;
+  width: 520px;
+  max-height: 56vh;
+}
+/* Evidence column, left, stacked under the pinned ledger. */
+[data-film='true'] .activity-rail,
+[data-film='true'] .animation-panel {
+  right: auto;
+  /* --canvas-left tracks the COLLAPSED rail, but film mode renders the rail
+     expanded with its labels, so the panels were sliding under it and losing
+     the first characters of their own headings. Clear the expanded width. */
+  /* Fixed, because the rail's own width token does not track the expanded rail
+     that film mode renders, and a wrong value slid these under it. */
+  left: 232px;
+  width: 300px;
+}
+/* Editing chrome is not content: it covered the lower third of every scene. */
+[data-film='true'] .progressive-inspector,
+[data-film='true'] .object-context { display: none !important; }

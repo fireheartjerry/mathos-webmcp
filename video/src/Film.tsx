@@ -104,7 +104,13 @@ function Segment({ shot, opacity, push }: { shot: (typeof SHOTS)[number]; opacit
   const style: CSSProperties = { position: 'absolute', display: 'block', width: FILM_W * zoom, height: FILM_H * zoom, left, top }
   return (
     <AbsoluteFill style={{ overflow: 'hidden', opacity }}>
-      <OffthreadVideo src={staticFile('film/capture.mp4')} startFrom={Math.max(0, Math.round(shot.srcStart * FILM_FPS))} style={style} muted />
+      <OffthreadVideo
+        src={staticFile('film/capture.mp4')}
+        startFrom={Math.max(0, Math.round(shot.srcStart * FILM_FPS))}
+        playbackRate={shot.playbackRate ?? 1}
+        style={style}
+        muted
+      />
     </AbsoluteFill>
   )
 }
@@ -134,36 +140,16 @@ function Stage() {
   const shot = SHOTS[index]
   const next = SHOTS[index + 1]
 
-  const layers: Array<{ shot: (typeof SHOTS)[number]; opacity: number; push: number }> = []
-  const overlap = shot.transitionSeconds ?? 0
-  const intoTransition = next && overlap > 0 ? seconds - (shot.filmEnd - overlap) : -1
-
-  let veil = 0
-  if (next && intoTransition >= 0) {
-    const t = clamp(intoTransition / overlap, 0, 1)
-    const eased = Easing.bezier(0.4, 0, 0.2, 1)(t)
-    if (shot.kind === 'bridge') {
-      // The product is animating a real match underneath; a plain cross-dissolve
-      // lets one representation become the other without fighting it.
-      layers.push({ shot, opacity: 1 - eased, push: 1 - 0.012 * eased })
-      layers.push({ shot: next, opacity: eased, push: 1 - 0.012 * (1 - eased) })
-    } else {
-      // Two unrelated scenes superimposed on cream paper just reads muddy -- both are
-      // light, busy and low-contrast, so a 50/50 frame is a smear rather than a blend.
-      // Dipping through the paper colour instead keeps every frame clean: the outgoing
-      // shot leaves into the page while pushing toward the viewer, the page holds for
-      // an instant, and the incoming shot settles back out of it.
-      const out = clamp(eased / 0.55, 0, 1)
-      const incoming = clamp((eased - 0.45) / 0.55, 0, 1)
-      // Capped below 1: at full strength the paper holds for about nine frames, which
-      // reads as a flash rather than a breath. Leaving a ghost keeps the cut continuous.
-      veil = 0.88 * Math.sin(Math.PI * eased)
-      layers.push({ shot, opacity: 1 - out, push: 1 - 0.038 * eased })
-      layers.push({ shot: next, opacity: incoming, push: 1 - 0.038 * (1 - eased) })
-    }
-  } else {
-    layers.push({ shot, opacity: 1, push: 1 })
-  }
+  // No transitions. Jerry's call, and it supersedes the storyboard's "every transition
+  // preserves a real mathematical object" rule: the dip-through-paper on camera joins
+  // and the cross-dissolve on bridge joins both read as effects laid over the product
+  // rather than as the product, so every join is now a straight cut. One shot on screen
+  // at a time, no veil, no push. Whatever match the app animates inside a shot still
+  // plays; nothing is added on top of it.
+  const layers: Array<{ shot: (typeof SHOTS)[number]; opacity: number; push: number }> = [
+    { shot, opacity: 1, push: 1 },
+  ]
+  const veil = 0
 
   return (
     <AbsoluteFill style={{ overflow: 'hidden', background: '#f4f0e6' }}>
@@ -231,8 +217,11 @@ function Music() {
   const base = Math.pow(10, (manifest.music.gainDb ?? -24) / 20)
   const duck = Math.pow(10, (manifest.music.duckDb ?? -6) / 20)
   const windows = narration.clips.flatMap((clip) => {
-    const shot = SHOTS.find((candidate) => candidate.id === clip.shot)
-    return shot ? [{ start: shot.filmStart + clip.offset, end: shot.filmStart + clip.offset + clip.duration }] : []
+    // build-narration-manifest resolves `offset` onto the finished film clock and
+    // stores the owning picture shot separately as `overShot`. The old lookup used
+    // the clip id (`clip.shot`) as though it were a manifest shot id, so it never
+    // matched and the music never ducked under narration.
+    return [{ start: clip.offset, end: clip.offset + clip.duration }]
   })
   return (
     <Audio

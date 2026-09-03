@@ -23,11 +23,15 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-TIMELINE = ROOT / 'video/public/film/timeline.json'
+import os
+# The Agent Replay take lives in its own directory so the Director film stays
+# intact next to it; FILM_DIR selects which one this run scores.
+FILM_DIR = os.environ.get('FILM_DIR', 'video/public/film')
+TIMELINE = ROOT / FILM_DIR / 'timeline.json'
 MANIFEST = ROOT / 'video/film.manifest.json'
-CUTLIST = ROOT / 'video/public/film/cutlist.json'
-OUT = ROOT / 'video/public/film'
-NARRATION = ROOT / 'video/public/film/narration.json'
+CUTLIST = ROOT / FILM_DIR / 'cutlist.json'
+OUT = ROOT / FILM_DIR
+NARRATION = ROOT / FILM_DIR / 'narration.json'
 SR = 48_000
 
 
