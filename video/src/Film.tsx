@@ -104,7 +104,12 @@ function Stage() {
   const frame = useCurrentFrame()
   const seconds = frame / FILM_FPS
 
-  const index = SHOTS.reduce((current, shot, candidate) => (seconds >= shot.filmStart ? candidate : current), 0)
+  // Segments OVERLAP by their transition length, so "the last shot that has started"
+  // picks the incoming shot the moment the overlap opens -- the outgoing shot then
+  // never renders during its own transition and every join collapses to a hard cut.
+  // The active shot is the earliest one that has not yet ended.
+  const running = SHOTS.findIndex((candidate) => candidate.filmEnd > seconds)
+  const index = running === -1 ? SHOTS.length - 1 : running
   const shot = SHOTS[index]
   const next = SHOTS[index + 1]
 
@@ -112,12 +117,29 @@ function Stage() {
   const overlap = shot.transitionSeconds ?? 0
   const intoTransition = next && overlap > 0 ? seconds - (shot.filmEnd - overlap) : -1
 
+  let veil = 0
   if (next && intoTransition >= 0) {
     const t = clamp(intoTransition / overlap, 0, 1)
     const eased = Easing.bezier(0.4, 0, 0.2, 1)(t)
-    const depth = shot.kind === 'bridge' ? 0.012 : 0.055
-    layers.push({ shot, opacity: 1 - eased, push: 1 + depth * eased })
-    layers.push({ shot: next, opacity: eased, push: 1 + depth * (1 - eased) })
+    if (shot.kind === 'bridge') {
+      // The product is animating a real match underneath; a plain cross-dissolve
+      // lets one representation become the other without fighting it.
+      layers.push({ shot, opacity: 1 - eased, push: 1 + 0.012 * eased })
+      layers.push({ shot: next, opacity: eased, push: 1 + 0.012 * (1 - eased) })
+    } else {
+      // Two unrelated scenes superimposed on cream paper just reads muddy -- both are
+      // light, busy and low-contrast, so a 50/50 frame is a smear rather than a blend.
+      // Dipping through the paper colour instead keeps every frame clean: the outgoing
+      // shot leaves into the page while pushing toward the viewer, the page holds for
+      // an instant, and the incoming shot settles back out of it.
+      const out = clamp(eased / 0.55, 0, 1)
+      const incoming = clamp((eased - 0.45) / 0.55, 0, 1)
+      // Capped below 1: at full strength the paper holds for about nine frames, which
+      // reads as a flash rather than a breath. Leaving a ghost keeps the cut continuous.
+      veil = 0.88 * Math.sin(Math.PI * eased)
+      layers.push({ shot, opacity: 1 - out, push: 1 + 0.075 * eased })
+      layers.push({ shot: next, opacity: incoming, push: 1 + 0.075 * (1 - eased) })
+    }
   } else {
     layers.push({ shot, opacity: 1, push: 1 })
   }
@@ -135,6 +157,7 @@ function Stage() {
           <Segment shot={layer.shot} opacity={layer.opacity} push={layer.push} />
         </Sequence>
       ))}
+      {veil > 0 && <AbsoluteFill style={{ background: '#f4f0e6', opacity: veil, pointerEvents: 'none' }} />}
     </AbsoluteFill>
   )
 }
