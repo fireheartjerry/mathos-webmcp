@@ -187,7 +187,14 @@ const cameraViewportForWorld = (
 }
 
 /** How much closer the film camera sits than the Director review camera. The clinic keeps its Tutor panel above the frame in view. */
-const filmCameraFit = (scene: CatalogSceneId) => (scene === 'gamma-clinic' ? 1.04 : 1.18)
+/**
+ * The film sits closer than the review camera so a scene's card fills the picture.
+ * Raised from 1.04/1.18: at the old fit the neighbouring scene's card was inside the
+ * visible world and got sliced flush by the frame edge, which a frame review flagged
+ * twelve times as the single most damaging defect in the cut. Scenes sit about 1080
+ * world px apart, so the camera has to show meaningfully less than that.
+ */
+const filmCameraFit = (scene: CatalogSceneId) => (scene === 'gamma-clinic' ? 1.16 : 1.32)
 
 const isUsableViewport = (viewport: Viewport | undefined): viewport is Viewport => Boolean(
   viewport
@@ -1223,7 +1230,15 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     const filmFit = filmMode && scene !== 'overview' ? filmCameraFit(scene) : 1
     const zoom = boundedViewportZoom(viewport.zoom * filmFit)
     const focus = { x: (width / 2 - viewport.x) / viewport.zoom, y: (height / 2 - viewport.y) / viewport.zoom }
-    return { x: width / 2 - focus.x * zoom, y: height / 2 - focus.y * zoom, zoom }
+    // Centre on the rect the chrome leaves free, exactly as the scene and focus
+    // cameras do. Every shot of the film is a Director shot, so a camera that
+    // centres on the whole canvas puts the scene under the activity rail and lets
+    // the NEXT scene's card creep in at the right edge -- which is what a frame
+    // review found in twelve places, sliced flush by the frame boundary.
+    const inset = chromeInsets()
+    const centreX = inset.left + (width - inset.left - inset.right) / 2
+    const centreY = inset.top + (height - inset.top - inset.bottom) / 2
+    return { x: centreX - focus.x * zoom, y: centreY - focus.y * zoom, zoom }
   }
 
   const directorViewportBookmark = (viewport: Viewport): DirectorShotViewport => {
