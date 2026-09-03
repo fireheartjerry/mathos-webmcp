@@ -38,12 +38,12 @@ Upload `public/og.png` first. It is the real Mathburst interface at 1200×630 an
 
 ## Video
 
-The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, 2:41, one continuous take of the real product with narration that describes only visible behaviour. Upload it and paste the public URL into the form. Rebuild instructions: `docs/video/FILM_REPRODUCTION.md`.
+The submission film is `video/out/mathburst-final.mp4`: 2560×1440, 60 fps, 2:47, cut from a single take of the real product. It opens on what Mathburst is, the problem it solves and how WebMCP is wired in, then demonstrates seven scenes across all four projects. The simplex scene is cut for time. Upload it and paste the public URL into the form. Rebuild instructions: `docs/video/FILM_REPRODUCTION.md`.
 
 Suggested title:
 
 ```text
-Mathburst — eight connected mathematical scenes powered by 48 WebMCP tools
+Mathburst — a shared mathematical canvas an AI tutor can actually edit, through 48 WebMCP tools
 ```
 
 Suggested description:
