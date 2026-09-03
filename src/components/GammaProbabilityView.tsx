@@ -5,7 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { gammaBinMasses, gammaCDF, gammaDensity, gammaFunction, massesToSoftmax } from '../domain/math/probability'
 import { monoWidth, placeLabel, type LabelBox } from '../domain/math/graph'
 import type { GraphObject, WorldAction } from '../domain/world/types'
-import { revealDash, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import { Tex } from './Tex'
 import '../styles/graph.css'
@@ -346,7 +346,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
       onPointerDown={stop}
       style={revealing ? { opacity: object.opacity } : undefined}
     >
-      <header className="gamma-header reveal-fade" style={{ opacity: chromeT }}>
+      <header className="gamma-header" style={revealRiseStyle(p, 0.02, 0.17)}>
         <div className="gamma-header-title">
           <span className="graph-widget-kicker gamma-kicker-text">normalised gamma density · total area 1</span>
           <h3><span className="gamma-title-text">Gamma density</span><span className="gamma-title-meta">a = {short(shape)} · b = {short(bound)}</span></h3>
@@ -395,7 +395,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
               </g>
             ))}
             {curveT > 0 && <path className={`gamma-curve${flashes.a ? ' is-flash' : ''}`} d={curve} pathLength={1} style={revealDash(curveT)} />}
-            <g style={{ opacity: finalT }}>
+            <g style={revealRiseStyle(p, 0.84, 0.98, { distance: 12 })}>
               <line className="gamma-tangent" x1={mapX(tangentA)} y1={mapY(tangentY + slope * (tangentA - tangentX))} x2={mapX(tangentB)} y2={mapY(tangentY + slope * (tangentB - tangentX))} />
               <line className="gamma-bound" x1={boundPx} x2={boundPx} y1={plot.top} y2={plot.bottom} />
               <circle className="gamma-mode" cx={modePx} cy={modePeakY} r="4" />
@@ -416,7 +416,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
             </g>
           </g>
           <line className="gamma-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} pathLength={1} style={revealDash(axesT)} />
-          <g style={{ opacity: axesT }}>
+          <g style={revealRiseStyle(p, 0.08, 0.24, { distance: 10 })}>
             {[0, 4, 8, 12, 16].filter((tick) => tick >= xMin && tick <= xMax).map((tick) => (
               <text key={tick} className="gamma-label" x={mapX(tick)} y={plot.bottom + 14} textAnchor="middle">{tick}</text>
             ))}
@@ -424,7 +424,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
         </svg>
       </div>
 
-      <footer className="gamma-footer reveal-fade" style={{ opacity: chromeT }}>
+      <footer className="gamma-footer" style={revealRiseStyle(p, 0.08, 0.22)}>
         <div className="gamma-probability-controls" onPointerDown={stop}>
           <label className={flashes.a ? 'is-flash' : undefined}>
             <span>shape a <NumberField label="Gamma shape a value" value={committedShape} min={SHAPE_RANGE[0]} max={SHAPE_RANGE[1]} step={0.1} onCommit={shapeField} /></span>
@@ -468,7 +468,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
                 {bridge.masses.map((mass, index) => <td key={index}>{fmt(mass * finalT)}</td>)}
                 <td className="gamma-sum">{fmt(sumOf(bridge.masses) * finalT)}</td>
               </tr>
-              <tr className="is-log" style={{ opacity: finalT }}>
+              <tr className="is-log" style={revealRiseStyle(p, 0.87, 0.98, { distance: 8 })}>
                 <th scope="row">log mass ℓⱼ</th>
                 {bridge.logs.map((value, index) => <td key={index}>{fmt(value)}</td>)}
                 <td />

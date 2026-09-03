@@ -106,6 +106,13 @@
   cursor: default;
 }
 
+.live-geometry.has-toolbar.is-revealing .geometry-toolbar {
+  opacity: var(--geometry-toolbar-opacity, 1);
+  transform: var(--geometry-toolbar-transform, none);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 .geometry-tool {
   flex: none;
   display: inline-grid;

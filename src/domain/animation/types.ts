@@ -2,7 +2,7 @@
 export type AnimationValue = number | number[] | number[][] | string
 
 /** Named easing curves understood by the runtime (see easing.ts). */
-export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'smoothStep'
+export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'smoothStep' | 'backOut' | 'bounceOut'
 
 /** A stable path into a canonical entity, visible object, or the world camera. */
 export type AnimationTargetPath =

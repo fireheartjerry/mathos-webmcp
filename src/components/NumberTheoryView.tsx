@@ -12,7 +12,7 @@ import {
 } from '../domain/math/partitions'
 import { tetrahedralLatticeCount } from '../domain/math/simplex'
 import type { NumberTheoryObject, WorldAction, WorldState } from '../domain/world/types'
-import { revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber } from './useTweenedNumber'
 import { Tex } from './Tex'
 import '../styles/reveal.css'
@@ -187,8 +187,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
   const theoremT = revealStage(p, 0.9, 1)
   const cellStyle = (index: number, count: number, extra?: CSSProperties): CSSProperties => {
     const t = revealItem(cellsT, index, count, 1)
-    if (t >= 1) return extra ?? {}
-    return { ...extra, opacity: t, transform: `translateY(${((1 - t) * 6).toFixed(2)}px)` }
+    return { ...revealRiseStyle(t, 0, 1, { distance: 16 }), ...extra }
   }
 
   // New coefficient cells slide in from the right with a 40 ms stagger when the cutoff grows.
@@ -270,7 +269,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
 
   return (
     <section className={`number-theory-view lattice-card reveal-root${revealing ? ' is-revealing' : ''}`} aria-label="Integer partitions" onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="lattice-head reveal-fade" style={{ opacity: headerT }}>
+      <header className="lattice-head" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="lattice-head-text">
           <span className="lattice-kicker">Integer partitions · finite Euler product</span>
           <h3 className="lattice-title">Lattice points become partition coefficients</h3>
@@ -311,7 +310,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
       </header>
 
       <div className="nt-body">
-        <div className="number-theory-chain reveal-fade" aria-label="Lattice point to partition" style={{ opacity: chainT }}>
+        <div className="number-theory-chain" aria-label="Lattice point to partition" style={revealRiseStyle(p, 0.05, 0.25)}>
           <div className="number-theory-step">
             <small>lattice point · N = {denominator}</small>
             <strong>({tuple.join(', ')})</strong>
@@ -367,7 +366,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
               })}
             </div>
           </div>
-          <div className={`coefficient-readout${flash.selectedN ? ' is-agent-set' : ''}`} style={{ opacity: revealStage(p, 0.55, 0.65) }} aria-live="polite">
+          <div className={`coefficient-readout${flash.selectedN ? ' is-agent-set' : ''}`} style={revealRiseStyle(p, 0.54, 0.67, { distance: 10 })} aria-live="polite">
             <span>p({selectedN}) = <b>{selectedCoefficient}</b></span>
             {verifyLine}
           </div>
@@ -377,7 +376,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
           <div className="residue-lanes">
             {lanes.map((lane, laneIndex) => {
               const t = revealItem(lanesT, laneIndex, lanes.length, 0.6)
-              const laneStyle: CSSProperties | undefined = t < 1 ? { opacity: t, transform: `translateX(${((1 - t) * -10).toFixed(2)}px)` } : undefined
+              const laneStyle: CSSProperties = revealRiseStyle(t, 0, 1, { distance: 18 })
               return (
                 <div
                   key={lane.residue}
@@ -405,7 +404,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
 
       <footer className="lattice-foot" onPointerDown={stop}>
         {object.revealTheorem ? (
-          <aside className={`ramanujan-reveal ${verification.verified ? 'is-verified' : 'has-counterexample'}${flash.revealTheorem ? ' is-agent-set' : ''}`} style={{ opacity: theoremT }}>
+          <aside className={`ramanujan-reveal ${verification.verified ? 'is-verified' : 'has-counterexample'}${flash.revealTheorem ? ' is-agent-set' : ''}`} style={revealRiseStyle(p, 0.88, 1)}>
             <div className="ramanujan-statement">
               <span className="math-object-kicker">THEOREM · RAMANUJAN (1919)</span>
               <h4><Tex latex={'p(5n+4)\\equiv 0\\pmod 5'} /></h4>
@@ -418,7 +417,7 @@ export default function NumberTheoryView({ object, world, run }: NumberTheoryVie
             <button type="button" onPointerDown={stop} onClick={() => reveal(false)}>hide</button>
           </aside>
         ) : (
-          <button className={`ramanujan-tease${flash.revealTheorem ? ' is-agent-set' : ''}`} type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)} style={{ opacity: theoremT }}>
+          <button className={`ramanujan-tease${flash.revealTheorem ? ' is-agent-set' : ''}`} type="button" data-demo-target="partition-reveal" onPointerDown={stop} onClick={() => reveal(true)} style={revealRiseStyle(p, 0.88, 1)}>
             <span>?</span> every value in the n ≡ 4 lane is a multiple of five · reveal the theorem
           </button>
         )}

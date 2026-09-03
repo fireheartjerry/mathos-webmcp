@@ -20,7 +20,7 @@ import type { ResolvedAngle, ResolvedGeometry, ResolvedPoint } from '../domain/m
 import type { GeometryObject, GeometryPrimitive, GraphObject, MatrixObject, Point, WorldAction } from '../domain/world/types'
 import GeometryToolbar, { GEOMETRY_TOOLS } from './GeometryToolbar'
 import type { GeometryTool } from './GeometryToolbar'
-import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumbers } from './useTweenedNumber'
 import '../styles/geometry.css'
 import '../styles/reveal.css'
@@ -680,7 +680,13 @@ export default function LiveGeometry({
   const editingPoint = editingLabel ? resolved.points.find((point) => point.id === editingLabel) ?? null : null
 
   const rootClass = ['live-geometry', 'has-toolbar', 'reveal-root', revealing ? 'is-revealing' : '', tool === 'move' ? 'is-moving' : tool === 'delete' ? 'is-deleting' : 'is-constructing'].filter(Boolean).join(' ')
-  const rootStyle: CSSProperties = { ...(revealing ? { opacity: object.opacity } : {}), '--accent': object.accent || '#7c5cff' } as CSSProperties
+  const toolbarRise = revealRiseStyle(p, 0.06, 0.22, { distance: 12 })
+  const rootStyle: CSSProperties = {
+    ...(revealing ? { opacity: object.opacity } : {}),
+    '--accent': object.accent || '#7c5cff',
+    '--geometry-toolbar-opacity': toolbarRise.opacity,
+    '--geometry-toolbar-transform': toolbarRise.transform,
+  } as CSSProperties
   const enteringClass = (id: string) => entering.has(id) ? ' is-entering' : ''
 
   return (
@@ -695,7 +701,7 @@ export default function LiveGeometry({
       onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node | null)) activeRef.current = rootRef.current?.matches(':hover') ?? false }}
       onKeyDown={onRootKeyDown}
     >
-      <header className="geometry-header" style={{ opacity: kickerT }}>
+      <header className="geometry-header" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="geometry-heading">
           <span className="geometry-kicker">Dynamic geometry</span>
           <h3>Homothety · Spiral similarity</h3>
@@ -775,7 +781,7 @@ export default function LiveGeometry({
             return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
               <path className={`geometry-angle${enteringClass(angle.id)}`} d={arc.path} pathLength={1} style={revealDash(t)} />
               <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
-              <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={{ opacity: t }}>{angle.degrees.toFixed(1)}°</text>
+              <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={revealRiseStyle(t, 0, 1, { distance: 9 })}>{angle.degrees.toFixed(1)}°</text>
             </g>
           })}
           {previews}
@@ -812,7 +818,7 @@ export default function LiveGeometry({
                   data-canvas-control={tool === 'move' ? 'true' : undefined}
                   x={point.point.x + 9}
                   y={point.point.y - 9}
-                  style={{ opacity: t }}
+                  style={revealRiseStyle(t, 0, 1, { distance: 10 })}
                   onDoubleClick={tool === 'move' ? (event) => { event.stopPropagation(); setEditingLabel(point.id) } : undefined}
                 >
                   {point.label}
@@ -872,7 +878,7 @@ export default function LiveGeometry({
           </div>
         )}
       </div>
-      <footer className={`geometry-legend reveal-fade${hasSpiral ? ' has-spiral' : ''}`} style={{ opacity: legendT }}>
+      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`} style={revealRiseStyle(p, 0.84, 1)}>
         {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
         <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
       </footer>

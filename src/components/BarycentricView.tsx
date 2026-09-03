@@ -13,7 +13,7 @@ import {
   type Triangle,
 } from '../domain/math/barycentric'
 import type { BarycentricObject, Point, WorldAction, WorldState } from '../domain/world/types'
-import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealLerp, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumbers } from './useTweenedNumber'
 import '../styles/reveal.css'
 import '../styles/barycentric.css'
@@ -261,7 +261,7 @@ export default function BarycentricView({ object, world, run }: Props) {
       onPointerDown={stop}
       style={revealing ? { opacity: object.opacity } : undefined}
     >
-      <header className="barycentric-header" style={{ opacity: kickerT }}>
+      <header className="barycentric-header" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="barycentric-heading">
           <span className="barycentric-kicker">Barycentric coordinates</span>
           <h3>P = αA + βB + γC</h3>
@@ -303,7 +303,7 @@ export default function BarycentricView({ object, world, run }: Props) {
               {[[1, 2], [2, 0], [0, 1]].map(([first, second], index) => {
                 const cx = (livePoint.x + vertices[first].x + vertices[second].x) / 3
                 const cy = (livePoint.y + vertices[first].y + vertices[second].y) / 3
-                return <text key={`area-${index}`} className={`barycentric-area-label is-${index}`} x={cx} y={cy + 4} textAnchor="middle" style={{ opacity: labelT }}>{GREEK[index]} = {(liveWeights[index] * labelT).toFixed(2)}</text>
+                return <text key={`area-${index}`} className={`barycentric-area-label is-${index}`} x={cx} y={cy + 4} textAnchor="middle" style={revealRiseStyle(p, 0.74 + index * 0.035, 0.94 + index * 0.02, { distance: 9 })}>{GREEK[index]} = {(liveWeights[index] * labelT).toFixed(2)}</text>
               })}
               {pulsePosition && pulse && (
                 <circle
@@ -346,7 +346,7 @@ export default function BarycentricView({ object, world, run }: Props) {
                         data-canvas-control="true"
                         x={labelX}
                         y={labelY}
-                        style={{ opacity: t }}
+                        style={revealRiseStyle(p, index * 0.1, index * 0.1 + 0.15, { distance: 10 })}
                         onDoubleClick={(event) => { event.stopPropagation(); setEditingLabel(index as VertexIndex) }}
                       >
                         {object.labels[index]}
@@ -367,12 +367,12 @@ export default function BarycentricView({ object, world, run }: Props) {
                 onPointerDown={beginPointDrag}
                 aria-label="Drag barycentric point P"
               />}
-              <text className="barycentric-point-label" x={livePoint.x + 12} y={livePoint.y - 10} style={{ opacity: labelT }}>P</text>
+              <text className="barycentric-point-label" x={livePoint.x + 12} y={livePoint.y - 10} style={revealRiseStyle(p, 0.75, 0.95, { distance: 10 })}>P</text>
             </g>
           </svg>
         </div>
 
-        <aside className="barycentric-side reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
+        <aside className="barycentric-side" onPointerDown={stop} style={revealRiseStyle(p, 0.05, 0.22)}>
           <div className="barycentric-weight-grid" aria-label="Barycentric weights">
             {liveWeights.map((weight, index) => (
               <div key={GREEK[index]} className={`barycentric-weight is-${index}`}>
@@ -428,7 +428,7 @@ export default function BarycentricView({ object, world, run }: Props) {
         </aside>
       </div>
 
-      <footer className="barycentric-footer reveal-fade" style={{ opacity: sideT }}>
+      <footer className="barycentric-footer" style={revealRiseStyle(p, 0.12, 0.28)}>
         <span className="barycentric-areas">
           <small>signed subareas</small>
           <code>[{areas.signed.map((value) => value.toFixed(0)).join(', ')}]</code>

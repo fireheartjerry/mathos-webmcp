@@ -17,7 +17,7 @@ import {
   type LabelBox,
 } from '../domain/math/graph'
 import type { EquationObject, GraphObject, WorldAction, WorldState } from '../domain/world/types'
-import { revealDash, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import { Tex } from './Tex'
 import '../styles/graph.css'
@@ -527,6 +527,7 @@ export default function LiveGraph({
   const curveT = revealStage(p, 0.25, 0.65)
   const areaT = revealStage(p, 0.65, 0.85)
   const finalT = revealStage(p, 0.85, 1)
+  const finalStyle = revealRiseStyle(p, 0.84, 0.98, { distance: 14 })
   const areaClipId = `graph-area-clip-${object.id}`
   const clipId = `graph-clip-${object.id}`
 
@@ -556,7 +557,7 @@ export default function LiveGraph({
 
   return (
     <div className={`live-graph graph-widget reveal-root${revealing ? ' is-revealing' : ''}${dragging ? ` is-dragging is-dragging-${dragging}` : ''}`} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="graph-header reveal-fade" data-canvas-control="true" onPointerDown={stopCanvasDrag} style={{ opacity: chromeT }}>
+      <header className="graph-header" data-canvas-control="true" onPointerDown={stopCanvasDrag} style={revealRiseStyle(p, 0.02, 0.17)}>
         <div className="graph-header-kicker">
           <span className="graph-widget-kicker">live function</span>
           <span className="graph-header-meta">{expressions.length > 1 ? `${expressions.length} curves · ` : ''}{domainMeta}</span>
@@ -616,7 +617,7 @@ export default function LiveGraph({
             {xMin <= 0 && xMax >= 0 && <line className="graph-axis" x1={mapX(0)} x2={mapX(0)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />}
             {shadePath && areaT > 0 && <g clipPath={`url(#${areaClipId})`}><path className={`graph-area${flashes.shade ? ' is-flash' : ''}`} d={shadePath} /></g>}
             {shadeTarget && finalT > 0 && shadeBounds[0] < shadeBounds[1] && ([0, 1] as const).map((edge) => (
-              <g key={`shade-edge-${edge}`} className={`graph-shade-edge${dragging === 'shade' ? ' is-dragging' : ''}`} style={{ opacity: finalT }}>
+              <g key={`shade-edge-${edge}`} className={`graph-shade-edge${dragging === 'shade' ? ' is-dragging' : ''}`} style={finalStyle}>
                 <line x1={mapX(shadeBounds[edge])} x2={mapX(shadeBounds[edge])} y1={plot.top} y2={plot.bottom} />
                 <rect
                   className="graph-shade-grip"
@@ -640,7 +641,7 @@ export default function LiveGraph({
                 style={{ stroke: curve.colour, ...revealDash(curveT) }}
               />
             ))}
-            {tangent && finalT > 0 && <g className={`graph-tangent-group${flashes.tangent ? ' is-flash' : ''}`} style={{ opacity: finalT }}>
+            {tangent && finalT > 0 && <g className={`graph-tangent-group${flashes.tangent ? ' is-flash' : ''}`} style={finalStyle}>
               <line className="graph-tangent" x1={mapX(tangent.first.x)} y1={mapY(tangent.first.y)} x2={mapX(tangent.second.x)} y2={mapY(tangent.second.y)} />
               <circle
                 className={`graph-focus${dragging === 'tangent' ? ' is-dragging' : ''}`}
@@ -654,7 +655,7 @@ export default function LiveGraph({
               />
             </g>}
             {legend && (
-              <g className="graph-legend" style={{ opacity: finalT }}>
+              <g className="graph-legend" style={revealRiseStyle(p, 0.84, 0.96, { distance: 12 })}>
                 <rect className="graph-label-plate" x={legend.x} y={legend.y} width={legend.width} height={legend.height} rx="2" />
                 {legendRows.map((curve, index) => (
                   <g key={`legend-${index}`}>
@@ -665,7 +666,7 @@ export default function LiveGraph({
               </g>
             )}
             {labels.length > 0 && finalT > 0 && (
-              <g style={{ opacity: finalT }}>
+              <g style={revealRiseStyle(p, 0.87, 1, { distance: 12 })}>
                 <rect className="graph-label-plate" x={plate.x} y={plate.y} width={plate.width} height={plate.height} rx="2" />
                 {labels.map((label, index) => (
                   <text key={label.className} className={label.className} x={plot.right - 6} y={plot.top + 16 + index * 16} textAnchor="end">{label.text}</text>
@@ -673,7 +674,7 @@ export default function LiveGraph({
               </g>
             )}
           </g>
-          <g style={{ opacity: axesT }}>
+          <g style={revealRiseStyle(p, 0.08, 0.24, { distance: 10 })}>
             <text className="graph-tick" x={plot.left} y={plot.bottom + 14}>{short(xMin, 2)}</text>
             <text className="graph-tick" x={plot.right} y={plot.bottom + 14} textAnchor="end">{short(xMax, 2)}</text>
             <text className="graph-tick" x={plot.left - 5} y={plot.top + 10} textAnchor="end">{short(yMax, 2)}</text>
@@ -682,7 +683,7 @@ export default function LiveGraph({
         </svg>
       </div>
 
-      <footer className="graph-footer reveal-fade" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel} style={{ opacity: chromeT }}>
+      <footer className="graph-footer" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel} style={revealRiseStyle(p, 0.08, 0.22)}>
         <div className={`graph-row graph-domain${flashes.domain ? ' is-flash' : ''}`}>
           <span className="graph-row-label">x</span>
           <NumberField label="x minimum" value={xMin} onCommit={(value) => commitDomain({ xMin: value })} />

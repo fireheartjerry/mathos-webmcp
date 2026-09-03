@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
 import { DEFAULT_LEARNING_RATE, createInitialTinyModel, evaluateTinyModel, trainOneStep } from '../domain/math/transformer'
 import type { TrainStepResult } from '../domain/math/transformer'
 import type { AttentionObject, Matrix2, TinyModelState, TrainingObject, WorldAction, WorldObject, WorldState } from '../domain/world/types'
-import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import { Derived, EditableNumber, useFlash } from './AttentionView'
 import '../styles/reveal.css'
@@ -227,7 +227,7 @@ export default function TrainingView({ object, world, run }: Props) {
 
   return (
     <section className={`training-view reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="training-header reveal-fade" style={{ opacity: headerT }}>
+      <header className="training-header" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="training-heading">
           <span className="math-object-kicker">TINY TRANSFORMER · GRADIENT STEP</span>
           <h3>One honest training step</h3>
@@ -240,27 +240,27 @@ export default function TrainingView({ object, world, run }: Props) {
       </header>
 
       <div className="training-metrics">
-        <div style={{ opacity: metricT(0) }}>
+        <div style={revealRiseStyle(p, 0.1, 0.24)}>
           <small>STEP</small>
           <strong className={stepFlash ? 'is-changed' : undefined}>{object.step}</strong>
           <span>η {object.learningRate ? short(object.learningRate, 3) : '—'}</span>
         </div>
-        <div className="is-rate" style={{ opacity: metricT(1) }}>
+        <div className="is-rate" style={revealRiseStyle(p, 0.14, 0.28)}>
           <small>RATE η <span className="attention-editable-tag">editable</span></small>
           <EditableNumber value={startRate} min={LEARNING_RATE_RANGE.min} max={LEARNING_RATE_RANGE.max} step={0.01} label="Learning rate" onCommit={setLearningRate} />
           <span>line search starts here, halves until it improves</span>
         </div>
-        <div style={{ opacity: metricT(2) }}>
+        <div style={revealRiseStyle(p, 0.18, 0.32)}>
           <small>TARGET · QUERY</small>
           <strong>{object.model.tokens[object.model.targetIndex]}</strong>
           <span>query {object.model.tokens[object.model.queryIndex]} · {attention ? 'shared with the attention card' : 'standalone'}</span>
         </div>
-        <div className="is-loss" style={{ opacity: metricT(3) }}>
+        <div className="is-loss" style={revealRiseStyle(p, 0.22, 0.36)}>
           <small>LOSS <Derived /></small>
           <strong>{fmt(lossT * metricT(3))}</strong>
           <span>{lossHistory.length > 1 ? `${lossDeltaT <= 0 ? '↓' : '↑'} ${fmt(Math.abs(lossDeltaT))} since step 0` : 'awaiting a step'}</span>
         </div>
-        <div className="is-probability" style={{ opacity: metricT(4) }}>
+        <div className="is-probability" style={revealRiseStyle(p, 0.26, 0.4)}>
           <small>P(TARGET) <Derived /></small>
           <strong>{fmt(probabilityT * metricT(4))}</strong>
           <span>{probabilityHistory.length > 1 ? `${probabilityDeltaT >= 0 ? '↑' : '↓'} ${fmt(Math.abs(probabilityDeltaT))} since step 0` : 'awaiting a step'}</span>
@@ -268,7 +268,7 @@ export default function TrainingView({ object, world, run }: Props) {
       </div>
 
       <div className="training-body">
-        <div className="training-probabilities reveal-fade" style={{ opacity: distributionT }}>
+        <div className="training-probabilities" style={revealRiseStyle(p, 0.3, 0.5)}>
           <div className="training-card-heading"><span>OUTPUT p <Derived /></span><b>Σ p = {fmt(probabilitiesT.reduce((sum, value) => sum + value, 0) * distributionT)}</b></div>
           {probabilitiesT.map((probability, index) => (
             <div className={`training-probability${index === object.model.targetIndex ? ' is-target' : ''}`} key={index}>
@@ -277,18 +277,18 @@ export default function TrainingView({ object, world, run }: Props) {
           ))}
         </div>
         <div className="training-history">
-          <div className="training-history-card is-loss reveal-fade" style={{ opacity: historyT(0) }}>
+          <div className="training-history-card is-loss" style={revealRiseStyle(p, 0.4, 0.55)}>
             <div className="training-card-heading"><span>LOSS · {lossHistory.length} point{lossHistory.length === 1 ? '' : 's'}</span><b style={{ flexShrink: 0 }}>{lossHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
             <Sparkline values={lossHistory} tone="loss" label="Loss history" draw={sparkT} />
           </div>
-          <div className="training-history-card is-probability reveal-fade" style={{ opacity: historyT(1) }}>
+          <div className="training-history-card is-probability" style={revealRiseStyle(p, 0.45, 0.6)}>
             <div className="training-card-heading"><span>P(TARGET) · {probabilityHistory.length} point{probabilityHistory.length === 1 ? '' : 's'}</span><b style={{ flexShrink: 0 }}>{probabilityHistory.slice(-2).map((value) => fmt(value)).join(' → ')}</b></div>
             <Sparkline values={probabilityHistory} tone="probability" label="Target probability history" draw={sparkT} />
           </div>
         </div>
       </div>
 
-      <div className="training-drift reveal-fade" aria-label="Parameters moved by the gradient" style={{ opacity: driftT }}>
+      <div className="training-drift" aria-label="Parameters moved by the gradient" style={revealRiseStyle(p, 0.5, 0.7)}>
         <div className="training-card-heading"><span>WEIGHTS BEFORE → AFTER · {driftLabel}</span><b>{tracked.before ? `η = ${short(object.learningRate, 3)}` : object.step === 0 ? 'at step zero' : 'reloaded · drift since step 0'}</b></div>
         <div className="training-drift-grid">
           <MatrixDrift label="W_Q" before={driftBefore.wq} after={object.model.wq} flash={stepFlash} />
@@ -297,7 +297,7 @@ export default function TrainingView({ object, world, run }: Props) {
         </div>
       </div>
 
-      <footer className="training-footnote" style={{ opacity: footerT }}>
+      <footer className="training-footnote" style={revealRiseStyle(p, 0.88, 1, { distance: 10 })}>
         central finite differences on every visible parameter · deterministic backtracking from η · a step is committed only when the loss fell and p(target) rose
       </footer>
     </section>

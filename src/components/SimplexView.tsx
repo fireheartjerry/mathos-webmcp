@@ -17,7 +17,7 @@ import {
   type Tetrahedron,
 } from '../domain/math/simplex'
 import type { Point, SimplexObject, WorldAction } from '../domain/world/types'
-import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import '../styles/reveal.css'
 import '../styles/lattice.css'
@@ -400,7 +400,7 @@ export default function SimplexView({ object, run }: Props) {
 
   return (
     <div className={`simplex-view lattice-card reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="lattice-head reveal-fade" style={{ opacity: chromeT }}>
+      <header className="lattice-head" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="lattice-head-text">
           <span className="lattice-kicker">4-weight probability simplex · perspective projection</span>
           <h3 className="lattice-title">Tetrahedral probability</h3>
@@ -425,7 +425,7 @@ export default function SimplexView({ object, run }: Props) {
             onPointerUp={finishDrag}
             onPointerCancel={finishDrag}
           >
-            <polygon className="simplex-face" points={projected.slice(0, 3).map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} style={{ opacity: revealStage(p, 0.3, 0.45) }} />
+            <polygon className="simplex-face" points={projected.slice(0, 3).map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} style={revealRiseStyle(p, 0.3, 0.46, { distance: 10 })} />
             {EDGE_PAIRS.map(([first, second], index) => {
               const t = revealItem(edgesT, index, EDGE_PAIRS.length, 0.8)
               if (t <= 0) return null
@@ -454,7 +454,7 @@ export default function SimplexView({ object, run }: Props) {
                   cx={mapped.x}
                   cy={mapped.y}
                   r={onPlane ? 2.8 : 2}
-                  style={t < 1 ? { opacity: 0.65 * t } : { animationDelay: latticeDelay(index) }}
+                  style={{ ...revealRiseStyle(t, 0, 1, { distance: 12 }), opacity: 0.65 * t, animationDelay: latticeDelay(index) }}
                 />
               )
             })}
@@ -470,7 +470,7 @@ export default function SimplexView({ object, run }: Props) {
               // of that vertex's own label, so skip it rather than double-draw.
               if (distance(vertex, projected[index]) < 4 || distance(vertex, projected[3]) < 4) return null
               return (
-                <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: sectionT }}>
+                <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={revealRiseStyle(p, 0.72 + index * 0.035, 0.94, { distance: 9 })}>
                   {LABELS[index]}ₜ
                 </text>
               )
@@ -481,25 +481,25 @@ export default function SimplexView({ object, run }: Props) {
                 <circle className="simplex-point-hit" cx={projectedPoint.x} cy={projectedPoint.y} r={15} onPointerDown={beginPointDrag} />
               </g>
             )}
-            <text className="simplex-interior-label" x={interiorLabelX} y={interiorLabelY} style={{ opacity: pointT }}>{interiorLabelText}</text>
+            <text className="simplex-interior-label" x={interiorLabelX} y={interiorLabelY} style={revealRiseStyle(p, 0.84, 1, { distance: 10 })}>{interiorLabelText}</text>
             {projected.map((vertex, index) => {
               const t = revealStage(p, index * 0.08, index * 0.08 + 0.12)
               if (t <= 0) return null
               return (
                 <g key={LABELS[index]}>
                   <circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r={4.5 * t} />
-                  <text className="simplex-vertex-label" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: t }}>{LABELS[index]}</text>
+                  <text className="simplex-vertex-label" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={revealRiseStyle(p, index * 0.08, index * 0.08 + 0.12, { distance: 9 })}>{LABELS[index]}</text>
                 </g>
               )
             })}
-            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={sectionLabelX} y={17} textAnchor="end" style={{ opacity: sectionT }}>
+            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={sectionLabelX} y={17} textAnchor="end" style={revealRiseStyle(p, 0.72, 0.94, { distance: 9 })}>
               {sectionLabelText}
             </text>
           </svg>
-          <span className="simplex-orbit-hint" aria-hidden="true" style={{ opacity: chromeT * 0.7 }}>drag P · drag space to orbit</span>
+          <span className="simplex-orbit-hint" aria-hidden="true" style={{ ...revealRiseStyle(p, 0.1, 0.24, { distance: 8 }), opacity: chromeT * 0.7 }}>drag P · right-drag space to orbit</span>
         </div>
 
-        <aside className="simplex-side reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
+        <aside className="simplex-side" onPointerDown={stop}>
           <div className="sx-weights">
             {weights.map((weight, index) =>
               slider(
@@ -510,10 +510,10 @@ export default function SimplexView({ object, run }: Props) {
                 (value) => `Set ${GREEK[index]} to ${short(value)}; the other weights keep their ratios`,
                 { target: index === 3 ? 'simplex-weight-delta' : undefined, className: index === 3 ? 'is-hero' : undefined, flash: flash.weights },
               ),
-            ).map((node, index) => <div key={LABELS[index]}>{node}</div>)}
-            <div className="sx-weights-sum"><span>Σ λᵢ</span><b>{fmt(sum)}</b></div>
+            ).map((node, index) => <div key={LABELS[index]} style={revealRiseStyle(p, 0.05 + index * 0.04, 0.2 + index * 0.04, { distance: 13 })}>{node}</div>)}
+            <div className="sx-weights-sum" style={revealRiseStyle(p, 0.2, 0.34, { distance: 10 })}><span>Σ λᵢ</span><b>{fmt(sum)}</b></div>
           </div>
-          <div className="sx-section">
+          <div className="sx-section" style={revealRiseStyle(p, 0.24, 0.4)}>
             {slider(
               'section δ = t',
               section,
@@ -528,14 +528,14 @@ export default function SimplexView({ object, run }: Props) {
                 : <>the section at δ = t is a triangle; sweep to t = {weights[3].toFixed(2)} to recall the barycentric triangle holding P</>}
             </p>
           </div>
-          <div className={`sx-orbit${flash.rotationX || flash.rotationY ? ' is-agent-set' : ''}`}>
+          <div className={`sx-orbit${flash.rotationX || flash.rotationY ? ' is-agent-set' : ''}`} style={revealRiseStyle(p, 0.34, 0.49, { distance: 12 })}>
             <span>orbit x <b>{rotationX.toFixed(2)}</b> · y <b>{rotationY.toFixed(2)}</b></span>
             <button type="button" className="lattice-btn" onClick={() => commit('Reset the simplex orbit', { rotationX: -0.32, rotationY: 0.49 })} disabled={Math.abs(object.rotationX + 0.32) < 1e-6 && Math.abs(object.rotationY - 0.49) < 1e-6}>reset</button>
           </div>
         </aside>
       </div>
 
-      <footer className="lattice-foot reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
+      <footer className="lattice-foot" onPointerDown={stop} style={revealRiseStyle(p, 0.44, 0.62)}>
         <div className={`lattice-foot-text${flash.denominator ? ' is-agent-set' : ''}`}>
           <b>{recurrence.total}</b>
           <span>lattice points · L₃({denominator}) = C({denominator + 3}, 3)</span>
