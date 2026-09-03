@@ -287,6 +287,16 @@ export default function LiveGeometry({
   const allPrimitives = draft.length ? [...tweenedPrimitives, ...draft] : tweenedPrimitives
   const primitives = cursor && dragging ? withDrag(allPrimitives, dragging, cursor) : allPrimitives
   const resolved = resolveGeometry(primitives)
+  const primitiveById = new Map(primitives.map((primitive) => [primitive.id, primitive]))
+  const renderKindClass = (id: string) => {
+    const kind = primitiveById.get(id)?.kind
+    if (kind === 'circumcircle') return ' is-circumcircle'
+    if (kind === 'mixtilinearIncircle') return ' is-mixtilinear-incircle'
+    if (kind === 'incenter') return ' is-incenter'
+    if (kind === 'arcMidpoint') return ' is-arc-midpoint'
+    if (kind === 'circleTangency') return ' is-circle-tangency'
+    return ''
+  }
   const width = Math.max(220, object.bounds.width)
   const height = Math.max(180, object.bounds.height)
   const readouts = constructionReadouts(resolved.points)
@@ -662,7 +672,7 @@ export default function LiveGeometry({
   const selectedPrimitive = selected ? object.primitives.find((candidate) => candidate.id === selected) ?? null : null
   const measure = selectedPrimitive ? measurementFor(selectedPrimitive, resolved, describe(selectedPrimitive, object.primitives)) : null
   const metaText = tool === 'move' ? (selectedPrimitive ? describe(selectedPrimitive, object.primitives) : 'move · click to select') : `${activeTool.label.toLowerCase()} tool`
-  const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel'].includes(selectedPrimitive.kind) : false
+  const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel', 'circumcircle', 'mixtilinearIncircle'].includes(selectedPrimitive.kind) : false
 
   const previews = isConstructing && cursor ? renderPreview(tool, pending, cursor, pointAt, resolved) : null
 
@@ -753,7 +763,7 @@ export default function LiveGeometry({
             const t = drawT(circle.id)
             if (t <= 0) return null
             return <g key={circle.id}>
-              <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}${enteringClass(circle.id)}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
+              <circle className={`geometry-circle is-${circle.id}${renderKindClass(circle.id)}${selected === circle.id ? ' is-selected' : ''}${enteringClass(circle.id)}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
               <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
             </g>
           })}
@@ -800,10 +810,10 @@ export default function LiveGeometry({
             if (t <= 0) return null
             const radius = point.draggable ? 6 : 4.5
             const isEditing = editingLabel === point.id
-            return <g key={point.id} className={`geometry-point-group is-${point.id}${enteringClass(point.id)}`}>
+            return <g key={point.id} className={`geometry-point-group is-${point.id}${renderKindClass(point.id)}${enteringClass(point.id)}`}>
               {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
               <circle
-                className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
+                className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}${renderKindClass(point.id)}`}
                 data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
                 data-canvas-handle={point.draggable ? 'true' : undefined}
                 data-primitive-id={point.id}

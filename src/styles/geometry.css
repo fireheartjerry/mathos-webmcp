@@ -248,6 +248,19 @@
 .live-geometry.has-toolbar .geometry-angle { stroke: var(--accent); }
 .live-geometry.has-toolbar .geometry-angle-label { fill: var(--accent); }
 .live-geometry.has-toolbar .geometry-point.is-spiral-center { fill: var(--accent); }
+.live-geometry.has-toolbar .geometry-circle.is-circumcircle {
+  stroke: color-mix(in srgb, var(--graphite, #171713) 52%, transparent);
+  stroke-dasharray: 5 4;
+}
+.live-geometry.has-toolbar .geometry-circle.is-mixtilinear-incircle {
+  fill: color-mix(in srgb, var(--accent) 5%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.live-geometry.has-toolbar .geometry-point.is-incenter,
+.live-geometry.has-toolbar .geometry-point.is-arc-midpoint { fill: var(--teal, #2f8f88); }
+.live-geometry.has-toolbar .geometry-point.is-circle-tangency { fill: var(--accent); }
+.live-geometry.has-toolbar .geometry-point-group.is-circle-tangency .geometry-label { fill: var(--accent); font-weight: 700; }
 .live-geometry.has-toolbar .geometry-point-group.is-S .geometry-label,
 .live-geometry.has-toolbar .geometry-point-group.is-S-A .geometry-label,
 .live-geometry.has-toolbar .geometry-point-group.is-S-B .geometry-label,
