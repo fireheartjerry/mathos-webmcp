@@ -162,11 +162,34 @@ export async function commit(bridge: WorldBridge, worldAction: WorldAction, targ
   return { ...outcome, summary: outcome.summary || worldAction.summary, changedIds: ids, data: { ...(outcome.data ?? {}), ...data } }
 }
 
+/**
+ * A short, readable name for a LaTeX expression, for history summaries.
+ *
+ * The activity rail is a log of past-tense sentences, not a maths surface: pasting
+ * raw source into it puts literal "a\,x\,e^{-x}" on screen, which a frame review
+ * of the film flagged as unreadable. Strips the spacing and grouping syntax a reader
+ * does not need, and falls back to a generic phrase when the result is still noise.
+ */
+export const readableLatex = (latex: string, limit = 30): string => {
+  const plain = latex
+    .replace(/\\[,;:!]/g, '')
+    .replace(/\\left|\\right/g, '')
+    .replace(/\\cdot/g, ' * ')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!plain) return 'the expression'
+  // Any command left is source a reader should never see in a log line, so the whole
+  // expression yields to a phrase rather than half-rendering as "\fracx^a-1e^-x".
+  if (/\\[a-zA-Z]/.test(plain)) return 'the expression'
+  return plain.length > limit ? `${plain.slice(0, limit)}…` : plain
+}
+
 /** Short human label for summaries: “text “Solve for x””, “graph 3f2a1c9e”. */
 export function nameOf(object: WorldObject): string {
   const short = object.id.length > 12 ? object.id.slice(0, 8) : object.id
   if (object.kind === 'text') return `text “${object.text.length > 24 ? `${object.text.slice(0, 24)}…` : object.text}”`
-  if (object.kind === 'equation') return `equation ${object.latex.length > 28 ? `${object.latex.slice(0, 28)}…` : object.latex}`
+  if (object.kind === 'equation') return `equation ${readableLatex(object.latex, 28)}`
   if (object.kind === 'frame') return `frame “${object.title}”`
   if (object.kind === 'shape') return `${object.shape} ${short}`
   return `${object.kind} ${short}`
@@ -762,7 +785,7 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId, xDomain: [-4, 4], yDomain: [-5, 10], color: '#7c5cff', parameters: args.parameters as Record<string, number> | undefined, showTangentAt: args.showTangentAt as number | undefined, shadeIntegral: args.shadeIntegral as [number, number] | undefined, visualization: args.visualization as 'standard' | 'gamma-density' | undefined, binEdges: args.binEdges as [number, number, number, number] | undefined, bounds: graphBounds, rotation: 0, author: 'agent', opacity: 1 }
     operations.push({ type: 'put', object: graph }, { type: 'select', ids: [graph.id] })
     const at = graph.showTangentAt ?? 0
-    return commit(bridge, action(`Graphed ${latex.length > 32 ? `${latex.slice(0, 32)}…` : latex}`, operations), changedIds(operations), { graphId: graph.id, equationId, latex, xDomain: graph.xDomain, yDomain: graph.yDomain, parameters: graph.parameters ?? {}, bounds: graphBounds, valueAt: { x: at, y: evaluateLatexAt(latex, at, graph.parameters) } })
+    return commit(bridge, action(`Graphed ${readableLatex(latex)}`, operations), changedIds(operations), { graphId: graph.id, equationId, latex, xDomain: graph.xDomain, yDomain: graph.yDomain, parameters: graph.parameters ?? {}, bounds: graphBounds, valueAt: { x: at, y: evaluateLatexAt(latex, at, graph.parameters) } })
   })
 
   const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Create a live construction from primitives, or pass objectId to extend one so new marks depend on its points. Coordinates: px local to bounds. Primitive shapes: point {at}, segment {from, to}, line {through[2]}, circle {center, through}, polygon {points}, midpoint {of[2]}, perpendicular/parallel {through, to}, intersection {lines[2]}, angle {a, vertex, b}, homothety {center, source, factor}, similarity {+angle°}, spiralCenter {a, b, a2, b2}.', schema({

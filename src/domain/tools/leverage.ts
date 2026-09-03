@@ -7,6 +7,7 @@
  * Every mutation goes through the same reducer as the canvas, so it is
  * attributed to the Tutor, visible in the activity rail, and undoable.
  */
+import { readableLatex } from './definitions'
 import { evaluateLatexAt } from '../math/graph'
 import { normalizeBarycentricWeights, pointFromWeights, triangleAreas } from '../math/barycentric'
 import { resolveGeometry } from '../math/geometry'
@@ -178,7 +179,7 @@ export function createLeverageTools(bridge: WorldBridge): WorldTool[] {
     if (!Array.isArray(args.x) || !args.x.length || args.x.length > 64 || !args.x.every((value) => typeof value === 'number' && Number.isFinite(value))) throw new Error('x must be an array of 1 to 64 finite numbers, e.g. [0, 0.5, 1].')
     if (args.parameters !== undefined && !isStringNumberMap(args.parameters)) throw new Error('parameters must map names to finite numbers, e.g. {"a": 2}.')
     const samples = (args.x as number[]).map((x) => ({ x, y: evaluateLatexAt(latex, x, args.parameters as Record<string, number> | undefined) }))
-    return { ok: true, summary: `Evaluated ${latex} at ${samples.length} point${samples.length === 1 ? '' : 's'}`, data: { latex, parameters: args.parameters ?? {}, samples, undefinedCount: samples.filter((sample) => sample.y === null).length } }
+    return { ok: true, summary: `Evaluated ${readableLatex(latex)} at ${samples.length} point${samples.length === 1 ? '' : 's'}`, data: { latex, parameters: args.parameters ?? {}, samples, undefinedCount: samples.filter((sample) => sample.y === null).length } }
   })
 
   const openProject = tool('open_project', 'Open a project', 'Open a saved project by id, optionally at one of its scenes. The learner sees the switch; nothing in either project changes. Get ids from list_projects.', schema({

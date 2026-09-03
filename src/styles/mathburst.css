@@ -1135,7 +1135,18 @@ button {
 .activity-undo:hover:not(:disabled) { color: #fff; background: var(--purple); }
 .activity-undo:disabled { color: var(--muted); opacity: 0.5; cursor: default; }
 .activity-toggle:focus-visible, .activity-undo:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; }
-.activity-list { max-height: 216px; overflow-y: auto; overscroll-behavior: contain; }
+/* Rows are variable-height (summary can wrap to 2 lines, author name adds a
+   line), so max-height can land mid-row when the list scrolls. Fade the last
+   24px instead of clipping hard, so the cut reads as "more below," not a
+   rendering bug. Harmless when the list doesn't overflow -- there is nothing
+   under the fade but the panel's own background. */
+.activity-list {
+  max-height: 216px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+}
 /* Empty-state prose wraps like any other caption -- never truncated. */
 .activity-list > p { margin: 0; padding: 12px; color: var(--muted); font: 12px/1.4 var(--system); white-space: normal; overflow-wrap: break-word; }
 .activity-item {
@@ -1167,7 +1178,7 @@ button {
 .activity-item:has(.source-dot.is-human) span { color: var(--muted); }
 .activity-rail.is-collapsed { width: 200px; }
 .activity-rail.is-compact { width: 284px; }
-.activity-rail.is-compact .activity-list { max-height: 36px; }
+.activity-rail.is-compact .activity-list { max-height: 36px; -webkit-mask-image: none; mask-image: none; }
 .activity-rail.is-compact .activity-item:not(:first-child) { display: none; }
 /* Director review takes the zoom control away, so nothing is left to sit above. */
 .mathburst-app:has(.director-panel) .activity-rail { bottom: 12px; }

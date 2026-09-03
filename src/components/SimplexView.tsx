@@ -260,8 +260,27 @@ export default function SimplexView({ object, run }: Props) {
   const pointOnVertex = projected.some((vertex) => distance(projectedPoint, vertex) < 5)
   const interiorLabelRawX = pointOnVertex ? projectedPoint.x - LABEL_OFFSET - interiorLabelWidth : projectedPoint.x + LABEL_OFFSET
   const interiorLabelRawY = pointOnVertex ? projectedPoint.y + LABEL_OFFSET + 8 : projectedPoint.y - LABEL_OFFSET
-  const interiorLabelX = clamp(interiorLabelRawX, LABEL_MARGIN, Math.max(LABEL_MARGIN, plotWidth - interiorLabelWidth - LABEL_MARGIN))
-  const interiorLabelY = clamp(interiorLabelRawY, 12, plotHeight - LABEL_MARGIN)
+  let interiorLabelX = clamp(interiorLabelRawX, LABEL_MARGIN, Math.max(LABEL_MARGIN, plotWidth - interiorLabelWidth - LABEL_MARGIN))
+  let interiorLabelY = clamp(interiorLabelRawY, 12, plotHeight - LABEL_MARGIN)
+  // The P readout and the small "Aₜ/Bₜ/Cₜ/Dₜ" section-vertex labels share the
+  // same 11px row and the same projected geometry, so at some sections/weights
+  // they land on the same row and run straight over each other. Step the
+  // readout down, one row at a time, until its box clears every visible one.
+  const LABEL_ROW_HEIGHT = 14
+  type LabelBox = { left: number; right: number; top: number; bottom: number }
+  const labelBox = (x: number, y: number, textWidth: number): LabelBox => ({ left: x, right: x + textWidth, top: y - 11, bottom: y + 3 })
+  const boxesOverlap = (a: LabelBox, b: LabelBox) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+  const sectionLabelBoxes = sectionPoints
+    .map((vertex, index) => (distance(vertex, projected[index]) < 4 || distance(vertex, projected[3]) < 4)
+      ? null
+      : labelBox(vertex.x + LABEL_OFFSET, vertex.y - LABEL_OFFSET, estimateLabelWidth(`${LABELS[index]}ₜ`)))
+    .filter((box): box is LabelBox => box !== null)
+  for (let guard = 0; guard < 6; guard += 1) {
+    if (!sectionLabelBoxes.some((box) => boxesOverlap(labelBox(interiorLabelX, interiorLabelY, interiorLabelWidth), box))) break
+    const nextY = clamp(interiorLabelY + LABEL_ROW_HEIGHT, 12, plotHeight - LABEL_MARGIN)
+    if (nextY === interiorLabelY) break
+    interiorLabelY = nextY
+  }
   const sectionLabelText = `section δ = ${section.toFixed(2)}${onSection ? ' · holds P' : ''}`
   const sectionLabelWidth = estimateLabelWidth(sectionLabelText)
   const sectionLabelX = Math.max(plotWidth - 12, sectionLabelWidth + LABEL_MARGIN)
