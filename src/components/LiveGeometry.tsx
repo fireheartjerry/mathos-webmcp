@@ -62,6 +62,11 @@ function primitiveRefs(primitive: GeometryPrimitive): string[] {
     case 'homothety':
     case 'similarity': return [primitive.center, primitive.source]
     case 'spiralCenter': return [primitive.a, primitive.b, primitive.a2, primitive.b2]
+    case 'incenter':
+    case 'circumcircle':
+    case 'arcMidpoint':
+    case 'mixtilinearIncircle': return [...primitive.of]
+    case 'circleTangency': return [...primitive.circles]
   }
 }
 
@@ -69,6 +74,9 @@ function primitiveRefs(primitive: GeometryPrimitive): string[] {
 const REVEAL_RANK: Record<GeometryPrimitive['kind'], number> = {
   point: 0, segment: 1, line: 1, polygon: 1, perpendicular: 1, parallel: 1, circle: 2,
   midpoint: 3, intersection: 3, homothety: 3, similarity: 3, spiralCenter: 3, angle: 4,
+  // Olympiad primitives: centres resolve with the derived points, the circles they
+  // determine draw with the other circles, tangency points last.
+  incenter: 3, circumcircle: 2, arcMidpoint: 3, mixtilinearIncircle: 2, circleTangency: 3,
 }
 
 /**
@@ -329,6 +337,11 @@ export default function LiveGeometry({
         : `homothety of ${name(primitive.source)} about ${name(primitive.center)} (×${primitive.factor})`
       case 'similarity': return `spiral similarity of ${name(primitive.source)} about ${name(primitive.center)}`
       case 'spiralCenter': return `spiral centre ${name(primitive.id)}`
+      case 'incenter': return `incentre of ${primitive.of.map(name).join('')}`
+      case 'circumcircle': return `circumcircle of ${primitive.of.map(name).join('')}`
+      case 'arcMidpoint': return `midpoint of the arc not containing ${name(primitive.notContaining)}`
+      case 'mixtilinearIncircle': return `${name(primitive.vertex)}-mixtilinear incircle`
+      case 'circleTangency': return `tangency of ${primitive.circles.map(name).join(' and ')}`
     }
   }
 

@@ -14,6 +14,7 @@ import {
   action, boundsSchema, changedIds, commit, emptySchema, isBounds, isPair, isPoint, isRecord, isStringArray, isStringNumberMap,
   nameOf, requiredString, schema, tool, values,
 } from './definitions'
+import { CONSTRUCT_FIELD, unbuilt } from './definitions'
 import type { ToolResult, WorldBridge, WorldTool } from './definitions'
 
 const PEN = { color: '#171713', width: 3, opacity: 1 }
@@ -319,12 +320,13 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
       from: { type: 'number', description: 'Start x in world px.' }, to: { type: 'number', description: 'End x in world px (> from).' },
       samples: { type: 'integer', minimum: 2, maximum: MAX_SAMPLES, description: `Sample count 2..${MAX_SAMPLES}. Default 80.` },
     }, ['latex', 'from', 'to'], { description: 'One piece {latex, from, to, samples?}.' }) },
+    ...CONSTRUCT_FIELD,
   }, [], { examples: [
     { mode: 'highlighter', strokes: [[{ x: 120, y: 210 }, { x: 380, y: 212 }]] },
     { strokes: [[{ x: 100, y: 100 }, { x: 140, y: 160 }, { x: 180, y: 100 }]], color: '#c0392b' },
     { parametric: { x: '400+60\\cos(t)', y: '300+60\\sin(t)', t0: 0, t1: 6.2832 } },
   ] }), false, async (input) => {
-    const args = values(input, ['mode', 'color', 'width', 'strokes', 'parametric', 'piecewise'])
+    const args = values(input, ['mode', 'color', 'width', 'strokes', 'parametric', 'piecewise', 'construct'])
     const mode = args.mode === undefined ? 'pen' : args.mode
     if (mode !== 'pen' && mode !== 'highlighter') throw new Error('mode must be "pen" or "highlighter".')
     const sources = ['strokes', 'parametric', 'piecewise'].filter((key) => args[key] !== undefined)
@@ -345,7 +347,7 @@ export function createParityTools(bridge: WorldBridge): WorldTool[] {
     const { bounds, local } = fitPoints(strokes, width / 2 + 2)
     const object: WorldObject = { id: crypto.randomUUID(), kind: 'ink', points: local[0], strokes: local.map((points) => ({ points })), color, width, bounds, rotation: 0, author: 'agent', opacity: defaults.opacity }
     const summary = mode === 'pen' ? `Drew ${strokes.length} pen stroke${strokes.length === 1 ? '' : 's'}` : `Highlighted with ${strokes.length} stroke${strokes.length === 1 ? '' : 's'}`
-    return commit(bridge, action(summary, [{ type: 'put', object }]), [object.id], { objectId: object.id, mode, color, width, strokeCount: strokes.length, pointCount, bounds })
+    return commit(bridge, action(summary, unbuilt([{ type: 'put', object }], args.construct)), [object.id], { objectId: object.id, mode, color, width, strokeCount: strokes.length, pointCount, bounds })
   })
 
   const eraseInk = tool('erase_ink', 'Erase ink', 'Remove ink objects in one undoable commit. Give ids, or region (a world px rectangle; every ink whose bounds intersect it), or own: true (only ink the agent drew). Other object kinds are never touched; use delete_objects for those.', schema({

@@ -471,6 +471,30 @@ const unionBounds = (objects: WorldObject[]): Bounds | null => {
 
 /** Fields update_objects may patch on every kind. `drawProgress` is transient and `id`, `kind`, `author` are immutable. */
 export const COMMON_PATCH_FIELDS = ['bounds', 'rotation', 'opacity', 'locked']
+
+/**
+ * Schema field every creating tool offers so a scene can be built on camera.
+ *
+ * Every view already implements a staged construction off one drawProgress
+ * fraction (see revealProgress/revealStage in domain/animation/evaluate.ts:
+ * the attention card draws its header, then the matrix rows, then the vectors
+ * growing out of the origin, then the softmax bars, then the readouts). But
+ * revealProgress treats a MISSING drawProgress as fully drawn, so a freshly
+ * created widget renders complete the instant it exists and none of that
+ * staging ever runs. Seeding drawProgress: 0 at creation is the primitive that
+ * lets an agent make a thing and then build it up with the animation tools.
+ */
+export const CONSTRUCT_FIELD = {
+  construct: { type: 'boolean', description: 'true: create it unbuilt (drawProgress 0), then animate drawProgress 0 to 1 on a timeline to build it on screen. Ink draws stroke by stroke.' },
+} as const
+
+/** Seed drawProgress: 0 on everything a creating tool is about to put, when asked. */
+export function unbuilt(operations: WorldOperation[], construct: unknown): WorldOperation[] {
+  if (construct !== true) return operations
+  return operations.map((operation) => (
+    operation.type === 'put' ? { ...operation, object: { ...operation.object, drawProgress: 0 } } : operation
+  ))
+}
 const SEMANTIC_LINK_FIELDS = ['entityId', 'bindingIds']
 /** Kind-specific fields update_objects may patch; every entry is validated by objectError after the merge. */
 export const KIND_PATCH_FIELDS: Record<WorldObject['kind'], string[]> = {
@@ -771,12 +795,13 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     shadeIntegral: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number', description: 'x bound.' }, description: '[from, to] in x to shade the area under the curve, e.g. [0, 1].' },
     visualization: { type: 'string', enum: ['standard', 'gamma-density'], description: '"standard" (default) or "gamma-density" for the normalised Gamma density view with mass bins.' },
     binEdges: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number', description: 'x edge.' }, description: 'Four ascending x edges splitting the density into three masses, e.g. [0, 2.5, 5, 12]. gamma-density only.' },
+    ...CONSTRUCT_FIELD,
   }, [], { examples: [
     { latex: 'x^2-2x-1' },
     { latex: 'a x e^{x}', parameters: { a: 1 }, shadeIntegral: [0, 1], bounds: { x: 700, y: 160, width: 460, height: 330 } },
     { equationId: 'eq-1', showTangentAt: 1.5 },
   ] }), false, async (input) => {
-    const args = values(input, ['latex', 'equationId', 'bounds', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges']); const hasLatex = typeof args.latex === 'string' && Boolean(args.latex.trim()); const hasEquation = typeof args.equationId === 'string' && Boolean(args.equationId.trim()); if (hasLatex === hasEquation) throw new Error('Provide exactly one of latex (e.g. "x^2-2x-1") or equationId (an existing equation object id).')
+    const args = values(input, ['latex', 'equationId', 'bounds', 'parameters', 'showTangentAt', 'shadeIntegral', 'visualization', 'binEdges', 'construct']); const hasLatex = typeof args.latex === 'string' && Boolean(args.latex.trim()); const hasEquation = typeof args.equationId === 'string' && Boolean(args.equationId.trim()); if (hasLatex === hasEquation) throw new Error('Provide exactly one of latex (e.g. "x^2-2x-1") or equationId (an existing equation object id).')
     const world = bridge.getWorld(); const graphBounds = args.bounds === undefined ? { x: 730, y: 150, width: 460, height: 330 } : args.bounds; if (!isBounds(graphBounds)) throw new Error('bounds must be {x, y, width > 0, height > 0} in world px, e.g. {"x": 730, "y": 150, "width": 460, "height": 330}.'); if (args.parameters !== undefined && !isStringNumberMap(args.parameters)) throw new Error('parameters must map names to finite numbers, e.g. {"a": 1.5}.'); if (args.showTangentAt !== undefined && (typeof args.showTangentAt !== 'number' || !Number.isFinite(args.showTangentAt))) throw new Error('showTangentAt must be a finite x value, e.g. 1.5.'); if (args.shadeIntegral !== undefined && !isPair(args.shadeIntegral)) throw new Error('shadeIntegral must be [from, to] in x, e.g. [0, 1].'); if (args.visualization !== undefined && args.visualization !== 'standard' && args.visualization !== 'gamma-density') throw new Error('visualization must be "standard" or "gamma-density".'); if (args.binEdges !== undefined && !isVector(args.binEdges, 4)) throw new Error('binEdges must be four finite ascending x values, e.g. [0, 2.5, 5, 12].')
     const operations: WorldOperation[] = []; let equationId = String(args.equationId ?? ''); let latex = ''
     if (hasLatex) { equationId = crypto.randomUUID(); latex = String(args.latex); operations.push({ type: 'put', object: { id: equationId, kind: 'equation', latex, color: '#171713', bounds: { x: graphBounds.x + 30, y: graphBounds.y - 62, width: 300, height: 50 }, rotation: 0, author: 'agent', opacity: 1 } }) } else {
@@ -784,21 +809,23 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     }
     const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId, xDomain: [-4, 4], yDomain: [-5, 10], color: '#7c5cff', parameters: args.parameters as Record<string, number> | undefined, showTangentAt: args.showTangentAt as number | undefined, shadeIntegral: args.shadeIntegral as [number, number] | undefined, visualization: args.visualization as 'standard' | 'gamma-density' | undefined, binEdges: args.binEdges as [number, number, number, number] | undefined, bounds: graphBounds, rotation: 0, author: 'agent', opacity: 1 }
     operations.push({ type: 'put', object: graph }, { type: 'select', ids: [graph.id] })
+    const built = unbuilt(operations, args.construct)
     const at = graph.showTangentAt ?? 0
-    return commit(bridge, action(`Graphed ${readableLatex(latex)}`, operations), changedIds(operations), { graphId: graph.id, equationId, latex, xDomain: graph.xDomain, yDomain: graph.yDomain, parameters: graph.parameters ?? {}, bounds: graphBounds, valueAt: { x: at, y: evaluateLatexAt(latex, at, graph.parameters) } })
+    return commit(bridge, action(`Graphed ${readableLatex(latex)}`, built), changedIds(built), { graphId: graph.id, equationId, latex, xDomain: graph.xDomain, yDomain: graph.yDomain, parameters: graph.parameters ?? {}, bounds: graphBounds, valueAt: { x: at, y: evaluateLatexAt(latex, at, graph.parameters) } })
   })
 
-  const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Create a live construction from primitives, or pass objectId to extend one so new marks depend on its points. Coordinates: px local to bounds. Primitive shapes: point {at}, segment {from, to}, line {through[2]}, circle {center, through}, polygon {points}, midpoint {of[2]}, perpendicular/parallel {through, to}, intersection {lines[2]}, angle {a, vertex, b}, homothety {center, source, factor}, similarity {+angle°}, spiralCenter {a, b, a2, b2}.', schema({
+  const constructGeometry = tool('construct_geometry', 'Construct dynamic geometry', 'Build a live construction, or extend one with objectId. Coords: px local to bounds. Shapes: point {at}, segment {from,to}, line {through[2]}, circle {center,through}, polygon {points}, midpoint {of[2]}, perpendicular/parallel {through,to}, intersection {lines[2]}, angle {a,vertex,b}, homothety/similarity {center,source,factor}, spiralCenter {a,b,a2,b2}, incenter/circumcircle {of[3]}, arcMidpoint {of[3],notContaining}, mixtilinearIncircle {of[3],vertex}, circleTangency {circles[2]}', schema({
     primitives: primitivesSchema,
     bounds: { ...boundsSchema, description: 'Construction box in world px. Default {x: 400, y: 170, width: 430, height: 330}. Ignored with objectId.' },
     accent: { type: 'string', description: 'CSS accent color for the marks. Default "#7c5cff". Ignored with objectId.' },
     objectId: { type: 'string', description: 'Existing geometry object to extend; new primitive ids must not clash with its own.' },
     summary: summarySchema('Constructed the perpendicular bisector'),
+    ...CONSTRUCT_FIELD,
   }, ['primitives'], { examples: [
     { primitives: [{ kind: 'point', id: 'A', at: { x: 60, y: 240 }, label: 'A', draggable: true }, { kind: 'point', id: 'B', at: { x: 340, y: 240 }, label: 'B', draggable: true }, { kind: 'point', id: 'C', at: { x: 200, y: 60 }, label: 'C', draggable: true }, { kind: 'polygon', id: 'ABC', points: ['A', 'B', 'C'] }, { kind: 'midpoint', id: 'M', of: ['A', 'B'], label: 'M' }, { kind: 'segment', id: 'CM', from: 'C', to: 'M' }] },
     { objectId: 'geo-1', primitives: [{ kind: 'circle', id: 'c', center: 'A', through: 'B' }] },
   ] }), false, async (input) => {
-    const args = values(input, ['primitives', 'bounds', 'accent', 'objectId', 'summary']); const bounds = args.bounds === undefined ? { x: 400, y: 170, width: 430, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds must be {x, y, width > 0, height > 0} in world px, e.g. {"x": 400, "y": 170, "width": 430, "height": 330}.')
+    const args = values(input, ['primitives', 'bounds', 'accent', 'objectId', 'summary', 'construct']); const bounds = args.bounds === undefined ? { x: 400, y: 170, width: 430, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds must be {x, y, width > 0, height > 0} in world px, e.g. {"x": 400, "y": 170, "width": 430, "height": 330}.')
     if (args.accent !== undefined && !isColor(args.accent)) throw new Error('accent must be a CSS color string, e.g. "#7c5cff".')
     const added = primitives(args.primitives)
     const ids = new Set<string>(); for (const primitive of added) { if (ids.has(primitive.id)) throw new Error(`Primitive id ${primitive.id} is repeated; ids must be unique inside a construction.`); ids.add(primitive.id) }
@@ -811,10 +838,10 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
       const duplicate = added.find((primitive) => taken.has(primitive.id))
       if (duplicate) throw new Error(`Primitive ${duplicate.id} already exists in ${existing.id}; choose a new id or read the construction with inspect_math.`)
       const object: WorldObject = { ...existing, primitives: [...existing.primitives, ...added] }
-      return commit(bridge, action(optionalSummary(args.summary, `Extended ${nameOf(existing)} with ${plural(added.length, 'primitive')}`), [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id], { objectId: object.id, addedIds: added.map((primitive) => primitive.id), primitiveCount: object.primitives.length, bounds: object.bounds, ...describe(object.primitives) })
+      return commit(bridge, action(optionalSummary(args.summary, `Extended ${nameOf(existing)} with ${plural(added.length, 'primitive')}`), unbuilt([{ type: 'put', object }, { type: 'select', ids: [object.id] }], args.construct)), [object.id], { objectId: object.id, addedIds: added.map((primitive) => primitive.id), primitiveCount: object.primitives.length, bounds: object.bounds, ...describe(object.primitives) })
     }
     const object: WorldObject = { id: crypto.randomUUID(), kind: 'geometry', primitives: added, accent: typeof args.accent === 'string' ? args.accent : '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }
-    return commit(bridge, action(optionalSummary(args.summary, `Constructed geometry with ${plural(added.length, 'primitive')}`), [{ type: 'put', object }, { type: 'select', ids: [object.id] }]), [object.id], { objectId: object.id, addedIds: added.map((primitive) => primitive.id), primitiveCount: added.length, bounds, ...describe(added) })
+    return commit(bridge, action(optionalSummary(args.summary, `Constructed geometry with ${plural(added.length, 'primitive')}`), unbuilt([{ type: 'put', object }, { type: 'select', ids: [object.id] }], args.construct)), [object.id], { objectId: object.id, addedIds: added.map((primitive) => primitive.id), primitiveCount: added.length, bounds, ...describe(added) })
   })
 
   const CONCEPTS = ['integral', 'tangent', 'homothety', 'matrix-transform', 'gamma-density', 'attention', 'training', 'barycentric', 'spiral-similarity', 'simplex', 'partitions']
@@ -822,8 +849,9 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
     concept: { type: 'string', enum: CONCEPTS, description: 'Scene to create, e.g. "integral", "attention" or "simplex"; the enum lists all eleven.' },
     sourceIds: { type: 'array', items: { type: 'string', description: 'Arrow object id.' }, description: 'matrix-transform only: arrow ids to use as source vectors. Default: two hidden basis arrows.' },
     bounds: { ...boundsSchema, description: 'Scene box in world px. Default {x: 720, y: 160, width: 470, height: 330}.' },
+    ...CONSTRUCT_FIELD,
   }, ['concept']), false, async (input) => {
-    const args = values(input, ['concept', 'sourceIds', 'bounds']); if (!CONCEPTS.includes(String(args.concept))) throw new Error(`concept must be one of: ${CONCEPTS.join(', ')}.`); if (args.sourceIds !== undefined && !isStringArray(args.sourceIds)) throw new Error('sourceIds must be an array of arrow object ids.'); const bounds = args.bounds === undefined ? { x: 720, y: 160, width: 470, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds must be {x, y, width > 0, height > 0} in world px, e.g. {"x": 720, "y": 160, "width": 470, "height": 330}.'); const world = bridge.getWorld(); const operations: WorldOperation[] = []
+    const args = values(input, ['concept', 'sourceIds', 'bounds', 'construct']); if (!CONCEPTS.includes(String(args.concept))) throw new Error(`concept must be one of: ${CONCEPTS.join(', ')}.`); if (args.sourceIds !== undefined && !isStringArray(args.sourceIds)) throw new Error('sourceIds must be an array of arrow object ids.'); const bounds = args.bounds === undefined ? { x: 720, y: 160, width: 470, height: 330 } : args.bounds; if (!isBounds(bounds)) throw new Error('bounds must be {x, y, width > 0, height > 0} in world px, e.g. {"x": 720, "y": 160, "width": 470, "height": 330}.'); const world = bridge.getWorld(); const operations: WorldOperation[] = []
     if (args.concept === 'integral' || args.concept === 'tangent' || args.concept === 'gamma-density') {
       const equation: WorldObject = { id: crypto.randomUUID(), kind: 'equation', latex: args.concept === 'gamma-density' ? '\\frac{x^{a-1}e^{-x}}{\\Gamma(a)}' : args.concept === 'integral' ? 'a x e^x' : 'x^2-2x-1', color: '#171713', bounds: { x: bounds.x + 30, y: bounds.y - 62, width: 280, height: 50 }, rotation: 0, author: 'agent', opacity: 1 }
       const graph: WorldObject = { id: crypto.randomUUID(), kind: 'graph', equationId: equation.id, xDomain: args.concept === 'gamma-density' ? [0, 12] : [-3, 3], yDomain: args.concept === 'gamma-density' ? [0, 0.25] : [-4, 10], color: '#7c5cff', parameters: args.concept === 'gamma-density' ? { a: 4.5 } : args.concept === 'integral' ? { a: 1 } : undefined, shadeIntegral: args.concept === 'gamma-density' || args.concept === 'integral' ? [0, 1] : undefined, showTangentAt: args.concept === 'tangent' ? 1.5 : undefined, visualization: args.concept === 'gamma-density' ? 'gamma-density' : 'standard', binEdges: args.concept === 'gamma-density' ? [0, 2.5, 5, 12] : undefined, bounds, rotation: 0, author: 'agent', opacity: 1 }
@@ -863,9 +891,10 @@ export function createWorldTools(bridge: WorldBridge): WorldTool[] {
       ]; sourceIds = sources.map((source) => source.id); operations.push(...sources.map((object) => ({ type: 'put' as const, object }))) }
       const matrix: WorldObject = { id: crypto.randomUUID(), kind: 'matrix', values: [[1, 0.8], [0, 1]], sourceIds, accent: '#7c5cff', bounds, rotation: 0, author: 'agent', opacity: 1 }; operations.push({ type: 'put', object: matrix }, { type: 'select', ids: [matrix.id] })
     }
-    const created = operations.flatMap((operation) => (operation.type === 'put' ? [operation.object] : []))
-    const primary = operations.find((operation) => operation.type === 'select')
-    return commit(bridge, action(`Visualized ${String(args.concept)}`, operations), changedIds(operations), { concept: args.concept, ids: created.map((object) => object.id), primaryId: primary?.type === 'select' ? primary.ids[0] : created[created.length - 1]?.id, kinds: kindCounts(created), bounds })
+    const built = unbuilt(operations, args.construct)
+    const created = built.flatMap((operation) => (operation.type === 'put' ? [operation.object] : []))
+    const primary = built.find((operation) => operation.type === 'select')
+    return commit(bridge, action(`Visualized ${String(args.concept)}`, built), changedIds(built), { concept: args.concept, ids: created.map((object) => object.id), primaryId: primary?.type === 'select' ? primary.ids[0] : created[created.length - 1]?.id, kinds: kindCounts(created), bounds })
   })
 
   const tools: WorldTool[] = [

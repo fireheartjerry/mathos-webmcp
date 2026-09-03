@@ -12,7 +12,7 @@ Mathburst is an AI-native math whiteboard for tutoring. A problem can begin as a
 
 1. Open **Gamma Lab → Recurrence Clinic**. Press **Reconstruct photo**, **AI double-check**, then **Approve clean conversion**.
 2. Open **Area Becomes Probability** and adjust the live bound. The normalized Gamma area, three bin masses, and `log mass → softmax` bridge update together.
-3. Open **WebMCP · 18/18**. The inspector shows the exact page tools an external agent receives; every **Run** button invokes the same tool handler.
+3. Open **WebMCP · 48/48**. The inspector shows the exact page tools an external agent receives; every **Run** button invokes the same tool handler.
 4. Visit **Tiny Transformer → Train From Scratch** and press **TRAIN 1 STEP**. The deterministic numerical-gradient update changes a visible parameter, lowers loss, and raises target probability.
 5. Visit **Olympiad Geometry → Homothety & Spiral Similarity**, then **Simplex → Ramanujan**. Drag the geometry, rotate the simplex, vary the lattice denominator, and inspect the finite partition lanes.
 6. Open **Director Review** to browse and edit all thirteen cinematic keyframes. Press **Undo** from the workspace; human and tutor actions share one attributed, reversible history.
@@ -46,19 +46,24 @@ Director Review contains thirteen editable keyframes mapped across the eight sce
 
 ## The complete WebMCP surface
 
-Mathburst registers exactly eighteen discoverable page tools.
+Mathburst registers exactly forty-eight discoverable page tools, in twelve groups.
 
-| Read the world | Direct action | Mathematical workflows |
+| Group | What it is for | Tools |
 | --- | --- | --- |
-| `get_world` | `create_objects` | `reconstruct_problem` |
-| `get_objects` | `update_objects` | `audit_reconstruction` |
-| `get_selection` | `delete_objects` | `graph_expression` |
-| `get_session_context` | `transform_objects` | `construct_geometry` |
-| `get_history` | `apply_actions` | `visualize_concept` |
-| `inspect_math` | `step_history` |  |
-|  | `set_viewport` |  |
+| **World** | Read the shared scene | `get_world` `get_objects` `get_selection` |
+| **Context** | Read tutoring and math state | `get_session_context` `get_history` `inspect_math` |
+| **Objects** | Create, edit and remove | `create_objects` `update_objects` `transform_objects` `delete_objects` |
+| **Control** | Batch, history and viewport | `apply_actions` `step_history` `set_viewport` |
+| **Reconstruct** | Turn images into live math | `reconstruct_problem` `audit_reconstruction` |
+| **Mathematics** | Graph, construct and visualize | `graph_expression` `construct_geometry` `visualize_concept` |
+| **Ink & shapes** | Draw, erase, shape and point | `draw_ink` `erase_ink` `create_shape` `edit_shape` `set_arrow` |
+| **Text & math** | Edit text, equations, graphs, matrices | `edit_text` `edit_equation` `set_graph` `set_matrix_cells` |
+| **Animation** | Author and drive timelines | `create_timeline` `add_keyframes` `play_timeline` `get_timelines` |
+| **Projects** | Library and navigation | `list_projects` `get_scene_catalog` `open_project` `open_scene` `create_project` `delete_project` |
+| **Tutoring** | Focus, explain, evaluate, annotate | `focus_objects` `spotlight_objects` `explain_object` `evaluate_expression` `annotate_object` |
+| **Labs** | Drive each lab from its own controls | `train_model_step` `set_attention_weight` `set_barycentric_weights` `move_geometry_point` `set_simplex_view` `set_partition_view` |
 
-The surface is compact without being narrow. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplexes, number theory, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
+Twelve of the forty-eight are read-only; the rest commit to the shared history. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplexes, number theory, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
 
 Every tool returns a small success/failure envelope. Every mutation compiles into canonical operations, enters the same reducer as a human gesture, recomputes direct dependencies, records authorship, and becomes undoable.
 
@@ -135,7 +140,7 @@ Use ChatGPT's WebMCP-capable browser, or in compatible Chrome builds enable:
 chrome://flags/#enable-webmcp-testing
 ```
 
-Restart the browser, open Mathburst, and confirm the inspector reads **WebMCP · 18/18**. A manual browser check is also possible:
+Restart the browser, open Mathburst, and confirm the inspector reads **WebMCP · 48/48**. A manual browser check is also possible:
 
 ```js
 const tools = await document.modelContext.getTools()

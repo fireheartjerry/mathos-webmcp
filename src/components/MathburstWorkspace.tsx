@@ -79,6 +79,7 @@ import WorldCanvas from './WorldCanvas'
 import FilmCursor from './FilmCursor'
 import AnimationTimeline from './animation/AnimationTimeline'
 import { useTimelinePlayback } from './animation/useTimelinePlayback'
+import { drawIn } from '../domain/animation/presets'
 import AgentConsole from './sidebar/AgentConsole'
 import AgentAura from './sidebar/AgentAura'
 import AgentActivation, { useOneShot } from './sidebar/AgentActivation'
@@ -138,28 +139,43 @@ const chromeInsets = () => {
   let right = 0
   let bottom = 0
   let left = 0
-  // The agent console is docked to the right in film mode and the progressive
-  // inspector floats over the bottom of the canvas. Neither was measured, so a
-  // framed object was fitted to a box that these two were sitting on top of.
-  for (const selector of ['.activity-rail', '.zoom-controls', '.animation-panel', '.agent-console']) {
-    const rect = measure(selector)
-    if (!rect) continue
-    right = Math.max(right, canvas.right - rect.left)
-    bottom = Math.max(bottom, canvas.bottom - rect.top)
+  let top = 0
+  // Which edge a panel occupies is a fact about the current layout, not a constant.
+  // The animation (Timelines) panel docks LEFT in film mode, but every panel here
+  // used to be charged to right/bottom, so `canvas.right - rect.left` returned
+  // nearly the full canvas width and framing reserved a third of the RIGHT while
+  // leaving the left clear -- focus_objects then fitted cards straight underneath
+  // the panel. Charge each panel to the edge it is actually nearest instead.
+  const claim = (rect: DOMRect) => {
+    const fromLeft = rect.right - canvas.left
+    const fromRight = canvas.right - rect.left
+    const fromTop = rect.bottom - canvas.top
+    const fromBottom = canvas.bottom - rect.top
+    const horizontal = Math.min(fromLeft, fromRight)
+    const vertical = Math.min(fromTop, fromBottom)
+    if (horizontal <= vertical) {
+      if (fromLeft <= fromRight) left = Math.max(left, fromLeft)
+      else right = Math.max(right, fromRight)
+    } else if (fromTop <= fromBottom) top = Math.max(top, fromTop)
+    else bottom = Math.max(bottom, fromBottom)
   }
-  const navigator = measure('.personal-project-navigator')
-  if (navigator) bottom = Math.max(bottom, canvas.bottom - navigator.top)
-  const ledger = measure('.tool-ledger')
-  if (ledger) left = Math.max(left, ledger.right - canvas.left)
-  const inspector = measure('.progressive-inspector')
-  if (inspector) bottom = Math.max(bottom, canvas.bottom - inspector.top)
+  // The header floats over the canvas, so `top` can never be assumed to be 0:
+  // card titles were being framed underneath it.
+  for (const selector of [
+    '.world-header', '.tool-rail', '.tool-ledger', '.activity-rail', '.zoom-controls',
+    '.animation-panel', '.agent-console', '.personal-project-navigator',
+    '.progressive-inspector', '.reconstruction-panel',
+  ]) {
+    const rect = measure(selector)
+    if (rect) claim(rect)
+  }
   // A little air beyond the chrome itself, and never let the insets eat the canvas.
   const gutter = 16
   return {
-    left: Math.min(canvas.width * 0.25, Math.max(0, left) + (left ? gutter : 0)),
-    right: Math.min(canvas.width * 0.3, Math.max(0, right) + (right ? gutter : 0)),
-    top: 0,
-    bottom: Math.min(canvas.height * 0.28, Math.max(0, bottom) + (bottom ? gutter : 0)),
+    left: Math.min(canvas.width * 0.25, Math.max(0, left) + (left > 0 ? gutter : 0)),
+    right: Math.min(canvas.width * 0.3, Math.max(0, right) + (right > 0 ? gutter : 0)),
+    top: Math.min(canvas.height * 0.2, Math.max(0, top) + (top > 0 ? gutter : 0)),
+    bottom: Math.min(canvas.height * 0.28, Math.max(0, bottom) + (bottom > 0 ? gutter : 0)),
   }
 }
 
@@ -1922,7 +1938,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
          * This puts the real captured strokes on the canvas, attributed to the
          * learner, before the agent starts reading.
          */
-        writeOpeningInk: () => {
+        writeOpeningInk: (seconds = 5) => {
           const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
           const ink = handwritingSampleToInk(samples, 'opening-attempt', {
             id: 'replay_opening_attempt',
@@ -1934,7 +1950,20 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
             opacity: 1,
           })
           if (!ink) return false
-          run(humanAction('Wrote the Gamma recurrence by hand', [{ type: 'put', object: ink }]))
+          // Write it, do not paste it. drawProgress 0 plus the drawIn preset reveals the
+          // strokes in the order and at the speed they were captured, so the line appears
+          // under a moving nib the way the learner actually wrote it. One human commit
+          // carries both the ink and its timeline; playback is transient, so the reveal
+          // never lands in history as a second edit.
+          const timeline = drawIn(ink.id, seconds, `draw-${ink.id}`)
+          run(humanAction('Wrote the Gamma recurrence by hand', [
+            { type: 'put', object: { ...ink, drawProgress: 0 } },
+            { type: 'putTimeline', timeline },
+          ]))
+          // run() commits through React state, so the controller cannot see the timeline
+          // on this tick: playing immediately left it parked at 0.00s and the ink simply
+          // never appeared. Start it once the commit has flushed.
+          window.setTimeout(() => playback.control(timeline.id, 'play'), 60)
           return true
         },
         runTool: (name: string, input: unknown) => webMcpTools.find((tool) => tool.name === name)?.execute(input),

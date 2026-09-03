@@ -68,11 +68,16 @@ There are **two** film productions in this repo. Do not mix them up.
 **Use the Agent Replay film.** The Director film is kept only because the narration
 `.wav` files live under `video/public/film/narration-v3/` and the replay reuses them.
 
+**Running it on macOS.** `scripts/film/chrome.mjs` used to know only Windows `chrome.exe`
+paths; it now also finds the macOS/Linux binaries, and `CHROME_POSITION` overrides the
+manifest's `chromePosition` (which assumed the authoring machine's second monitor).
+`audio.py` needs numpy: `python3 -m pip install --user numpy`.
+
 ### The replay
 `src/domain/replay/script.ts` is a scripted sequence of **real WebMCP tool calls**
 executed through the registered tool objects, with the agent's lines shown in an
 on-screen console. It is not a fake chat: every call in the console genuinely ran.
-The finished console reads **"99 calls · 48 distinct tools"**.
+The finished console reads **"107 calls · 48 distinct tools"**.
 
 ### Regenerating the video — exact sequence
 
@@ -84,8 +89,14 @@ Then, from the worktree root:
 FILM_MANIFEST=video/film.replay.manifest.json FILM_OUT=video/public/film-replay \
   node scripts/film/capture.mjs
 ```
+Do not guess `CONTENT_ENDS`. Measure where the picture actually stops moving:
 ```bash
-CONTENT_ENDS=<capture seconds minus 2> node scripts/film/build-replay.mjs
+ffmpeg -hide_banner -nostats -i video/public/film-replay/capture.mp4 \
+  -vf "freezedetect=n=-58dB:d=1.2,metadata=print:file=-" -map 0:v -f null - 2>/dev/null | grep freeze_start
+```
+```bash
+CONTENT_ENDS=<last freeze start, rounded up> HOLD=2.0 NARRATION_SCALE=<action seconds / 132> \
+  node scripts/film/build-replay.mjs
 FILM_DIR=video/public/film-replay python scripts/film/audio.py
 FILM_DIR=video/public/film-replay FILM_MANIFEST=video/film.replay.manifest.json \
   node scripts/film/render-fast.mjs "$HOME/Downloads/Mathburst-WebMCP-Challenge.mp4"
@@ -238,3 +249,32 @@ the storyboard.
   embedded double quotes from argv.
 - Jerry moves fast and wants iteration, not deliberation. Ship a file, then improve
   it. Always leave a working video in `~/Downloads`.
+
+---
+
+## 9. Ground-up construction (added on the Mac)
+
+Every view stages its own build off ONE `drawProgress` fraction (see `revealProgress`,
+`revealStage`, `revealItem` in `src/domain/animation/evaluate.ts`; e.g. `AttentionView.tsx`
+draws header → matrix rows → vectors growing from the origin → softmax bars → readouts).
+
+`revealProgress` treats a MISSING `drawProgress` as **fully drawn**, so anything freshly
+created rendered complete and none of that staging ever ran. The film was animating
+`opacity`/`bounds.y` instead: a finished card fading in.
+
+The missing primitive was "create it, don't draw it yet". `CONSTRUCT_FIELD` / `unbuilt()`
+in `src/domain/tools/definitions.ts` add `construct: true` to `visualize_concept`,
+`graph_expression`, `construct_geometry` and `draw_ink`; it seeds `drawProgress: 0`, and
+the agent then builds the thing with `create_timeline` → `add_keyframes` → `play_timeline`.
+
+**Rules if you touch the script:**
+- Anything created with `construct: true` MUST get a `drawProgress` timeline, or it stays
+  invisible forever.
+- A timeline's `duration` must be >= its latest keyframe `time`, and the `play_timeline`
+  step's `waitMs` must exceed the duration, or the build is cut off mid-assembly.
+- The learner's handwriting draws itself via `writeOpeningInk` (the `drawIn` preset).
+  `run()` commits through React state, so the play must be deferred a tick or the
+  timeline sits at 0.00s and the ink never appears.
+
+Pacing: `.film/script.pace-base.ts` is the pre-scaling copy of the replay script, so the
+timing factor can be retuned in one pass instead of unpicking edits.

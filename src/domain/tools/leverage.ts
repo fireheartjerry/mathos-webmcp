@@ -250,12 +250,20 @@ export function createLeverageTools(bridge: WorldBridge): WorldTool[] {
     if (args.color !== undefined && (typeof args.color !== 'string' || !args.color.trim())) throw new Error('color must be a CSS color string, e.g. "#7c5cff".')
     const presentation = args.presentation === 'handwritten' ? 'handwritten' : 'typed'
     const placement = typeof args.placement === 'string' ? args.placement : 'right'
-    const width = Math.min(420, Math.max(160, text.length * 9)); const height = presentation === 'handwritten' ? 44 : 32; const gap = 18
+    // Size the note to its own text. A flat 9px-per-character estimate measured the
+    // 16px typed face and under-measured the 22px handwritten one, so a note that
+    // wrapped to two lines was given a one-line box and lost its tail off the bottom
+    // edge ("v = −e⁻ˣ. Two negatives." rendered as "v = −e⁻ˣ. Two").
+    const fontSize = presentation === 'handwritten' ? 22 : 16; const gap = 18
+    const ideal = Math.ceil(text.length * fontSize * 0.58) + 16
+    const width = Math.min(420, Math.max(160, ideal))
+    const lines = Math.max(1, Math.ceil(ideal / width))
+    const height = lines * Math.round(fontSize * 1.35) + 14
     const bounds = placement === 'below' ? { x: target.bounds.x, y: target.bounds.y + target.bounds.height + gap, width, height }
       : placement === 'above' ? { x: target.bounds.x, y: target.bounds.y - height - gap, width, height }
         : placement === 'left' ? { x: target.bounds.x - width - gap, y: target.bounds.y, width, height }
           : { x: target.bounds.x + target.bounds.width + gap, y: target.bounds.y, width, height }
-    const note: WorldObject = { id: crypto.randomUUID(), kind: 'text', text, color: typeof args.color === 'string' ? args.color : '#7c5cff', fontSize: presentation === 'handwritten' ? 22 : 16, presentation, bounds, rotation: 0, author: 'agent', opacity: 1 }
+    const note: WorldObject = { id: crypto.randomUUID(), kind: 'text', text, color: typeof args.color === 'string' ? args.color : '#7c5cff', fontSize, presentation, bounds, rotation: 0, author: 'agent', opacity: 1 }
     const operations: WorldOperation[] = [{ type: 'put', object: note }, { type: 'select', ids: [note.id] }]
     return commit(bridge, action(`Annotated ${nameOf(target)}: “${text.length > 40 ? `${text.slice(0, 40)}…` : text}”`, operations), [id, note.id], { noteId: note.id, targetId: id, text, presentation, placement, bounds })
   })

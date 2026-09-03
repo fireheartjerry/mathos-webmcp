@@ -25,8 +25,15 @@ const fileOf = (id) => `film/narration-v3/${id}.wav`
 
 /** Where the performance stops and the finished console just holds. */
 const CONTENT_ENDS = Number(process.env.CONTENT_ENDS ?? 143.0)
-/** How long to hold the finished 48/48 console before the film ends. */
-const HOLD = 9.0
+/**
+ * How long to hold the finished 48/48 console before the film ends.
+ *
+ * 9s left the picture frozen for 19.4s (12.7% of the runtime), the last 12.4s of it
+ * without narration, because the replay stops moving before CONTENT_ENDS. Measure
+ * where the picture actually freezes (ffmpeg freezedetect) and pass CONTENT_ENDS
+ * from that; the hold is then only the deliberate beat on the end card.
+ */
+const HOLD = Number(process.env.HOLD ?? 3.0)
 const FILM_SECONDS = CONTENT_ENDS + HOLD
 
 // One span. The take needs no pans excised and no tails capped.
@@ -62,7 +69,10 @@ const plan = [
   ['07-density', 33.0],
   ['08-bridge', 43.4],
   ['09-attention', 52.0],
-  ['11-geometry', 61.8],
+  // The eight training clicks had no line, so the beat read as an animation
+  // rather than as real gradient steps the learner is taking.
+  ['10-training', 58.0],
+  ['11-geometry', 66.0],
   ['12-barycentric', 70.4],
   ['13-parity-shape', 75.2],
   ['13b-parity-ink', 83.0],
@@ -70,12 +80,30 @@ const plan = [
   ['15-matrix', 103.2],
   ['16-isolation', 112.0],
   ['17-close', 126.0],
+  // Names the panel the closing shot reveals; without it the ledger is a
+  // sidebar the viewer has never had explained. ABSOLUTE: the manifest appends this
+  // beat after the replay, so it sits a fixed distance from the end of the take and
+  // must not be stretched with the rest.
+  ['18-ledger', 164.0, { absolute: true }],
 ]
+
+/**
+ * The offsets above were measured against a take whose action ran ~132s. Slowing the
+ * replay down so each construction can be read stretches every beat, so the anchors
+ * have to stretch with it or the voice drifts ahead of the picture. Pass the ratio of
+ * the new action length to that reference: NARRATION_SCALE=1.26 for a ~166s take.
+ */
+const NARRATION_SCALE = Number(process.env.NARRATION_SCALE ?? 1)
 
 const clips = []
 let previousEnd = 0
 const problems = []
-for (const [id, wanted] of plan) {
+for (const [id, rawWanted, options] of plan) {
+  // A beat the manifest appends AFTER the replay (the closing ledger reveal) sits at a
+  // fixed distance from the end of the take, not at a fixed fraction of it. Scaling it
+  // with the rest pushed it past the end of the film entirely. Absolute anchors are
+  // given in final film seconds and are never stretched.
+  const wanted = options?.absolute ? rawWanted : rawWanted * NARRATION_SCALE
   const duration = durationOf(id)
   if (!duration) { problems.push(`${id}: no rendered audio`); continue }
   // Never let two clips talk at once; a clip may start late but never early.

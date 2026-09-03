@@ -91,6 +91,15 @@ export type GeometryPrimitive =
   | { kind: 'similarity'; id: string; center: string; source: string; factor: number; angle: number; label?: string }
   /** The unique fixed point of the spiral similarity sending a→a2 and b→b2. */
   | { kind: 'spiralCenter'; id: string; a: string; b: string; a2: string; b2: string; label?: string }
+  // Olympiad configuration primitives. These exist so tangency and concurrency are
+  // COMPUTED rather than drawn: a hand-placed "tangent" circle stops being tangent the
+  // moment a vertex moves, which is what made the old figure read as a sketch.
+  // `of` is the triangle's three point ids; `notContaining` and `vertex` name one of them.
+  | { kind: 'incenter'; id: string; of: [string, string, string]; label?: string }
+  | { kind: 'circumcircle'; id: string; of: [string, string, string] }
+  | { kind: 'arcMidpoint'; id: string; of: [string, string, string]; notContaining: string; label?: string }
+  | { kind: 'mixtilinearIncircle'; id: string; of: [string, string, string]; vertex: string }
+  | { kind: 'circleTangency'; id: string; circles: [string, string]; label?: string }
 export type GeometryObject = BaseObject & SemanticViewLink & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
 /** Rows × columns, 1..4 each. Only 2×2 matrices drive the transformation plane. */
 export type MatrixObject = BaseObject & {

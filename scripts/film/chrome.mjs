@@ -13,17 +13,26 @@ const CANDIDATES = [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   `${process.env.LOCALAPPDATA ?? ''}/Google/Chrome/Application/chrome.exe`,
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  `${process.env.HOME ?? ''}/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`,
+  '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
 ]
 
 export const wait = (ms) => new Promise((done) => setTimeout(done, ms))
 
 export function findChrome() {
   const found = (process.env.CHROME ? [process.env.CHROME] : []).concat(CANDIDATES).find((path) => existsSync(path))
-  if (!found) throw new Error('Chrome was not found. Set CHROME=<path to chrome.exe>.')
+  if (!found) throw new Error('Chrome was not found. Set CHROME=<path to the Chrome binary>.')
   return found
 }
 
-export async function launchChrome({ port = 9444, width = 2560, height = 1440, headless = false, position = process.env.CHROME_POSITION ?? '1707,0' } = {}) {
+export async function launchChrome({ port = 9444, width = 2560, height = 1440, headless = false, position = '1707,0' } = {}) {
+  // The manifest's chromePosition assumes the authoring machine's second monitor.
+  // CHROME_POSITION overrides it so another display can place the window on screen:
+  // the screencast wants a visible window, not one pushed off the desktop.
+  const windowPosition = process.env.CHROME_POSITION ?? position
   const profile = mkdtempSync(join(tmpdir(), 'mathburst-film-'))
   const args = [
     `--remote-debugging-port=${port}`,
@@ -32,7 +41,7 @@ export async function launchChrome({ port = 9444, width = 2560, height = 1440, h
     '--use-fake-ui-for-media-stream',
     '--auto-select-tab-capture-source-by-title=Mathburst',
     `--window-size=${width},${height + 90}`,
-    `--window-position=${position}`,
+    `--window-position=${windowPosition}`,
     '--force-device-scale-factor=1',
     '--autoplay-policy=no-user-gesture-required',
     '--disable-background-timer-throttling',

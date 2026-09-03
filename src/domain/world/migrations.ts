@@ -270,6 +270,19 @@ const isGeometryPrimitive = (value: unknown): boolean => {
       return isSafeIdentifier(value.through) && isSafeIdentifier(value.to)
     case 'intersection':
       return isPrimitiveRefArray(value.lines, 2) && isOptionalPrimitiveLabel(value)
+    // Olympiad configuration primitives: `of` is the triangle's three point ids.
+    case 'incenter':
+      return isPrimitiveRefArray(value.of, 3) && isOptionalPrimitiveLabel(value)
+    case 'circumcircle':
+      return isPrimitiveRefArray(value.of, 3)
+    case 'arcMidpoint':
+      return isPrimitiveRefArray(value.of, 3)
+        && isSafeIdentifier(value.notContaining)
+        && isOptionalPrimitiveLabel(value)
+    case 'mixtilinearIncircle':
+      return isPrimitiveRefArray(value.of, 3) && isSafeIdentifier(value.vertex)
+    case 'circleTangency':
+      return isPrimitiveRefArray(value.circles, 2) && isOptionalPrimitiveLabel(value)
     case 'angle':
       return isSafeIdentifier(value.a)
         && isSafeIdentifier(value.vertex)

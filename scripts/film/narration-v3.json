@@ -1,139 +1,144 @@
 {
-  "voiceId": "nPczCjzI2devNBz1zQrb",
-  "model": "eleven_v3",
-  "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.8,
-    "style": 0.2,
-    "speed": 1
+ "voiceId": "nPczCjzI2devNBz1zQrb",
+ "model": "eleven_v3",
+ "settings": {
+  "stability": 0.5,
+  "similarity_boost": 0.8,
+  "style": 0.2,
+  "speed": 1
+ },
+ "notes": "Draft 3. The v2 script narrated what the picture already showed, which served Execution and left Potential Impact unscored and 'how you used WebMCP' -- an explicit rule requirement -- barely covered. This one spends its first 40 seconds on what Mathburst is, the problem it solves, and how WebMCP is actually wired in, and pays for it by cutting the play-by-play roughly in half. Target: 2:52 picture, about 2:20 of speech, so the demo can breathe. Each clip now names the shot it plays over and its offset within that shot, so the spec is the single source for the words and the manifest owns only timing, steps and camera. 13-simplex was dropped with the simplex scene. Draft 3b: the close claimed every edit in the film went through a tool. The timeline records 27 tutor commits and 11 human ones, so that was false and it also erased the parity the film exists to show. runDemoCue routes agent steps through tool.execute and human steps through run(), so the corrected line states exactly that.",
+ "clips": [
+  {
+   "id": "01-what",
+   "act": 0,
+   "text": "This is Mathburst. An infinite canvas where a student and an AI tutor do mathematics inside the same document.",
+   "shot": "new-project",
+   "offset": 1.4
   },
-  "notes": "Draft 3. The v2 script narrated what the picture already showed, which served Execution and left Potential Impact unscored and 'how you used WebMCP' -- an explicit rule requirement -- barely covered. This one spends its first 40 seconds on what Mathburst is, the problem it solves, and how WebMCP is actually wired in, and pays for it by cutting the play-by-play roughly in half. Target: 2:52 picture, about 2:20 of speech, so the demo can breathe. Each clip now names the shot it plays over and its offset within that shot, so the spec is the single source for the words and the manifest owns only timing, steps and camera. 13-simplex was dropped with the simplex scene. Draft 3b: the close claimed every edit in the film went through a tool. The timeline records 27 tutor commits and 11 human ones, so that was false and it also erased the parity the film exists to show. runDemoCue routes agent steps through tool.execute and human steps through run(), so the corrected line states exactly that.",
-  "clips": [
-    {
-      "id": "01-what",
-      "act": 0,
-      "text": "This is Mathburst. An infinite canvas where a student and an AI tutor do mathematics inside the same document.",
-      "shot": "new-project",
-      "offset": 1.4
-    },
-    {
-      "id": "02-problem",
-      "act": 0,
-      "text": "Today a tutor can only talk about your work. Your reasoning sits in a photograph it cannot reach, so it explains around the problem instead of touching it.",
-      "shot": "cold-open",
-      "offset": 0.8
-    },
-    {
-      "id": "03-webmcp",
-      "act": 0,
-      "text": "Mathburst registers forty-eight WebMCP tools on the page. The tutor calls them the way you use the toolbar: one reducer, one history.",
-      "shot": "cold-open",
-      "offset": 11.5
-    },
-    {
-      "id": "04-handwriting",
-      "act": 1,
-      "text": "The student writes the Gamma recurrence by hand. The sign error is deliberate.",
-      "shot": "opening-attempt",
-      "offset": 0.5
-    },
-    {
-      "id": "05-mark",
-      "act": 1,
-      "text": "The tutor reads the ink and circles exactly where integration by parts flips the sign. It marks. It does not fix.",
-      "shot": "opening-tutor",
-      "offset": 0.4
-    },
-    {
-      "id": "06-live-math",
-      "act": 1,
-      "text": "The student corrects it. Then the tutor types LaTeX into a live equation and resizes it, using the same handles you would drag.",
-      "shot": "reconstruction",
-      "offset": 1.4
-    },
-    {
-      "id": "07-density",
-      "act": 2,
-      "text": "It pans down and builds the density from nothing. Axes, then the curve, then the area, split into three masses.",
-      "shot": "gamma-probability",
-      "offset": 0.8
-    },
-    {
-      "id": "08-bridge",
-      "act": 2,
-      "text": "Drag the shape and the masses follow. Log masses, then softmax. The same three numbers, arrived at twice.",
-      "shot": "gamma-probability",
-      "offset": 10
-    },
-    {
-      "id": "09-attention",
-      "act": 3,
-      "text": "Which is the bridge to attention. The tutor raises one entry of W Q and explains while the weights move, and they still sum to one.",
-      "shot": "attention",
-      "offset": 1.2
-    },
-    {
-      "id": "10-training",
-      "act": 3,
-      "text": "One gradient step by the tutor, undone. Then eight by the student. Every click is real arithmetic on the parameters you can see.",
-      "shot": "training-step",
-      "offset": 1
-    },
-    {
-      "id": "11-geometry",
-      "act": 4,
-      "text": "The student places three points. Tangent circles, the homothety and the spiral centre construct themselves in dependency order.",
-      "shot": "homothety",
-      "offset": 1.2
-    },
-    {
-      "id": "13-parity-shape",
-      "act": 5,
-      "text": "The tutor rings the density with create shape. Then the student takes that same ellipse by its handles and turns it.",
-      "shot": "parity-shapes",
-      "offset": 1
-    },
-    {
-      "id": "13b-parity-ink",
-      "act": 5,
-      "text": "The student highlights, draws, erases. Then the tutor erases the circle it drew itself, and one undo brings it back. [calm] Undo works on the tutor too.",
-      "shot": "parity-ink",
-      "offset": 1.2
-    },
-    {
-      "id": "12-barycentric",
-      "act": 4,
-      "text": "P is a weighted average of A, B and C. Weights that sum to one, like attention weights. So P glides to them.",
-      "shot": "barycentrics",
-      "offset": 1.2
-    },
-    {
-      "id": "14-ramanujan",
-      "act": 6,
-      "text": "Ramanujan's congruence, verified for these finite cases. The card says plainly that the general statement is a theorem, and not one proved here.",
-      "shot": "ramanujan",
-      "offset": 1.6
-    },
-    {
-      "id": "15-matrix",
-      "act": 7,
-      "text": "A matrix typed by hand, sheared by tool. One matrix moves every vector at once.",
-      "shot": "webmcp-crescendo",
-      "offset": 0.6
-    },
-    {
-      "id": "16-isolation",
-      "act": 8,
-      "text": "A graph, a construction, an edit. Then three undos walk the page backwards.",
-      "shot": "webmcp-crescendo",
-      "offset": 7.2
-    },
-    {
-      "id": "17-close",
-      "act": 8,
-      "text": "Forty-eight tools registered on the page. Every tutor edit you just saw went through one of them, and the student reached the same reducer. [calm] One history holds them both.",
-      "shot": "one-world",
-      "offset": 0.15
-    }
-  ]
+  {
+   "id": "02-problem",
+   "act": 0,
+   "text": "Today a tutor can only talk about your work. Your reasoning sits in a photograph it cannot reach, so it explains around the problem instead of touching it.",
+   "shot": "cold-open",
+   "offset": 0.8
+  },
+  {
+   "id": "03-webmcp",
+   "act": 0,
+   "text": "Mathburst registers forty-eight WebMCP tools on the page. The tutor calls them the way you use the toolbar: one reducer, one history. Watch for purple. Every purple glow is a tool call landing on the page.",
+   "shot": "cold-open",
+   "offset": 11.5
+  },
+  {
+   "id": "04-handwriting",
+   "act": 1,
+   "text": "The student writes the Gamma recurrence by hand. The sign error is deliberate.",
+   "shot": "opening-attempt",
+   "offset": 0.5
+  },
+  {
+   "id": "05-mark",
+   "act": 1,
+   "text": "The tutor reads the ink and circles exactly where integration by parts flips the sign. It marks. It does not fix.",
+   "shot": "opening-tutor",
+   "offset": 0.4
+  },
+  {
+   "id": "06-live-math",
+   "act": 1,
+   "text": "The student corrects it. Then the tutor types LaTeX into a live equation and resizes it, using the same handles you would drag.",
+   "shot": "reconstruction",
+   "offset": 1.4
+  },
+  {
+   "id": "07-density",
+   "act": 2,
+   "text": "It pans down and builds the density from nothing. Axes, then the curve, then the area, split into three masses.",
+   "shot": "gamma-probability",
+   "offset": 0.8
+  },
+  {
+   "id": "08-bridge",
+   "act": 2,
+   "text": "Drag the shape and the masses follow. Log masses, then softmax. The same three numbers, arrived at twice.",
+   "shot": "gamma-probability",
+   "offset": 10
+  },
+  {
+   "id": "09-attention",
+   "act": 3,
+   "text": "Which is the bridge to attention. The tutor raises one entry of W Q and explains while the weights move, and they still sum to one.",
+   "shot": "attention",
+   "offset": 1.2
+  },
+  {
+   "id": "10-training",
+   "act": 3,
+   "text": "The tutor takes one gradient step, then undoes it. The rest are the learner's. Every click is real arithmetic on the parameters on screen, not a canned animation.",
+   "shot": "training-step",
+   "offset": 1
+  },
+  {
+   "id": "11-geometry",
+   "act": 4,
+   "text": "The student places three points. Tangent circles, the homothety and the spiral centre construct themselves in dependency order.",
+   "shot": "homothety",
+   "offset": 1.2
+  },
+  {
+   "id": "13-parity-shape",
+   "act": 5,
+   "text": "The tutor rings the density with create shape. Then the student takes that same ellipse by its handles and turns it.",
+   "shot": "parity-shapes",
+   "offset": 1
+  },
+  {
+   "id": "13b-parity-ink",
+   "act": 5,
+   "text": "The student highlights, draws, erases. Then the tutor erases the circle it drew itself, and one undo brings it back. [calm] Undo works on the tutor too.",
+   "shot": "parity-ink",
+   "offset": 1.2
+  },
+  {
+   "id": "12-barycentric",
+   "act": 4,
+   "text": "P is a weighted average of A, B and C. Weights that sum to one, like attention weights. So P glides to them.",
+   "shot": "barycentrics",
+   "offset": 1.2
+  },
+  {
+   "id": "14-ramanujan",
+   "act": 6,
+   "text": "Ramanujan's congruence, verified for these finite cases. The card says plainly that the general statement is a theorem, and not one proved here.",
+   "shot": "ramanujan",
+   "offset": 1.6
+  },
+  {
+   "id": "15-matrix",
+   "act": 7,
+   "text": "A matrix typed by hand, sheared by tool. One matrix moves every vector at once.",
+   "shot": "webmcp-crescendo",
+   "offset": 0.6
+  },
+  {
+   "id": "16-isolation",
+   "act": 8,
+   "text": "A graph, a construction, an edit. Then three undos walk the page backwards.",
+   "shot": "webmcp-crescendo",
+   "offset": 7.2
+  },
+  {
+   "id": "17-close",
+   "act": 8,
+   "text": "Forty-eight tools registered on the page. Every tutor edit you just saw went through one of them, and the student reached the same reducer. [calm] One history holds them both.",
+   "shot": "one-world",
+   "offset": 0.15
+  },
+  {
+   "id": "18-ledger",
+   "shot": "agent-replay",
+   "text": "That panel is the ledger. Every tool the tutor called, in order, with its own count. Forty-eight of forty-eight, all on the page."
+  }
+ ]
 }

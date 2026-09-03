@@ -12,6 +12,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { connectPage, launchChrome, wait } from './chrome.mjs'
 
@@ -231,10 +232,24 @@ try {
 
   // ---- screencast --------------------------------------------------------------
   let frameIndex = 0
+  // Each frame is ~250 KB and there are ~12.8k of them. Writing them synchronously
+  // blocked the event loop inside the screencast handler for the whole take, which
+  // both delays the ack and competes with the CDP traffic driving the performance.
+  // Queue the writes instead and settle them before ffmpeg reads the list.
+  let pendingWrites = []
+  const drains = []
   const onFrame = (params) => {
     if (recording) {
       const file = `f${String(frameIndex).padStart(5, '0')}.jpg`
-      writeFileSync(resolve(FRAMES, file), Buffer.from(params.data, 'base64'))
+      pendingWrites.push(writeFile(resolve(FRAMES, file), Buffer.from(params.data, 'base64')))
+      // Bounded: fs.promises opens a descriptor per call, so letting all ~12.8k run
+      // at once risks EMFILE and holds every promise alive. Drain in batches; at 60
+      // frames a second against a ~1ms write this never actually stalls the take.
+      if (pendingWrites.length >= 256) {
+        const batch = pendingWrites
+        pendingWrites = []
+        drains.push(Promise.all(batch))
+      }
       frames.push({ file, t: params.metadata.timestamp })
       frameIndex += 1
     }
@@ -265,6 +280,29 @@ try {
   const takeStart = now()
   events.push({ t: 0, kind: 'take', label: 'start' })
 
+  /**
+   * Harvest new commits from the world's activity log.
+   *
+   * reducer.ts caps that log at the last 30 entries. Draining once per SHOT was fine
+   * for the 16-shot Director film, but the Agent Replay take is a single shot of 107
+   * calls, so by the time the shot ended the ring buffer had already dropped ~77 of
+   * them -- taking the sound design's per-commit ticks (audio.py) down to 30 and
+   * leaving timeline.json claiming zero human commits. Poll while the take runs.
+   */
+  const drainCommits = async () => {
+    const commits = await page
+      .evaluate('return window.__mathburstFilm.getWorld().activity.map((c) => ({ id: c.action.id, at: c.at, source: c.action.source, summary: c.action.summary }))')
+      .catch(() => null)
+    if (!commits) return
+    for (const commit of commits) {
+      if (seenCommits.has(commit.id)) continue
+      seenCommits.add(commit.id)
+      const t = commit.at / 1000 - takeStart
+      if (t >= 0) events.push({ t, kind: commit.source === 'agent' ? 'tutor' : 'human', label: commit.summary })
+    }
+  }
+  const commitPoll = setInterval(() => { void drainCommits() }, 1200)
+
   for (const [shotIndex, shot] of plan.entries()) {
     const shotStart = now() - takeStart
     log(`shot ${String(shotIndex + 1).padStart(2, '0')} ${shot.id} @ ${shotStart.toFixed(2)}s`)
@@ -280,6 +318,15 @@ try {
       else if (step.slider) await slider(step.slider, step.value, step.durationMs)
       else if (step.type) await typeInto(step.type, step.value, step.settleMs, step.enter !== false)
       else if (step.pointer) await moveTo(WIDTH * step.pointer.x, HEIGHT * step.pointer.y, 700)
+      // Park the cursor on an element without clicking it. The WebMCP ledger rests as a
+      // 40px tab and opens its full tool list on :hover alone (sidebar.css), so the film
+      // reveals it by pointing at it rather than by toggling any state.
+      else if (step.hover) {
+        const rect = await rectOf(step.hover, step.text)
+        const x = rect.x + rect.width / 2
+        const y = rect.y + rect.height / 2
+        await moveTo(x, y, travel(x, y))
+      }
       else if (step.collapseActivity !== undefined) await page.evaluate(`const t = document.querySelector('.activity-toggle'); if (t && (t.getAttribute('aria-expanded') === 'true') === ${Boolean(step.collapseActivity)}) t.click(); return true`)
       else if (step.selectShot) await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(step.selectShot)}); return true`)
       // Cold open navigates for real: gallery, then into a project, then the Director
@@ -338,15 +385,10 @@ try {
       if (shot.stage !== 'gallery') await page.evaluate('window.__mathburstFilm.previewNext(); return true')
     }
     shots.push({ id: shot.id, title: shot.title, start: shotStart, end: shotEnd, budget: shot.seconds, transitionAt, transitionOut: shot.transitionOut })
-    const commits = await page.evaluate('return window.__mathburstFilm.getWorld().activity.map((c) => ({ id: c.action.id, at: c.at, source: c.action.source, summary: c.action.summary }))')
-    log(`  commits in world: ${commits.length}; new: ${commits.filter((c) => !seenCommits.has(c.id)).length}`)
-    for (const commit of commits) {
-      if (seenCommits.has(commit.id)) continue
-      seenCommits.add(commit.id)
-      const t = commit.at / 1000 - takeStart
-      if (t >= 0) events.push({ t, kind: commit.source === 'agent' ? 'tutor' : 'human', label: commit.summary })
-    }
+    await drainCommits()
   }
+  clearInterval(commitPoll)
+  await drainCommits()
   events.sort((a, b) => a.t - b.t)
   await wait(1200)
   recording = false
@@ -367,6 +409,9 @@ try {
   log(`captured ${frames.length} frames over ${takeEnd.toFixed(1)}s`)
 
   // ---- encode --------------------------------------------------------------------
+  // Every queued frame must be on disk before the concat list is read.
+  await Promise.all([...drains, Promise.all(pendingWrites)])
+
   const t0 = frames[0].t
   const list = frames.map((frame, index) => {
     const nextT = frames[index + 1]?.t ?? Math.max(frame.t + 0.05, takeStart + takeEnd)
@@ -376,7 +421,12 @@ try {
   execFileSync('ffmpeg', [
     '-y', '-f', 'concat', '-safe', '0', '-i', resolve(FRAMES, 'frames.txt'),
     '-vf', `fps=${FPS},format=yuv420p`,
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '15', '-movflags', '+faststart',
+    // capture.mp4 is an INTERMEDIATE: render-fast.mjs re-encodes it to the master at
+    // crf 18. Spending `medium` here bought nothing downstream and cost 46s of the
+    // ~4min pipeline. `ultrafast` at crf 12 is visually transparent for screen content
+    // and measured 46s -> ~31s on a 12.8k-frame take. JPEG decode, not x264, is the
+    // remaining wall (~400 fps, and -threads does not move it).
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '12', '-movflags', '+faststart',
     CAPTURE,
   ], { stdio: 'inherit' })
   const offset = t0 - takeStart

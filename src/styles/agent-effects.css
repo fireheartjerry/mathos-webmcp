@@ -56,10 +56,14 @@
   0%, 100% { transform: scale(1); box-shadow: 0 0 24px rgba(124, 92, 255, 0.45), inset 0 0 0 1px rgba(124, 92, 255, 0.35); }
   50% { transform: scale(1.03); box-shadow: 0 0 34px rgba(124, 92, 255, 0.6), inset 0 0 0 1px rgba(124, 92, 255, 0.5); }
 }
+/* Sits BELOW the target. The attached trace chip (.webmcp-trace-attached) anchors
+   above the same object, and both are opaque purple pills, so an aura label above
+   painted over the tail of the tool name: "set_attention_weight ✓" read on camera
+   as "set_attention_ ONE STEP". Above for the tool that ran, below for the intent. */
 .agent-aura-label {
   position: absolute;
   left: -2px;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   max-width: 320px;
   overflow: hidden;
   padding: 5px 8px;
@@ -76,10 +80,10 @@
   content: '';
   position: absolute;
   left: 10px;
-  top: 100%;
+  bottom: 100%;
   border: 5px solid transparent;
-  border-top-color: var(--purple);
-  border-bottom: 0;
+  border-bottom-color: var(--purple);
+  border-top: 0;
 }
 
 /* ---- Activation sweep (the agent woke up) ------------------------------- */

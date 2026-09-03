@@ -815,7 +815,12 @@ button {
 .mathburst-app { --chrome-left: calc(var(--canvas-left) + var(--ledger-lane) + 12px); }
 .mathburst-app:has(.webmcp-inspector) { --right-inset: calc(12px + var(--inspector-w) + 12px); --right-top-inset: calc(12px + var(--inspector-w) + 12px); --canvas-right: calc(var(--inspector-w) + 24px); }
 .mathburst-app:has(.director-panel) { --right-inset: calc(var(--director-w) + 28px); --right-top-inset: calc(var(--director-w) + 28px); --canvas-right: calc(var(--director-w) + 28px); }
-.mathburst-app:has(.reconstruction-panel) { --right-top-inset: calc(var(--right-inset) + var(--reconstruction-w) + 12px); }
+/* The panel must also take its width off the canvas, not just push top-right chrome
+   aside. --canvas-centre is derived from --canvas-right, and the docked console is
+   centred on it, so without this the console stayed centred over the full canvas and
+   covered the panel's left third: header, title and the approve button all clipped
+   mid-word for the last 23 seconds of the film. */
+.mathburst-app:has(.reconstruction-panel) { --right-top-inset: calc(var(--right-inset) + var(--reconstruction-w) + 12px); --canvas-right: calc(var(--reconstruction-w) + 28px); }
 
 /* Scrolling regions inside chrome use a thin, quiet scrollbar. */
 .webmcp-groups, .inspector-panel, .agent-console-lines, .tool-ledger-list, .tool-ledger-unused-list, .animation-list, .activity-list, .project-gallery, .project-creator, .director-shot-list, .director-detail, .creation-popover { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }

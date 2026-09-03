@@ -497,8 +497,14 @@
 [data-film='true'] .canvas-mode,
 [data-film='true'] .zoom-controls { display: none !important; }
 [data-film='true'] .tool-rail { overflow: visible; }
-[data-film='true'] .tool-rail:hover, [data-film='true'] .tool-rail:has(:focus-visible) { width: var(--rail-w); padding-bottom: 8px; background: var(--ivory); border-right-color: transparent; }
-[data-film='true'] .tool-rail:hover .rail-label, [data-film='true'] .tool-rail:has(:focus-visible) .rail-label { opacity: 0; }
+/* A PINNED rail is a deliberate state and must not react to the cursor. These rules
+   collapse the rail to --rail-w (44px) to keep it out of shot, but the film pins the
+   rail at 188px, so every cursor pass over it snapped the rail shut and blanked its
+   labels -- reading on camera as a flicker. Only an unpinned rail yields to hover. */
+[data-film='true'] .tool-rail:not(.is-pinned):hover,
+[data-film='true'] .tool-rail:not(.is-pinned):has(:focus-visible) { width: var(--rail-w); padding-bottom: 8px; background: var(--ivory); border-right-color: transparent; }
+[data-film='true'] .tool-rail:not(.is-pinned):hover .rail-label,
+[data-film='true'] .tool-rail:not(.is-pinned):has(:focus-visible) .rail-label { opacity: 0; }
 [data-film='true'] .rail-button:hover .rail-tooltip, [data-film='true'] .rail-button:focus-visible .rail-tooltip { display: inline-flex; }
 [data-film='true'] .world-object > .author-pip { transition: none; }
 .film-cursor { position: fixed; left: 0; top: 0; z-index: var(--z-film); width: 22px; height: 30px; pointer-events: none; opacity: 0; transform: translate(-2px, -2px); transition: opacity 240ms var(--ease-out); }
@@ -553,6 +559,16 @@
   left: 232px;
   width: 300px;
 }
+/* The console owns the TOP of the right column in film mode. The reconstruction
+   panel is anchored to the same top-right corner, so the two stacked and the
+   console covered the panel's left third -- header, title and the approve button
+   all clipped mid-word -- for the closing 20 seconds. Sit it under the console,
+   right edges aligned, rather than on top of it. */
+[data-film='true'] .reconstruction-panel {
+  top: calc(var(--header-h) + 12px + 56vh + 12px);
+  right: 16px;
+}
+
 /* Editing chrome is not content: it covered the lower third of every scene. */
 [data-film='true'] .progressive-inspector,
 [data-film='true'] .object-context { display: none !important; }

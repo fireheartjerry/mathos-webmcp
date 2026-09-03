@@ -218,6 +218,10 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
       continue
     }
 
+    // Contract only: the Olympiad primitives are declared but not resolved yet, so
+    // skip them here rather than falling into the homothety/similarity branch below.
+    if (primitive.kind !== 'homothety' && primitive.kind !== 'similarity') continue
+
     const center = pointFrom(resolved, primitive.center)
     const source = pointFrom(resolved, primitive.source)
     if (center && source) {
@@ -263,6 +267,13 @@ export function primitiveReferences(primitive: GeometryPrimitive): string[] {
     case 'homothety':
     case 'similarity': return [primitive.center, primitive.source]
     case 'spiralCenter': return [primitive.a, primitive.b, primitive.a2, primitive.b2]
+    // Contract only: dependency bookkeeping so the union is exhaustive. resolveGeometry
+    // does not implement these yet, so they simply do not render until it does.
+    case 'incenter':
+    case 'circumcircle':
+    case 'arcMidpoint':
+    case 'mixtilinearIncircle': return [...primitive.of]
+    case 'circleTangency': return [...primitive.circles]
   }
 }
 
