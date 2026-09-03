@@ -12,11 +12,12 @@ Scorer, pinned for every round: `codex exec --skip-git-repo-check` reading
 | 0 (baseline) | 68/100 | tbd, contradiction, long-sentence |
 | 1 | 72/100 | tbd, contradiction, long-sentence |
 | 2 | 71/100 | tbd |
-| 3 | pending | tbd (video URL, blocked on upload) |
+| 3 | 98/100 | tbd (video URL, blocked on upload) |
+| 3b (re-score of shipped text) | 98/100 | tbd (video URL, blocked on upload) |
 
 ---
 
-## Round 3 — score 71 → pending
+## Round 3 — score 71 -> 98 (+27)
 **Reviewers:** `codex exec`, `kimi -p`, and a fresh-context Claude subagent, all
 criteria-aware and all pointed at the three criteria that had scored worst.
 **Accepted:** 19 · **Rejected:** 2 · **Deferred:** 1
@@ -90,3 +91,33 @@ filter.
 - No hosted build URL in **Try it out**, only the repo. The copy invites a judge to
   open the inspector and run any tool, which a repo link does not let them do. The
   deploy plumbing exists in `package.json`; needs the author to confirm the URL.
+
+
+## Stopping here
+
+Target was 95. Two independent Codex runs, the second against the exact text that
+ships, both returned **98/100**. Nine of the ten criteria score full marks.
+
+The remaining 2 points sit in `sentence_mechanics`, where the scorer counts
+`belongs`, `needed`, `carry`, `knows`, `sum` and `covers` as stative verbs. Those
+are lexical verbs, not copulas, and rewriting around them makes the prose worse
+rather than better. Both runs flagged the same two short paragraphs, so this is a
+stable reading of the rubric rather than noise, and it is not worth another round.
+
+`tbd_field_gate` still FAILS on the video URL. That is blocked on the YouTube
+upload, not on the writing, and it clears the moment the link exists.
+
+Per-criterion, final run:
+
+| # | Criterion | Score |
+|---|---|---|
+| C1 | Cold-open and comprehension specificity | 12/12 |
+| C2 | Facts outrank adjectives | 16/16 |
+| C3 | Self-correction as credibility | 10/10 |
+| C4 | Capability claims paired with mechanisms | 12/12 |
+| C5 | The 48-tool count is audited | 10/10 |
+| C6 | Sentence mechanics | 14/16 |
+| C7 | Hackathon-cliche absence | 6/6 |
+| C8 | Section-to-section pull | 6/6 |
+| C9 | Tutor/student boundary and audience honesty | 6/6 |
+| C10 | WebMCP API named in a technical claim | 6/6 |
