@@ -10,12 +10,44 @@ in here were claimed fixed once and were not; two were fixed and then silently b
 again by a later change. Your job is to check every entry against the code and the
 running product, fix what is still wrong, and improve what is merely adequate.
 
-Fresh worktree from the merged tip:
+## Working arrangement — no worktree this round
 
-    cd /Users/fireheartjerry/Code/mathos-webmcp
-    git worktree add ../mathos-codex-5 -b codex/audit hackathon-build
-    cd ../mathos-codex-5
-    pnpm install
+**You have the main checkout to yourself.** Claude has stood down: it will not edit
+files or run captures while you work, so there is nobody to collide with and no
+ownership split to respect beyond the two paths in section 7.
+
+    cd /Users/fireheartjerry/Code/mathos-webmcp   # already on hackathon-build
+    pnpm install                                   # if node_modules is stale
+
+Work on `hackathon-build` directly, or branch from it if you prefer — your call.
+
+### Everything already merged into `hackathon-build`
+
+Four of your branches are in, each merged with zero conflicts:
+
+| Branch | Worktree | What it landed |
+|---|---|---|
+| `codex/render-layer` | `../mathos-codex` | staged construction motion, computed olympiad primitives, simplex orbit |
+| `codex/render-layer-2` | `../mathos-codex-2` | exact containing-arc midpoint and drag-stable mixtilinear collinearity, deeper construction across seven views, the final lockup |
+| `codex/narration-schedule` | `../mathos-codex-3` | beat-anchored narration scheduler |
+| `codex/framing` | `../mathos-codex-4` | the deterministic framing solver and its headless harness |
+
+Claude's own work is merged on the same branch — the film script, the capture driver,
+the tool-side contracts, the two scene cuts, the layout guard, and the wiring for your
+lockup and your scheduler.
+
+**Those four worktrees are stale and safe to delete.** Everything in them is merged;
+`git branch --merged hackathon-build` confirms all four. Clean them up if you like:
+
+    git worktree remove ../mathos-codex   ../mathos-codex-2 \
+                        ../mathos-codex-3 ../mathos-codex-4
+    git branch -d codex/render-layer codex/render-layer-2 \
+                  codex/narration-schedule codex/framing
+    git worktree prune
+
+There is also a detached-HEAD worktree at `~/.codex/worktrees/7332/mathos-webmcp`
+sitting on the original clone commit `3202fd6`, far behind. It holds nothing that was
+not superseded; remove it too if it is yours.
 
 ---
 
@@ -231,10 +263,11 @@ so a stalled animation makes the card late rather than invisible forever.
 4. Anywhere the film *says* something, verify the product *does* it. That failure mode
    has occurred three times in this project and is the most damaging one available.
 
-Ownership for this round: everything except `scripts/film/**` and
-`src/domain/replay/script.ts` is yours. Those two are Claude's, because Claude is
-driving the capture. If a fix needs a change in either, write it to
-`docs/CODEX_REQUESTS.md` with the exact change and why.
+Ownership for this round: **everything is yours except `scripts/film/**` and
+`src/domain/replay/script.ts`.** Those two stay Claude's only because Claude runs the
+capture and the render and needs them stable to do it — not because you should not
+change them. If a fix needs either, write the exact change to `docs/CODEX_REQUESTS.md`
+and Claude will apply it and re-capture.
 
 Keep `npx tsc --noEmit` clean. Commit to `codex/audit`. Report what you checked, what
 you changed, what you found already correct, and anything you deliberately left alone.
