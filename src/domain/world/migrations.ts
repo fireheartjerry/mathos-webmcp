@@ -277,7 +277,8 @@ const isGeometryPrimitive = (value: unknown): boolean => {
       return isPrimitiveRefArray(value.of, 3)
     case 'arcMidpoint':
       return isPrimitiveRefArray(value.of, 3)
-        && isSafeIdentifier(value.notContaining)
+        // exactly one of notContaining / containing
+        && (isSafeIdentifier(value.notContaining) !== isSafeIdentifier(value.containing))
         && isOptionalPrimitiveLabel(value)
     case 'mixtilinearIncircle':
       return isPrimitiveRefArray(value.of, 3) && isSafeIdentifier(value.vertex)

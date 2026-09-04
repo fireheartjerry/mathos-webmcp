@@ -359,7 +359,10 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
 
     if (primitive.kind === 'arcMidpoint') {
       const triangle = triangleFrom(resolved, primitive.of)
-      const excludedIndex = triangle?.ids.indexOf(primitive.notContaining) ?? -1
+      // `containing: 'A'` is the arc BC through A (major); `notContaining: 'A'` is the
+      // arc BC away from A (minor). Different points in any scalene triangle.
+      const named = primitive.notContaining ?? primitive.containing
+      const excludedIndex = named === undefined ? -1 : (triangle?.ids.indexOf(named) ?? -1)
       if (triangle && excludedIndex >= 0) {
         const otherIndices = [0, 1, 2].filter((index) => index !== excludedIndex)
         const point = arcMidpointNotContaining(

@@ -349,7 +349,9 @@ export default function LiveGeometry({
       case 'spiralCenter': return `spiral centre ${name(primitive.id)}`
       case 'incenter': return `incentre of ${primitive.of.map(name).join('')}`
       case 'circumcircle': return `circumcircle of ${primitive.of.map(name).join('')}`
-      case 'arcMidpoint': return `midpoint of the arc not containing ${name(primitive.notContaining)}`
+      case 'arcMidpoint': return primitive.containing !== undefined
+        ? `midpoint of the arc through ${name(primitive.containing)}`
+        : `midpoint of the arc not containing ${name(primitive.notContaining ?? '')}`
       case 'mixtilinearIncircle': return `${name(primitive.vertex)}-mixtilinear incircle`
       case 'circleTangency': return `tangency of ${primitive.circles.map(name).join(' and ')}`
     }

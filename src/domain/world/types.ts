@@ -97,7 +97,10 @@ export type GeometryPrimitive =
   // `of` is the triangle's three point ids; `notContaining` and `vertex` name one of them.
   | { kind: 'incenter'; id: string; of: [string, string, string]; label?: string }
   | { kind: 'circumcircle'; id: string; of: [string, string, string] }
-  | { kind: 'arcMidpoint'; id: string; of: [string, string, string]; notContaining: string; label?: string }
+  // Exactly one of notContaining / containing. The mixtilinear theorem needs the MAJOR
+  // arc (the one containing A); `notContaining: 'A'` is the minor arc and a different
+  // point in any scalene triangle, so the contract has to be able to say which.
+  | { kind: 'arcMidpoint'; id: string; of: [string, string, string]; notContaining?: string; containing?: string; label?: string }
   | { kind: 'mixtilinearIncircle'; id: string; of: [string, string, string]; vertex: string }
   | { kind: 'circleTangency'; id: string; circles: [string, string]; label?: string }
 export type GeometryObject = BaseObject & SemanticViewLink & { kind: 'geometry'; primitives: GeometryPrimitive[]; accent: string }
