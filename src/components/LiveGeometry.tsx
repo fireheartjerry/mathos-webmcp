@@ -313,6 +313,15 @@ export default function LiveGeometry({
   }
   const kickerT = revealStage(p, 0, 0.15)
   const legendT = revealStage(p, 0.85, 1)
+  const majorArcId = primitives.find((primitive) => primitive.kind === 'arcMidpoint' && primitive.containing !== undefined)?.id
+  const incenterId = primitives.find((primitive) => primitive.kind === 'incenter')?.id
+  const tangencyId = primitives.find((primitive) => primitive.kind === 'circleTangency')?.id
+  const mixtilinearAxis = majorArcId && incenterId && tangencyId
+    ? { major: pointAt(majorArcId), incenter: pointAt(incenterId), tangency: pointAt(tangencyId) }
+    : null
+  const axisT = majorArcId && incenterId && tangencyId
+    ? Math.min(drawT(majorArcId), drawT(incenterId), drawT(tangencyId))
+    : 0
 
   const setTool = (next: GeometryTool) => {
     setToolState(next)
@@ -786,6 +795,17 @@ export default function LiveGeometry({
               <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
             </g>
           })}
+          {axisT > 0 && mixtilinearAxis?.major && mixtilinearAxis.incenter && mixtilinearAxis.tangency && (
+            <line
+              className="geometry-mixtilinear-axis"
+              x1={mixtilinearAxis.major.x}
+              y1={mixtilinearAxis.major.y}
+              x2={mixtilinearAxis.tangency.x}
+              y2={mixtilinearAxis.tangency.y}
+              pathLength={1}
+              style={revealDash(axisT)}
+            />
+          )}
           {resolved.angles.map((angle) => {
             const t = drawT(angle.id)
             if (t <= 0) return null

@@ -112,6 +112,17 @@ export function arcMidpointNotContaining(first: Point, second: Point, other: Poi
   return candidates.find((candidate) => cross(chord, difference(candidate, first)) * otherSide < 0) ?? null
 }
 
+/** Midpoint of the arc through `first` and `second` that contains `other`. */
+export function arcMidpointContaining(first: Point, second: Point, other: Point): Point | null {
+  const circumcircle = triangleCircumcircle(first, second, other)
+  const minorMidpoint = arcMidpointNotContaining(first, second, other)
+  if (!circumcircle || !minorMidpoint) return null
+  return {
+    x: 2 * circumcircle.center.x - minorMidpoint.x,
+    y: 2 * circumcircle.center.y - minorMidpoint.y,
+  }
+}
+
 /** Circle tangent to both sides at `vertex` and internally tangent to the circumcircle. */
 export function triangleMixtilinearIncircle(vertex: Point, first: Point, second: Point): { center: Point; radius: number } | null {
   const incenter = triangleIncenter(vertex, first, second)
@@ -365,7 +376,7 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
       const excludedIndex = named === undefined ? -1 : (triangle?.ids.indexOf(named) ?? -1)
       if (triangle && excludedIndex >= 0) {
         const otherIndices = [0, 1, 2].filter((index) => index !== excludedIndex)
-        const point = arcMidpointNotContaining(
+        const point = (primitive.containing !== undefined ? arcMidpointContaining : arcMidpointNotContaining)(
           triangle.points[otherIndices[0]],
           triangle.points[otherIndices[1]],
           triangle.points[excludedIndex],
