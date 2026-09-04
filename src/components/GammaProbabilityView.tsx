@@ -5,7 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { gammaBinMasses, gammaCDF, gammaDensity, gammaFunction, massesToSoftmax } from '../domain/math/probability'
 import { monoWidth, placeLabel, type LabelBox } from '../domain/math/graph'
 import type { GraphObject, WorldAction } from '../domain/world/types'
-import { revealDash, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import { Tex } from './Tex'
 import '../styles/graph.css'
@@ -346,12 +346,12 @@ export default function GammaProbabilityView({ object, run }: Props) {
       onPointerDown={stop}
       style={revealing ? { opacity: object.opacity } : undefined}
     >
-      <header className="gamma-header" style={revealRiseStyle(p, 0.02, 0.17)}>
-        <div className="gamma-header-title">
+      <header className="gamma-header">
+        <div className="gamma-header-title" style={revealRiseStyle(p, 0.01, 0.14, { distance: 10 })}>
           <span className="graph-widget-kicker gamma-kicker-text">normalised gamma density · total area 1</span>
           <h3><span className="gamma-title-text">Gamma density</span><span className="gamma-title-meta">a = {short(shape)} · b = {short(bound)}</span></h3>
         </div>
-        <div className="gamma-header-equation">
+        <div className="gamma-header-equation" style={revealRiseStyle(p, 0.07, 0.21, { distance: 12 })}>
           <Tex latex={DENSITY_LATEX} ariaLabel="g sub a of x equals x to the a minus one times e to the minus x, over Gamma of a" />
         </div>
       </header>
@@ -374,11 +374,11 @@ export default function GammaProbabilityView({ object, run }: Props) {
           <g clipPath={`url(#${clipId})`}>
             {Array.from({ length: 9 }, (_, index) => {
               const x = xMin + ((xMax - xMin) * index) / 8
-              return <line key={`x-${index}`} className="gamma-grid" x1={mapX(x)} x2={mapX(x)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />
+              return <line key={`x-${index}`} className="gamma-grid" x1={mapX(x)} x2={mapX(x)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(revealItem(axesT, index, 9, 2))} />
             })}
             {areaT > 0 && <g clipPath={`url(#${areaClipId})`}><path className={`gamma-area${flashes.b ? ' is-flash' : ''}`} d={shade} /></g>}
             {finalT > 0 && binCuts.map((cut, index) => (
-              <g key={`cut-${index}`} className={`gamma-bin-edge${flashes.edges ? ' is-flash' : ''}${dragging === 'edge' ? ' is-dragging' : ''}`}>
+              <g key={`cut-${index}`} className={`gamma-bin-edge${flashes.edges ? ' is-flash' : ''}${dragging === 'edge' ? ' is-dragging' : ''}`} style={revealRiseStyle(p, 0.82 + index * 0.035, 0.95 + index * 0.025, { distance: 10 })}>
                 <line className="gamma-bin-cut" x1={mapX(cut)} x2={mapX(cut)} y1={plot.bottom - (plot.bottom - binCutTop) * finalT} y2={plot.bottom} />
                 <rect
                   className="gamma-bin-grip"
@@ -409,7 +409,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
                 aria-label="Drag CDF bound"
               />
               {binLabels.map((label, index) => (
-                <text key={BIN_LABELS[index]} className="gamma-bin-label" x={label.x} y={binLabelY} textAnchor="middle">{label.text}</text>
+                <text key={BIN_LABELS[index]} className="gamma-bin-label" x={label.x} y={binLabelY} textAnchor="middle" style={revealRiseStyle(p, 0.84 + index * 0.025, 0.97, { distance: 8 })}>{label.text}</text>
               ))}
               <text className="gamma-cdf-label" x={cdfBox.x} y={cdfBox.y + 11} textAnchor="start">{cdfText}</text>
               <text className="gamma-mode-label" x={modeBox.x} y={modeBox.y + 10} textAnchor="start">{modeText}</text>
@@ -424,9 +424,9 @@ export default function GammaProbabilityView({ object, run }: Props) {
         </svg>
       </div>
 
-      <footer className="gamma-footer" style={revealRiseStyle(p, 0.08, 0.22)}>
+      <footer className="gamma-footer">
         <div className="gamma-probability-controls" onPointerDown={stop}>
-          <label className={flashes.a ? 'is-flash' : undefined}>
+          <label className={flashes.a ? 'is-flash' : undefined} style={revealRiseStyle(p, 0.08, 0.22, { distance: 12 })}>
             <span>shape a <NumberField label="Gamma shape a value" value={committedShape} min={SHAPE_RANGE[0]} max={SHAPE_RANGE[1]} step={0.1} onCommit={shapeField} /></span>
             <input
               type="range" min={SHAPE_RANGE[0]} max={SHAPE_RANGE[1]} step="0.1" value={shape} aria-label="Gamma shape a" data-demo-target="gamma-shape"
@@ -436,7 +436,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
               onBlur={() => { if (draft?.a !== undefined) commit(`Changed the shape a to ${short(shape)}`, { a: shape }) }}
             />
           </label>
-          <label className={flashes.b ? 'is-flash' : undefined}>
+          <label className={flashes.b ? 'is-flash' : undefined} style={revealRiseStyle(p, 0.12, 0.26, { distance: 12 })}>
             <span>bound b <NumberField label="Gamma CDF bound b value" value={committedBound} min={xMin} max={xMax} step={0.05} onCommit={boundField} /></span>
             <input
               type="range" min={xMin} max={xMax} step="0.05" value={bound} aria-label="Gamma CDF bound b" data-demo-target="gamma-bound"
@@ -446,12 +446,12 @@ export default function GammaProbabilityView({ object, run }: Props) {
               onBlur={() => { if (draft?.b !== undefined) commit(`Moved the CDF bound b to ${short(bound)}`, { b: bound }) }}
             />
           </label>
-          <small>Γ({short(shape, 1)}) = {fmt(shownGamma, 4)} · edges {short(edges[1])}, {short(edges[2])}</small>
+          <small style={revealRiseStyle(p, 0.16, 0.3, { distance: 10 })}>Γ({short(shape, 1)}) = {fmt(shownGamma, 4)} · edges {short(edges[1])}, {short(edges[2])}</small>
         </div>
 
         <div className="gamma-bridge">
           <table className="gamma-bridge-table" aria-label="Probability masses, log masses and softmax">
-            <thead>
+            <thead style={revealRiseStyle(p, 0.8, 0.92, { distance: 8 })}>
               <tr>
                 <th scope="col" />
                 {masses.map((_, index) => {
@@ -463,7 +463,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
               </tr>
             </thead>
             <tbody>
-              <tr className="is-mass" data-hero-path="mass">
+              <tr className="is-mass" data-hero-path="mass" style={revealRiseStyle(p, 0.83, 0.95, { distance: 8 })}>
                 <th scope="row">probability mass</th>
                 {bridge.masses.map((mass, index) => <td key={index}>{fmt(mass * finalT)}</td>)}
                 <td className="gamma-sum">{fmt(sumOf(bridge.masses) * finalT)}</td>
@@ -473,7 +473,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
                 {bridge.logs.map((value, index) => <td key={index}>{fmt(value)}</td>)}
                 <td />
               </tr>
-              <tr className="is-softmax">
+              <tr className="is-softmax" style={revealRiseStyle(p, 0.9, 1, { distance: 8 })}>
                 <th scope="row">softmax(ℓ)ⱼ</th>
                 {bridge.probabilities.map((probability, index) => (
                   <td key={index}>
@@ -485,7 +485,7 @@ export default function GammaProbabilityView({ object, run }: Props) {
               </tr>
             </tbody>
           </table>
-          <div className="gamma-bridge-note">
+          <div className="gamma-bridge-note" style={revealRiseStyle(p, 0.91, 1, { distance: 9 })}>
             <b>the final bin owns the tail</b>
             <span>w₃ = 1 − w₁ − w₂, so the masses sum to exactly one.</span>
             <em>log-masses are the logits the attention head starts from.</em>

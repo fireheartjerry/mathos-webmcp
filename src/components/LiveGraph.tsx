@@ -17,7 +17,7 @@ import {
   type LabelBox,
 } from '../domain/math/graph'
 import type { EquationObject, GraphObject, WorldAction, WorldState } from '../domain/world/types'
-import { revealDash, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import { Tex } from './Tex'
 import '../styles/graph.css'
@@ -528,6 +528,9 @@ export default function LiveGraph({
   const areaT = revealStage(p, 0.65, 0.85)
   const finalT = revealStage(p, 0.85, 1)
   const finalStyle = revealRiseStyle(p, 0.84, 0.98, { distance: 14 })
+  const xTicks = ticks(xDomain)
+  const yTicks = ticks(yDomain)
+  const gridCount = xTicks.length + yTicks.length
   const areaClipId = `graph-area-clip-${object.id}`
   const clipId = `graph-clip-${object.id}`
 
@@ -557,12 +560,12 @@ export default function LiveGraph({
 
   return (
     <div className={`live-graph graph-widget reveal-root${revealing ? ' is-revealing' : ''}${dragging ? ` is-dragging is-dragging-${dragging}` : ''}`} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="graph-header" data-canvas-control="true" onPointerDown={stopCanvasDrag} style={revealRiseStyle(p, 0.02, 0.17)}>
-        <div className="graph-header-kicker">
+      <header className="graph-header" data-canvas-control="true" onPointerDown={stopCanvasDrag}>
+        <div className="graph-header-kicker" style={revealRiseStyle(p, 0.01, 0.12, { distance: 10 })}>
           <span className="graph-widget-kicker">live function</span>
           <span className="graph-header-meta">{expressions.length > 1 ? `${expressions.length} curves · ` : ''}{domainMeta}</span>
         </div>
-        <div className="graph-equation-row">
+        <div className="graph-equation-row" style={revealRiseStyle(p, 0.06, 0.2, { distance: 12 })}>
           <span className="graph-fx">f(x) =</span>
           <input
             className={`graph-latex-input${flashes.latex ? ' is-flash' : ''}`}
@@ -611,8 +614,8 @@ export default function LiveGraph({
           </defs>
           <rect className="graph-paper" x="0" y="0" width={width} height={height} />
           <g clipPath={`url(#${clipId})`}>
-            {ticks(xDomain).map((value) => <line key={`x-${value}`} className="graph-grid" x1={mapX(value)} x2={mapX(value)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />)}
-            {ticks(yDomain).map((value) => <line key={`y-${value}`} className="graph-grid" x1={plot.left} x2={plot.right} y1={mapY(value)} y2={mapY(value)} pathLength={1} style={revealDash(axesT)} />)}
+            {xTicks.map((value, index) => <line key={`x-${value}`} className="graph-grid" x1={mapX(value)} x2={mapX(value)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(revealItem(axesT, index, gridCount, 2))} />)}
+            {yTicks.map((value, index) => <line key={`y-${value}`} className="graph-grid" x1={plot.left} x2={plot.right} y1={mapY(value)} y2={mapY(value)} pathLength={1} style={revealDash(revealItem(axesT, xTicks.length + index, gridCount, 2))} />)}
             {yMin <= 0 && yMax >= 0 && <line className="graph-axis" x1={plot.left} x2={plot.right} y1={mapY(0)} y2={mapY(0)} pathLength={1} style={revealDash(axesT)} />}
             {xMin <= 0 && xMax >= 0 && <line className="graph-axis" x1={mapX(0)} x2={mapX(0)} y1={plot.bottom} y2={plot.top} pathLength={1} style={revealDash(axesT)} />}
             {shadePath && areaT > 0 && <g clipPath={`url(#${areaClipId})`}><path className={`graph-area${flashes.shade ? ' is-flash' : ''}`} d={shadePath} /></g>}
@@ -683,8 +686,8 @@ export default function LiveGraph({
         </svg>
       </div>
 
-      <footer className="graph-footer" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel} style={revealRiseStyle(p, 0.08, 0.22)}>
-        <div className={`graph-row graph-domain${flashes.domain ? ' is-flash' : ''}`}>
+      <footer className="graph-footer" data-canvas-control="true" onPointerDown={stopCanvasDrag} onWheel={stopWheel}>
+        <div className={`graph-row graph-domain${flashes.domain ? ' is-flash' : ''}`} style={revealRiseStyle(p, 0.08, 0.22, { distance: 12 })}>
           <span className="graph-row-label">x</span>
           <NumberField label="x minimum" value={xMin} onCommit={(value) => commitDomain({ xMin: value })} />
           <span className="graph-range-sep">–</span>
@@ -708,11 +711,11 @@ export default function LiveGraph({
           </div>
         </div>
 
-        {parameterNames.map((name) => {
+        {parameterNames.map((name, index) => {
           const value = parameters[name] ?? DEFAULT_PARAMETER
           const [min, max] = rangeOf(name)
           return (
-            <div key={name} className={`graph-param${flashes[`param:${name}`] ? ' is-flash' : ''}`}>
+            <div key={name} className={`graph-param${flashes[`param:${name}`] ? ' is-flash' : ''}`} style={revealRiseStyle(p, 0.12 + index * 0.035, 0.28 + index * 0.035, { distance: 12 })}>
               <span className="graph-param-name">{name} =</span>
               <NumberField small label={`Parameter ${name} value`} value={committedParameter(name)} onCommit={(next) => commitParameterValue(name, next)} />
               <NumberField small label={`${name} slider minimum`} value={min} onCommit={(next) => setRanges((current) => ({ ...current, [name]: [next, Math.max(next + 0.1, max)] }))} />
@@ -733,7 +736,7 @@ export default function LiveGraph({
           )
         })}
 
-        <div className="graph-row graph-analysis">
+        <div className="graph-row graph-analysis" style={revealRiseStyle(p, 0.18, 0.34, { distance: 12 })}>
           <span className={`graph-analysis-group${flashes.tangent ? ' is-flash' : ''}`}>
             <label className={`graph-toggle${object.showTangentAt !== undefined ? ' is-on' : ''}`}>
               <input type="checkbox" checked={object.showTangentAt !== undefined} onChange={(event) => toggleTangent(event.target.checked)} />

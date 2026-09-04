@@ -361,10 +361,10 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   const rootStyle = revealing ? { opacity: object.opacity } : undefined
 
   const toolbar = (
-    <header className="matrix-toolbar" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()} style={revealRiseStyle(p, 0.01, 0.18)}>
-      <span className="matrix-kicker-text">matrix</span>
-      <span className="matrix-title">A</span>
-      <div className="matrix-actions" role="toolbar" aria-label="Matrix operations">
+    <header className="matrix-toolbar" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()}>
+      <span className="matrix-kicker-text" style={revealRiseStyle(p, 0.01, 0.12, { distance: 9 })}>matrix</span>
+      <span className="matrix-title" style={revealRiseStyle(p, 0.04, 0.15, { distance: 10 })}>A</span>
+      <div className="matrix-actions" role="toolbar" aria-label="Matrix operations" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
         <button type="button" title="Add row" disabled={rows >= MATRIX_MAX_SIZE} onClick={() => resize(rows + 1, columns)}>+r</button>
         <button type="button" title="Remove row" disabled={rows <= MATRIX_MIN_SIZE} onClick={() => resize(rows - 1, columns)}>−r</button>
         <button type="button" title="Add column" disabled={columns >= MATRIX_MAX_SIZE} onClick={() => resize(rows, columns + 1)}>+c</button>
@@ -375,7 +375,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
         <button type="button" title="Scale by k" aria-expanded={popover === 'scale'} className={popover === 'scale' ? 'is-open' : undefined} onClick={() => setPopover(popover === 'scale' ? null : 'scale')}>×k</button>
         {isTwoByTwo && <button type="button" title="Rotate by θ" aria-expanded={popover === 'rotate'} className={popover === 'rotate' ? 'is-open' : undefined} onClick={() => setPopover(popover === 'rotate' ? null : 'rotate')}>θ</button>}
       </div>
-      <span className="matrix-dims">{rows}×{columns}</span>
+      <span className="matrix-dims" style={revealRiseStyle(p, 0.1, 0.22, { distance: 10 })}>{rows}×{columns}</span>
     </header>
   )
 
@@ -408,15 +408,15 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   )
 
   const readouts = (
-    <div className="matrix-facts" aria-live="polite" style={revealRiseStyle(p, isTwoByTwo ? 0.82 : 0.48, 0.98)}>
-      <span><small>dim </small>{rows} × {columns}</span>
+    <div className="matrix-facts" aria-live="polite">
+      <span style={revealRiseStyle(p, isTwoByTwo ? 0.8 : 0.46, 0.91, { distance: 10 })}><small>dim </small>{rows} × {columns}</span>
       {square ? (
         <>
-          <span><small>det </small><b>{formatNumber(det)}</b></span>
-          <span><small>tr </small>{formatNumber(tr)}</span>
-          {isTwoByTwo && <span><small>λ </small>{eig ? `${formatNumber(eig[0])}, ${formatNumber(eig[1])}` : 'complex'}</span>}
+          <span style={revealRiseStyle(p, isTwoByTwo ? 0.84 : 0.5, 0.94, { distance: 10 })}><small>det </small><b>{formatNumber(det)}</b></span>
+          <span style={revealRiseStyle(p, isTwoByTwo ? 0.88 : 0.54, 0.97, { distance: 10 })}><small>tr </small>{formatNumber(tr)}</span>
+          {isTwoByTwo && <span style={revealRiseStyle(p, 0.91, 1, { distance: 10 })}><small>λ </small>{eig ? `${formatNumber(eig[0])}, ${formatNumber(eig[1])}` : 'complex'}</span>}
         </>
-      ) : <span><small>not square</small></span>}
+      ) : <span style={revealRiseStyle(p, 0.54, 0.72, { distance: 10 })}><small>not square</small></span>}
     </div>
   )
 
@@ -703,10 +703,10 @@ function TwoByTwoPlane({
               })()}
             </g>
           </svg>
-          <div className="matrix-key" style={revealRiseStyle(p, 0.84, 0.98, { distance: 10 })}>
-            <span>— source</span>
-            <b>— transformed</b>
-            {eigen && <em>— eigenlines</em>}
+          <div className="matrix-key">
+            <span style={revealRiseStyle(p, 0.82, 0.94, { distance: 9 })}>— source</span>
+            <b style={revealRiseStyle(p, 0.86, 0.97, { distance: 9 })}>— transformed</b>
+            {eigen && <em style={revealRiseStyle(p, 0.9, 1, { distance: 9 })}>— eigenlines</em>}
           </div>
         </div>
         <div className="matrix-side" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()}>

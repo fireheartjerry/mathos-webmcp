@@ -313,6 +313,15 @@ export default function LiveGeometry({
   }
   const kickerT = revealStage(p, 0, 0.15)
   const legendT = revealStage(p, 0.85, 1)
+  const majorArcId = primitives.find((primitive) => primitive.kind === 'arcMidpoint' && primitive.containing !== undefined)?.id
+  const incenterId = primitives.find((primitive) => primitive.kind === 'incenter')?.id
+  const tangencyId = primitives.find((primitive) => primitive.kind === 'circleTangency')?.id
+  const mixtilinearAxis = majorArcId && incenterId && tangencyId
+    ? { major: pointAt(majorArcId), incenter: pointAt(incenterId), tangency: pointAt(tangencyId) }
+    : null
+  const axisT = majorArcId && incenterId && tangencyId
+    ? Math.min(drawT(majorArcId), drawT(incenterId), drawT(tangencyId))
+    : 0
 
   const setTool = (next: GeometryTool) => {
     setToolState(next)
@@ -713,12 +722,12 @@ export default function LiveGeometry({
       onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node | null)) activeRef.current = rootRef.current?.matches(':hover') ?? false }}
       onKeyDown={onRootKeyDown}
     >
-      <header className="geometry-header" style={revealRiseStyle(p, 0.01, 0.15)}>
-        <div className="geometry-heading">
+      <header className="geometry-header">
+        <div className="geometry-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
           <span className="geometry-kicker">Dynamic geometry</span>
           <h3>Homothety · Spiral similarity</h3>
         </div>
-        <div className="geometry-meta">
+        <div className="geometry-meta" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
           <b>{visiblePoints.length} points · {markCount} marks</b>
           <small title={metaText}>{metaText}</small>
         </div>
@@ -786,6 +795,17 @@ export default function LiveGeometry({
               <line className="geometry-hit" x1={segment.from.x} y1={segment.from.y} x2={segment.to.x} y2={segment.to.y} data-primitive-id={segment.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, segment.id) : undefined} />
             </g>
           })}
+          {axisT > 0 && mixtilinearAxis?.major && mixtilinearAxis.incenter && mixtilinearAxis.tangency && (
+            <line
+              className="geometry-mixtilinear-axis"
+              x1={mixtilinearAxis.major.x}
+              y1={mixtilinearAxis.major.y}
+              x2={mixtilinearAxis.tangency.x}
+              y2={mixtilinearAxis.tangency.y}
+              pathLength={1}
+              style={revealDash(axisT)}
+            />
+          )}
           {resolved.angles.map((angle) => {
             const t = drawT(angle.id)
             if (t <= 0) return null
@@ -890,9 +910,9 @@ export default function LiveGeometry({
           </div>
         )}
       </div>
-      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`} style={revealRiseStyle(p, 0.84, 1)}>
-        {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
-        <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
+      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`}>
+        {readouts.map((readout, index) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`} style={revealRiseStyle(p, 0.8 + index * 0.035, 0.95 + index * 0.02, { distance: 10 })}><small>{readout.label}</small><b>{readout.value}</b></span>)}
+        <em style={revealRiseStyle(p, 0.87, 1, { distance: 10 })}>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
       </footer>
     </div>
   )

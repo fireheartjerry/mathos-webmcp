@@ -257,6 +257,15 @@
   stroke: var(--accent);
   stroke-width: 2;
 }
+
+.live-geometry.has-toolbar .geometry-mixtilinear-axis {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 62%, var(--graphite));
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
 .live-geometry.has-toolbar .geometry-point.is-incenter,
 .live-geometry.has-toolbar .geometry-point.is-arc-midpoint { fill: var(--teal, #2f8f88); }
 .live-geometry.has-toolbar .geometry-point.is-circle-tangency { fill: var(--accent); }
