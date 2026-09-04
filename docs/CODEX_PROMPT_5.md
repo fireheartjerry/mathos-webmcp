@@ -1,5 +1,6 @@
 You are auditing and finishing a hackathon submission at
-/Users/fireheartjerry/Code/mathos-webmcp, working in parallel with a Claude agent.
+/Users/fireheartjerry/Code/mathos-webmcp. Unlike the previous four rounds you are
+working alone: Claude has stood down for this one, so the repository is yours.
 
 **Read this whole prompt before touching anything, and read it as a specification, not
 as a report card.** Below is the complete reviewer feedback this project is being built
