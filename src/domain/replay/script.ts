@@ -6,7 +6,8 @@ import type { ReplayScript, ReplayStep } from './types'
  *
  * Grammar the whole script obeys:
  * - `spotlight_objects` runs before every change to an existing object.
- * - `set_viewport` makes room before every new region is built.
+ * - `set_viewport` pulls back before every new region is built; focus_objects
+ *   tightens the shot only after the new object exists.
  * - every construction is animated with `create_timeline` + `play_timeline`.
  * - equation and text edits use `typewriter: true`.
  * - steps that depend on something the human draws on camera are `optional`,
@@ -22,7 +23,7 @@ import type { ReplayScript, ReplayStep } from './types'
  *   Act 3  attention, training      x 2200..3000, 3200..4000
  *   Act 4  geometry, barycentric    x 4200..4930, 5130..5860
  *   Act 6  simplex, partitions      x 6060..6860, 7060..7860
- *   Act 7  matrix                   x 8060..8860
+ *   Act 7  matrix                   x 7060..7860
  */
 
 const PURPLE = '#7c5cff'
@@ -35,17 +36,18 @@ const BRIDGE_LOG_LATEX = '\\ell_j=\\log w_j'
 const BRIDGE_SOFTMAX_LATEX = '\\operatorname{softmax}(\\ell)_j=\\frac{e^{\\ell_j}}{\\sum_k e^{\\ell_k}}=w_j'
 
 /**
- * Camera that shows the world region whose top-left corner is (x, y).
+ * Staging camera that shows the world region whose top-left corner is (x, y).
  *
- * The old 40px margin put that corner underneath the film's left column — the rail is
- * rendered expanded at 188px and the ledger, timelines and activity panels stack
- * beside it — so a pan parked the new act behind the chrome. Clear the column and the
- * header instead; focus_objects still does the precise framing afterwards.
+ * The card used to arrive at 1.25x before focus_objects could measure it. At that
+ * scale an 800px visualizer is wider than the lane between the left rail and the
+ * replay console, so its first frames were born underneath the console and only
+ * became legible after the camera corrected itself. Pull back first: the complete
+ * card now enters a clear visual plane, then focus_objects makes the precise shot.
  */
-const ZOOM = 1.25
+const STAGING_ZOOM = 0.82
 const LEFT_CHROME = 300
 const TOP_CHROME = 120
-const camera = (x: number, y: number) => ({ viewport: { x: LEFT_CHROME - x * ZOOM, y: TOP_CHROME - y * ZOOM, zoom: ZOOM } })
+const camera = (x: number, y: number) => ({ viewport: { x: LEFT_CHROME - x * STAGING_ZOOM, y: TOP_CHROME - y * STAGING_ZOOM, zoom: STAGING_ZOOM } })
 
 const step = (entry: ReplayStep): ReplayStep => entry
 
@@ -117,6 +119,10 @@ const liveLineage = (
   latex: string,
   typewriterMs = 1180,
 ): ReplayStep[] => [
+  // Stage every scene here rather than relying on its enclosing act. Attention →
+  // training and geometry → barycentric each contain two visualizers; when the pan
+  // lived only at the act boundary, the second card was born behind Agent Replay.
+  step({ tool: 'set_viewport', input: camera(scene.x - 60, scene.y - 140), waitMs: 167 }),
   step({
     tool: 'create_objects',
     input: {
@@ -262,7 +268,7 @@ const ACT_1: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_2: ReplayStep[] = [
-  step({ id: 'act2', say: 'I need space below.', tool: 'set_viewport', input: camera(1140, 500), waitMs: 167 }),
+  step({ id: 'act2', say: 'I need space below.', waitMs: 167 }),
   ...liveLineage('lineage_density', { x: 1200, y: 640, width: 800 }, '\\Gamma(a)\;\\longrightarrow\;g_a(x)=\\frac{x^{a-1}e^{-x}}{\\Gamma(a)}'),
   step({
     id: 'graph2',
@@ -315,6 +321,14 @@ const ACT_2: ReplayStep[] = [
     waitMs: 167,
   }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }, { $ref: 'graph2.changedIds.1' }], label: 'masses → logs → softmax', seconds: 2.17 }, optional: true, waitMs: 135 }),
+  step({ tool: 'spotlight_objects', input: { ids: ['replay_bins_note'], label: 'one word', seconds: 1.74 }, optional: true, waitMs: 135 }),
+  step({
+    say: 'One word in the explanation, retyped where it belongs.',
+    tool: 'edit_text',
+    input: { objectId: 'replay_bins_note', text: 'Total area is 1. The three bins hold w₁, w₂, w₃; their logs become the scores softmax will see.', typewriter: true, typewriterMs: 2320 },
+    optional: true,
+    waitMs: 135,
+  }),
   step({
     id: 'bridge2',
     say: 'Here is the bridge.',
@@ -363,7 +377,7 @@ const ACT_2: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_3: ReplayStep[] = [
-  step({ say: 'Over to attention. Panning right.', tool: 'set_viewport', input: camera(2140, 500), waitMs: 167 }),
+  step({ say: 'Over to attention. Panning right.', waitMs: 167 }),
   ...liveLineage('lineage_attention', { x: 2200, y: 640, width: 800 }, '(w_1,w_2,w_3)\;\\xrightarrow{\;\\log,\;\\operatorname{softmax}\;}\;\\alpha'),
   step({ id: 'att3', tool: 'visualize_concept', input: { concept: 'attention', bounds: { x: 2200, y: 640, width: 800, height: 560 }, construct: true } }),
   step({ tool: 'focus_objects', input: { ids: ['lineage_attention', { $ref: 'att3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 216 }),
@@ -438,7 +452,7 @@ const ACT_3: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_4: ReplayStep[] = [
-  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", tool: 'set_viewport', input: camera(4140, 500), waitMs: 167 }),
+  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", waitMs: 167 }),
   step({ humanNote: 'The learner picks Geometry; the GeoGebra-style toolbar appears; the cursor places A, B, C and closes the triangle.' }),
   step({ id: 'geoHuman4', tool: 'get_objects', input: { kinds: ['geometry'], limit: 1 }, optional: true }),
   ...liveLineage('lineage_geometry', { x: 4200, y: 640, width: 730 }, '\\alpha_1+\\alpha_2+\\alpha_3=1\;\\longrightarrow\;P=\\textstyle\\sum_i \\alpha_i A_i'),
@@ -628,8 +642,55 @@ const ACT_6: ReplayStep[] = [
   }),
 ]
 
+// ---------------------------------------------------------------------------
+// Act 6b — Compatibility work happens in a disposable side room. These tools are
+// real product surface, but they are not the conclusion of this live lesson. Keeping
+// the reconstruction inside the scratch project also guarantees that its approval
+// panel disappears when the main Pipeline project returns.
+// ---------------------------------------------------------------------------
+
+const ACT_6B: ReplayStep[] = [
+  step({ id: 'project7', say: 'One side room keeps imported work isolated from the live lesson.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 135 }),
+  step({ tool: 'open_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 234 }),
+  step({ tool: 'open_scene', input: { scene: 'gamma-clinic' }, optional: true, waitMs: 234 }),
+  step({
+    id: 'compatImage8',
+    tool: 'create_objects',
+    input: {
+      summary: 'Prepared an off-canvas compatibility fixture',
+      objects: [{
+        id: 'replay_compat_image', kind: 'image',
+        src: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+        alt: 'Off-canvas compatibility fixture',
+        bounds: { x: -4200, y: -4200, width: 120, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
+      }],
+    },
+    optional: true,
+  }),
+  step({
+    say: 'An imported worksheet can become live math here while the main lesson stays untouched.',
+    tool: 'reconstruct_problem',
+    input: {
+      sourceImageId: 'replay_compat_image',
+      proposedObjects: [{
+        id: 'replay_compat_equation', kind: 'equation', latex: '\\Gamma(x+1)=x\\Gamma(x)', color: GRAPHITE,
+        bounds: { x: -4000, y: -4000, width: 320, height: 64 }, rotation: 0, author: 'agent', opacity: 1,
+      }],
+      uncertainObjectIds: [],
+    },
+    optional: true,
+  }),
+  step({
+    tool: 'audit_reconstruction',
+    input: { auditSummary: 'Checked the scratch import against its source.' },
+    optional: true,
+  }),
+  step({ say: 'Scratch checked. Back to the live lesson.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 267 }),
+  step({ tool: 'delete_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 135 }),
+]
+
 const ACT_7: ReplayStep[] = [
-  step({ say: 'Last construction. Panning right.', tool: 'set_viewport', input: camera(7000, 500), waitMs: 167 }),
+  step({ say: 'Last construction. Panning right.', waitMs: 167 }),
   step({ humanNote: 'The learner picks Matrix → 2 × 2 and types values into the grid.' }),
   ...liveLineage('lineage_matrix', { x: 7060, y: 640, width: 800 }, 'W_Q:v\\mapsto W_Qv\;\\longrightarrow\;A:v\\mapsto Av'),
   step({ id: 'matrix7', tool: 'visualize_concept', input: { concept: 'matrix-transform', bounds: { x: 7060, y: 640, width: 800, height: 560 }, construct: true } }),
@@ -652,30 +713,6 @@ const ACT_7: ReplayStep[] = [
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw7.data.timelineId' }, action: 'play' }, waitMs: 4050 }),
   step({ say: 'Same idea as W_Q: a matrix moves every vector at once.', waitMs: 234 }),
   step({ humanNote: 'The learner drags a basis vector; the cells update.' }),
-  step({ humanNote: 'The learner double-clicks the explanation note and edits a word.' }),
-  step({ tool: 'spotlight_objects', input: { ids: ['replay_bins_note'], label: 'one word', seconds: 1.74 }, optional: true, waitMs: 135 }),
-  step({
-    say: 'One word in my note, retyped.',
-    tool: 'edit_text',
-    input: { objectId: 'replay_bins_note', text: 'Total area is 1. The three bins hold w₁, w₂, w₃; their logs become the scores softmax will see.', typewriter: true, typewriterMs: 2320 },
-    optional: true,
-    waitMs: 135,
-  }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }], label: 'one term', seconds: 1.74 }, optional: true, waitMs: 135 }),
-  step({
-    say: 'And one LaTeX term, live.',
-    tool: 'edit_equation',
-    input: { objectId: { $ref: 'graph2.changedIds.0' }, latex: '\\frac{x^{a-1}e^{-x}}{\\Gamma(a)},\\quad a=5.5', typewriter: true, typewriterMs: 2320 },
-    optional: true,
-    waitMs: 167,
-  }),
-  step({ humanNote: 'The learner undoes and redoes both edits from the rail.' }),
-  step({ humanNote: 'The learner draws a Frame around the whole page and titles it Pipeline.' }),
-  step({ id: 'project7', say: 'A second project, so you can see the isolation.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 135 }),
-  step({ tool: 'open_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 234 }),
-  step({ tool: 'open_scene', input: { scene: 'gamma-clinic' }, optional: true, waitMs: 234 }),
-  step({ say: 'Untouched. Back we go.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 267 }),
-  step({ tool: 'delete_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 135 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -733,38 +770,6 @@ const ACT_7B: ReplayStep[] = [
 
 const ACT_8: ReplayStep[] = [
   step({
-    id: 'compatImage8',
-    tool: 'create_objects',
-    input: {
-      summary: 'Prepared an off-canvas compatibility fixture',
-      objects: [{
-        id: 'replay_compat_image', kind: 'image',
-        src: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
-        alt: 'Off-canvas compatibility fixture',
-        bounds: { x: -4200, y: -4200, width: 120, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
-      }],
-    },
-    optional: true,
-  }),
-  step({
-    say: 'Two compatibility tools stay available for imported worksheets. They run off canvas here; the lesson itself stayed live from the first keystroke.',
-    tool: 'reconstruct_problem',
-    input: {
-      sourceImageId: 'replay_compat_image',
-      proposedObjects: [{
-        id: 'replay_compat_equation', kind: 'equation', latex: '\\Gamma(x+1)=x\\Gamma(x)', color: GRAPHITE,
-        bounds: { x: -4000, y: -4000, width: 320, height: 64 }, rotation: 0, author: 'agent', opacity: 1,
-      }],
-      uncertainObjectIds: [],
-    },
-    optional: true,
-  }),
-  step({
-    tool: 'audit_reconstruction',
-    input: { auditSummary: 'Compatibility import checked; the live Pipeline construction remains authoritative.' },
-    optional: true,
-  }),
-  step({
     say: "That's every tool, used at least once, all through one shared history.",
     tool: 'get_history', input: { limit: 100 },
     calls: [{ tool: 'get_world', input: { includeObjects: false } }, { tool: 'get_timelines', input: {} }],
@@ -778,5 +783,5 @@ export const FILM_V2_SCRIPT: ReplayScript = {
   // The concept-map pullback repeated create_objects and set_viewport after both had
   // already succeeded on camera. Cutting that complete beat preserves all 48 tools
   // while giving the final ledger enough room to be read below the three-minute cap.
-  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_7, ...ACT_8],
+  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_6B, ...ACT_7, ...ACT_8],
 }

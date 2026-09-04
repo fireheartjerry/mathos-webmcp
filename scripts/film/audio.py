@@ -1,14 +1,15 @@
-"""Restrained music bed and event-locked sound design for the Mathburst film.
+"""Original music bed and event-locked sound design for the Mathburst film.
 
 Reads the capture timeline and writes two 48 kHz stereo WAV files:
 
-  video/public/film/music.wav   a slow, quiet pad that moves through the acts
+  video/public/film/music.wav   a warm generative score that moves through the acts
   video/public/film/sfx.wav     one soft tick per real commit (graphite for the
                                 learner, a softer purple-tinted one for the Tutor)
                                 and a low, brief swell under each bridge
 
-Nothing here is looped ambience: every sound is placed at a timestamp the
-capture logged, and the bed reaches rest before the final lockup.
+The music is synthesized here from deterministic oscillators: no stock loop or
+licensed recording. Commit sounds are placed at measured capture timestamps,
+and the score resolves into silence after the closing line.
 
     python scripts/film/audio.py
 """
@@ -58,27 +59,50 @@ def envelope(length: int, attack: float, release: float) -> np.ndarray:
     return env
 
 
-def pad_voice(freq: float, seconds: float, rng: np.random.Generator, detune: float = 0.0015) -> np.ndarray:
-    """Three slightly detuned sines with slow amplitude drift. Quiet by design."""
+def pad_voice(freq: float, seconds: float, rng: np.random.Generator, detune: float = 0.0018) -> np.ndarray:
+    """A warm, gently moving oscillator; richer than a bare sine but still voice-safe."""
     t = np.arange(int(seconds * SR)) / SR
     out = np.zeros_like(t)
     for k, ratio in enumerate((1 - detune, 1.0, 1 + detune)):
         phase = rng.uniform(0, 2 * math.pi)
         drift = 1 + 0.06 * np.sin(2 * math.pi * (0.05 + 0.02 * k) * t + phase)
-        out += np.sin(2 * math.pi * freq * ratio * t + phase) * drift
-    # a whisper of the octave keeps it from sounding like a test tone
-    out += 0.18 * np.sin(2 * math.pi * freq * 2 * t)
-    return out / 3.6
+        fundamental = np.sin(2 * math.pi * freq * ratio * t + phase)
+        octave = 0.20 * np.sin(2 * math.pi * freq * 2 * ratio * t + phase * 0.7)
+        air = 0.06 * np.sin(2 * math.pi * freq * 3 * ratio * t + phase * 1.3)
+        out += (fundamental + octave + air) * drift
+    return out / 4.0
 
 
 CHORDS = [
-    # act boundaries (seconds are read from the timeline; chord order is fixed)
-    ('D', [146.83, 220.0, 293.66, 369.99]),      # D major, open
-    ('B', [123.47, 185.0, 246.94, 293.66]),      # B minor 7
-    ('G', [98.0, 146.83, 196.0, 246.94]),        # G major 7
-    ('A', [110.0, 164.81, 220.0, 277.18]),       # A major
-    ('D2', [146.83, 220.0, 293.66, 440.0]),      # D major, higher voicing
+    # root, open pad voicing, and a small upper-register arpeggio. The progression
+    # is intentionally consonant but avoids repeating the exact same inversion.
+    ('Dmaj9', 73.42, [110.00, 146.83, 185.00, 220.00, 329.63], [293.66, 369.99, 440.00, 659.25]),
+    ('Bm7',   61.74, [92.50, 123.47, 146.83, 185.00, 220.00], [246.94, 293.66, 369.99, 493.88]),
+    ('Gmaj9', 49.00, [73.42, 98.00, 123.47, 146.83, 220.00], [196.00, 246.94, 293.66, 440.00]),
+    ('Asus4', 55.00, [82.41, 110.00, 146.83, 164.81, 220.00], [220.00, 293.66, 329.63, 440.00]),
+    ('Em7',   41.20, [61.74, 82.41, 98.00, 123.47, 146.83], [164.81, 196.00, 246.94, 329.63]),
 ]
+
+# A long-form harmonic path, not a tiny loop. The last three entries form an audible
+# IV–V–I cadence; music() switches to them as it approaches the lockup.
+PROGRESSION = [0, 1, 2, 3, 0, 4, 2, 3, 1, 2, 0, 3]
+
+
+def pluck(freq: float, seconds: float, phase: float) -> np.ndarray:
+    t = np.arange(int(seconds * SR)) / SR
+    attack = np.minimum(1.0, t / 0.012)
+    decay = np.exp(-5.2 * t)
+    body = np.sin(2 * math.pi * freq * t + phase)
+    body += 0.28 * np.sin(2 * math.pi * freq * 2 * t + phase * 0.6)
+    body += 0.08 * np.sin(2 * math.pi * freq * 3 * t + phase * 1.4)
+    return body * attack * decay / 1.36
+
+
+def bass_note(freq: float, seconds: float) -> np.ndarray:
+    t = np.arange(int(seconds * SR)) / SR
+    attack = np.minimum(1.0, t / 0.045)
+    release = np.exp(-2.0 * t)
+    return (np.sin(2 * math.pi * freq * t) + 0.14 * np.sin(2 * math.pi * freq * 2 * t)) * attack * release
 
 
 def film_clock(cutlist: dict | None):
@@ -107,41 +131,74 @@ def film_clock(cutlist: dict | None):
 def music(timeline: dict, seed: int, total: float, to_film, cutlist: dict | None = None) -> np.ndarray:
     rng = np.random.default_rng(seed)
     n = int(total * SR)
-    left = np.zeros(n)
-    right = np.zeros(n)
-    # One chord per three shots, changing on shot starts, resolving on the lockup.
-    # Take the starts from the cut list, which already states each shot's position in
-    # the finished film. Mapping the RAW shot start through to_film instead returned
-    # None for every shot the cut list starts late (a camera arrival skips its pan), so
-    # most boundaries were dropped and the bed stayed silent for the first sixty
-    # seconds of the film.
-    if cutlist and cutlist.get('shots'):
-        starts = [float(shot['filmStart']) for shot in cutlist['shots']]
-    else:
-        starts = [b for b in (to_film(shot['start']) for shot in timeline['shots']) if b is not None]
-    boundaries = [starts[i] for i in range(0, len(starts), 3)] + [total]
-    boundaries = sorted(set(max(0.0, b) for b in boundaries))
-    for index in range(len(boundaries) - 1):
-        start, end = boundaries[index], boundaries[index + 1]
-        chord = CHORDS[index % len(CHORDS)]
-        seconds = end - start + 2.5  # overlap into the next chord
-        voice = np.zeros(int(seconds * SR))
-        for f in chord[1]:
-            voice += pad_voice(f, seconds, rng)
-        voice *= envelope(len(voice), attack=1.8, release=2.4)
-        s = int(start * SR)
-        e = min(n, s + len(voice))
-        pan = 0.5 + 0.18 * math.sin(index * 1.3)
-        left[s:e] += voice[: e - s] * (1 - pan) * 0.6
-        right[s:e] += voice[: e - s] * pan * 0.6
-    # Final rest: gentle fade in the last 1.6 s so the lockup lands on silence.
-    tail = int(1.6 * SR)
-    left[-tail:] *= np.linspace(1, 0, tail)
-    right[-tail:] *= np.linspace(1, 0, tail)
-    # Low-pass by simple moving average to keep it soft.
-    kernel = np.ones(48) / 48
-    left = np.convolve(left, kernel, mode='same')
-    right = np.convolve(right, kernel, mode='same')
+    pad_l = np.zeros(n)
+    pad_r = np.zeros(n)
+    detail_l = np.zeros(n)
+    detail_r = np.zeros(n)
+
+    def place(target_l: np.ndarray, target_r: np.ndarray, sample: np.ndarray, at: float, gain: float, pan: float) -> None:
+        start = max(0, int(at * SR))
+        if start >= n:
+            return
+        end = min(n, start + len(sample))
+        width = end - start
+        target_l[start:end] += sample[:width] * gain * math.sqrt(1 - pan)
+        target_r[start:end] += sample[:width] * gain * math.sqrt(pan)
+
+    # 84 BPM keeps motion under the narration. Two bars per harmony yields roughly
+    # thirty genuinely changing chords in a three-minute one-shot film—the old score
+    # accidentally produced one chord because it counted edit-list shots.
+    beat = 60.0 / 84.0
+    chord_seconds = beat * 8
+    chord_count = max(1, int(math.ceil(total / chord_seconds)))
+    cadence = [2, 3, 0]
+
+    for index in range(chord_count):
+        start = index * chord_seconds
+        chord_id = cadence[index - (chord_count - len(cadence))] if index >= chord_count - len(cadence) else PROGRESSION[index % len(PROGRESSION)]
+        _, root, voicing, arp = CHORDS[chord_id]
+
+        # Cross-faded pad. Lower notes stay centred; upper notes gently widen.
+        seconds = min(chord_seconds + 2.3, total - start)
+        for voice_index, freq in enumerate(voicing):
+            tone = pad_voice(freq, seconds, rng) * envelope(int(seconds * SR), 1.25, 2.15)
+            pan = 0.40 + 0.20 * (voice_index / max(1, len(voicing) - 1))
+            place(pad_l, pad_r, tone, start, 0.14 / len(voicing), pan)
+
+        # A low downbeat every half-bar gives the picture direction without becoming
+        # trailer percussion. It recedes during the opening and closing lockup.
+        for local_beat in (0, 4):
+            at = start + local_beat * beat
+            if at >= total - 5.0:
+                continue
+            bass = bass_note(root, min(1.65, total - at))
+            place(detail_l, detail_r, bass, at, 0.055, 0.5)
+
+        # Sparse eight-note figure: gaps are deliberate so dialogue still owns the
+        # midrange. The contour evolves rather than restarting identically each bar.
+        contour = (0, 2, 1, 3, 1, 2, 0, 3)
+        for pulse in range(16):
+            at = start + pulse * beat / 2
+            if at < 7.0 or at >= total - 6.0 or pulse % 3 == 2:
+                continue
+            note = arp[contour[(pulse + index) % len(contour)]]
+            sample = pluck(note, min(0.72, total - at), rng.uniform(0, 2 * math.pi))
+            pan = 0.34 if (pulse + index) % 2 == 0 else 0.66
+            place(detail_l, detail_r, sample, at, 0.032, pan)
+
+    # Smooth only the pad; retaining the pluck transients is what keeps the cue from
+    # turning back into featureless ambience.
+    kernel = np.ones(36) / 36
+    pad_l = np.convolve(pad_l, kernel, mode='same')
+    pad_r = np.convolve(pad_r, kernel, mode='same')
+    left = pad_l + detail_l
+    right = pad_r + detail_r
+
+    # A restrained long-form arc and a full two-and-a-half seconds of resolved air.
+    seconds_axis = np.arange(n) / SR
+    arc = np.interp(seconds_axis, [0, 7, total * 0.42, total * 0.76, total - 6, total - 2.5, total], [0, 0.72, 0.9, 1.0, 0.82, 0.0, 0.0])
+    left *= arc
+    right *= arc
     return np.stack([left, right], axis=1)
 
 

@@ -60,7 +60,9 @@ const detectContentEnd = (takeSeconds) => {
   return value
 }
 const CONTENT_ENDS = detectContentEnd(Number(timeline.seconds))
-const HOLD = numberFromEnv('HOLD', 3)
+// Six seconds gives the restored closing thesis room to finish over the completed
+// lockup. The audio builder adds its own 1.8s musical release after the final word.
+const HOLD = numberFromEnv('HOLD', 6)
 const FILM_SECONDS = CONTENT_ENDS + HOLD
 /** Hard inter-clip floor and hard protection against narration going stale. */
 const MIN_GAP = numberFromEnv('NARRATION_MIN_GAP', 0.35)
@@ -89,9 +91,9 @@ const onBeat = (kind, labelIncludes, occurrence = 1) => ({ type: 'match', kind, 
 const afterCommit = (anchor, count = 1) => ({ type: 'afterCommit', anchor, count })
 
 /**
- * The voice carries the argument and leaves parity flourishes and repeated tool
- * actions to the picture. The generic closing line repeated the opening argument;
- * the final ledger line now carries the measured 48/48 proof instead.
+ * The voice carries the argument while the parity section proves that learner and
+ * tutor share the same objects and history. After the matrix there is one closing
+ * thesis over the finished lockup; compatibility work has already happened.
  */
 const plan = [
   { id: '01-what', beat: onBeat('take', 'start') },
@@ -103,8 +105,10 @@ const plan = [
   { id: '10-training', beat: onBeat('tutor', 'Applied gradient step 1') },
   { id: '11-geometry', beat: onBeat('tutor', 'completed the construction') },
   { id: '12-barycentric', beat: onBeat('tutor', 'Visualized barycentric') },
+  { id: '13-parity-shape', beat: onBeat('tutor', 'Moved arrow replay_arrow') },
+  { id: '16c-undo', beat: onBeat('human', 'Undid erased 1 ink object by id') },
   { id: '15-matrix', beat: onBeat('tutor', 'Visualized matrix-transform') },
-  { id: '18-ledger', beat: onBeat('replay', 'all tool calls settled') },
+  { id: '17-close', beat: onBeat('replay', 'all tool calls settled') },
 ]
 
 const describePredicate = (predicate) => {
