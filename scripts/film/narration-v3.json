@@ -82,7 +82,7 @@
   {
    "id": "11-geometry",
    "act": 4,
-   "text": "The student places three points. Tangent circles, the homothety and the spiral centre construct themselves in dependency order.",
+   "text": "You place three points. Everything after them is computed: the circles are tangent because the construction makes them tangent, and they stay tangent when you drag a vertex.",
    "shot": "homothety",
    "offset": 1.2
   },
@@ -103,7 +103,7 @@
   {
    "id": "12-barycentric",
    "act": 4,
-   "text": "P is a weighted average of A, B and C. Weights that sum to one, like attention weights. So P glides to them.",
+   "text": "P is a weighted average of A, B and C, weights summing to one. The same three numbers the attention head produced, now naming a point inside a triangle.",
    "shot": "barycentrics",
    "offset": 1.2
   },
@@ -139,6 +139,16 @@
    "id": "18-ledger",
    "shot": "agent-replay",
    "text": "That panel is the ledger. Every tool the tutor called, in order, with its own count. Forty-eight of forty-eight, all on the page."
+  },
+  {
+   "id": "16b-map",
+   "shot": "agent-replay",
+   "text": "None of these are separate demos. The tutor joins each card to the one it came from, and writes the reason on the join."
+  },
+  {
+   "id": "16c-undo",
+   "shot": "agent-replay",
+   "text": "And the learner can take any of it back. One click on undo and the tutor's last edit reverses, because there is only one history."
   }
  ]
 }

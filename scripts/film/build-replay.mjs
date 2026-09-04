@@ -76,15 +76,16 @@ const plan = [
   ['12-barycentric', 70.4],
   ['13-parity-shape', 75.2],
   ['13b-parity-ink', 83.0],
-  ['14-ramanujan', 93.4],
   ['15-matrix', 103.2],
   ['16-isolation', 112.0],
-  ['17-close', 126.0],
+  ['16b-map', 118.0],
+  ['16c-undo', 126.0],
+  ['17-close', 134.0],
   // Names the panel the closing shot reveals; without it the ledger is a
   // sidebar the viewer has never had explained. ABSOLUTE: the manifest appends this
   // beat after the replay, so it sits a fixed distance from the end of the take and
   // must not be stretched with the rest.
-  ['18-ledger', 165.0, { absolute: true }],
+  ['18-ledger', 167.0, { absolute: true }],
 ]
 
 /**
