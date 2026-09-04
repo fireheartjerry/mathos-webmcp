@@ -68,3 +68,27 @@ if (problems.length) {
   process.exit(1)
 }
 console.log(`layout ok: ${boxes.length} boxes, all at least ${GUTTER}px apart`)
+
+// ---------------------------------------------------------------------------
+// Timelines: no keyframe may sit past its own duration.
+//
+// create_timeline rejects one, which kills the replay mid-take. A blanket pacing
+// trim moved a duration and left a keyframe behind exactly once, and it cost a full
+// five-minute capture to find out. It costs nothing to check here.
+// ---------------------------------------------------------------------------
+
+const timelines = [...text.matchAll(/name: '([^']+)',\n\s*duration: ([\d.]+),([\s\S]*?)\n\s*\},\n\s*\}\)/g)]
+const overruns = []
+for (const [, name, duration, body] of timelines) {
+  const end = Number(duration)
+  const times = [...body.matchAll(/time: ([\d.]+)/g)].map((match) => Number(match[1]))
+  const past = [...new Set(times.filter((time) => time > end + 1e-9))].sort((a, b) => a - b)
+  if (past.length) overruns.push({ name, end, past })
+}
+if (overruns.length) {
+  console.error(`\n${overruns.length} timeline${overruns.length === 1 ? '' : 's'} with keyframes past the end:\n`)
+  for (const { name, end, past } of overruns) console.error(`  "${name}" runs ${end}s but has keyframes at ${past.join(', ')}s`)
+  console.error('')
+  process.exit(1)
+}
+console.log(`timelines ok: ${timelines.length} checked, every keyframe inside its duration`)

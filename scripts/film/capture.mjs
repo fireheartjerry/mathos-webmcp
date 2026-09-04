@@ -308,7 +308,12 @@ try {
     log(`shot ${String(shotIndex + 1).padStart(2, '0')} ${shot.id} @ ${shotStart.toFixed(2)}s`)
     events.push({ t: shotStart, kind: 'shot', label: shot.id })
     for (const step of shot.steps ?? []) {
-      if (step.wait) await wait(step.wait)
+      // `wait` is a MODIFIER on a step, not a step. Every handler below already ends
+      // with `wait(step.wait ?? default)`, so testing it first here silently reduced
+      // `{startReplay, wait}` and `{pauseReplayAfter, wait}` to a bare pause — the
+      // replay was never started or paused, and the gesture that followed failed on a
+      // handle that could not exist yet. Only take this branch for a lone wait.
+      if (step.wait && Object.keys(step).length === 1) await wait(step.wait)
       else if (step.cue) { await page.evaluate(`window.__mathburstFilm.runCue(${JSON.stringify(step.cue)}); return true`); await wait(200); await awaitIdle() }
       else if (step.doubleClick) await doubleClick(step.doubleClick, step.text)
       else if (step.clickAt) await clickAt(step.clickAt.x, step.clickAt.y)
@@ -357,6 +362,7 @@ try {
       // upstream cannot silently move the pause somewhere else.
       else if (step.pauseReplayAfter) {
         const deadline = Date.now() + (step.timeoutMs ?? 90_000)
+        let found = false
         while (Date.now() < deadline) {
           // Act 1 offers an Accept/Decline proposal. The replay blocks on it, so this
           // poll has to answer it too or it waits for a line that can never arrive.
@@ -365,10 +371,29 @@ try {
             proposal: Boolean(document.querySelector('.agent-console-proposal .is-accept:not(:disabled)')),
             status: document.querySelector('.agent-console')?.getAttribute('data-status'),
           }`)
-          if (state.seen) break
+          if (state.seen) {
+            found = true
+            const where = await page.evaluate(`return { n: document.querySelectorAll('.agent-console-line').length, last: [...document.querySelectorAll('.agent-console-line')].slice(-2).map((x) => x.innerText.replace(/\\s+/g, ' ').slice(0, 90)) }`).catch(() => null)
+            log(`  pause "${String(step.pauseReplayAfter).slice(0, 40)}" matched after ${((Date.now() - (deadline - (step.timeoutMs ?? 90_000))) / 1000).toFixed(1)}s — ${JSON.stringify(where)}`)
+            break
+          }
           if (state.proposal) { await click('.agent-console-proposal .is-accept:not(:disabled)'); await wait(350); continue }
-          if (state.status === 'stopped') throw new Error('Agent replay stopped before the pause point')
+          if (state.status === 'stopped') {
+            const where = await page.evaluate(`return { counter: document.querySelector('.agent-console-status')?.innerText, lines: [...document.querySelectorAll('.agent-console-line')].slice(-5).map((x) => x.innerText.replace(/\\s+/g, ' ').slice(0, 140)) }`).catch(() => null)
+            throw new Error(`Agent replay stopped before the pause point — ${JSON.stringify(where)}`)
+          }
           await wait(150)
+        }
+        // Never fall through to the gesture. A pause that never found its line used to
+        // pause wherever the replay happened to be and then fail on a missing handle,
+        // which says nothing about why. Say where the replay actually got to.
+        if (!found) {
+          const state = await page.evaluate(`return {
+            status: document.querySelector('.agent-console')?.getAttribute('data-status'),
+            counter: document.querySelector('.agent-console-status')?.innerText,
+            lines: [...document.querySelectorAll('.agent-console-line')].slice(-4).map((n) => n.innerText.replace(/\\s+/g, ' ').slice(0, 120)),
+          }`).catch(() => null)
+          throw new Error(`Never saw the console line ${JSON.stringify(step.pauseReplayAfter)} — ${JSON.stringify(state)}`)
         }
         // A pause only lands in the runner's beforeStep hook, so the status flips at the
         // NEXT step boundary, not on the click. Clicking Resume before that leaves the
@@ -383,11 +408,14 @@ try {
         await page.waitFor(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'running'`, 20_000)
         await wait(step.wait ?? 300)
       }
-      // Start the replay and return, so the manifest can act while it runs.
+      // Start the replay and return, so the manifest can act while it runs. Verify it
+      // actually started: a Run click that lands while the console is still animating
+      // open does nothing, and the next five minutes then look like a stalled replay.
       else if (step.startReplay) {
         await click('.console-trigger')
-        await wait(500)
+        await wait(700)
         await click('.agent-console-controls button[aria-label="Run"]')
+        await page.waitFor(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'running'`, 15_000)
         await wait(step.wait ?? 300)
       }
       else if (step.runReplay || step.awaitReplay) {
@@ -406,7 +434,10 @@ try {
             await click('.agent-console-proposal .is-accept:not(:disabled)')
             await wait(350)
           } else if (state.status === 'done') break
-          else if (state.status === 'stopped') throw new Error('Agent replay stopped before completion')
+          else if (state.status === 'stopped') {
+            const where = await page.evaluate("return { counter: document.querySelector('.agent-console-status')?.innerText, lines: [...document.querySelectorAll('.agent-console-line')].slice(-5).map((x) => x.innerText.replace(/\\s+/g, ' ').slice(0, 150)) }").catch(() => null)
+            throw new Error(`Agent replay stopped before completion — ${JSON.stringify(where)}`)
+          }
           else await wait(120)
         }
         const finished = await page.evaluate(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'done'`)
@@ -416,7 +447,7 @@ try {
             status: document.querySelector('.agent-console')?.getAttribute('data-status'),
             counter: document.querySelector('.agent-console-status')?.innerText,
             proposal: Boolean(document.querySelector('.agent-console-proposal .is-accept:not(:disabled)')),
-            lines: [...document.querySelectorAll('.agent-console-line')].slice(-4).map((n) => n.innerText.replace(/\n/g, ' ').slice(0, 120)),
+            lines: [...document.querySelectorAll('.agent-console-line')].slice(-4).map((n) => n.innerText.replace(/\\s+/g, ' ').slice(0, 120)),
           }`).catch(() => null)
           throw new Error(`Timed out waiting for Agent replay — ${JSON.stringify(state)}`)
         }

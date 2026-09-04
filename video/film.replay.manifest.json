@@ -26,7 +26,7 @@
     {
       "id": "new-project",
       "title": "Create Pipeline",
-      "seconds": 10,
+      "seconds": 6,
       "stage": "gallery",
       "steps": [
         {
@@ -36,7 +36,7 @@
           }
         },
         {
-          "wait": 500
+          "wait": 180
         },
         {
           "click": ".new-project-button"
@@ -47,7 +47,7 @@
         {
           "type": "#new-project-title",
           "value": "Pipeline",
-          "settleMs": 350,
+          "settleMs": 70,
           "enter": false
         },
         {
@@ -57,7 +57,7 @@
           "waitFor": ".tool-ledger"
         },
         {
-          "wait": 450
+          "wait": 180
         }
       ],
       "transitionOut": "bridge"
@@ -65,13 +65,13 @@
     {
       "id": "agent-replay",
       "title": "One shared mathematical world",
-      "seconds": 132,
+      "seconds": 170,
       "steps": [
         {
           "click": ".rail-pin"
         },
         {
-          "wait": 250
+          "wait": 180
         },
         {
           "writeInk": true
@@ -81,18 +81,18 @@
         },
         {
           "startReplay": true,
-          "wait": 400
+          "wait": 250
         },
         {
           "pauseReplayAfter": "resizes the ellipse with its handles",
           "timeoutMs": 300000,
-          "wait": 350
+          "wait": 200
         },
         {
           "click": ".kind-shape.is-selected"
         },
         {
-          "wait": 300
+          "wait": 200
         },
         {
           "drag": ".selection-handle[data-handle=\"se\"]",
@@ -100,10 +100,10 @@
             "dx": 70,
             "dy": 35
           },
-          "durationMs": 900
+          "durationMs": 700
         },
         {
-          "wait": 250
+          "wait": 180
         },
         {
           "drag": ".selection-handle[data-handle=\"rotate\"]",
@@ -111,68 +111,42 @@
             "dx": 55,
             "dy": 22
           },
-          "durationMs": 800
+          "durationMs": 650
         },
         {
-          "wait": 400
-        },
-        {
-          "resumeReplay": true,
-          "wait": 300
-        },
-        {
-          "pauseReplayAfter": "drags the arrow head",
-          "timeoutMs": 300000,
-          "wait": 350
-        },
-        {
-          "click": "[data-object-id=\"replay_arrow\"]"
-        },
-        {
-          "wait": 300
-        },
-        {
-          "drag": ".node-handle.is-arrow-end[data-node-index=\"1\"]",
-          "px": {
-            "dx": 90,
-            "dy": -45
-          },
-          "durationMs": 900
-        },
-        {
-          "wait": 400
+          "wait": 250
         },
         {
           "resumeReplay": true,
-          "wait": 300
+          "wait": 200
         },
         {
           "pauseReplayAfter": "clicks Undo in the rail",
           "timeoutMs": 300000,
-          "wait": 350
+          "wait": 200
         },
         {
           "click": ".rail-button[aria-label=\"Undo\"]"
         },
         {
-          "wait": 1400
+          "wait": 1000
         },
         {
           "resumeReplay": true,
-          "wait": 300
+          "wait": 200
         },
         {
           "awaitReplay": true,
           "timeoutMs": 420000
         },
         {
-          "wait": 700
+          "wait": 250
         },
         {
           "hover": ".tool-ledger"
         },
         {
-          "wait": 4200
+          "wait": 1800
         },
         {
           "pointer": {
@@ -181,14 +155,14 @@
           }
         },
         {
-          "wait": 700
+          "wait": 250
         },
         {
           "showLockup": true,
-          "wait": 400
+          "wait": 250
         },
         {
-          "wait": 3600
+          "wait": 2000
         }
       ],
       "transitionOut": "end"

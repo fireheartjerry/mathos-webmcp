@@ -1930,7 +1930,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
          * This puts the real captured strokes on the canvas, attributed to the
          * learner, before the agent starts reading.
          */
-        writeOpeningInk: (seconds = 5) => {
+        writeOpeningInk: (seconds = 3.4) => {
           const samples = { ...handwritingSamplesRef.current, ...loadHandwritingSamples() }
           const ink = handwritingSampleToInk(samples, 'opening-attempt', {
             id: 'replay_opening_attempt',
