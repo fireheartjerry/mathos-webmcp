@@ -73,18 +73,21 @@ agent connected.
 Four projects run on that path. One of them ends with the tutor refusing to fix a
 mistake it had already found.
 
-## A credible path to real-world impact
+## A direct path to impact at scale
 
-Mathburst is submitted by [Mathos AI](https://www.mathos.ai/), an active
-[Y Combinator Winter 2024 company](https://www.ycombinator.com/companies/mathos).
+We are submitting Mathburst on behalf of [Mathos AI](https://www.mathos.ai/), an
+active [Y Combinator Winter 2024 company](https://www.ycombinator.com/companies/mathos)
+featured in [Forbes 30 Under 30 Education 2025](https://www.forbes.com/profile/mathos-ai/).
 Mathos's [Google Play listing](https://play.google.com/store/apps/details?id=com.mathgptpro.mclient)
-says its existing AI tutor is trusted by over 2 million students across more than
-200 countries.
+reports that its existing AI tutor is trusted by more than 2 million students
+across 200+ countries.
 
-That reach is not a claim that Mathburst already has two million users. It gives
-this prototype a credible distribution and research path: run opt-in pilots with
-real learners, then measure time to correction, whether students accept or undo
-agent interventions, and whether they retain the concept afterward.
+We already know how to reach math learners at scale. Mathburst gives us a clear
+next step: bring an agent into the learner's actual workspace, make every action
+visible and reversible, and test the result with real students. We will measure
+correction time, accepted and reversed tutor actions, and concept retention. With
+Mathos's distribution and educational experience, we can turn this working WebMCP
+model into a learning experience for millions of students.
 
 ## What you can watch it do
 
