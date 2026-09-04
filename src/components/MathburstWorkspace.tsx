@@ -425,6 +425,8 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   /** Every tool call of the session, for the ledger, toast and inspector counters. */
   const [toolLog, setToolLog] = useState<LedgerEvent[]>([])
   const [ledgerPinned, toggleLedgerPinned] = useLedgerPin(false)
+  /** The closing lockup, shown by the film after the replay finishes. */
+  const [lockupShown, setLockupShown] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   /** Agent intent: purple auras around objects the agent is about to touch. */
   const [spotlightTargets, setSpotlightTargets] = useState<Array<{ id: string; until: number; label?: string }>>([])
@@ -1182,6 +1184,7 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
   const ledgerBursts = useMemo(() => groupBurst(toolLog), [toolLog])
   const activationActive = useOneShot(activationTick)
   const readingEvent = useMemo(() => collapseInvocations(toolLog).find((event) => event.readOnly && event.phase === 'running') ?? null, [toolLog])
+  const lockupLedger = useMemo(() => summarizeLedger(toolLog, webMcpTools), [toolLog, webMcpTools])
   const ledgerCounts = useMemo(() => Object.fromEntries(Object.entries(summarizeLedger(toolLog, webMcpTools).perTool).map(([name, entry]) => [name, entry.calls])), [toolLog, webMcpTools])
 
   /** Wait for the Tutor presence to settle so consecutive real tool calls never collide. */
@@ -2010,6 +2013,8 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
           window.setTimeout(() => playback.control(timeline.id, 'play'), 60)
           return true
         },
+        /** Show the closing lockup. The replay film has no Director shot to hang it on. */
+        showLockup: (shown = true) => { setLockupShown(shown); return true },
         runTool: (name: string, input: unknown) => webMcpTools.find((tool) => tool.name === name)?.execute(input),
         navigateScene: navigateToScene,
         undo: () => history('undo'),
@@ -2233,10 +2238,12 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
           onDone={() => setBridgePlay(null)}
         />
       )}
-      {directorOpen && (activeDirectorShot.id === 'one-world' || activeDirectorShot.id === 'webmcp-crescendo') && (
-        <div className={`cinematic-lockup${activeDirectorShot.id === 'one-world' ? ' is-final' : ''}`} aria-live="polite">
-          {activeDirectorShot.id === 'one-world' && <p><b>One mathematical world.</b><span>Every agent can enter.</span></p>}
-          <small><i aria-hidden="true" />WebMCP <strong>{registeredCount}</strong> tools registered</small>
+      {(lockupShown || (directorOpen && (activeDirectorShot.id === 'one-world' || activeDirectorShot.id === 'webmcp-crescendo'))) && (
+        <div className={`cinematic-lockup${lockupShown || activeDirectorShot.id === 'one-world' ? ' is-final' : ''}`} aria-live="polite">
+          <p><b>Mathburst</b><span>One mathematical world. Every agent can enter.</span></p>
+          {/* Read off the live ledger, never hardcoded: the whole claim is that these
+              numbers are what actually happened on the page. */}
+          <small><i aria-hidden="true" /><strong>{lockupLedger.distinctUsed} / {lockupLedger.totalTools}</strong> tools · {lockupLedger.totalCalls} calls</small>
         </div>
       )}
 

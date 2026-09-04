@@ -334,6 +334,7 @@ try {
       else if (step.openGallery) { await page.evaluate('window.__mathburstFilm.openGallery(); return true'); await wait(700) }
       else if (step.openProject) { await page.evaluate(`window.__mathburstFilm.openProject(${JSON.stringify(step.openProject)}); return true`); await wait(900) }
       else if (step.openDirector) { await page.evaluate('window.__mathburstFilm.openDirector(); return true'); await wait(500) }
+      else if (step.showLockup !== undefined) { await page.evaluate(`window.__mathburstFilm.showLockup(${JSON.stringify(step.showLockup)}); return true`); await wait(step.wait ?? 300) }
       else if (step.writeInk) { await page.evaluate('return Boolean(window.__mathburstFilm.writeOpeningInk())'); await wait(step.wait ?? 1400) }
       else if (step.closeDirector) { await page.evaluate('window.__mathburstFilm.closeDirector(); return true'); await wait(500) }
       // selectShot opens the PROJECT that owns a shot's scene, not the scene itself, so a

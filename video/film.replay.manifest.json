@@ -118,6 +118,13 @@
         },
         {
           "wait": 700
+        },
+        {
+          "showLockup": true,
+          "wait": 400
+        },
+        {
+          "wait": 3600
         }
       ],
       "transitionOut": "end"
