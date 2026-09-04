@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { evaluateTinyModel } from '../domain/math/transformer'
 import {
+  cevianConfiguration,
   clampPointToTriangle,
   formatWeightTriple,
   normalizeWeights3,
@@ -40,7 +41,7 @@ const humanPut = (summary: string, object: BarycentricObject): WorldAction => ({
 
 /** Card anatomy in pixels; mirrored by barycentric.css so the SVG stays 1:1 with its viewBox. */
 const HEADER_HEIGHT = 44
-const FOOTER_HEIGHT = 56
+const FOOTER_HEIGHT = 82
 const SIDE_WIDTH = 214
 const POINT_TWEEN_MS = 240
 const PULSE_MS = 700
@@ -120,6 +121,7 @@ export default function BarycentricView({ object, world, run }: Props) {
   const livePoint = previewPoint ?? pointFromWeights(vertices, tweenedWeights)
   const liveWeights = previewPoint ? triangleAreas(previewPoint, vertices).weights : tweenedWeights
   const areas = triangleAreas(livePoint, vertices)
+  const cevians = cevianConfiguration(vertices, liveWeights)
   const clipId = `barycentric-clip-${object.id}`
   const attention = world && object.linkedAttentionId ? world.objects[object.linkedAttentionId] : undefined
   const attentionWeights = attention?.kind === 'attention'
@@ -254,6 +256,8 @@ export default function BarycentricView({ object, world, run }: Props) {
   const pulsePosition = pulse === null ? null : pulse.target === 'point' ? livePoint : vertices[pulse.target]
   const sum = liveWeights.reduce((total, weight) => total + weight, 0)
   const meta = linkedNow ? 'weights = attention α' : attentionWeights ? 'attention head linked' : 'free weights'
+  const ratioText = cevians.ratios.map((value) => value === null ? 'boundary' : value.toFixed(2))
+  const cevaProduct = cevians.product === null ? 'boundary' : cevians.product.toFixed(3)
 
   return (
     <div
@@ -263,7 +267,7 @@ export default function BarycentricView({ object, world, run }: Props) {
     >
       <header className="barycentric-header">
         <div className="barycentric-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
-          <span className="barycentric-kicker">Barycentric coordinates</span>
+          <span className="barycentric-kicker">Barycentric coordinates · Ceva live</span>
           <h3>P = αA + βB + γC</h3>
         </div>
         <div className="barycentric-meta" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
@@ -296,9 +300,15 @@ export default function BarycentricView({ object, world, run }: Props) {
               {vertices.map((vertex, index) => {
                 const t = cevianT(index)
                 if (t <= 0) return null
-                const tip = revealLerp(vertex, livePoint, t)
+                const tip = revealLerp(vertex, cevians.feet[index], t)
                 return <line key={`cevian-${index}`} className="barycentric-cevian" x1={vertex.x} y1={vertex.y} x2={tip.x} y2={tip.y} />
               })}
+              {cevians.feet.map((foot, index) => (
+                <g key={`cevian-foot-${index}`} style={revealRiseStyle(p, 0.62 + index * 0.035, 0.84 + index * 0.035, { distance: 7 })}>
+                  <circle className="barycentric-cevian-foot" cx={foot.x} cy={foot.y} r={3.5} />
+                  <text className="barycentric-cevian-foot-label" x={foot.x + 7} y={foot.y - 7}>{['D', 'E', 'F'][index]}</text>
+                </g>
+              ))}
               {/* Subarea labels sit at the centroid of each signed sub-triangle. */}
               {[[1, 2], [2, 0], [0, 1]].map(([first, second], index) => {
                 const cx = (livePoint.x + vertices[first].x + vertices[second].x) / 3
@@ -436,6 +446,9 @@ export default function BarycentricView({ object, world, run }: Props) {
           <em>[{liveWeights.map((weight) => weight.toFixed(3)).join(', ')}]</em>
         </span>
         <p className="barycentric-invariant" style={revealRiseStyle(p, 0.82, 1, { distance: 11 })}>Dragging a vertex moves P by the same weights: the affine combination is the invariant.</p>
+        <p className="barycentric-ceva" style={revealRiseStyle(p, 0.86, 1, { distance: 11 })}>
+          <b>Ceva</b> · BD/DC × CE/EA × AF/FB = {ratioText.join(' × ')} = <strong>{cevaProduct}</strong>
+        </p>
       </footer>
     </div>
   )

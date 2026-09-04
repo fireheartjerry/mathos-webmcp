@@ -61,6 +61,8 @@
 .mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final {
   inset: 0;
   box-sizing: border-box;
+  opacity: 1;
+  transform: none;
   align-content: center;
   justify-content: start;
   gap: clamp(18px, 2vw, 34px);
@@ -130,13 +132,13 @@
 }
 
 @keyframes cinematic-lockup-build {
-  from { opacity: 0; transform: translateY(34px) scale(.985); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(34px) scale(.985); }
+  to { transform: none; }
 }
 
 @keyframes cinematic-lockup-piece {
-  from { opacity: 0; transform: translateY(42px) scale(.97); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(42px) scale(.97); }
+  to { transform: none; }
 }
 
 @keyframes cinematic-lockup-rule {

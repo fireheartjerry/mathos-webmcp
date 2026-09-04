@@ -544,9 +544,39 @@
   left: auto;
   right: 16px;
   transform: none;
-  width: 520px;
-  max-height: 56vh;
+  width: 620px;
+  max-height: 60vh;
 }
+/* Capture is authored at 1440p and delivered at 720p. The base 10.5–13px
+   console type became 5–6.5px in the submitted film, so the evidence was
+   technically present but not readable. These sizes land at 8–10px after the
+   exact 2× downscale while keeping the mathematical stage clear. */
+[data-film='true'] .agent-console-header { min-height: 54px; padding-inline: 16px 10px; }
+[data-film='true'] .agent-console-kicker { font-size: 16px; }
+[data-film='true'] .agent-console-header em { font-size: 16px; }
+[data-film='true'] .agent-console-lines { padding: 12px 16px; }
+[data-film='true'] .agent-console-line { grid-template-columns: 58px minmax(0, 1fr); column-gap: 12px; padding-block: 6px; font-size: 20px; }
+[data-film='true'] .agent-console-line > span:first-child,
+[data-film='true'] .agent-console-thinking > span { font-size: 16px; }
+[data-film='true'] .agent-console-line.is-tool,
+[data-film='true'] .agent-console-line.is-group,
+[data-film='true'] .agent-console-group li { grid-template-columns: 18px auto 18px minmax(0, 1fr); column-gap: 10px; font-size: 18px; }
+[data-film='true'] .agent-console-line.is-tool { padding-left: 70px; }
+[data-film='true'] .agent-console-line.is-tool > i,
+[data-film='true'] .agent-console-group li > i { font-size: 16px; }
+[data-film='true'] .agent-console-line.is-tool > small,
+[data-film='true'] .agent-console-group li > small { font-size: 18px; }
+[data-film='true'] .agent-console-line.is-tool > span,
+[data-film='true'] .agent-console-group li > span { font-size: 16px; }
+[data-film='true'] .agent-console-thinking { grid-template-columns: 58px minmax(0, 1fr); column-gap: 12px; }
+[data-film='true'] .agent-console-proposal { margin-left: 70px; }
+[data-film='true'] .agent-console-proposal > b,
+[data-film='true'] .agent-console-proposal > p > span { font-size: 16px; }
+[data-film='true'] .agent-console-proposal > p { grid-template-columns: 58px minmax(0, 1fr); font-size: 20px; }
+[data-film='true'] .agent-console-proposal-actions button,
+[data-film='true'] .agent-console-controls button { height: 36px; font-size: 17px; }
+[data-film='true'] .agent-console-status,
+[data-film='true'] .agent-console-footer { font-size: 16px; }
 /* Evidence column, left, stacked under the pinned ledger. */
 [data-film='true'] .activity-rail,
 [data-film='true'] .animation-panel {

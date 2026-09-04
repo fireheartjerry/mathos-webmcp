@@ -8,7 +8,7 @@
 
 .barycentric-view.barycentric-card {
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) 56px;
+  grid-template-rows: 44px minmax(0, 1fr) 82px;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
   height: 100%;
@@ -89,6 +89,8 @@
 
 .barycentric-card .barycentric-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
 .barycentric-card .barycentric-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.barycentric-card .barycentric-cevian-foot { fill: var(--paper, #fbf9f3); stroke: var(--graphite, #171713); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.barycentric-card .barycentric-cevian-foot-label { fill: var(--graphite, #171713); font: 600 11px/1 var(--serif, 'STIX Two Text', serif); pointer-events: none; }
 
 .barycentric-card .barycentric-vertex-label.is-editable { pointer-events: auto; cursor: text; }
 .barycentric-card .barycentric-vertex-label.is-editable:hover { fill: var(--purple, #7c5cff); }
@@ -327,13 +329,14 @@
 
 /* ---- Footer ---------------------------------------------------------------- */
 .barycentric-card .barycentric-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr);
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 5px 12px;
   min-width: 0;
-  height: 56px;
-  padding: 0 16px;
+  height: 82px;
+  padding: 7px 16px 6px;
   box-sizing: border-box;
   border-top: 1px solid var(--line, rgba(23, 23, 19, 0.16));
 }
@@ -369,6 +372,18 @@
   text-align: right;
   white-space: normal;
 }
+
+.barycentric-card .barycentric-ceva {
+  grid-column: 1 / -1;
+  margin: 0;
+  min-width: 0;
+  color: var(--muted, #7a776d);
+  font: 11px/1.25 var(--mono, 'Fira Code', monospace);
+  text-align: center;
+  white-space: normal;
+}
+.barycentric-card .barycentric-ceva b { color: var(--graphite, #171713); font-weight: 700; }
+.barycentric-card .barycentric-ceva strong { color: var(--purple, #7c5cff); font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
   .barycentric-agent-pulse { animation-duration: 1ms; }

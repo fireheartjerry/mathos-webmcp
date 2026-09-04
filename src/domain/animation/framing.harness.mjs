@@ -21,6 +21,7 @@ const subjects = [
 const canvases = [
   { name: 'film', width: 2560, height: 1440, left: 548, right: 536, bottom: 64 },
   { name: 'window', width: 1440, height: 900, left: 316, right: 308, bottom: 64 },
+  { name: 'film-wide-console', width: 2560, height: 1440, left: 548, right: 776, bottom: 64 },
 ]
 
 const intersects = (a, b) => (
@@ -39,7 +40,7 @@ const assertFrame = (solution, bounds, emphasis) => {
   const screen = screenBounds(bounds, solution.viewport)
   assert(containsBounds(solution.free, screen), 'subject must be fully inside the free region')
   assert(solution.coverage + EPSILON >= SHOT_COVERAGE[emphasis], 'shot must meet its stated coverage')
-  if (emphasis !== 'establish') {
+  if (solution.neighboursExcluded) {
     for (const direction of [-1, 1]) {
       const neighbour = screenBounds(neighbourBounds(bounds, direction), solution.viewport)
       assert(!intersects(solution.free, neighbour), 'neighbour must not intrude into a detail/feature shot')
@@ -152,5 +153,5 @@ const rows = subjects.flatMap((subject) => emphases.map((emphasis) => {
   }
 }))
 
-console.log('Framing harness: all constraints passed across 16 chrome/canvas combinations.')
+console.log(`Framing harness: all constraints passed across ${canvases.length * 8} chrome/canvas combinations.`)
 console.table(rows)

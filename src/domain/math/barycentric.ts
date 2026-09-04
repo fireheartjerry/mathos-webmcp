@@ -19,6 +19,15 @@ export type TriangleAreas = {
   weights: BarycentricWeights
 }
 
+export type CevianConfiguration = {
+  /** D on BC, E on CA, F on AB. */
+  feet: Triangle
+  /** BD/DC, CE/EA and AF/FB; null is the corresponding vertex/boundary case. */
+  ratios: [number | null, number | null, number | null]
+  /** Ceva's product, equal to one whenever all three ratios are finite. */
+  product: number | null
+}
+
 const EPSILON = 1e-9
 
 /**
@@ -87,6 +96,45 @@ export function triangleAreas(point: Point, vertices: Triangle): TriangleAreas {
     totalSigned,
     total: Math.abs(totalSigned),
     weights,
+  }
+}
+
+/**
+ * Trace the three cevians through a barycentric point P = (α:β:γ).
+ *
+ * The opposite-side intersections are D=(0:β:γ), E=(α:0:γ),
+ * F=(α:β:0), hence BD/DC=γ/β, CE/EA=α/γ and AF/FB=β/α.
+ * Their product is Ceva's identity. Keeping this derivation in the math layer
+ * makes the olympiad readout follow the same weights as the draggable point.
+ */
+export function cevianConfiguration(vertices: Triangle, weights: readonly number[]): CevianConfiguration {
+  const [alpha, beta, gamma] = normalizeBarycentricWeights(weights)
+  const [a, b, c] = vertices
+  const foot = (first: Point, second: Point, firstWeight: number, secondWeight: number): Point => {
+    const total = firstWeight + secondWeight
+    if (total <= EPSILON) return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 }
+    return {
+      x: (first.x * firstWeight + second.x * secondWeight) / total,
+      y: (first.y * firstWeight + second.y * secondWeight) / total,
+    }
+  }
+  const ratio = (numerator: number, denominator: number) => denominator <= EPSILON ? null : numerator / denominator
+  const ratios: CevianConfiguration['ratios'] = [
+    ratio(gamma, beta),
+    ratio(alpha, gamma),
+    ratio(beta, alpha),
+  ]
+  const product = ratios[0] !== null && ratios[1] !== null && ratios[2] !== null
+    ? ratios[0] * ratios[1] * ratios[2]
+    : null
+  return {
+    feet: [
+      foot(b, c, beta, gamma),
+      foot(c, a, gamma, alpha),
+      foot(a, b, alpha, beta),
+    ],
+    ratios,
+    product,
   }
 }
 

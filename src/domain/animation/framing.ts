@@ -198,15 +198,13 @@ export const solveViewportForBounds = ({
   if (free.width <= 0 || free.height <= 0) throw new Error('Floating chrome leaves no free region for the subject.')
   const requestedCoverage = SHOT_COVERAGE[emphasis]
   const fitZoom = Math.min(free.width / bounds.width, free.height / bounds.height)
-  const excludesNeighbours = emphasis !== 'establish' && bounds.width <= pitch && neighbourWidth <= pitch
-  const neighbourZoom = excludesNeighbours ? free.width / (pitch * 2 - neighbourWidth) : 0
-  const zoom = Math.max(minZoom, fitZoom * requestedCoverage, neighbourZoom)
-
-  if (zoom > fitZoom + EPSILON) {
-    throw new Error(
-      `Cannot frame ${bounds.width}x${bounds.height} subject: required zoom ${zoom.toFixed(3)} exceeds fit zoom ${fitZoom.toFixed(3)}.`,
-    )
-  }
+  const canTryNeighbourExclusion = emphasis !== 'establish' && bounds.width <= pitch && neighbourWidth <= pitch
+  const neighbourZoom = canTryNeighbourExclusion ? free.width / (pitch * 2 - neighbourWidth) : 0
+  // Chrome can leave a region too narrow to hide both neighbouring columns. In that
+  // case containment wins: keep the requested visual coverage where possible and
+  // allow a sliver of context instead of failing the camera tool (and the replay).
+  const excludesNeighbours = canTryNeighbourExclusion && neighbourZoom <= fitZoom + EPSILON
+  const zoom = Math.min(fitZoom, Math.max(minZoom, fitZoom * requestedCoverage, excludesNeighbours ? neighbourZoom : 0))
 
   const horizontal = horizontalPlacement(free, bounds, zoom, excludesNeighbours, pitch, neighbourWidth)
   const vertical = { lower: free.top, upper: free.bottom - bounds.height * zoom }
