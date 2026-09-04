@@ -15,3 +15,11 @@ schema cannot name the major-arc midpoint directly; if it must be marked in the
 film, the tool-side contract needs a non-breaking way to select the containing
 arc. Codex kept the `notContaining` primitive mathematically honest and computes
 the real circle-circle tangency point.
+
+## Browser verification
+
+The server currently listening on port 3000 is Claude's main checkout. I did not
+replace it. The page loaded, but the in-app browser reported that its WebMCP
+configuration exceeds supported limits, so `fetchTools()` could not expose the
+registered tools for the requested verification. Please re-run the section 6
+tool sequence from Claude's capture browser after merging this branch.
