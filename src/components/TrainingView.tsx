@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { DEFAULT_LEARNING_RATE, createInitialTinyModel, evaluateTinyModel, trainOneStep } from '../domain/math/transformer'
 import type { TrainStepResult } from '../domain/math/transformer'
 import type { AttentionObject, Matrix2, TinyModelState, TrainingObject, WorldAction, WorldObject, WorldState } from '../domain/world/types'
@@ -114,9 +114,9 @@ function Sparkline({ values, tone, label, draw = 1 }: { values: number[]; tone: 
 }
 
 /** Before → after for every cell of one matrix; arrows mark the sign of the move, flash marks a landed step. */
-function MatrixDrift({ label, before, after, flash }: { label: string; before: Matrix2; after: Matrix2; flash: boolean }) {
+function MatrixDrift({ label, before, after, flash, style }: { label: string; before: Matrix2; after: Matrix2; flash: boolean; style?: CSSProperties }) {
   return (
-    <div className="training-matrix">
+    <div className="training-matrix" style={style}>
       <span>{label}</span>
       <div>
         {after.flat().map((value, index) => {
@@ -227,12 +227,12 @@ export default function TrainingView({ object, world, run }: Props) {
 
   return (
     <section className={`training-view reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="training-header" style={revealRiseStyle(p, 0.01, 0.15)}>
-        <div className="training-heading">
+      <header className="training-header">
+        <div className="training-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
           <span className="math-object-kicker">TINY TRANSFORMER · GRADIENT STEP</span>
           <h3>One honest training step</h3>
         </div>
-        <div className="training-actions">
+        <div className="training-actions" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
           <button type="button" data-demo-target="train-reset" onClick={reset}>reset</button>
           <button type="button" data-demo-target="train-five" onClick={() => trainSteps(5)}>train 5 steps</button>
           <button type="button" className="training-primary" data-demo-target="train-step" onClick={() => trainSteps(1)}>train 1 step</button>
@@ -271,7 +271,7 @@ export default function TrainingView({ object, world, run }: Props) {
         <div className="training-probabilities" style={revealRiseStyle(p, 0.3, 0.5)}>
           <div className="training-card-heading"><span>OUTPUT p <Derived /></span><b>Σ p = {fmt(probabilitiesT.reduce((sum, value) => sum + value, 0) * distributionT)}</b></div>
           {probabilitiesT.map((probability, index) => (
-            <div className={`training-probability${index === object.model.targetIndex ? ' is-target' : ''}`} key={index}>
+            <div className={`training-probability${index === object.model.targetIndex ? ' is-target' : ''}`} key={index} style={revealRiseStyle(p, 0.32 + index * 0.035, 0.5 + index * 0.035, { distance: 10 })}>
               <span>{object.model.tokens[index]}</span><i><em style={{ width: `${(Math.max(0, probability) * 100 * distributionT).toFixed(2)}%` }} /></i><b>{fmt(probability * distributionT)}</b>
             </div>
           ))}
@@ -291,9 +291,9 @@ export default function TrainingView({ object, world, run }: Props) {
       <div className="training-drift" aria-label="Parameters moved by the gradient" style={revealRiseStyle(p, 0.5, 0.7)}>
         <div className="training-card-heading"><span>WEIGHTS BEFORE → AFTER · {driftLabel}</span><b>{tracked.before ? `η = ${short(object.learningRate, 3)}` : object.step === 0 ? 'at step zero' : 'reloaded · drift since step 0'}</b></div>
         <div className="training-drift-grid">
-          <MatrixDrift label="W_Q" before={driftBefore.wq} after={object.model.wq} flash={stepFlash} />
-          <MatrixDrift label="W_K" before={driftBefore.wk} after={object.model.wk} flash={stepFlash} />
-          <MatrixDrift label="W_V" before={driftBefore.wv} after={object.model.wv} flash={stepFlash} />
+          <MatrixDrift label="W_Q" before={driftBefore.wq} after={object.model.wq} flash={stepFlash} style={revealRiseStyle(p, 0.52, 0.68, { distance: 11 })} />
+          <MatrixDrift label="W_K" before={driftBefore.wk} after={object.model.wk} flash={stepFlash} style={revealRiseStyle(p, 0.56, 0.72, { distance: 11 })} />
+          <MatrixDrift label="W_V" before={driftBefore.wv} after={object.model.wv} flash={stepFlash} style={revealRiseStyle(p, 0.6, 0.76, { distance: 11 })} />
         </div>
       </div>
 

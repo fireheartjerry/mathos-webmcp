@@ -261,12 +261,12 @@ export default function BarycentricView({ object, world, run }: Props) {
       onPointerDown={stop}
       style={revealing ? { opacity: object.opacity } : undefined}
     >
-      <header className="barycentric-header" style={revealRiseStyle(p, 0.01, 0.15)}>
-        <div className="barycentric-heading">
+      <header className="barycentric-header">
+        <div className="barycentric-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
           <span className="barycentric-kicker">Barycentric coordinates</span>
           <h3>P = αA + βB + γC</h3>
         </div>
-        <div className="barycentric-meta">
+        <div className="barycentric-meta" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
           <b>Σ = {fmt(sum)}</b>
           <small className={linkedNow ? 'is-linked' : undefined}>{meta}</small>
         </div>
@@ -372,10 +372,10 @@ export default function BarycentricView({ object, world, run }: Props) {
           </svg>
         </div>
 
-        <aside className="barycentric-side" onPointerDown={stop} style={revealRiseStyle(p, 0.05, 0.22)}>
+        <aside className="barycentric-side" onPointerDown={stop}>
           <div className="barycentric-weight-grid" aria-label="Barycentric weights">
             {liveWeights.map((weight, index) => (
-              <div key={GREEK[index]} className={`barycentric-weight is-${index}`}>
+              <div key={GREEK[index]} className={`barycentric-weight is-${index}`} style={revealRiseStyle(p, 0.06 + index * 0.045, 0.23 + index * 0.045, { distance: 12 })}>
                 <label className="barycentric-weight-name" htmlFor={`${object.id}-weight-${index}`}>{GREEK[index]} · {object.labels[index]}</label>
                 <NumberField
                   key={`${index}-${committedWeights[index].toFixed(3)}`}
@@ -403,13 +403,13 @@ export default function BarycentricView({ object, world, run }: Props) {
               </div>
             ))}
           </div>
-          <div className="barycentric-actions">
+          <div className="barycentric-actions" style={revealRiseStyle(p, 0.18, 0.34, { distance: 11 })}>
             <button type="button" data-demo-target="barycentric-centroid" onClick={setCentroid}>centroid [1:1:1]</button>
             <button type="button" className={linkedNow ? 'is-linked' : undefined} disabled={!attentionWeights || linkedNow} onClick={syncAttention} title={attentionWeights ? `attention α = [${attentionWeights.map((weight) => weight.toFixed(3)).join(', ')}]` : 'no linked attention head'}>
               {linkedNow ? 'weights = attention α' : 'use attention α'}
             </button>
           </div>
-          <div className={`barycentric-coordinates${showCoordinates ? ' is-open' : ''}`}>
+          <div className={`barycentric-coordinates${showCoordinates ? ' is-open' : ''}`} style={revealRiseStyle(p, 0.22, 0.38, { distance: 11 })}>
             <button type="button" className="barycentric-coordinates-toggle" aria-expanded={showCoordinates} onClick={() => setShowCoordinates((value) => !value)}>
               <span>{showCoordinates ? '▾' : '▸'}</span> vertex coordinates
             </button>
@@ -428,14 +428,14 @@ export default function BarycentricView({ object, world, run }: Props) {
         </aside>
       </div>
 
-      <footer className="barycentric-footer" style={revealRiseStyle(p, 0.12, 0.28)}>
-        <span className="barycentric-areas">
+      <footer className="barycentric-footer">
+        <span className="barycentric-areas" style={revealRiseStyle(p, 0.72, 0.9, { distance: 11 })}>
           <small>signed subareas</small>
           <code>[{areas.signed.map((value) => value.toFixed(0)).join(', ')}]</code>
           <small>÷ {areas.totalSigned.toFixed(0)} =</small>
           <em>[{liveWeights.map((weight) => weight.toFixed(3)).join(', ')}]</em>
         </span>
-        <p className="barycentric-invariant">Dragging a vertex moves P by the same weights: the affine combination is the invariant.</p>
+        <p className="barycentric-invariant" style={revealRiseStyle(p, 0.82, 1, { distance: 11 })}>Dragging a vertex moves P by the same weights: the affine combination is the invariant.</p>
       </footer>
     </div>
   )

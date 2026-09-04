@@ -722,12 +722,12 @@ export default function LiveGeometry({
       onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node | null)) activeRef.current = rootRef.current?.matches(':hover') ?? false }}
       onKeyDown={onRootKeyDown}
     >
-      <header className="geometry-header" style={revealRiseStyle(p, 0.01, 0.15)}>
-        <div className="geometry-heading">
+      <header className="geometry-header">
+        <div className="geometry-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
           <span className="geometry-kicker">Dynamic geometry</span>
           <h3>Homothety · Spiral similarity</h3>
         </div>
-        <div className="geometry-meta">
+        <div className="geometry-meta" style={revealRiseStyle(p, 0.07, 0.2, { distance: 11 })}>
           <b>{visiblePoints.length} points · {markCount} marks</b>
           <small title={metaText}>{metaText}</small>
         </div>
@@ -910,9 +910,9 @@ export default function LiveGeometry({
           </div>
         )}
       </div>
-      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`} style={revealRiseStyle(p, 0.84, 1)}>
-        {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
-        <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
+      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`}>
+        {readouts.map((readout, index) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`} style={revealRiseStyle(p, 0.8 + index * 0.035, 0.95 + index * 0.02, { distance: 10 })}><small>{readout.label}</small><b>{readout.value}</b></span>)}
+        <em style={revealRiseStyle(p, 0.87, 1, { distance: 10 })}>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
       </footer>
     </div>
   )

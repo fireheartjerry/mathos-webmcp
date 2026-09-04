@@ -263,8 +263,10 @@ export default function AttentionView({ object, world, run }: Props) {
   }
   const temperatureFlash = useFlash(object.temperature)
 
-  const matrix = (key: MatrixKey) => (
-    <fieldset className={`attention-matrix is-${key}`} data-hero-path={key === HERO_CELL.key ? 'cell' : undefined}>
+  const matrix = (key: MatrixKey) => {
+    const matrixIndex = (['wq', 'wk', 'wv'] as MatrixKey[]).indexOf(key)
+    return (
+    <fieldset className={`attention-matrix is-${key}`} data-hero-path={key === HERO_CELL.key ? 'cell' : undefined} style={revealRiseStyle(p, 0.08 + matrixIndex * 0.055, 0.25 + matrixIndex * 0.055, { distance: 12 })}>
       <legend>W<sub>{MATRIX_SUBSCRIPT[key]}</sub></legend>
       <div className="attention-matrix-grid">
         {object.model[key].map((row, rowIndex) => row.map((value, columnIndex) => {
@@ -278,14 +280,14 @@ export default function AttentionView({ object, world, run }: Props) {
               label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
               className={isHero ? 'is-hero' : undefined}
               demoTarget={isHero ? 'attention-matrix-cell' : undefined}
-              style={revealing ? revealRiseStyle(p, rowIndex * 0.2, rowIndex * 0.2 + 0.2, { distance: 12 }) : undefined}
+              style={revealing ? revealRiseStyle(p, 0.1 + matrixIndex * 0.055 + (rowIndex * 2 + columnIndex) * 0.018, 0.28 + matrixIndex * 0.055 + (rowIndex * 2 + columnIndex) * 0.018, { distance: 12 }) : undefined}
               onCommit={(next) => commitCell(key, rowIndex, columnIndex, next)}
             />
           )
         }))}
       </div>
     </fieldset>
-  )
+  )}
 
   const arcs = keysT.map((key, index) => arcPath(queryT, key, 30 + index * 13))
   const stop = (event: ReactPointerEvent) => { if (event.button !== 2) event.stopPropagation() }
@@ -418,12 +420,12 @@ export default function AttentionView({ object, world, run }: Props) {
 
   return (
     <section className={`attention-view reveal-root${heroActive ? ' is-hero-active' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="attention-header" style={revealRiseStyle(p, 0.01, 0.15)}>
-        <div className="attention-heading">
+      <header className="attention-header">
+        <div className="attention-heading" style={revealRiseStyle(p, 0.01, 0.13, { distance: 10 })}>
           <span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span>
           <h3>Attention is a weighted sum</h3>
         </div>
-        <div className="attention-meta">
+        <div className="attention-meta" style={revealRiseStyle(p, 0.06, 0.18, { distance: 11 })}>
           <span>softmax over (q·kⱼ/√2 + log wⱼ) / T</span>
           <b>T = {short(temperature)} · query {tokens[queryIndex]} · target {tokens[targetIndex]}</b>
         </div>
@@ -563,8 +565,8 @@ export default function AttentionView({ object, world, run }: Props) {
           </table>
           </div>
 
-          <div className="attention-readout" style={revealRiseStyle(p, 0.78, 0.96)}>
-            <div className="attention-readout-left">
+          <div className="attention-readout">
+            <div className="attention-readout-left" style={revealRiseStyle(p, 0.76, 0.91, { distance: 12 })}>
               <div className="attention-context">
                 <span className="attention-kicker">CONTEXT c <Derived /></span>
                 <strong>[{fmt(contextT[0] * readoutT)}, {fmt(contextT[1] * readoutT)}]</strong>
@@ -575,7 +577,7 @@ export default function AttentionView({ object, world, run }: Props) {
                 <span>−log p(target), p = {fmt(targetProbabilityT * readoutT)}</span>
               </div>
             </div>
-            <div className="attention-probability-list">
+            <div className="attention-probability-list" style={revealRiseStyle(p, 0.82, 0.97, { distance: 12 })}>
               <span className="attention-kicker">
                 {/* This column is narrower than CONTEXT/LOSS's, so the label -- not the pill -- gives way: the pill keeps the same fixed width as its siblings and the short label ellipsises instead. */}
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: '1 1 auto' }}>NEXT TOKEN p</span>
