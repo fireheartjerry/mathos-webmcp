@@ -6,7 +6,7 @@ Every requirement Jerry stated in the 2026-09-02 session, where the story (`FILM
 
 | # | Requirement (Jerry's words, condensed) | Story beat | Product | Status |
 |---|---|---|---|---|
-| 1 | Link in the omnibox is the real ChatGPT site, not localhost; film on the ChatGPT Sites surface | Rules §1; Act 0.1; Act 8.3 | Repo linked to a Site (`.openai/hosting.json`); deploy not yet run | **Open**: deploy needs your yes (replaces the old Second Try site) |
+| 1 | Link in the omnibox is the real ChatGPT site, not localhost; film on the ChatGPT Sites surface | Rules §1; Act 0.1; Act 8.3 | Deployed at `https://mathburst.fireheartjerry.chatgpt.site/` and used in the final submission | **Met** |
 | 2 | Screen recording as a normal human using Mathburst, real browser profile and tabs, cursor clearly visible and moving | Rules §2 (system cursor performs every human action) | Cursor is the OS cursor; nothing hides it | Met |
 | 3 | Show the entire UI of the app | Rules "never cut to a card floating on ivory"; every act names rail, header, column, log | Layout audited 2026-09-02: column, header, inspector, project bar, zoom control fixed | Met |
 | 4 | New project created on camera, named **Pipeline** | Act 0.2 | New-project dialog; `/p/<id>` URL | Met |

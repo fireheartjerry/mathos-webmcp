@@ -1,6 +1,7 @@
 # Devpost submission copy — Mathburst
 
-Single source for every field. Edit here, paste to Devpost at the end.
+> Archived intermediate review. The current submitted reference is
+> [`SUBMISSION_COPY.md`](SUBMISSION_COPY.md), and the live Devpost page is the final source of truth.
 
 **Voice rules:** Simple English. Short sentences. No em dashes in the copy blocks.
 No slop words (leverage, seamless, robust, delve, unlock, empower, game-changing).
@@ -156,7 +157,7 @@ https://github.com/fireheartjerry/mathos-webmcp
 ## FIELD: Video demo link
 
 ```
-TBD: YouTube URL once uploaded
+https://youtu.be/xBAUK71mjGY
 ```
 
 ---

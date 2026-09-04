@@ -1,45 +1,40 @@
-# Mathburst demo video
+# Mathburst submission film
 
-This Remotion composition turns a real Mathburst screencast into the submission film. The product is full bleed for the complete 155-second narration body. Frame one is the functioning whiteboard. There is no title card or end card.
+The [public 2:59 film](https://youtu.be/xBAUK71mjGY) is a Remotion composition built from one continuous 2560×1440 capture of the real Mathburst product. The composition adds only straight cuts, restrained framing, ElevenLabs narration, a licensed royalty-free ambient score, and event-locked sound design. It does not redraw product screens.
 
-The composition consumes these files from `video/public/`:
+The current `Film` composition consumes generated files under `video/public/film/`:
 
-- `screen.mp4` — the real product capture from `scripts/record-demo.mjs`.
-- `beats.json` — measured beat timing and focus rectangles for restrained camera moves.
-- `narration.json` — the seven beat definitions and their 155-second body timing.
-- `seg00.wav` through `seg06.wav` — one narration track per beat.
+- `capture.mp4` and `timeline.json` from the scripted product take;
+- `cutlist.json`, which maps measured capture spans onto the finished-film clock;
+- `narration.json` plus the ElevenLabs clips in `narration-v2/`;
+- `music.wav` and `sfx.wav`.
+
+The editable source of truth is `video/film.manifest.json`. It defines the 2560×1440, 60 fps output, the three-minute ceiling, product actions, camera targets, narration, music ducking, and sound cues. The renderer derives its duration from the last narration word plus a 1.6-second closing hold, which prevents the final line from being cut off.
 
 ## Rebuild from the repository root
 
-Run the product and capture it at the root URL:
-
 ```powershell
-pnpm build
-npx vinext start --port 3400
-```
-
-In a second PowerShell window, capture the product, build the seven narration files, and copy the metadata:
-
-```powershell
-$env:URL = 'http://localhost:3400/'
-node scripts/record-demo.mjs
-pwsh -File scripts/build-narration.ps1 -Json docs/narration.json -OutDir video/public
-Copy-Item -LiteralPath docs/narration.json -Destination video/public/narration.json -Force
-```
-
-Then install the separate video workspace and render:
-
-```powershell
+pnpm install
 npm --prefix video install
-npm --prefix video run render
+pnpm dev --port 3400
 ```
 
-The render is written to `video/out/demo.mp4`. To preview the composition instead, run `npm --prefix video run studio`.
+In a second shell:
 
-## Composition rules
+```powershell
+node scripts/film/capture.mjs
+node scripts/film/narrate-eleven.mjs
+node scripts/film/build-cutlist.mjs
+node scripts/film/build-narration-manifest.mjs
+python scripts/film/audio.py
+npm --prefix video run render:film
+```
 
-The seven held marker/caption pairs are defined in `video/src/Demo.tsx` and follow the narration beat order. The marker is quiet and top-aligned. The caption is a readable bottom band. Both use Mathburst ivory, graphite, and purple with no gradients.
+The final render is `video/out/mathburst-final.mp4`; `render:review` creates a half-scale review copy. Generated capture, narration, and render files are intentionally ignored. See [`docs/video/FILM_REPRODUCTION.md`](../docs/video/FILM_REPRODUCTION.md) for setup, caching, QA contact sheets, and exact verification checks.
 
-The camera may use the measured focus rectangles, but narrow regions stay at a full-product shot. This keeps tool panels, equations, and the mathematical canvas from being cropped out for emphasis.
+## Current composition guarantees
 
-The final beat closes on the shared mathematical world and the WebMCP thesis. Audio is attached to its matching beat sequence, so changing a beat's timing requires regenerating `beats.json`, `narration.json`, and the seven WAV files together.
+- Every on-screen edit originates in the actual product reducer or a registered WebMCP handler.
+- Each shot renders on a sequence-relative clock, preventing later shots from drifting away from narration.
+- Narration offsets live on the finished-film clock; music ducking uses those same measured windows.
+- The closing frame holds until narration finishes, then resolves cleanly on the Mathburst/WebMCP lockup.

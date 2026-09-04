@@ -1,6 +1,6 @@
 # Devpost submission copy — Mathburst
 
-Single source for every field. Edit here, paste to Devpost at the end.
+Repository reference for the submitted fields. The live Devpost project is the final source of truth.
 
 **Voice rules:** Simple English. Short sentences. No em dashes in the copy blocks.
 No slop words (leverage, seamless, robust, delve, unlock, empower, game-changing).
@@ -21,7 +21,7 @@ Mathburst
 ## FIELD: Elevator pitch (200 char max)
 
 ```
-A math canvas where a student and an AI tutor edit the same document. One undo history reverses them both.
+Mathburst is a shared live math canvas. A student and an AI tutor edit the same objects through 48 native WebMCP tools; every edit is attributed, and one shared undo history reverses both.
 ```
 
 ---
@@ -195,7 +195,7 @@ https://github.com/fireheartjerry/mathos-webmcp
 ## FIELD: Video demo link
 
 ```
-TBD: YouTube URL once uploaded
+https://youtu.be/xBAUK71mjGY
 ```
 
 ---
@@ -291,32 +291,11 @@ it and run any of them with no agent connected.
 
 ---
 
-## Live Devpost form state (verified in the form, 2026-09-03)
+## Live Devpost form state (verified 2026-09-04)
 
-The four "Additional info" essays above were written against the challenge rules'
-questions. The actual Devpost form asks a different set, so those essays feed the
-story rather than a field of their own. Saved and verified in the live draft:
-
-**Project details (step 3)** — About the project: saved, 6853 characters.
-Built with: 10 tags saved. Try it out: repo URL saved.
-Video demo link: EMPTY, required.
-
-**Additional info (step 4)** — Submitter type, country, organization, app status:
-already set. What you updated during the period: saved. Testing instructions:
-saved. Public code repo: saved. AI tools used: saved. Level of learning:
-Significant. Career value: Yes.
-Live URL judges can access: EMPTY, required.
-Which agents or clients you tested the tools with: EMPTY, required.
-
-**Three fields still need Jerry.**
-
-1. **Live URL that judges can access.** No deployment exists.
-   `docs/video/FILM_V2_SPEC_TRACE.md:9` records the ChatGPT Sites deploy as not
-   yet run, and it would replace the existing Second Try site, so it needs an
-   explicit yes. The judging checklist opens with this link, and the copy invites
-   judges to open the inspector, which a repo link does not let them do.
-2. **Video demo link.** Waiting on the YouTube upload.
-3. **Which agents or clients you tested the tools with.** Only Jerry knows what
-   was actually driven end to end. The repo shows the in-product inspector and a
-   WebMCP-capable browser; it does not record an agent session, so nothing was
-   written here rather than guess at a claim judges will check.
+- Project is published and submitted to The WebMCP Challenge.
+- Live app: <https://mathburst.fireheartjerry.chatgpt.site/>
+- Public source: <https://github.com/fireheartjerry/mathos-webmcp>
+- Public 2:59 demo with narration and licensed audio: <https://youtu.be/xBAUK71mjGY>
+- Project story, 48-tool implementation summary, technology tags, judge instructions, and agent-testing details are saved.
+- Native WebMCP testing records Claude using `create_objects`, `get_objects`, `get_history`, and `step_history`; the built-in inspector exercises the identical handlers without an external client.

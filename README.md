@@ -4,20 +4,24 @@
 
 Mathburst is an AI-native math whiteboard for tutoring. A problem can begin as a photograph and become editable equations, reactive graphs, dynamic geometry, matrices, diagrams, notes, and freehand work. The learner and the external tutor do not trade screenshots or disconnected chat messages: they act inside the same world.
 
-**Local app:** run `pnpm dev`, then open `http://localhost:3000`.
+**[Try Mathburst live](https://mathburst.fireheartjerry.chatgpt.site/)** · **[Watch the 2:59 demo](https://youtu.be/xBAUK71mjGY)** · **[Inspect all 48 WebMCP tools](docs/WEBMCP_TOOLS.md)**
+
+WebMCP requires ChatGPT's in-app browser or Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled. In any other browser, Mathburst's built-in inspector still invokes the same registered handlers, so every tool remains demonstrable. The submitted scope is deliberately local: one browser, one learner, one in-browser agent, one shared world and undo history.
+
+**Local app:** run `pnpm install && pnpm dev`, then open `http://localhost:3000`.
 
 ![Mathburst — a shared mathematical world](public/og.png)
 
 ## The 60-second judge path
 
-1. Open **Gamma Lab → Recurrence Clinic**. Press **Reconstruct photo**, **AI double-check**, then **Approve clean conversion**.
-2. Open **Area Becomes Probability** and adjust the live bound. The normalized Gamma area, three bin masses, and `log mass → softmax` bridge update together.
-3. Open **WebMCP · 48/48**. The inspector shows the exact page tools an external agent receives; every **Run** button invokes the same tool handler.
-4. Visit **Tiny Transformer → Train From Scratch** and press **TRAIN 1 STEP**. The deterministic numerical-gradient update changes a visible parameter, lowers loss, and raises target probability.
-5. Visit **Olympiad Geometry → Homothety & Spiral Similarity**, then **Simplex → Ramanujan**. Drag the geometry, rotate the simplex, vary the lattice denominator, and inspect the finite partition lanes.
-6. Open **Director Review** to browse and edit all thirteen cinematic keyframes. Press **Undo** from the workspace; human and tutor actions share one attributed, reversible history.
+1. Open the [live app](https://mathburst.fireheartjerry.chatgpt.site/) in a WebMCP-capable browser. Open **WebMCP · 48/48** to see the exact native page tools an external agent receives.
+2. Run `set_matrix_cells` from the inspector. The matrix updates, a ring marks the target, the ledger names the tool, and the activity rail credits the tutor. Press **Undo** once; the agent commit reverses through the same history as a learner edit.
+3. Open **Gamma Lab → Recurrence Clinic**. The seeded photograph workflow proposes a semantic reconstruction, audits it, and waits for learner approval. It demonstrates the approval flow; it is not claimed as generalized OCR.
+4. Open **Area Becomes Probability** and adjust the live bound. The normalized Gamma area, three bin masses, and `log mass → softmax` bridge update together.
+5. Visit **Tiny Transformer → Train From Scratch** and press **TRAIN 1 STEP**. The deterministic numerical-gradient update changes a visible parameter, lowers loss, and raises target probability.
+6. Visit **Olympiad Geometry → Homothety & Spiral Similarity**, then **Simplex → Ramanujan**. Drag the geometry, rotate the simplex, vary the lattice denominator, and inspect the explicitly finite partition lanes.
 
-That is the whole thesis in one minute: the page owns the mathematical state and the agent gains precise control of it through WebMCP.
+That is the thesis in one minute: the page owns the mathematical state, WebMCP gives the agent precise bounded control, and the learner retains visibility and undo. The final film's recorded history contains 27 tutor commits and 11 learner commits.
 
 ## Why this is different
 
@@ -63,7 +67,7 @@ Mathburst registers exactly forty-eight discoverable page tools, in twelve group
 | **Tutoring** | Focus, explain, evaluate, annotate | `focus_objects` `spotlight_objects` `explain_object` `evaluate_expression` `annotate_object` |
 | **Labs** | Drive each lab from its own controls | `train_model_step` `set_attention_weight` `set_barycentric_weights` `move_geometry_point` `set_simplex_view` `set_partition_view` |
 
-Twelve of the forty-eight are read-only; the rest commit to the shared history. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplexes, number theory, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
+Twelve of the forty-eight are read-only, twenty-eight commit to the shared world history, and eight control history, navigation, projects, playback, or viewport state. `create_objects`, `update_objects`, and `apply_actions` expose the full typed vocabulary for ink, text, images, shapes, arrows, equations, graphs, geometry, matrices, attention, training, barycentrics, simplexes, number theory, frames, and groups. The higher-level tools give agents clean golden paths for reconstruction and mathematical visualization.
 
 Every tool returns a small success/failure envelope. Every mutation compiles into canonical operations, enters the same reducer as a human gesture, recomputes direct dependencies, records authorship, and becomes undoable.
 
@@ -151,7 +155,7 @@ The inspector remains available when `document.modelContext` is absent, so the f
 
 ## Scope, deliberately
 
-This is an ambitious hackathon instrument, not a production SaaS application. It is one local document for one learner and one external tutor. There are no accounts, cloud sync, multiplayer servers, cross-session learner profiles, generalized OCR, or production infrastructure. The submitted product is the four-project, eight-scene mathematical world; video production and deployment are outside this repository-completion scope.
+This is an ambitious hackathon instrument, not a production SaaS application. It is one browser-local document for one learner and one in-browser tutor. There are no accounts, cloud sync, multiplayer servers, cross-session learner profiles, or generalized OCR. The submitted product is the deployed four-project, eight-scene mathematical world, its 48-tool WebMCP surface, and the reproducible film pipeline in `video/` and `scripts/film/`.
 
 The project was built during the 2026 WebMCP Challenge submission period. The repository previously contained a different challenge-period prototype called **Second Try**; the final Mathburst pivot replaced its product model, interface, WebMCP surface, demo, and public story. The exact boundary is documented in [PROVENANCE.md](PROVENANCE.md), and Git history preserves the evolution.
 

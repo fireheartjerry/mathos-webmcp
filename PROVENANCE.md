@@ -23,7 +23,7 @@ The following submitted capabilities were designed and implemented during the fi
 - live equation-to-graph dependencies, dynamic geometry constructions, and editable matrix transformations;
 - the photograph-to-semantic-scene reconstruction proposal, audit, and learner-approval workflow;
 - the tutoring attempt state and representation-switch interaction;
-- all eighteen Mathburst WebMCP tools, their schemas, registration/read-back bridge, result envelopes, and local inspector;
+- the initial eighteen-tool WebMCP surface and its later expansion to forty-eight tools, including schemas, registration/read-back bridge, result envelopes, budgets, parity checks, and local inspector;
 - the seeded calculus, Olympiad geometry, and matrix-space showcase scenes;
 - the Mathburst visual system, favicon, Open Graph image, judge path, submission copy, and final demo recording.
 
@@ -37,10 +37,10 @@ The pivot is recorded by these commits:
 | `50cdddd` | Human-operable whiteboard |
 | `9b422a2` | Live graph, geometry, and matrix engines |
 | `72a4b15` | Reconstruction, tutoring, and agent presence |
-| `da133d8` | Exact eighteen-tool WebMCP surface |
+| `da133d8` | Initial eighteen-tool WebMCP surface |
 | `eec8f44` | Frontier scenes and final visual polish |
 
-Later release commits contain repository cleanup, demo media, and deployment alignment only.
+Later challenge-period commits expanded the surface to forty-eight tools, added the four-project/eight-scene product flow, strengthened human-agent history parity and tool-budget checks, completed the film pipeline, and aligned the public deployment and submission materials.
 
 ## Reused challenge-period work
 
