@@ -84,6 +84,21 @@
           "timeoutMs": 420000
         },
         {
+          "wait": 500
+        },
+        {
+          "click": ".rail-button[aria-label=\"Undo\"]"
+        },
+        {
+          "wait": 1300
+        },
+        {
+          "click": ".rail-button[aria-label=\"Redo\"]"
+        },
+        {
+          "wait": 1000
+        },
+        {
           "wait": 900
         },
         {
@@ -93,7 +108,7 @@
           "hover": ".tool-ledger"
         },
         {
-          "wait": 5200
+          "wait": 4200
         },
         {
           "pointer": {
@@ -102,7 +117,7 @@
           }
         },
         {
-          "wait": 1200
+          "wait": 700
         }
       ],
       "transitionOut": "end"
