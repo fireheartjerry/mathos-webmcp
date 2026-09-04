@@ -73,6 +73,19 @@ agent connected.
 Four projects run on that path. One of them ends with the tutor refusing to fix a
 mistake it had already found.
 
+## A credible path to real-world impact
+
+Mathburst is submitted by [Mathos AI](https://www.mathos.ai/), an active
+[Y Combinator Winter 2024 company](https://www.ycombinator.com/companies/mathos).
+Mathos's [Google Play listing](https://play.google.com/store/apps/details?id=com.mathgptpro.mclient)
+says its existing AI tutor is trusted by over 2 million students across more than
+200 countries.
+
+That reach is not a claim that Mathburst already has two million users. It gives
+this prototype a credible distribution and research path: run opt-in pilots with
+real learners, then measure time to correction, whether students accept or undo
+agent interventions, and whether they retain the concept afterward.
+
 ## What you can watch it do
 
 **The tutor marks an error and refuses to fix it.** A handwritten Gamma

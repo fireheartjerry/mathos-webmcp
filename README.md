@@ -33,6 +33,10 @@ Most AI tutoring is a chat beside a dead document. Mathburst makes the document 
 - Mathematics stays semantic. Graphs depend on equations, constructions depend on points, and matrices transform linked vectors.
 - Reconstruction is the only approval gate. Ordinary tutor edits land directly, exactly like human edits, and remain attributed and undoable.
 
+## A credible path to real learners
+
+Mathburst is submitted by [Mathos AI](https://www.mathos.ai/), an active [Y Combinator Winter 2024 company](https://www.ycombinator.com/companies/mathos). Mathos's [Google Play listing](https://play.google.com/store/apps/details?id=com.mathgptpro.mclient) says its existing AI tutor is trusted by over 2 million students across more than 200 countries. Mathburst does not claim those users today; that distribution creates a realistic path to opt-in pilots measuring correction time, accepted or undone agent interventions, and later concept retention.
+
 ## Four saved projects, eight connected scenes
 
 Mathburst ships with four saved projects that are viewport bookmarks inside one persistent world. Switching projects never swaps reducers or loses edits.
