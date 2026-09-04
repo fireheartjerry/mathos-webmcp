@@ -334,7 +334,9 @@ try {
       else if (step.openGallery) { await page.evaluate('window.__mathburstFilm.openGallery(); return true'); await wait(700) }
       else if (step.openProject) { await page.evaluate(`window.__mathburstFilm.openProject(${JSON.stringify(step.openProject)}); return true`); await wait(900) }
       else if (step.openDirector) { await page.evaluate('window.__mathburstFilm.openDirector(); return true'); await wait(500) }
-      else if (step.showLockup !== undefined) { await page.evaluate(`window.__mathburstFilm.showLockup(${JSON.stringify(step.showLockup)}); return true`); await wait(step.wait ?? 300) }
+      // Mark the lockup on the timeline: build-replay refuses a cut that lands before
+      // the end card has finished building, which is how the card used to get clipped.
+      else if (step.showLockup !== undefined) { await page.evaluate(`window.__mathburstFilm.showLockup(${JSON.stringify(step.showLockup)}); return true`); events.push({ t: now() - takeStart, kind: 'lockup', label: 'final lockup' }); await wait(step.wait ?? 300) }
       else if (step.writeInk) { await page.evaluate('return Boolean(window.__mathburstFilm.writeOpeningInk())'); await wait(step.wait ?? 1400) }
       else if (step.closeDirector) { await page.evaluate('window.__mathburstFilm.closeDirector(); return true'); await wait(500) }
       // selectShot opens the PROJECT that owns a shot's scene, not the scene itself, so a
@@ -368,11 +370,17 @@ try {
           if (state.status === 'stopped') throw new Error('Agent replay stopped before the pause point')
           await wait(150)
         }
+        // A pause only lands in the runner's beforeStep hook, so the status flips at the
+        // NEXT step boundary, not on the click. Clicking Resume before that leaves the
+        // replay parked: the Run button is still labelled "Run", the resume never
+        // happens, and the capture times out. Wait for the state, both ways.
         await click('.agent-console-controls button', 'Pause')
+        await page.waitFor(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'paused'`, 20_000)
         await wait(step.wait ?? 300)
       }
       else if (step.resumeReplay) {
         await click('.agent-console-controls button[aria-label="Resume"]')
+        await page.waitFor(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'running'`, 20_000)
         await wait(step.wait ?? 300)
       }
       // Start the replay and return, so the manifest can act while it runs.

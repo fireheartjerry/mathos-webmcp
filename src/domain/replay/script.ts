@@ -100,6 +100,38 @@ const explainers = (
     step({ tool: 'focus_objects', input: { ids: [`${id}_frame_1`], emphasis: 'detail', anchor: 'cursor' }, optional: true, waitMs: 493 }),
   ]
 }
+/**
+ * The one-line reason this scene follows the last one, written above it as live math.
+ *
+ * The reviewer's complaint was that the widgets felt disconnected — each scene arrives
+ * and nobody says what produced it. The concept map answers that at the end; this
+ * answers it at the moment of arrival, in the notation the scene is about. It is
+ * created empty and then typed, so the link is *derived* on camera rather than
+ * appearing pre-written, and it is a plain equation object so no new tool is needed.
+ */
+const LINEAGE_H = 78
+const LINEAGE_GAP = 26
+const liveLineage = (
+  id: string,
+  scene: { x: number; y: number; width: number },
+  latex: string,
+  typewriterMs = 1180,
+): ReplayStep[] => [
+  step({
+    tool: 'create_objects',
+    input: {
+      summary: `Tutor opened the ${id} lineage line`,
+      objects: [{
+        id, kind: 'equation', latex: '', color: PURPLE,
+        bounds: { x: scene.x, y: scene.y - LINEAGE_H - LINEAGE_GAP, width: scene.width, height: LINEAGE_H },
+        rotation: 0, author: 'agent', opacity: 1,
+      }],
+    },
+    waitMs: 140,
+  }),
+  step({ tool: 'edit_equation', input: { objectId: id, latex, typewriter: true, typewriterMs }, waitMs: 160 }),
+]
+
 const object = (target: { objectId: unknown }, path: string) => ({ kind: 'object', objectId: target.objectId, path })
 
 // ---------------------------------------------------------------------------
@@ -228,7 +260,8 @@ const ACT_1: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_2: ReplayStep[] = [
-  step({ id: 'act2', say: 'I need space below.', tool: 'set_viewport', input: camera(1140, 580), waitMs: 223 }),
+  step({ id: 'act2', say: 'I need space below.', tool: 'set_viewport', input: camera(1140, 500), waitMs: 223 }),
+  ...liveLineage('lineage_density', { x: 1200, y: 640, width: 800 }, '\\Gamma(a)\;\\longrightarrow\;g_a(x)=\\frac{x^{a-1}e^{-x}}{\\Gamma(a)}'),
   step({
     id: 'graph2',
     say: "Your corrected recurrence normalises into a density. I'll build it from nothing.",
@@ -236,6 +269,7 @@ const ACT_2: ReplayStep[] = [
     input: { latex: '0', bounds: { x: 1200, y: 640, width: 800, height: 560 }, construct: true },
     waitMs: 223,
   }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_density', { $ref: 'graph2.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 260 }),
   step({
     tool: 'set_graph',
     input: {
@@ -259,7 +293,7 @@ const ACT_2: ReplayStep[] = [
       ],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw2.data.timelineId' }, action: 'play' }, waitMs: 7612 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw2.data.timelineId' }, action: 'play' }, waitMs: 6900 }),
   step({ humanNote: 'The learner drags shape a → 5.5 and bound b → 4.4; the masses update live.' }),
   step({
     say: 'The three bins split the area into masses w₁ w₂ w₃. Take logs and you have the scores a softmax will see.',
@@ -285,16 +319,16 @@ const ACT_2: ReplayStep[] = [
     tool: 'create_timeline',
     input: {
       name: 'Masses to softmax',
-      duration: 10.88,
+      duration: 8.5,
       tracks: [
         {
           target: object({ objectId: { $ref: 'graph2.changedIds.0' } }, 'latex'),
           keyframes: [
-            { time: 0, value: GAMMA_LATEX }, { time: 1.81, value: BRIDGE_MASS_LATEX }, { time: 4.71, value: BRIDGE_LOG_LATEX },
-            { time: 7.61, value: BRIDGE_SOFTMAX_LATEX }, { time: 10.51, value: GAMMA_LATEX },
+            { time: 0, value: GAMMA_LATEX }, { time: 1.6, value: BRIDGE_MASS_LATEX }, { time: 3.9, value: BRIDGE_LOG_LATEX },
+            { time: 6.2, value: BRIDGE_SOFTMAX_LATEX }, { time: 8.2, value: GAMMA_LATEX },
           ],
         },
-        { target: object({ objectId: { $ref: 'graph2.changedIds.1' } }, 'shadeIntegral'), keyframes: [{ time: 0, value: [0, 4.4] }, { time: 2.71, value: [0, 2.5] }, { time: 5.44, value: [2.5, 5] }, { time: 8.15, value: [5, 12] }, { time: 10.88, value: [0, 4.4] }] },
+        { target: object({ objectId: { $ref: 'graph2.changedIds.1' } }, 'shadeIntegral'), keyframes: [{ time: 0, value: [0, 4.4] }, { time: 2.1, value: [0, 2.5] }, { time: 4.2, value: [2.5, 5] }, { time: 6.4, value: [5, 12] }, { time: 8.5, value: [0, 4.4] }] },
       ],
     },
   }),
@@ -303,10 +337,10 @@ const ACT_2: ReplayStep[] = [
     input: {
       timelineId: { $ref: 'bridge2.data.timelineId' },
       target: object({ objectId: { $ref: 'graph2.changedIds.1' } }, 'parameters.a'),
-      keyframes: [{ time: 0, value: 5.5 }, { time: 5.44, value: 4.5 }, { time: 10.88, value: 5.5 }],
+      keyframes: [{ time: 0, value: 5.5 }, { time: 4.25, value: 4.5 }, { time: 8.5, value: 5.5 }],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'bridge2.data.timelineId' }, action: 'play' }, waitMs: 11238 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'bridge2.data.timelineId' }, action: 'play' }, waitMs: 8800 }),
   step({ humanNote: 'When the timeline ends the widget is editable again; the learner nudges the slider to prove it.' }),
   ...explainers('density2', { x: 1200, y: 640, width: 800, height: 560 }, [
     { title: 'Why the area is one',
@@ -327,22 +361,23 @@ const ACT_2: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_3: ReplayStep[] = [
-  step({ say: 'Over to attention. Panning right.', tool: 'set_viewport', input: camera(2140, 580), waitMs: 223 }),
+  step({ say: 'Over to attention. Panning right.', tool: 'set_viewport', input: camera(2140, 500), waitMs: 223 }),
+  ...liveLineage('lineage_attention', { x: 2200, y: 640, width: 800 }, '(w_1,w_2,w_3)\;\\xrightarrow{\;\\log,\;\\operatorname{softmax}\;}\;\\alpha'),
   step({ id: 'att3', tool: 'visualize_concept', input: { concept: 'attention', bounds: { x: 2200, y: 640, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_attention', { $ref: 'att3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
   step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }] }, waitMs: 180 }),
   step({
     id: 'draw3',
     tool: 'create_timeline',
     input: {
       name: 'Attention card draw-in',
-      duration: 7,
+      duration: 5.6,
       tracks: [
-        { target: object({ objectId: { $ref: 'att3.changedIds.0' } }, 'drawProgress'), keyframes: [{ time: 0, value: 0, easing: 'easeInOut' }, { time: 7, value: 1 }] },
+        { target: object({ objectId: { $ref: 'att3.changedIds.0' } }, 'drawProgress'), keyframes: [{ time: 0, value: 0, easing: 'easeInOut' }, { time: 5.6, value: 1 }] },
       ],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw3.data.timelineId' }, action: 'play' }, waitMs: 7500 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw3.data.timelineId' }, action: 'play' }, waitMs: 5900 }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], label: 'W_Q[0][0]', seconds: 3.62 }, optional: true, waitMs: 313 }),
   step({
     say: 'W_Q turns each token into a query. Raising this entry leans the query toward the first embedding dimension, so the dot products with the keys change, and so do the weights.',
@@ -351,8 +386,9 @@ const ACT_3: ReplayStep[] = [
     waitMs: 402,
   }),
   step({ say: "Weights still sum to one. That's the softmax doing its job.", waitMs: 402 }),
+  ...liveLineage('lineage_training', { x: 3200, y: 640, width: 800 }, '\\alpha^{(0)}\;\\xrightarrow{\;-\\eta\\nabla L\;}\;\\alpha^{(13)}'),
   step({ id: 'train3', tool: 'visualize_concept', input: { concept: 'training', bounds: { x: 3200, y: 640, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 180 }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_training', { $ref: 'train3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 180 }),
   step({
     id: 'traindraw3',
     tool: 'create_timeline',
@@ -362,7 +398,7 @@ const ACT_3: ReplayStep[] = [
       tracks: [{ target: object({ objectId: { $ref: 'train3.changedIds.0' } }, 'drawProgress'), keyframes: [{ time: 0, value: 0, easing: 'easeInOut' }, { time: 5.25, value: 1 }] }],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'traindraw3.data.timelineId' }, action: 'play' }, waitMs: 5750 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'traindraw3.data.timelineId' }, action: 'play' }, waitMs: 5500 }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], label: 'one step', seconds: 2.17 }, optional: true, waitMs: 180 }),
   // One step, undone, then a real training run. A single step read as an animation;
   // watching loss fall across thirteen of them is what makes it obviously arithmetic.
@@ -400,9 +436,10 @@ const ACT_3: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_4: ReplayStep[] = [
-  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", tool: 'set_viewport', input: camera(4140, 580), waitMs: 223 }),
+  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", tool: 'set_viewport', input: camera(4140, 500), waitMs: 223 }),
   step({ humanNote: 'The learner picks Geometry; the GeoGebra-style toolbar appears; the cursor places A, B, C and closes the triangle.' }),
   step({ id: 'geoHuman4', tool: 'get_objects', input: { kinds: ['geometry'], limit: 1 }, optional: true }),
+  ...liveLineage('lineage_geometry', { x: 4200, y: 640, width: 730 }, '\\alpha_1+\\alpha_2+\\alpha_3=1\;\\longrightarrow\;P=\\textstyle\\sum_i \\alpha_i A_i'),
   step({
     id: 'geo4',
     say: 'Every mark I add depends on your three points.',
@@ -431,6 +468,7 @@ const ACT_4: ReplayStep[] = [
       ],
     },
   }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_geometry', { $ref: 'geo4.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 260 }),
   step({
     id: 'draw4',
     tool: 'create_timeline',
@@ -440,11 +478,12 @@ const ACT_4: ReplayStep[] = [
       tracks: [{ target: object({ objectId: { $ref: 'geo4.changedIds.0' } }, 'drawProgress'), keyframes: [{ time: 0, value: 0 }, { time: 5.44, value: 1 }] }],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw4.data.timelineId' }, action: 'play' }, waitMs: 6162 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw4.data.timelineId' }, action: 'play' }, waitMs: 5900 }),
   step({ say: 'Drag one point and everything follows. Let me show you with A.', tool: 'spotlight_objects', input: { ids: [{ $ref: 'geo4.changedIds.0' }], label: 'moving A', seconds: 2.17 }, optional: true, waitMs: 180 }),
   step({ tool: 'move_geometry_point', input: { objectId: { $ref: 'geo4.changedIds.0' }, pointId: 'A', by: { x: 41, y: -31 } }, waitMs: 267 }),
+  ...liveLineage('lineage_bary', { x: 5130, y: 640, width: 730 }, '\\alpha\;\\longrightarrow\;P=(\\alpha:\\beta:\\gamma),\\quad \\frac{BD}{DC}\\cdot\\frac{CE}{EA}\\cdot\\frac{AF}{FB}=1'),
   step({ id: 'bary4', tool: 'visualize_concept', input: { concept: 'barycentric', bounds: { x: 5130, y: 640, width: 730, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_bary', { $ref: 'bary4.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
   step({
     id: 'drawBary4',
     tool: 'create_timeline',
@@ -454,7 +493,7 @@ const ACT_4: ReplayStep[] = [
       tracks: [{ target: object({ objectId: { $ref: 'bary4.changedIds.0' } }, 'drawProgress'), keyframes: [{ time: 0, value: 0, easing: 'easeInOut' }, { time: 4.75, value: 1 }] }],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'drawBary4.data.timelineId' }, action: 'play' }, waitMs: 5250 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'drawBary4.data.timelineId' }, action: 'play' }, waitMs: 5050 }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], label: 'P', seconds: 2.9 }, optional: true, waitMs: 223 }),
   step({
     say: 'P is a weighted average of A, B and C. Those weights can be anything that sums to one. Like attention weights.',
@@ -586,10 +625,11 @@ const ACT_6: ReplayStep[] = [
 ]
 
 const ACT_7: ReplayStep[] = [
-  step({ say: 'Last construction. Panning right.', tool: 'set_viewport', input: camera(7000, 580), waitMs: 223 }),
+  step({ say: 'Last construction. Panning right.', tool: 'set_viewport', input: camera(7000, 500), waitMs: 223 }),
   step({ humanNote: 'The learner picks Matrix → 2 × 2 and types values into the grid.' }),
+  ...liveLineage('lineage_matrix', { x: 7060, y: 640, width: 800 }, 'W_Q:v\\mapsto W_Qv\;\\longrightarrow\;A:v\\mapsto Av'),
   step({ id: 'matrix7', tool: 'visualize_concept', input: { concept: 'matrix-transform', bounds: { x: 7060, y: 640, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'matrix7.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
+  step({ tool: 'focus_objects', input: { ids: ['lineage_matrix', { $ref: 'matrix7.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 290 }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'matrix7.changedIds.2' }], label: 'shear', seconds: 2.17 }, optional: true, waitMs: 180 }),
   step({ say: 'A shear: one off-diagonal entry.', tool: 'set_matrix_cells', input: { objectId: { $ref: 'matrix7.changedIds.2' }, cells: [{ row: 0, column: 1, value: 1.2 }] }, waitMs: 180 }),
   step({
@@ -605,7 +645,7 @@ const ACT_7: ReplayStep[] = [
       ],
     },
   }),
-  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw7.data.timelineId' }, action: 'play' }, waitMs: 5800 }),
+  step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw7.data.timelineId' }, action: 'play' }, waitMs: 5500 }),
   step({ say: 'Same idea as W_Q: a matrix moves every vector at once.', waitMs: 313 }),
   step({ humanNote: 'The learner drags a basis vector; the cells update.' }),
   step({ humanNote: 'The learner double-clicks the explanation note and edits a word.' }),

@@ -80,26 +80,90 @@
           "wait": 600
         },
         {
-          "runReplay": true,
-          "timeoutMs": 420000
+          "startReplay": true,
+          "wait": 400
         },
         {
-          "wait": 500
+          "pauseReplayAfter": "resizes the ellipse with its handles",
+          "timeoutMs": 300000,
+          "wait": 350
+        },
+        {
+          "click": ".kind-shape.is-selected"
+        },
+        {
+          "wait": 300
+        },
+        {
+          "drag": ".selection-handle[data-handle=\"se\"]",
+          "px": {
+            "dx": 70,
+            "dy": 35
+          },
+          "durationMs": 900
+        },
+        {
+          "wait": 250
+        },
+        {
+          "drag": ".selection-handle[data-handle=\"rotate\"]",
+          "px": {
+            "dx": 55,
+            "dy": 22
+          },
+          "durationMs": 800
+        },
+        {
+          "wait": 400
+        },
+        {
+          "resumeReplay": true,
+          "wait": 300
+        },
+        {
+          "pauseReplayAfter": "drags the arrow head",
+          "timeoutMs": 300000,
+          "wait": 350
+        },
+        {
+          "click": "[data-object-id=\"replay_arrow\"]"
+        },
+        {
+          "wait": 300
+        },
+        {
+          "drag": ".node-handle.is-arrow-end[data-node-index=\"1\"]",
+          "px": {
+            "dx": 90,
+            "dy": -45
+          },
+          "durationMs": 900
+        },
+        {
+          "wait": 400
+        },
+        {
+          "resumeReplay": true,
+          "wait": 300
+        },
+        {
+          "pauseReplayAfter": "clicks Undo in the rail",
+          "timeoutMs": 300000,
+          "wait": 350
         },
         {
           "click": ".rail-button[aria-label=\"Undo\"]"
         },
         {
-          "wait": 1300
+          "wait": 1400
         },
         {
-          "click": ".rail-button[aria-label=\"Redo\"]"
+          "resumeReplay": true,
+          "wait": 300
         },
         {
-          "wait": 1000
-        },
-        {
-          "wait": 900
+          "awaitReplay": true,
+          "timeoutMs": 420000
         },
         {
           "wait": 700

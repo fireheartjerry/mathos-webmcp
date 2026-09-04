@@ -4,6 +4,7 @@
  *
  *   CONTENT_ENDS=175.2 HOLD=2 node scripts/film/build-replay.mjs
  */
+import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -23,8 +24,42 @@ const numberFromEnv = (name, fallback, minimum = 0) => {
   return value
 }
 
-/** Where the performance stops moving, plus the deliberate end-card hold. */
-const CONTENT_ENDS = numberFromEnv('CONTENT_ENDS', 143, 0.01)
+/**
+ * Where the performance stops moving, measured rather than guessed.
+ *
+ * This used to be a hand-typed default of 143s, and it was stale the moment the pacing
+ * changed: too high and the film ends on dead air, too low and it amputates the closing
+ * beats — the final lockup was being cut off entirely. ffmpeg's freezedetect reports
+ * where the picture stops changing, and the last such marker in the take is the end of
+ * the performance. CONTENT_ENDS survives as a deliberate override; the log says which
+ * source won.
+ */
+const detectContentEnd = (takeSeconds) => {
+  if (process.env.CONTENT_ENDS) {
+    const value = numberFromEnv('CONTENT_ENDS', 143, 0.01)
+    console.log(`content ends ${value.toFixed(2)}s (source: CONTENT_ENDS override)`)
+    return value
+  }
+  const capture = resolve(DIR, 'capture.mp4')
+  const probe = spawnSync('ffmpeg', [
+    '-hide_banner', '-nostats', '-i', capture,
+    '-vf', 'freezedetect=n=-58dB:d=1.0,metadata=print:file=-',
+    '-map', '0:v', '-f', 'null', '-',
+  ], { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 })
+  const text = `${probe.stdout ?? ''}${probe.stderr ?? ''}`
+  const starts = [...text.matchAll(/freeze_start[:=]\s*([\d.]+)/g)]
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isFinite(value) && value > 0 && value < takeSeconds - 0.05)
+  if (!starts.length) {
+    throw new Error(`freezedetect found no still frame in ${capture}; pass CONTENT_ENDS to override`)
+  }
+  const last = starts[starts.length - 1]
+  // freeze_start is the first frame of the still, so the last motion is just before it.
+  const value = Math.min(takeSeconds, last + 0.35)
+  console.log(`content ends ${value.toFixed(2)}s (source: freezedetect, ${starts.length} still${starts.length === 1 ? '' : 's'}, last begins ${last.toFixed(2)}s)`)
+  return value
+}
+const CONTENT_ENDS = detectContentEnd(Number(timeline.seconds))
 const HOLD = numberFromEnv('HOLD', 3)
 const FILM_SECONDS = CONTENT_ENDS + HOLD
 /** Hard inter-clip floor and hard protection against narration going stale. */
@@ -33,6 +68,19 @@ const MAX_DRIFT = numberFromEnv('NARRATION_MAX_DRIFT', 10)
 
 if (CONTENT_ENDS > Number(timeline.seconds) + 0.001) {
   throw new Error(`CONTENT_ENDS ${CONTENT_ENDS.toFixed(2)}s exceeds the captured take ${Number(timeline.seconds).toFixed(2)}s`)
+}
+
+// The end card animates in over 900ms. A cut that lands inside that build ships a
+// half-drawn lockup, which is exactly what the last take did.
+const LOCKUP_BUILD = 0.9
+const lockup = timeline.events.filter((event) => event.kind === 'lockup').pop()
+if (lockup) {
+  const needed = lockup.t + LOCKUP_BUILD
+  if (FILM_SECONDS < needed - 0.001) {
+    throw new Error(`the cut ends at ${FILM_SECONDS.toFixed(2)}s but the lockup is not fully built until ${needed.toFixed(2)}s (shown ${lockup.t.toFixed(2)}s + ${LOCKUP_BUILD}s build); raise HOLD or CONTENT_ENDS`)
+  }
+} else {
+  console.warn('no lockup event in timeline.json — recapture with a capture.mjs that marks it')
 }
 
 // Beat predicates stay beside the lines they place. `afterCommit` counts only
