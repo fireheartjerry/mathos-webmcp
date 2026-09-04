@@ -412,23 +412,22 @@ const ACT_4: ReplayStep[] = [
       bounds: { x: 4200, y: 640, width: 730, height: 560 },
       construct: true,
       primitives: [
-        { kind: 'point', id: 'A', at: { x: 119, y: 442 }, label: 'A', draggable: true },
-        { kind: 'point', id: 'B', at: { x: 595, y: 442 }, label: 'B', draggable: true },
-        { kind: 'point', id: 'C', at: { x: 357, y: 111 }, label: 'C', draggable: true },
+        { kind: 'point', id: 'A', at: { x: 132, y: 452 }, label: 'A', draggable: true },
+        { kind: 'point', id: 'B', at: { x: 604, y: 468 }, label: 'B', draggable: true },
+        { kind: 'point', id: 'C', at: { x: 425, y: 104 }, label: 'C', draggable: true },
         { kind: 'polygon', id: 'ABC', points: ['A', 'B', 'C'] },
-        { kind: 'midpoint', id: 'M', of: ['A', 'B'], label: 'M' },
-        { kind: 'point', id: 'O', at: { x: 357, y: 340 }, label: 'O', draggable: true },
-        { kind: 'circle', id: 'c1', center: 'O', through: 'M' },
-        { kind: 'homothety', id: 'A2', center: 'O', source: 'A', factor: 0.72, label: 'A′' },
-        { kind: 'homothety', id: 'B2', center: 'O', source: 'B', factor: 0.72, label: 'B′' },
-        { kind: 'segment', id: 'A2B2', from: 'A2', to: 'B2' },
-        { kind: 'midpoint', id: 'M2', of: ['A2', 'B2'], label: 'M′' },
-        { kind: 'circle', id: 'c2', center: 'O', through: 'M2' },
-        { kind: 'similarity', id: 'A3', center: 'O', source: 'A', factor: 0.72, angle: 32, label: 'A″' },
-        { kind: 'similarity', id: 'B3', center: 'O', source: 'B', factor: 0.72, angle: 32, label: 'B″' },
-        { kind: 'segment', id: 'A3B3', from: 'A3', to: 'B3' },
-        { kind: 'spiralCenter', id: 'S', a: 'A', b: 'B', a2: 'A3', b2: 'B3', label: 'S' },
-        { kind: 'angle', id: 'ang', a: 'A', vertex: 'O', b: 'A3' },
+        // c1 and c2 used to share the centre O, so they were CONCENTRIC and the spoken
+        // claim that they are tangent was false. Every mark below is derived, so the
+        // tangency and the T-I-M' collinearity hold by construction and survive a drag.
+        { kind: 'incenter', id: 'I', of: ['A', 'B', 'C'], label: 'I' },
+        { kind: 'circumcircle', id: 'omega', of: ['A', 'B', 'C'] },
+        { kind: 'arcMidpoint', id: 'M', of: ['B', 'C', 'A'], notContaining: 'A', label: 'M' },
+        { kind: 'arcMidpoint', id: 'M_major', of: ['B', 'C', 'A'], containing: 'A', label: 'M′' },
+        { kind: 'mixtilinearIncircle', id: 'omega_A', of: ['A', 'B', 'C'], vertex: 'A' },
+        { kind: 'circleTangency', id: 'T', circles: ['omega', 'omega_A'], label: 'T' },
+        { kind: 'segment', id: 'AI', from: 'A', to: 'I' },
+        { kind: 'segment', id: 'AM', from: 'A', to: 'M' },
+        { kind: 'segment', id: 'AT', from: 'A', to: 'T' },
       ],
     },
   }),
@@ -480,12 +479,12 @@ const ACT_5: ReplayStep[] = [
     input: {
       summary: 'Tutor boxed Acts 1 and 2',
       shape: 'polygon', fill: 'rgba(124, 92, 255, 0.06)', stroke: PURPLE, strokeWidth: 2,
-      points: [{ x: 100, y: 180 }, { x: 2060, y: 180 }, { x: 2060, y: 1340 }, { x: 100, y: 1340 }],
+      points: [{ x: 6100, y: 180 }, { x: 6760, y: 180 }, { x: 6760, y: 900 }, { x: 6100, y: 900 }],
     },
     calls: [{
       id: 'ellipse5',
       tool: 'create_shape',
-      input: { summary: 'Tutor ringed Act 3', shape: 'ellipse', fill: 'none', stroke: PURPLE, strokeWidth: 2, bounds: { x: 3150, y: 590, width: 900, height: 660 } },
+      input: { summary: 'Tutor ringed Act 3', shape: 'ellipse', fill: 'none', stroke: PURPLE, strokeWidth: 2, bounds: { x: 6180, y: 960, width: 620, height: 380 } },
     }],
     waitMs: 267,
   }),
@@ -503,7 +502,6 @@ const ACT_5: ReplayStep[] = [
     input: { summary: 'Tutor selected the lesson sheet', operations: [{ type: 'select', ids: [{ $ref: 'box5.data.objectId' }, { $ref: 'ellipse5.data.objectId' }] }] },
     waitMs: 267,
   }),
-  step({ humanNote: 'The learner drags an arrow from the density widget to the attention card, then drags its head.' }),
   // The learner's arrow has to exist before the agent can re-aim it. This used to
   // read the world for an arrow that was never created, so the id resolved to
   // undefined and both the spotlight and set_arrow failed red on camera.
@@ -515,12 +513,13 @@ const ACT_5: ReplayStep[] = [
       objects: [{
         id: 'replay_arrow', kind: 'arrow',
         from: { x: 24, y: 150 }, to: { x: 300, y: 20 },
-        bounds: { x: 2000, y: 820, width: 200, height: 200 },
+        bounds: { x: 6260, y: 400, width: 420, height: 260 },
         rotation: 0, opacity: 1, color: GRAPHITE,
       }],
     },
     waitMs: 223,
   }),
+  step({ humanNote: 'The learner drags the arrow head to point at the exact bin.' }),
   step({ tool: 'spotlight_objects', input: { ids: ['replay_arrow'], label: 'tail → bin 2', seconds: 1.74 }, optional: true, waitMs: 180 }),
   step({ say: "I'll point the tail at the exact bin.", tool: 'set_arrow', input: { objectId: 'replay_arrow', from: { x: 18, y: 168 }, color: PURPLE }, optional: true, waitMs: 223 }),
   step({ humanNote: 'The learner highlights the softmax row.' }),
@@ -528,7 +527,7 @@ const ACT_5: ReplayStep[] = [
     id: 'glow5',
     say: 'Same colour on the matching barycentric weights.',
     tool: 'draw_ink',
-    input: { mode: 'highlighter', color: HIGHLIGHT, width: 18, construct: true, strokes: [[{ x: 5200, y: 1080 }, { x: 5600, y: 1080 }]] },
+    input: { mode: 'highlighter', color: HIGHLIGHT, width: 18, construct: true, strokes: [[{ x: 6220, y: 1180 }, { x: 6620, y: 1180 }]] },
     waitMs: 180,
   }),
   step({
@@ -545,6 +544,7 @@ const ACT_5: ReplayStep[] = [
   step({ say: 'Too wide. Deleting it, like you would.', tool: 'delete_objects', input: { summary: 'Tutor deleted its highlight', ids: [{ $ref: 'glow5.data.objectId' }] }, waitMs: 223 }),
   step({ humanNote: 'The learner erases a stray stroke.' }),
   step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'mark1.data.objectId' }], label: 'my circle', seconds: 1.74 }, optional: true, waitMs: 180 }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'mark1.data.objectId' }], emphasis: 'feature' }, optional: true, waitMs: 420 }),
   step({ tool: 'erase_ink', input: { ids: [{ $ref: 'mark1.data.objectId' }] }, optional: true, waitMs: 267 }),
   // No tool undo here on purpose: the capture pauses the replay on this line and the
   // LEARNER undoes it, cursor travelling to the rail's Undo button. The film claimed

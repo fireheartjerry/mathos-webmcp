@@ -296,7 +296,19 @@ function geometryPrimitiveError(value: unknown): string | null {
   if (value.kind === 'homothety') return string('center') && string('source') && typeof value.factor === 'number' && Number.isFinite(value.factor) ? null : `Homothety ${value.id} needs center and source point ids plus a finite factor, e.g. {"kind": "homothety", "id": "A2", "center": "O", "source": "A", "factor": 1.5}.`
   if (value.kind === 'similarity') return string('center') && string('source') && typeof value.factor === 'number' && Number.isFinite(value.factor) && value.factor !== 0 && typeof value.angle === 'number' && Number.isFinite(value.angle) ? null : `Similarity ${value.id} needs center, source, a non-zero factor and an angle in degrees, e.g. {"kind": "similarity", "id": "A2", "center": "O", "source": "A", "factor": 0.7, "angle": 36}.`
   if (value.kind === 'spiralCenter') return string('a') && string('b') && string('a2') && string('b2') ? null : `Spiral centre ${value.id} needs point ids a, b, a2, b2 (a→a2 and b→b2), e.g. {"kind": "spiralCenter", "id": "O", "a": "A", "b": "B", "a2": "A2", "b2": "B2"}.`
-  return `Geometry primitive ${value.id} has unknown kind “${value.kind}”. Use point, segment, line, circle, polygon, midpoint, perpendicular, parallel, intersection, angle, homothety, similarity or spiralCenter.`
+  // Olympiad primitives. `of` is the triangle's three point ids; incidence and tangency
+  // are computed, so a figure built from these stays exact when a vertex is dragged.
+  const triangle = isStringArray(value.of) && value.of.length === 3
+  if (value.kind === 'incenter' || value.kind === 'circumcircle') return triangle ? null : `${value.kind} ${value.id} needs of: [pointId, pointId, pointId], e.g. ["A", "B", "C"].`
+  if (value.kind === 'arcMidpoint') {
+    if (!triangle) return `Arc midpoint ${value.id} needs of: [pointId, pointId, pointId], e.g. ["B", "C", "A"].`
+    return string('notContaining') !== string('containing')
+      ? null
+      : `Arc midpoint ${value.id} needs exactly one of notContaining or containing, naming a vertex from of: notContaining is the minor arc, containing is the major arc.`
+  }
+  if (value.kind === 'mixtilinearIncircle') return triangle && string('vertex') ? null : `Mixtilinear incircle ${value.id} needs of: [three point ids] and vertex: one of them, e.g. {"of": ["A", "B", "C"], "vertex": "A"}.`
+  if (value.kind === 'circleTangency') return isStringArray(value.circles) && value.circles.length === 2 ? null : `Circle tangency ${value.id} needs circles: [circleId, circleId], e.g. ["omega", "omega_A"].`
+  return `Geometry primitive ${value.id} has unknown kind “${value.kind}”. Use point, segment, line, circle, polygon, midpoint, perpendicular, parallel, intersection, angle, homothety, similarity, spiralCenter, incenter, circumcircle, arcMidpoint, mixtilinearIncircle or circleTangency.`
 }
 
 const semanticLinkError = (value: Values, id: string): string | null => {
