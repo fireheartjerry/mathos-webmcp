@@ -24,7 +24,7 @@ import {
   type MatrixValues,
 } from '../domain/math/matrix'
 import type { MatrixObject, Point, WorldAction, WorldState } from '../domain/world/types'
-import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealLerp, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumbers } from './useTweenedNumber'
 import '../styles/matrix.css'
 import '../styles/reveal.css'
@@ -80,6 +80,7 @@ function MatrixCell({
   column,
   value,
   flash,
+  style,
   inputRef,
   onCommit,
   onMove,
@@ -90,6 +91,7 @@ function MatrixCell({
   column: number
   value: number
   flash: boolean
+  style?: CSSProperties
   inputRef: (element: HTMLInputElement | null) => void
   onCommit: (row: number, column: number, value: number) => void
   onMove: (row: number, column: number, dr: number, dc: number) => void
@@ -154,6 +156,7 @@ function MatrixCell({
       inputMode="decimal"
       value={text}
       className={flash ? 'is-flash' : undefined}
+      style={style}
       aria-label={`Matrix entry row ${row + 1}, column ${column + 1}`}
       data-canvas-control="true"
       onPointerDown={stopCanvas}
@@ -358,7 +361,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   const rootStyle = revealing ? { opacity: object.opacity } : undefined
 
   const toolbar = (
-    <header className="matrix-toolbar reveal-fade" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()} style={{ opacity: toolbarT }}>
+    <header className="matrix-toolbar" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()} style={revealRiseStyle(p, 0.01, 0.18)}>
       <span className="matrix-kicker-text">matrix</span>
       <span className="matrix-title">A</span>
       <div className="matrix-actions" role="toolbar" aria-label="Matrix operations">
@@ -381,7 +384,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
       className="matrix-grid"
       role="group"
       aria-label={`Edit ${rows} by ${columns} matrix`}
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(44px, 1fr))`, opacity: gridT }}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(44px, 1fr))` }}
       data-canvas-control="true"
       onPointerDown={stopCanvas}
       onDoubleClick={(event) => event.stopPropagation()}
@@ -393,6 +396,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
           column={columnIndex}
           value={value}
           flash={cellFlashes.has(cellKey(rowIndex, columnIndex))}
+          style={revealRiseStyle(p, 0.08 + ((rowIndex * columns + columnIndex) / Math.max(1, rows * columns)) * 0.3, 0.28 + ((rowIndex * columns + columnIndex) / Math.max(1, rows * columns)) * 0.3, { distance: 14 })}
           inputRef={registerInput(rowIndex, columnIndex)}
           onCommit={commitCell}
           onMove={moveFocus}
@@ -404,7 +408,7 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
   )
 
   const readouts = (
-    <div className="matrix-facts reveal-fade" aria-live="polite" style={{ opacity: readoutT }}>
+    <div className="matrix-facts" aria-live="polite" style={revealRiseStyle(p, isTwoByTwo ? 0.82 : 0.48, 0.98)}>
       <span><small>dim </small>{rows} × {columns}</span>
       {square ? (
         <>
@@ -427,11 +431,11 @@ export default function MatrixPlane({ object, world, run }: { object: MatrixObje
         {toolbar}
         {popoverNode}
         <div className="matrix-body matrix-centre">
-          <span className="matrix-name" style={{ opacity: gridT }}>A =</span>
+          <span className="matrix-name" style={revealRiseStyle(p, 0.06, 0.24, { distance: 10 })}>A =</span>
           {grid}
           {readouts}
           {showColumns && (
-            <ul className="matrix-column-list" aria-label="Column vectors" style={{ opacity: readoutT }}>
+            <ul className="matrix-column-list" aria-label="Column vectors" style={revealRiseStyle(p, 0.62, 0.94, { distance: 12 })}>
               {matrixColumns(shown).map((column, index) => <li key={index}><span>c{index + 1} </span>({column.map(formatNumber).join(', ')})</li>)}
             </ul>
           )}
@@ -610,7 +614,7 @@ function TwoByTwoPlane({
               <clipPath id={`matrix-clip-${object.id}`}><rect x={box.left} y={box.top} width={Math.max(0, box.right - box.left)} height={Math.max(0, box.bottom - box.top)} /></clipPath>
             </defs>
             <rect className="matrix-paper" width={plotWidth} height={plotHeight} />
-            <text className="matrix-kicker" x="12" y="18" style={{ opacity: kickerT }}>linear transformation</text>
+            <text className="matrix-kicker" x="12" y="18" style={revealRiseStyle(p, 0.01, 0.15, { distance: 10 })}>linear transformation</text>
             <g clipPath={`url(#matrix-clip-${object.id})`}>
               <g className="matrix-lattice">
                 {GRID_VALUES.map((value, index) => {
@@ -640,7 +644,7 @@ function TwoByTwoPlane({
                 const tip = ends[1].y <= ends[0].y ? ends[1] : ends[0]
                 const label = clampLabel(tip.x - (tip.x > center.x ? textWidth + 8 : -8), tip.y + (tip.y < center.y ? 16 : -8), textWidth)
                 return (
-                  <g key={`eigen-${index}`} className="matrix-eigen" style={{ opacity: keyT }}>
+                  <g key={`eigen-${index}`} className="matrix-eigen" style={revealRiseStyle(p, 0.84 + index * 0.035, 0.98, { distance: 10 })}>
                     <line x1={ends[0].x} y1={ends[0].y} x2={ends[1].x} y2={ends[1].y} />
                     <text x={label.x} y={label.y}>{text}</text>
                   </g>
@@ -655,7 +659,7 @@ function TwoByTwoPlane({
                 return <g key={vector.id}>
                   <line className="matrix-source-vector" x1={center.x} y1={center.y} x2={source.x} y2={source.y} markerEnd={`url(#${sourceMarker})`} />
                   <line className="matrix-result-vector" x1={center.x} y1={center.y} x2={transformed.x} y2={transformed.y} markerEnd={`url(#${resultMarker})`} />
-                  <text className="matrix-vector-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>{text}</text>
+                  <text className="matrix-vector-label" x={label.x} y={label.y} style={revealRiseStyle(p, 0.62 + index * 0.05, 0.84 + index * 0.05, { distance: 9 })}>{text}</text>
                 </g>
               })}
               {vectorT > 0 && (() => {
@@ -693,23 +697,23 @@ function TwoByTwoPlane({
                       r={6}
                       onPointerDown={(event) => beginDrag(event, column)}
                     />
-                    <text className="matrix-basis-label" x={label.x} y={label.y} style={{ opacity: vectorT }}>{text}</text>
+                    <text className="matrix-basis-label" x={label.x} y={label.y} style={revealRiseStyle(p, 0.6 + index * 0.05, 0.82 + index * 0.05, { distance: 9 })}>{text}</text>
                   </g>
                 })
               })()}
             </g>
           </svg>
-          <div className="matrix-key" style={{ opacity: keyT }}>
+          <div className="matrix-key" style={revealRiseStyle(p, 0.84, 0.98, { distance: 10 })}>
             <span>— source</span>
             <b>— transformed</b>
             {eigen && <em>— eigenlines</em>}
           </div>
         </div>
         <div className="matrix-side" data-canvas-control="true" onPointerDown={stopCanvas} onDoubleClick={(event) => event.stopPropagation()}>
-          <span className="matrix-name" style={{ opacity: revealStage(p, 0, 0.3) }}>A =</span>
+          <span className="matrix-name" style={revealRiseStyle(p, 0.06, 0.26, { distance: 10 })}>A =</span>
           {grid}
           {readouts}
-          <em style={{ opacity: keyT }} title="Drag e1′ and e2′ on the plane; type in a cell, or press ↑ ↓ (Shift for ±1)">drag · type · ↑↓ edit</em>
+          <em style={revealRiseStyle(p, 0.86, 1, { distance: 9 })} title="Drag e1′ and e2′ on the plane; type in a cell, or press ↑ ↓ (Shift for ±1)">drag · type · ↑↓ edit</em>
         </div>
       </div>
     </div>

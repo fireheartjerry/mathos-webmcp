@@ -11,6 +11,14 @@ export type ProjectionOptions = {
   distance?: number
   offset?: Point
 }
+export type DepthProjectedPoint = Point & {
+  /** Rotated world z; larger values are nearer the camera. */
+  z: number
+  /** Positive camera-space distance. */
+  depth: number
+  /** Perspective scale multiplier at this depth. */
+  perspective: number
+}
 
 const DEFAULT_PROJECTION: Required<ProjectionOptions> = {
   scale: 1,
@@ -78,18 +86,30 @@ export function rotate3D(point: Vec3, rotation: EulerRotation): Vec3 {
   }
 }
 
-export function project3D(point: Vec3, options: ProjectionOptions = {}): Point {
+export function project3DWithDepth(point: Vec3, options: ProjectionOptions = {}): DepthProjectedPoint {
   const projection = { ...DEFAULT_PROJECTION, ...options }
   const depth = Math.max(0.25, projection.distance - point.z)
   const perspective = projection.distance / depth
   return {
     x: projection.offset.x + point.x * projection.scale * perspective,
     y: projection.offset.y + point.y * projection.scale * perspective,
+    z: point.z,
+    depth,
+    perspective,
   }
+}
+
+export function project3D(point: Vec3, options: ProjectionOptions = {}): Point {
+  const projected = project3DWithDepth(point, options)
+  return { x: projected.x, y: projected.y }
 }
 
 export function rotateAndProject(point: Vec3, rotation: EulerRotation, options: ProjectionOptions = {}): Point {
   return project3D(rotate3D(point, rotation), options)
+}
+
+export function rotateAndProjectWithDepth(point: Vec3, rotation: EulerRotation, options: ProjectionOptions = {}): DepthProjectedPoint {
+  return project3DWithDepth(rotate3D(point, rotation), options)
 }
 
 export function projectTetrahedron(

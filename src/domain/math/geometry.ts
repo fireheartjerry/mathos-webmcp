@@ -40,6 +40,131 @@ type ResolvedPrimitive =
 
 const difference = (to: Point, from: Point): Point => ({ x: to.x - from.x, y: to.y - from.y })
 const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x
+const dot = (a: Point, b: Point) => a.x * b.x + a.y * b.y
+const GEOMETRY_EPSILON = 1e-8
+
+const isFinitePoint = (point: Point): boolean => Number.isFinite(point.x) && Number.isFinite(point.y)
+const pointDistance = (a: Point, b: Point): number => Math.hypot(a.x - b.x, a.y - b.y)
+
+type TriangleData = { points: [Point, Point, Point]; ids: [string, string, string] }
+
+function triangleFrom(resolved: Map<string, ResolvedPrimitive>, ids: [string, string, string]): TriangleData | null {
+  const candidates = ids.map((id) => pointFrom(resolved, id))
+  if (!candidates.every((point): point is Point => Boolean(point))) return null
+  const points: [Point, Point, Point] = [candidates[0], candidates[1], candidates[2]]
+  if (Math.abs(cross(difference(points[1], points[0]), difference(points[2], points[0]))) < GEOMETRY_EPSILON) return null
+  return { points, ids }
+}
+
+/** Incenter weighted by the three opposite side lengths. */
+export function triangleIncenter(a: Point, b: Point, c: Point): Point | null {
+  const sideA = pointDistance(b, c)
+  const sideB = pointDistance(c, a)
+  const sideC = pointDistance(a, b)
+  const perimeter = sideA + sideB + sideC
+  if (perimeter < GEOMETRY_EPSILON || Math.abs(cross(difference(b, a), difference(c, a))) < GEOMETRY_EPSILON) return null
+  const point = {
+    x: (sideA * a.x + sideB * b.x + sideC * c.x) / perimeter,
+    y: (sideA * a.y + sideB * b.y + sideC * c.y) / perimeter,
+  }
+  return isFinitePoint(point) ? point : null
+}
+
+/** Circumcircle through three non-collinear points. */
+export function triangleCircumcircle(a: Point, b: Point, c: Point): { center: Point; radius: number } | null {
+  const denominator = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y))
+  if (Math.abs(denominator) < GEOMETRY_EPSILON) return null
+  const aa = a.x * a.x + a.y * a.y
+  const bb = b.x * b.x + b.y * b.y
+  const cc = c.x * c.x + c.y * c.y
+  const center = {
+    x: (aa * (b.y - c.y) + bb * (c.y - a.y) + cc * (a.y - b.y)) / denominator,
+    y: (aa * (c.x - b.x) + bb * (a.x - c.x) + cc * (b.x - a.x)) / denominator,
+  }
+  const radius = pointDistance(center, a)
+  return isFinitePoint(center) && Number.isFinite(radius) && radius > GEOMETRY_EPSILON ? { center, radius } : null
+}
+
+/** Midpoint of the arc through `first` and `second` that excludes `other`. */
+export function arcMidpointNotContaining(first: Point, second: Point, other: Point): Point | null {
+  const circumcircle = triangleCircumcircle(first, second, other)
+  if (!circumcircle) return null
+  const { center, radius } = circumcircle
+  const fromCenterA = difference(first, center)
+  const fromCenterB = difference(second, center)
+  let bisector = { x: fromCenterA.x + fromCenterB.x, y: fromCenterA.y + fromCenterB.y }
+  let length = Math.hypot(bisector.x, bisector.y)
+  // A diameter has antipodal endpoints, so either perpendicular radius bisects
+  // an arc. The side-of-chord test below still selects the one excluding `other`.
+  if (length < GEOMETRY_EPSILON) {
+    bisector = { x: -fromCenterA.y, y: fromCenterA.x }
+    length = Math.hypot(bisector.x, bisector.y)
+  }
+  if (length < GEOMETRY_EPSILON) return null
+  const unit = { x: bisector.x / length, y: bisector.y / length }
+  const candidates = [
+    { x: center.x + radius * unit.x, y: center.y + radius * unit.y },
+    { x: center.x - radius * unit.x, y: center.y - radius * unit.y },
+  ]
+  const chord = difference(second, first)
+  const otherSide = cross(chord, difference(other, first))
+  if (Math.abs(otherSide) < GEOMETRY_EPSILON) return null
+  return candidates.find((candidate) => cross(chord, difference(candidate, first)) * otherSide < 0) ?? null
+}
+
+/** Circle tangent to both sides at `vertex` and internally tangent to the circumcircle. */
+export function triangleMixtilinearIncircle(vertex: Point, first: Point, second: Point): { center: Point; radius: number } | null {
+  const incenter = triangleIncenter(vertex, first, second)
+  const circumcircle = triangleCircumcircle(vertex, first, second)
+  if (!incenter || !circumcircle) return null
+  const firstRay = difference(first, vertex)
+  const secondRay = difference(second, vertex)
+  const firstLength = Math.hypot(firstRay.x, firstRay.y)
+  const secondLength = Math.hypot(secondRay.x, secondRay.y)
+  if (firstLength < GEOMETRY_EPSILON || secondLength < GEOMETRY_EPSILON) return null
+  const cosine = Math.max(-1, Math.min(1, dot(firstRay, secondRay) / (firstLength * secondLength)))
+  const cosineHalfSquared = (1 + cosine) / 2
+  if (cosineHalfSquared < GEOMETRY_EPSILON) return null
+  // The side-contact chord is perpendicular to the angle bisector and passes
+  // through I, hence AX = AI / cos²(A/2) for the mixtilinear centre X.
+  const center = {
+    x: vertex.x + (incenter.x - vertex.x) / cosineHalfSquared,
+    y: vertex.y + (incenter.y - vertex.y) / cosineHalfSquared,
+  }
+  const radius = Math.abs(cross(difference(center, vertex), firstRay)) / firstLength
+  if (!isFinitePoint(center) || !Number.isFinite(radius) || radius < GEOMETRY_EPSILON) return null
+  // Reject numerically unstable or invalid configurations rather than drawing a
+  // circle that only looks tangent after a nearly-degenerate drag.
+  const centerDistance = pointDistance(center, circumcircle.center)
+  const error = Math.abs(centerDistance + radius - circumcircle.radius)
+  if (error > Math.max(1, circumcircle.radius) * 1e-6) return null
+  return { center, radius }
+}
+
+/** Unique contact point of two externally or internally tangent circles. */
+export function tangentCirclesPoint(first: ResolvedCircle, second: ResolvedCircle): Point | null {
+  const centerDistance = pointDistance(first.center, second.center)
+  if (centerDistance < GEOMETRY_EPSILON) return null
+  const tolerance = Math.max(1, first.radius, second.radius) * 1e-6
+  const direction = {
+    x: (second.center.x - first.center.x) / centerDistance,
+    y: (second.center.y - first.center.y) / centerDistance,
+  }
+  if (Math.abs(centerDistance - (first.radius + second.radius)) <= tolerance) {
+    return { x: first.center.x + first.radius * direction.x, y: first.center.y + first.radius * direction.y }
+  }
+  if (Math.abs(centerDistance - Math.abs(first.radius - second.radius)) > tolerance) return null
+  const larger = first.radius >= second.radius ? first : second
+  const smaller = first.radius >= second.radius ? second : first
+  const towardSmaller = {
+    x: (smaller.center.x - larger.center.x) / centerDistance,
+    y: (smaller.center.y - larger.center.y) / centerDistance,
+  }
+  return {
+    x: larger.center.x + larger.radius * towardSmaller.x,
+    y: larger.center.y + larger.radius * towardSmaller.y,
+  }
+}
 
 function pointFrom(resolved: Map<string, ResolvedPrimitive>, id: string): Point | null {
   const value = resolved.get(id)
@@ -218,8 +343,58 @@ export function resolveGeometry(primitives: GeometryPrimitive[]): ResolvedGeomet
       continue
     }
 
-    // Contract only: the Olympiad primitives are declared but not resolved yet, so
-    // skip them here rather than falling into the homothety/similarity branch below.
+    if (primitive.kind === 'incenter') {
+      const triangle = triangleFrom(resolved, primitive.of)
+      const point = triangle ? triangleIncenter(...triangle.points) : null
+      if (point) keep({ kind: 'point', id: primitive.id, point, label: primitive.label, derived: true })
+      continue
+    }
+
+    if (primitive.kind === 'circumcircle') {
+      const triangle = triangleFrom(resolved, primitive.of)
+      const circle = triangle ? triangleCircumcircle(...triangle.points) : null
+      if (circle) keep({ kind: 'circle', id: primitive.id, ...circle })
+      continue
+    }
+
+    if (primitive.kind === 'arcMidpoint') {
+      const triangle = triangleFrom(resolved, primitive.of)
+      const excludedIndex = triangle?.ids.indexOf(primitive.notContaining) ?? -1
+      if (triangle && excludedIndex >= 0) {
+        const otherIndices = [0, 1, 2].filter((index) => index !== excludedIndex)
+        const point = arcMidpointNotContaining(
+          triangle.points[otherIndices[0]],
+          triangle.points[otherIndices[1]],
+          triangle.points[excludedIndex],
+        )
+        if (point) keep({ kind: 'point', id: primitive.id, point, label: primitive.label, derived: true })
+      }
+      continue
+    }
+
+    if (primitive.kind === 'mixtilinearIncircle') {
+      const triangle = triangleFrom(resolved, primitive.of)
+      const vertexIndex = triangle?.ids.indexOf(primitive.vertex) ?? -1
+      if (triangle && vertexIndex >= 0) {
+        const otherIndices = [0, 1, 2].filter((index) => index !== vertexIndex)
+        const circle = triangleMixtilinearIncircle(
+          triangle.points[vertexIndex],
+          triangle.points[otherIndices[0]],
+          triangle.points[otherIndices[1]],
+        )
+        if (circle) keep({ kind: 'circle', id: primitive.id, ...circle })
+      }
+      continue
+    }
+
+    if (primitive.kind === 'circleTangency') {
+      const first = resolved.get(primitive.circles[0])
+      const second = resolved.get(primitive.circles[1])
+      const point = first?.kind === 'circle' && second?.kind === 'circle' ? tangentCirclesPoint(first, second) : null
+      if (point) keep({ kind: 'point', id: primitive.id, point, label: primitive.label, derived: true })
+      continue
+    }
+
     if (primitive.kind !== 'homothety' && primitive.kind !== 'similarity') continue
 
     const center = pointFrom(resolved, primitive.center)
@@ -298,6 +473,7 @@ export function dependentIds(primitives: GeometryPrimitive[], ids: string[]): Se
 export function isPointLike(primitive: GeometryPrimitive): boolean {
   return primitive.kind === 'point' || primitive.kind === 'midpoint' || primitive.kind === 'intersection'
     || primitive.kind === 'homothety' || primitive.kind === 'similarity' || primitive.kind === 'spiralCenter'
+    || primitive.kind === 'incenter' || primitive.kind === 'arcMidpoint' || primitive.kind === 'circleTangency'
 }
 
 /** Whether a primitive resolves to a direction (usable by perpendicular, parallel and intersection). */

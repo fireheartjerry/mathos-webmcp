@@ -1,6 +1,6 @@
 import type { GeometryPrimitive, Point, Viewport, WorldObject, WorldState } from '../world/types'
 import type { SemanticEntity } from '../semantic/types'
-import { interpolate, type Interpolable } from './easing'
+import { backOut, interpolate, type Interpolable } from './easing'
 import type { AnimationKeyframe, AnimationTargetPath, AnimationTimeline, AnimationTrack, AnimationValue } from './types'
 
 /** Times keyed by timeline id; every listed timeline is overlaid at that time. */
@@ -264,6 +264,49 @@ export function revealProgress(object: { drawProgress?: number } | null | undefi
 export function revealStage(p: number, start: number, end: number): number {
   if (end <= start) return p >= end ? 1 : 0
   return Math.min(1, Math.max(0, (p - start) / (end - start)))
+}
+
+/** Entrance transform for one staged sub-element: rises from below and overshoots. */
+export function revealRise(
+  p: number,
+  start: number,
+  end: number,
+  options: { distance?: number; overshoot?: number } = {},
+): { opacity: number; translateY: number; scale: number } {
+  const distance = options.distance ?? 18
+  const overshoot = options.overshoot ?? 0.12
+  if (p <= start) return { opacity: 0, translateY: distance, scale: 1 - overshoot / 2 }
+  if (p >= end) return { opacity: 1, translateY: 0, scale: 1 }
+  const stage = revealStage(p, start, end)
+  const eased = backOut(stage)
+  return {
+    opacity: stage,
+    translateY: distance * (1 - eased),
+    scale: 1 - overshoot / 2 + (overshoot / 2) * eased,
+  }
+}
+
+/** CSS/SVG style adapter for `revealRise`; keeps presentation code terse and uniform. */
+export function revealRiseStyle(
+  p: number,
+  start: number,
+  end: number,
+  options?: { distance?: number; overshoot?: number },
+): {
+  opacity: number
+  transform: string
+  transformOrigin: 'center'
+  transformBox: 'fill-box'
+  willChange: 'transform, opacity'
+} {
+  const rise = revealRise(p, start, end, options)
+  return {
+    opacity: rise.opacity,
+    transform: `translateY(${rise.translateY.toFixed(3)}px) scale(${rise.scale.toFixed(5)})`,
+    transformOrigin: 'center',
+    transformBox: 'fill-box',
+    willChange: 'transform, opacity',
+  }
 }
 
 /**

@@ -12,7 +12,7 @@ import type {
   WorldAction,
   WorldState,
 } from '../domain/world/types'
-import { revealDash, revealItem, revealLerp, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealLerp, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import '../styles/reveal.css'
 import '../styles/attention.css'
@@ -278,7 +278,7 @@ export default function AttentionView({ object, world, run }: Props) {
               label={`${MATRIX_LABELS[key]} row ${rowIndex + 1} column ${columnIndex + 1}`}
               className={isHero ? 'is-hero' : undefined}
               demoTarget={isHero ? 'attention-matrix-cell' : undefined}
-              style={revealing ? { opacity: rowT(rowIndex) } : undefined}
+              style={revealing ? revealRiseStyle(p, rowIndex * 0.2, rowIndex * 0.2 + 0.2, { distance: 12 }) : undefined}
               onCommit={(next) => commitCell(key, rowIndex, columnIndex, next)}
             />
           )
@@ -418,7 +418,7 @@ export default function AttentionView({ object, world, run }: Props) {
 
   return (
     <section className={`attention-view reveal-root${heroActive ? ' is-hero-active' : ''}${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="attention-header reveal-fade" style={{ opacity: headerT }}>
+      <header className="attention-header" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="attention-heading">
           <span className="math-object-kicker">TINY TRANSFORMER · ONE HEAD · 2-D EMBEDDINGS</span>
           <h3>Attention is a weighted sum</h3>
@@ -439,12 +439,12 @@ export default function AttentionView({ object, world, run }: Props) {
             <rect className="attention-plane-paper" width={PLANE.width} height={PLANE.height} />
             <line className="attention-axis" x1={ORIGIN.x - 40} x2={PLANE.width - 10} y1={ORIGIN.y} y2={ORIGIN.y} pathLength={1} style={revealDash(planeT)} />
             <line className="attention-axis" x1={ORIGIN.x} x2={ORIGIN.x} y1={ORIGIN.y + 26} y2={30} pathLength={1} style={revealDash(planeT)} />
-            <text className="attention-plane-kicker" x={12} y={15} style={{ opacity: planeT }}>
+            <text className="attention-plane-kicker" x={12} y={15} style={revealRiseStyle(p, 0.04, 0.2, { distance: 10 })}>
               <tspan x={12} dy="0">KEYS k = W_K e</tspan>
               <tspan x={12} dy="11">QUERY q = W_Q e</tspan>
             </text>
             {arcs.map((arc, index) => (
-              <g key={`arc-${index}`} className={`attention-arc${index === strongest ? ' is-strongest' : ''}`} data-hero-path="score" style={{ opacity: arcT }}>
+              <g key={`arc-${index}`} className={`attention-arc${index === strongest ? ' is-strongest' : ''}`} data-hero-path="score" style={revealRiseStyle(p, 0.4 + index * 0.025, 0.57 + index * 0.025, { distance: 9 })}>
                 <path d={arc.d} pathLength={1} style={revealDash(arcT)} />
                 <text x={arcLabels[index].x} y={arcLabels[index].y} textAnchor="middle">{short(arc.degrees, 0)}°</text>
               </g>
@@ -456,23 +456,23 @@ export default function AttentionView({ object, world, run }: Props) {
             {vectorT > 0 && keyTipsPlane.map((tip, index) => (
               <g key={`k-${index}`} className="attention-key-vector">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={tip.x} y2={tip.y} markerEnd={`url(#${markerId})`} />
-                <text x={keyLabels[index].x} y={keyLabels[index].y} style={{ opacity: vectorT }}>k{subscript(index)}</text>
+                <text x={keyLabels[index].x} y={keyLabels[index].y} style={revealRiseStyle(p, 0.18 + index * 0.035, 0.42 + index * 0.035, { distance: 9 })}>k{subscript(index)}</text>
               </g>
             ))}
             {vectorT > 0 && (
               <g className="attention-context-vector" data-hero-path="context">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={contextTipPlane.x} y2={contextTipPlane.y} markerEnd={`url(#${contextMarkerId})`} />
-                <text x={contextLabel.x} y={contextLabel.y} style={{ opacity: vectorT }}>{contextLabelText}</text>
+                <text x={contextLabel.x} y={contextLabel.y} style={revealRiseStyle(p, 0.3, 0.5, { distance: 9 })}>{contextLabelText}</text>
               </g>
             )}
             {vectorT > 0 && (
               <g className="attention-query-vector" data-hero-path="query">
                 <line x1={ORIGIN.x} y1={ORIGIN.y} x2={queryTipPlane.x} y2={queryTipPlane.y} markerEnd={`url(#${markerId})`} />
-                <text x={queryLabel.x} y={queryLabel.y} style={{ opacity: vectorT }}>{queryLabelText}</text>
+                <text x={queryLabel.x} y={queryLabel.y} style={revealRiseStyle(p, 0.2, 0.42, { distance: 9 })}>{queryLabelText}</text>
               </g>
             )}
             {embeddingPointsPlane.map((at, index) => (
-              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: planeT }}>
+              <g key={`e-${index}`} className={`attention-embedding${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={revealRiseStyle(p, 0.04 + index * 0.035, 0.18 + index * 0.035, { distance: 10 })}>
                 <circle cx={at.x} cy={at.y} r="4" />
                 <text x={embeddingLabels[index].x} y={embeddingLabels[index].y}>e{subscript(index)} · {tokens[index]}</text>
               </g>
@@ -480,9 +480,9 @@ export default function AttentionView({ object, world, run }: Props) {
           </svg>
 
           <div className="attention-ribbons" data-hero-path="ribbon" aria-label="Attention weights as ribbon widths">
-            <div className="attention-section-heading" style={{ opacity: revealStage(p, 0.35, 0.45) }}><span className="attention-kicker">SOFTMAX WEIGHTS α</span><Derived /><b>Σ α = {fmt(weightSumT * revealStage(p, 0.75, 0.85))}</b></div>
+            <div className="attention-section-heading" style={revealRiseStyle(p, 0.34, 0.46, { distance: 10 })}><span className="attention-kicker">SOFTMAX WEIGHTS α</span><Derived /><b>Σ α = {fmt(weightSumT * revealStage(p, 0.75, 0.85))}</b></div>
             {weightsT.map((weight, index) => (
-              <div key={index} className={`attention-ribbon${index === targetIndex ? ' is-target' : ''}${index === strongest ? ' is-strongest' : ''}`} style={{ opacity: revealStage(p, 0.35, 0.45) }}>
+              <div key={index} className={`attention-ribbon${index === targetIndex ? ' is-target' : ''}${index === strongest ? ' is-strongest' : ''}`} style={revealRiseStyle(p, 0.38 + index * 0.04, 0.52 + index * 0.04, { distance: 12 })}>
                 <span>α{subscript(index)} · {tokens[index]}</span>
                 <i><em style={{ width: `${(Math.max(0, weight) * 100 * barT(index)).toFixed(2)}%` }} /></i>
                 <b>{fmt(weight * barT(index))}</b>
@@ -491,9 +491,9 @@ export default function AttentionView({ object, world, run }: Props) {
           </div>
 
           <div className="attention-tokens" role="radiogroup" aria-label="Tokens and embeddings; pick one as the query">
-            <div className="attention-section-heading" style={{ opacity: tokenT(0) }}><span className="attention-kicker">EMBEDDINGS e · CLICK A TOKEN TO QUERY</span><span className="attention-editable-tag">editable</span></div>
+            <div className="attention-section-heading" style={revealRiseStyle(p, 0.2, 0.34, { distance: 10 })}><span className="attention-kicker">EMBEDDINGS e · CLICK A TOKEN TO QUERY</span><span className="attention-editable-tag">editable</span></div>
             {object.model.embeddings.map((embedding, index) => (
-              <div key={index} className={`attention-token${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={{ opacity: tokenT(index) }}>
+              <div key={index} className={`attention-token${index === queryIndex ? ' is-query' : ''}${index === targetIndex ? ' is-target' : ''}`} style={revealRiseStyle(p, 0.23 + index * 0.05, 0.37 + index * 0.05, { distance: 12 })}>
                 <button type="button" role="radio" aria-checked={index === queryIndex} onClick={() => chooseQuery(index)} title={`Make ${tokens[index]} the query`}>
                   <i aria-hidden="true" /><span>e{subscript(index)} · {tokens[index]}</span>
                 </button>
@@ -508,7 +508,7 @@ export default function AttentionView({ object, world, run }: Props) {
         <div className="attention-side">
           <div className="attention-matrices">{matrix('wq')}{matrix('wk')}{matrix('wv')}</div>
 
-          <div className="attention-controls reveal-fade" style={{ opacity: controlT }}>
+          <div className="attention-controls" style={revealRiseStyle(p, 0.3, 0.45)}>
             <div className="attention-temperature">
               <span className="attention-kicker">TEMPERATURE T</span>
               <input
@@ -544,26 +544,26 @@ export default function AttentionView({ object, world, run }: Props) {
           </div>
 
           <div className="attention-scores">
-          <div className="attention-section-heading" style={{ opacity: revealStage(p, 0.35, 0.45) }}><span className="attention-kicker">SCORES → SOFTMAX</span><Derived /></div>
+          <div className="attention-section-heading" style={revealRiseStyle(p, 0.35, 0.46, { distance: 10 })}><span className="attention-kicker">SCORES → SOFTMAX</span><Derived /></div>
           <table className="attention-score-table" aria-label="Scores and softmax weights">
-            <thead style={{ opacity: revealStage(p, 0.35, 0.45) }}>
+            <thead style={revealRiseStyle(p, 0.37, 0.49, { distance: 9 })}>
               <tr><th scope="col">token</th><th scope="col">q·kⱼ/√2</th><th scope="col">+ log wⱼ</th><th scope="col">÷ T</th><th scope="col">αⱼ</th></tr>
             </thead>
             <tbody>
               {pass.scores.map((_, index) => (
                 <tr key={index} className={index === queryIndex ? 'is-query' : undefined} data-hero-path={index === targetIndex ? 'score' : undefined}>
-                  <th scope="row" style={{ opacity: revealStage(p, 0.35, 0.45) }}>{tokens[index]}</th>
-                  <td style={{ opacity: columnT(0) }}>{fmt(scoresT[index])}</td>
-                  <td style={{ opacity: columnT(1) }}>{fmt(scoresT[3 + index])}</td>
-                  <td style={{ opacity: columnT(2) }}>{fmt(scoresT[6 + index])}</td>
-                  <td className="is-weight" style={{ opacity: columnT(3) }}>{fmt(weightsT[index] * barT(index))}</td>
+                  <th scope="row" style={revealRiseStyle(p, 0.38 + index * 0.025, 0.5 + index * 0.025, { distance: 8 })}>{tokens[index]}</th>
+                  <td style={revealRiseStyle(p, 0.4, 0.52, { distance: 8 })}>{fmt(scoresT[index])}</td>
+                  <td style={revealRiseStyle(p, 0.5, 0.62, { distance: 8 })}>{fmt(scoresT[3 + index])}</td>
+                  <td style={revealRiseStyle(p, 0.6, 0.72, { distance: 8 })}>{fmt(scoresT[6 + index])}</td>
+                  <td className="is-weight" style={revealRiseStyle(p, 0.7, 0.82, { distance: 8 })}>{fmt(weightsT[index] * barT(index))}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           </div>
 
-          <div className="attention-readout reveal-fade" style={{ opacity: readoutT }}>
+          <div className="attention-readout" style={revealRiseStyle(p, 0.78, 0.96)}>
             <div className="attention-readout-left">
               <div className="attention-context">
                 <span className="attention-kicker">CONTEXT c <Derived /></span>
@@ -591,7 +591,7 @@ export default function AttentionView({ object, world, run }: Props) {
         </div>
       </div>
 
-      <footer className="attention-footnote" style={{ opacity: footerT }}>
+      <footer className="attention-footnote" style={revealRiseStyle(p, 0.89, 1, { distance: 10 })}>
         weights, embeddings, temperature and the query/target choice are yours · everything tagged derived is recomputed on every edit
       </footer>
     </section>

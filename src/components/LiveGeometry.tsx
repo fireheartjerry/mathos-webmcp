@@ -20,7 +20,7 @@ import type { ResolvedAngle, ResolvedGeometry, ResolvedPoint } from '../domain/m
 import type { GeometryObject, GeometryPrimitive, GraphObject, MatrixObject, Point, WorldAction } from '../domain/world/types'
 import GeometryToolbar, { GEOMETRY_TOOLS } from './GeometryToolbar'
 import type { GeometryTool } from './GeometryToolbar'
-import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumbers } from './useTweenedNumber'
 import '../styles/geometry.css'
 import '../styles/reveal.css'
@@ -287,6 +287,16 @@ export default function LiveGeometry({
   const allPrimitives = draft.length ? [...tweenedPrimitives, ...draft] : tweenedPrimitives
   const primitives = cursor && dragging ? withDrag(allPrimitives, dragging, cursor) : allPrimitives
   const resolved = resolveGeometry(primitives)
+  const primitiveById = new Map(primitives.map((primitive) => [primitive.id, primitive]))
+  const renderKindClass = (id: string) => {
+    const kind = primitiveById.get(id)?.kind
+    if (kind === 'circumcircle') return ' is-circumcircle'
+    if (kind === 'mixtilinearIncircle') return ' is-mixtilinear-incircle'
+    if (kind === 'incenter') return ' is-incenter'
+    if (kind === 'arcMidpoint') return ' is-arc-midpoint'
+    if (kind === 'circleTangency') return ' is-circle-tangency'
+    return ''
+  }
   const width = Math.max(220, object.bounds.width)
   const height = Math.max(180, object.bounds.height)
   const readouts = constructionReadouts(resolved.points)
@@ -662,7 +672,7 @@ export default function LiveGeometry({
   const selectedPrimitive = selected ? object.primitives.find((candidate) => candidate.id === selected) ?? null : null
   const measure = selectedPrimitive ? measurementFor(selectedPrimitive, resolved, describe(selectedPrimitive, object.primitives)) : null
   const metaText = tool === 'move' ? (selectedPrimitive ? describe(selectedPrimitive, object.primitives) : 'move · click to select') : `${activeTool.label.toLowerCase()} tool`
-  const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel'].includes(selectedPrimitive.kind) : false
+  const selectionIsStroke = selectedPrimitive ? ['segment', 'line', 'circle', 'polygon', 'angle', 'perpendicular', 'parallel', 'circumcircle', 'mixtilinearIncircle'].includes(selectedPrimitive.kind) : false
 
   const previews = isConstructing && cursor ? renderPreview(tool, pending, cursor, pointAt, resolved) : null
 
@@ -680,7 +690,13 @@ export default function LiveGeometry({
   const editingPoint = editingLabel ? resolved.points.find((point) => point.id === editingLabel) ?? null : null
 
   const rootClass = ['live-geometry', 'has-toolbar', 'reveal-root', revealing ? 'is-revealing' : '', tool === 'move' ? 'is-moving' : tool === 'delete' ? 'is-deleting' : 'is-constructing'].filter(Boolean).join(' ')
-  const rootStyle: CSSProperties = { ...(revealing ? { opacity: object.opacity } : {}), '--accent': object.accent || '#7c5cff' } as CSSProperties
+  const toolbarRise = revealRiseStyle(p, 0.06, 0.22, { distance: 12 })
+  const rootStyle: CSSProperties = {
+    ...(revealing ? { opacity: object.opacity } : {}),
+    '--accent': object.accent || '#7c5cff',
+    '--geometry-toolbar-opacity': toolbarRise.opacity,
+    '--geometry-toolbar-transform': toolbarRise.transform,
+  } as CSSProperties
   const enteringClass = (id: string) => entering.has(id) ? ' is-entering' : ''
 
   return (
@@ -695,7 +711,7 @@ export default function LiveGeometry({
       onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node | null)) activeRef.current = rootRef.current?.matches(':hover') ?? false }}
       onKeyDown={onRootKeyDown}
     >
-      <header className="geometry-header" style={{ opacity: kickerT }}>
+      <header className="geometry-header" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="geometry-heading">
           <span className="geometry-kicker">Dynamic geometry</span>
           <h3>Homothety · Spiral similarity</h3>
@@ -747,7 +763,7 @@ export default function LiveGeometry({
             const t = drawT(circle.id)
             if (t <= 0) return null
             return <g key={circle.id}>
-              <circle className={`geometry-circle is-${circle.id}${selected === circle.id ? ' is-selected' : ''}${enteringClass(circle.id)}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
+              <circle className={`geometry-circle is-${circle.id}${renderKindClass(circle.id)}${selected === circle.id ? ' is-selected' : ''}${enteringClass(circle.id)}`} cx={circle.center.x} cy={circle.center.y} r={circle.radius} pathLength={1} style={revealDash(t)} />
               <circle className="geometry-hit" cx={circle.center.x} cy={circle.center.y} r={circle.radius} data-primitive-id={circle.id} data-canvas-handle="true" onPointerDown={tool === 'move' ? (event) => beginShapeDrag(event, circle.id) : undefined} />
             </g>
           })}
@@ -775,7 +791,7 @@ export default function LiveGeometry({
             return <g key={angle.id} className={`geometry-angle-group is-${angle.id}${selected === angle.id ? ' is-selected' : ''}`}>
               <path className={`geometry-angle${enteringClass(angle.id)}`} d={arc.path} pathLength={1} style={revealDash(t)} />
               <path className="geometry-hit" d={arc.path} data-primitive-id={angle.id} data-canvas-handle="true" />
-              <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={{ opacity: t }}>{angle.degrees.toFixed(1)}°</text>
+              <text className="geometry-angle-label" x={arc.label.x} y={arc.label.y} textAnchor="middle" style={revealRiseStyle(t, 0, 1, { distance: 9 })}>{angle.degrees.toFixed(1)}°</text>
             </g>
           })}
           {previews}
@@ -794,10 +810,10 @@ export default function LiveGeometry({
             if (t <= 0) return null
             const radius = point.draggable ? 6 : 4.5
             const isEditing = editingLabel === point.id
-            return <g key={point.id} className={`geometry-point-group is-${point.id}${enteringClass(point.id)}`}>
+            return <g key={point.id} className={`geometry-point-group is-${point.id}${renderKindClass(point.id)}${enteringClass(point.id)}`}>
               {(pendingIds.has(point.id) || selected === point.id) && <circle className={`geometry-ring${selected === point.id ? ' is-selected' : ''}`} cx={point.point.x} cy={point.point.y} r={11} />}
               <circle
-                className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}`}
+                className={`geometry-point${point.draggable ? ' is-draggable' : ''}${point.derived ? ' is-derived' : ''}${point.id === 'S' ? ' is-spiral-center' : ''}${renderKindClass(point.id)}`}
                 data-demo-target={point.id === 'A' ? 'geometry-vertex-a' : undefined}
                 data-canvas-handle={point.draggable ? 'true' : undefined}
                 data-primitive-id={point.id}
@@ -812,7 +828,7 @@ export default function LiveGeometry({
                   data-canvas-control={tool === 'move' ? 'true' : undefined}
                   x={point.point.x + 9}
                   y={point.point.y - 9}
-                  style={{ opacity: t }}
+                  style={revealRiseStyle(t, 0, 1, { distance: 10 })}
                   onDoubleClick={tool === 'move' ? (event) => { event.stopPropagation(); setEditingLabel(point.id) } : undefined}
                 >
                   {point.label}
@@ -872,7 +888,7 @@ export default function LiveGeometry({
           </div>
         )}
       </div>
-      <footer className={`geometry-legend reveal-fade${hasSpiral ? ' has-spiral' : ''}`} style={{ opacity: legendT }}>
+      <footer className={`geometry-legend${hasSpiral ? ' has-spiral' : ''}`} style={revealRiseStyle(p, 0.84, 1)}>
         {readouts.map((readout) => <span key={readout.id} className={`geometry-readout is-${readout.tone}`}><small>{readout.label}</small><b>{readout.value}</b></span>)}
         <em>{hasSpiral ? 'S is the fixed point of the spiral similarity A→A′, B→B′, recomputed from the four points' : 'drag A, B, C or O · the two circles stay tangent at O'}</em>
       </footer>

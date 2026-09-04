@@ -6,18 +6,20 @@ import {
   normalizedSimplexLatticePoints,
   pascalRecurrence,
   pointFromSimplexWeights,
-  projectTetrahedron,
-  rotateAndProject,
+  project3DWithDepth,
+  rotate3D,
+  rotateAndProjectWithDepth,
   sectionTriangle,
   setSimplexWeight,
   weightsFromScreenOnSection,
   wrapAngle,
   type EulerRotation,
+  type Vec3,
   type SimplexWeights,
   type Tetrahedron,
 } from '../domain/math/simplex'
 import type { Point, SimplexObject, WorldAction } from '../domain/world/types'
-import { revealDash, revealItem, revealProgress, revealStage } from '../domain/animation/evaluate'
+import { revealDash, revealItem, revealProgress, revealRiseStyle, revealStage } from '../domain/animation/evaluate'
 import { useTweenedNumber, useTweenedNumbers } from './useTweenedNumber'
 import '../styles/reveal.css'
 import '../styles/lattice.css'
@@ -41,6 +43,8 @@ const TETRAHEDRON: Tetrahedron = [
   { x: 0, y: 0, z: 2.25 },
 ]
 const EDGE_PAIRS: Array<[number, number]> = [[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]]
+/** Consistent outward winding for the four triangular faces. */
+const FACE_INDICES: Array<[number, number, number]> = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [2, 0, 3]]
 const LABELS = ['A', 'B', 'C', 'D']
 const GREEK = ['α', 'β', 'γ', 'δ']
 const MIN_DENOMINATOR = 1
@@ -62,6 +66,24 @@ const estimateLabelWidth = (text: string) => text.length * MONO_CHAR_WIDTH_11
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 const LABEL_MARGIN = 4
 const LABEL_OFFSET = 8
+
+const subtract3 = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
+const cross3 = (a: Vec3, b: Vec3): Vec3 => ({
+  x: a.y * b.z - a.z * b.y,
+  y: a.z * b.x - a.x * b.z,
+  z: a.x * b.y - a.y * b.x,
+})
+const dot3 = (a: Vec3, b: Vec3) => a.x * b.x + a.y * b.y + a.z * b.z
+const length3 = (value: Vec3) => Math.hypot(value.x, value.y, value.z)
+
+/** Cosine of the outward face normal toward the perspective camera. */
+function faceFacing(vertices: Vec3[], face: [number, number, number], cameraDistance: number): number {
+  const [a, b, c] = face.map((index) => vertices[index]) as [Vec3, Vec3, Vec3]
+  const normal = cross3(subtract3(b, a), subtract3(c, a))
+  const center = { x: (a.x + b.x + c.x) / 3, y: (a.y + b.y + c.y) / 3, z: (a.z + b.z + c.z) / 3 }
+  const towardCamera = { x: -center.x, y: -center.y, z: cameraDistance - center.z }
+  return dot3(normal, towardCamera) / Math.max(1e-9, length3(normal) * length3(towardCamera))
+}
 
 type Draft = Partial<Pick<SimplexObject, 'weights' | 'section' | 'rotationX' | 'rotationY'>>
 type DragState =
@@ -226,8 +248,9 @@ export default function SimplexView({ object, run }: Props) {
   const rotationY = tweenedOrbit[1]
   const denominator = clamp(Math.round(object.denominator), MIN_DENOMINATOR, MAX_DENOMINATOR)
   const rotation: EulerRotation = useMemo(() => ({ x: rotationX, y: rotationY, z: 0 }), [rotationX, rotationY])
-  const projected = useMemo(() => projectTetrahedron(TETRAHEDRON, rotation, projection), [rotation, projection])
-  const projectedPoint = rotateAndProject(pointFromSimplexWeights(TETRAHEDRON, weights), rotation, projection)
+  const rotatedVertices = useMemo(() => TETRAHEDRON.map((vertex) => rotate3D(vertex, rotation)), [rotation])
+  const projected = useMemo(() => rotatedVertices.map((vertex) => project3DWithDepth(vertex, projection)), [rotatedVertices, projection])
+  const projectedPoint = rotateAndProjectWithDepth(pointFromSimplexWeights(TETRAHEDRON, weights), rotation, projection)
   const flash = useForeignChanges(object, FLASH_FIELDS, localRef)
 
   // ---- staged reveal: edges → lattice → section plane sweeping down from the apex --
@@ -241,17 +264,47 @@ export default function SimplexView({ object, run }: Props) {
   const chromeT = revealStage(p, 0, 0.15)
   const drawnSection = 1 - (1 - section) * sectionT
   const sectionPoints = useMemo(
-    () => sectionTriangle(TETRAHEDRON, drawnSection).map((vertex) => rotateAndProject(vertex, rotation, projection)),
+    () => sectionTriangle(TETRAHEDRON, drawnSection).map((vertex) => rotateAndProjectWithDepth(vertex, rotation, projection)),
     [drawnSection, rotation, projection],
   )
   const recurrence = pascalRecurrence(denominator, 3)
   const lattice = useMemo(() => (object.showLattice ? normalizedSimplexLatticePoints(denominator) : []), [object.showLattice, denominator])
+  const projectedLattice = useMemo(() => lattice.map((latticeWeights, index) => ({
+    index,
+    weights: latticeWeights,
+    point: rotateAndProjectWithDepth(pointFromSimplexWeights(TETRAHEDRON, latticeWeights), rotation, projection),
+  })).sort((a, b) => a.point.z - b.point.z), [lattice, rotation, projection])
+  const faces = useMemo(() => FACE_INDICES.map((indices, index) => ({
+    index,
+    indices,
+    facing: faceFacing(rotatedVertices, indices, projection.distance),
+    z: indices.reduce((sum, vertex) => sum + rotatedVertices[vertex].z, 0) / 3,
+  })).sort((a, b) => a.z - b.z), [rotatedVertices, projection.distance])
+  const edges = useMemo(() => EDGE_PAIRS.map(([first, second], index) => {
+    const adjacent = faces.filter((face) => face.indices.includes(first) && face.indices.includes(second))
+    return {
+      first,
+      second,
+      index,
+      back: Math.max(...adjacent.map((face) => face.facing)) <= 0,
+      z: (rotatedVertices[first].z + rotatedVertices[second].z) / 2,
+    }
+  }).sort((a, b) => a.z - b.z), [faces, rotatedVertices])
   const onSection = Math.abs(section - weights[3]) < 0.012
   const sectionWeights = weights[3] < 0.999
     ? [weights[0], weights[1], weights[2]].map((weight) => weight / (1 - weights[3]))
     : [1 / 3, 1 / 3, 1 / 3]
   const sum = weights.reduce((total, weight) => total + weight, 0)
   const latticeDelay = (index: number) => `${Math.min(360, index * 3)}ms`
+  const zValues = projected.map((point) => point.z)
+  const zMin = Math.min(...zValues)
+  const zSpan = Math.max(1e-6, Math.max(...zValues) - zMin)
+  const depthAmount = (z: number) => clamp((z - zMin) / zSpan, 0, 1)
+  const projectedBounds = projected.reduce((bounds, point) => ({
+    left: Math.min(bounds.left, point.x),
+    right: Math.max(bounds.right, point.x),
+    bottom: Math.max(bounds.bottom, point.y),
+  }), { left: Infinity, right: -Infinity, bottom: -Infinity })
 
   // ---- label placement: keep the P/section readouts on-canvas and off any
   // vertex label they may currently coincide with (weights or δ at an extreme) --
@@ -320,7 +373,7 @@ export default function SimplexView({ object, run }: Props) {
     setDraft((current) => ({ ...(current ?? {}), weights: weightsAt(event) }))
   }
   const beginOrbitDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (event.button !== 0 || revealing || dragRef.current) return
+    if (event.button !== 2 || revealing || dragRef.current) return
     begin({ kind: 'orbit', pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, rotationX: object.rotationX, rotationY: object.rotationY }, event)
   }
   const moveDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -400,7 +453,7 @@ export default function SimplexView({ object, run }: Props) {
 
   return (
     <div className={`simplex-view lattice-card reveal-root${revealing ? ' is-revealing' : ''}`} onPointerDown={stop} style={revealing ? { opacity: object.opacity } : undefined}>
-      <header className="lattice-head reveal-fade" style={{ opacity: chromeT }}>
+      <header className="lattice-head" style={revealRiseStyle(p, 0.01, 0.15)}>
         <div className="lattice-head-text">
           <span className="lattice-kicker">4-weight probability simplex · perspective projection</span>
           <h3 className="lattice-title">Tetrahedral probability</h3>
@@ -419,20 +472,36 @@ export default function SimplexView({ object, run }: Props) {
             className="simplex-canvas"
             viewBox={`0 0 ${plotWidth} ${plotHeight}`}
             preserveAspectRatio="none"
-            aria-label="Projected tetrahedral probability simplex; drag P to move it on the section plane, drag empty space to orbit"
+            aria-label="Projected tetrahedral probability simplex; drag P to move it on the section plane, right-drag empty space to orbit"
             onPointerDown={beginOrbitDrag}
             onPointerMove={moveDrag}
             onPointerUp={finishDrag}
             onPointerCancel={finishDrag}
+            onContextMenu={(event) => { event.preventDefault(); event.stopPropagation() }}
           >
-            <polygon className="simplex-face" points={projected.slice(0, 3).map((item) => `${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(' ')} style={{ opacity: revealStage(p, 0.3, 0.45) }} />
-            {EDGE_PAIRS.map(([first, second], index) => {
+            <ellipse
+              className="simplex-shadow"
+              cx={(projectedBounds.left + projectedBounds.right) / 2}
+              cy={Math.min(plotHeight - 8, projectedBounds.bottom + 12)}
+              rx={Math.max(24, (projectedBounds.right - projectedBounds.left) * 0.32)}
+              ry={7}
+            />
+            {faces.map((face) => {
+              const rise = revealRiseStyle(p, 0.24 + face.index * 0.025, 0.44 + face.index * 0.025, { distance: 10 })
+              return <polygon
+                key={`face-${face.index}`}
+                className={`simplex-face${face.facing > 0 ? ' is-front' : ' is-back'}`}
+                points={face.indices.map((index) => `${projected[index].x.toFixed(1)},${projected[index].y.toFixed(1)}`).join(' ')}
+                style={{ ...rise, opacity: rise.opacity * (face.facing > 0 ? 0.12 : 0.025) }}
+              />
+            })}
+            {edges.map(({ first, second, index, back }) => {
               const t = revealItem(edgesT, index, EDGE_PAIRS.length, 0.8)
               if (t <= 0) return null
               return (
                 <line
                   key={`${first}-${second}`}
-                  className="simplex-edge"
+                  className={`simplex-edge${back ? ' is-back' : ' is-front'}`}
                   x1={projected[first].x}
                   y1={projected[first].y}
                   x2={projected[second].x}
@@ -442,19 +511,19 @@ export default function SimplexView({ object, run }: Props) {
                 />
               )
             })}
-            {lattice.map((latticeWeights, index) => {
+            {projectedLattice.map(({ weights: latticeWeights, index, point: mapped }) => {
               const t = revealItem(latticeT, index, lattice.length, 3)
               if (t <= 0) return null
-              const mapped = rotateAndProject(pointFromSimplexWeights(TETRAHEDRON, latticeWeights), rotation, projection)
               const onPlane = Math.abs(latticeWeights[3] - section) < 1e-9
+              const depth = depthAmount(mapped.z)
               return (
                 <circle
                   key={`lattice-${denominator}-${index}`}
                   className={`simplex-lattice-point${onPlane ? ' is-on-section' : ''}${flash.denominator || flash.showLattice ? ' is-agent-set' : ''}`}
                   cx={mapped.x}
                   cy={mapped.y}
-                  r={onPlane ? 2.8 : 2}
-                  style={t < 1 ? { opacity: 0.65 * t } : { animationDelay: latticeDelay(index) }}
+                  r={(onPlane ? 2.8 : 2) * (0.78 + depth * 0.36)}
+                  style={{ ...revealRiseStyle(t, 0, 1, { distance: 12 }), opacity: (0.28 + depth * 0.5) * t, animationDelay: latticeDelay(index) }}
                 />
               )
             })}
@@ -470,7 +539,7 @@ export default function SimplexView({ object, run }: Props) {
               // of that vertex's own label, so skip it rather than double-draw.
               if (distance(vertex, projected[index]) < 4 || distance(vertex, projected[3]) < 4) return null
               return (
-                <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: sectionT }}>
+                <text key={`section-${index}`} className="simplex-section-vertex" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={revealRiseStyle(p, 0.72 + index * 0.035, 0.94, { distance: 9 })}>
                   {LABELS[index]}ₜ
                 </text>
               )
@@ -481,25 +550,25 @@ export default function SimplexView({ object, run }: Props) {
                 <circle className="simplex-point-hit" cx={projectedPoint.x} cy={projectedPoint.y} r={15} onPointerDown={beginPointDrag} />
               </g>
             )}
-            <text className="simplex-interior-label" x={interiorLabelX} y={interiorLabelY} style={{ opacity: pointT }}>{interiorLabelText}</text>
-            {projected.map((vertex, index) => {
+            <text className="simplex-interior-label" x={interiorLabelX} y={interiorLabelY} style={revealRiseStyle(p, 0.84, 1, { distance: 10 })}>{interiorLabelText}</text>
+            {projected.map((vertex, index) => ({ vertex, index })).sort((a, b) => a.vertex.z - b.vertex.z).map(({ vertex, index }) => {
               const t = revealStage(p, index * 0.08, index * 0.08 + 0.12)
               if (t <= 0) return null
               return (
                 <g key={LABELS[index]}>
-                  <circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r={4.5 * t} />
-                  <text className="simplex-vertex-label" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={{ opacity: t }}>{LABELS[index]}</text>
+                  <circle className="simplex-vertex" cx={vertex.x} cy={vertex.y} r={4.5 * t * (0.82 + depthAmount(vertex.z) * 0.28)} style={{ opacity: 0.55 + depthAmount(vertex.z) * 0.45 }} />
+                  <text className="simplex-vertex-label" x={vertex.x + LABEL_OFFSET} y={vertex.y - LABEL_OFFSET} style={revealRiseStyle(p, index * 0.08, index * 0.08 + 0.12, { distance: 9 })}>{LABELS[index]}</text>
                 </g>
               )
             })}
-            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={sectionLabelX} y={17} textAnchor="end" style={{ opacity: sectionT }}>
+            <text className={`simplex-section-label${flash.section ? ' is-agent-set' : ''}`} x={sectionLabelX} y={17} textAnchor="end" style={revealRiseStyle(p, 0.72, 0.94, { distance: 9 })}>
               {sectionLabelText}
             </text>
           </svg>
-          <span className="simplex-orbit-hint" aria-hidden="true" style={{ opacity: chromeT * 0.7 }}>drag P · drag space to orbit</span>
+          <span className="simplex-orbit-hint" aria-hidden="true" style={{ ...revealRiseStyle(p, 0.1, 0.24, { distance: 8 }), opacity: chromeT * 0.7 }}>drag P · right-drag space to orbit</span>
         </div>
 
-        <aside className="simplex-side reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
+        <aside className="simplex-side" onPointerDown={stop}>
           <div className="sx-weights">
             {weights.map((weight, index) =>
               slider(
@@ -510,10 +579,10 @@ export default function SimplexView({ object, run }: Props) {
                 (value) => `Set ${GREEK[index]} to ${short(value)}; the other weights keep their ratios`,
                 { target: index === 3 ? 'simplex-weight-delta' : undefined, className: index === 3 ? 'is-hero' : undefined, flash: flash.weights },
               ),
-            ).map((node, index) => <div key={LABELS[index]}>{node}</div>)}
-            <div className="sx-weights-sum"><span>Σ λᵢ</span><b>{fmt(sum)}</b></div>
+            ).map((node, index) => <div key={LABELS[index]} style={revealRiseStyle(p, 0.05 + index * 0.04, 0.2 + index * 0.04, { distance: 13 })}>{node}</div>)}
+            <div className="sx-weights-sum" style={revealRiseStyle(p, 0.2, 0.34, { distance: 10 })}><span>Σ λᵢ</span><b>{fmt(sum)}</b></div>
           </div>
-          <div className="sx-section">
+          <div className="sx-section" style={revealRiseStyle(p, 0.24, 0.4)}>
             {slider(
               'section δ = t',
               section,
@@ -528,14 +597,14 @@ export default function SimplexView({ object, run }: Props) {
                 : <>the section at δ = t is a triangle; sweep to t = {weights[3].toFixed(2)} to recall the barycentric triangle holding P</>}
             </p>
           </div>
-          <div className={`sx-orbit${flash.rotationX || flash.rotationY ? ' is-agent-set' : ''}`}>
+          <div className={`sx-orbit${flash.rotationX || flash.rotationY ? ' is-agent-set' : ''}`} style={revealRiseStyle(p, 0.34, 0.49, { distance: 12 })}>
             <span>orbit x <b>{rotationX.toFixed(2)}</b> · y <b>{rotationY.toFixed(2)}</b></span>
             <button type="button" className="lattice-btn" onClick={() => commit('Reset the simplex orbit', { rotationX: -0.32, rotationY: 0.49 })} disabled={Math.abs(object.rotationX + 0.32) < 1e-6 && Math.abs(object.rotationY - 0.49) < 1e-6}>reset</button>
           </div>
         </aside>
       </div>
 
-      <footer className="lattice-foot reveal-fade" onPointerDown={stop} style={{ opacity: sideT }}>
+      <footer className="lattice-foot" onPointerDown={stop} style={revealRiseStyle(p, 0.44, 0.62)}>
         <div className={`lattice-foot-text${flash.denominator ? ' is-agent-set' : ''}`}>
           <b>{recurrence.total}</b>
           <span>lattice points · L₃({denominator}) = C({denominator + 3}, 3)</span>
