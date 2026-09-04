@@ -81,7 +81,10 @@
         },
         {
           "runReplay": true,
-          "timeoutMs": 260000
+          "timeoutMs": 420000
+        },
+        {
+          "wait": 900
         },
         {
           "wait": 700

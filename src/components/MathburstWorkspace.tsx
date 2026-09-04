@@ -1132,12 +1132,15 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
       playbackRef.current?.control(timelineId, timelineAction, options)
       return { ok: true, summary: `${timelineAction === 'play' ? 'Played' : timelineAction === 'pause' ? 'Paused' : timelineAction === 'seek' ? 'Sought' : 'Reset'} timeline`, data: { timelineId, action: timelineAction, ...(options ?? {}) } }
     },
-    focusObjects: (ids, emphasis = 'feature') => {
+    focusObjects: (ids, emphasis = 'feature', anchor = 'center') => {
       const current = worldRef.current
       const bounds = unionBounds(current, expandTargetIds(current, ids))
       if (!bounds) return { ok: false, summary: 'No changes made', error: 'Those objects have no bounds to focus on.' }
       const shot = emphasis === 'detail' ? 'a close shot of' : emphasis === 'establish' ? 'a wide shot of' : 'the camera on'
-      return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Framed ${shot} ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds, emphasis) }] }, ids)
+      // 'cursor' holds the point under the pointer still, so the shot pushes in on what
+      // is being pointed at instead of recentring, which reads as a cut.
+      const anchorWorld = anchor === 'cursor' ? pointerWorldPoint() : null
+      return runAgent({ id: crypto.randomUUID(), source: 'agent', summary: `Framed ${shot} ${ids.length} object${ids.length === 1 ? '' : 's'}`, operations: [{ type: 'viewport', viewport: viewportForBounds(bounds, emphasis, anchorWorld) }] }, ids)
     },
     onTrace: (event) => {
       setToolLog((current) => [...current, { ...event, at: Date.now() }].slice(-2000))
@@ -1151,6 +1154,28 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     },
   }), [createLibraryProject, navigateToScene, openLibraryProject, openProjectGallery, runAgent, runHistoryBridge, trashLibraryProject])
   const webMcpTools = useMemo(() => createWorldTools(bridge), [bridge])
+  /**
+   * Last pointer position in client pixels, for `focus_objects {anchor: 'cursor'}`.
+   * The film's cursor is driven by real CDP mouse events, so this tracks it exactly as
+   * it tracks a person's mouse — the agent gets to push in where the learner is looking
+   * without the page needing to know anything about the capture driver.
+   */
+  const pointerRef = useRef<{ x: number; y: number } | null>(null)
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => { pointerRef.current = { x: event.clientX, y: event.clientY } }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
+  /** The pointer in world coordinates, or null when it has never moved over the canvas. */
+  const pointerWorldPoint = useCallback((): { x: number; y: number } | null => {
+    const pointer = pointerRef.current
+    const canvas = typeof document === 'undefined' ? null : document.querySelector('.world-canvas')?.getBoundingClientRect()
+    if (!pointer || !canvas) return null
+    const { x, y, zoom } = worldRef.current.viewport
+    if (!Number.isFinite(zoom) || zoom <= 0) return null
+    return { x: (pointer.x - canvas.left - x) / zoom, y: (pointer.y - canvas.top - y) / zoom }
+  }, [])
+
   const playback = useTimelinePlayback(world)
   const playbackRef = useRef(playback)
   playbackRef.current = playback
@@ -1820,31 +1845,50 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     establish: { ratio: 2, min: 520, cap: 620 },
   } as const
 
+  /**
+   * How much of the usable picture the subject should fill — the standard zoom.
+   *
+   * The additive margins above were the reason every scene read as small: an 800x560
+   * card at `feature` grew to 1440x1200 before fitting, and against a usable rect
+   * narrowed by the rail, the timelines panel and the docked console that solved to
+   * zoom 0.71, putting the card at about a fifth of the frame. Coverage states the
+   * intent directly instead: fit the subject, then keep this fraction of the space.
+   */
+  const SHOT_COVERAGE = { detail: 0.94, feature: 0.78, establish: 0.44 } as const
+
   const viewportForBounds = (
     bounds: { x: number; y: number; width: number; height: number },
     emphasis: keyof typeof SHOT_CONTEXT = 'feature',
+    /**
+     * World point to hold still while the zoom changes — a push-in "at the cursor".
+     * Without it the camera always recentres, so a zoom reads as a cut to somewhere
+     * else rather than as moving closer to the thing being pointed at.
+     */
+    anchor?: { x: number; y: number } | null,
   ): Viewport => {
     const { width, height } = canvasSize()
-    const shot = SHOT_CONTEXT[emphasis] ?? SHOT_CONTEXT.feature
-    // The floor is what separates the shots on a small target: proportional margin
-    // alone leaves a matrix cell framed identically at every level. Note the zoom
-    // ceiling of 2.5 still flattens detail and feature for anything under roughly
-    // 1000 world px -- both simply reach maximum zoom.
-    const margin = Math.max(shot.min, Math.min(shot.cap, Math.max(bounds.width, bounds.height) * shot.ratio))
-    bounds = {
-      x: bounds.x - margin,
-      y: bounds.y - margin,
-      width: bounds.width + margin * 2,
-      height: bounds.height + margin * 2,
-    }
+    const coverage = SHOT_COVERAGE[emphasis] ?? SHOT_COVERAGE.feature
     const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.04))
     const inset = chromeInsets()
     const availableWidth = Math.max(1, width - inset.left - inset.right - padding * 2)
     const availableHeight = Math.max(1, height - inset.top - inset.bottom - padding * 2)
-    const rawZoom = bounds.width > 0 && bounds.height > 0
+    const fit = bounds.width > 0 && bounds.height > 0
       ? Math.min(availableWidth / bounds.width, availableHeight / bounds.height)
       : 1
-    const zoom = clampZoom(rawZoom)
+    const zoom = clampZoom(fit * coverage)
+
+    if (anchor) {
+      // Keep the anchor exactly where it already sits on screen, then only the scale
+      // changes. Fall back to centring if the anchor is currently off-picture, since
+      // holding an off-screen point would push the subject out of frame.
+      const current = worldRef.current.viewport
+      const screenX = current.x + anchor.x * current.zoom
+      const screenY = current.y + anchor.y * current.zoom
+      const onPicture = screenX > inset.left && screenX < width - inset.right
+        && screenY > inset.top && screenY < height - inset.bottom
+      if (onPicture) return { x: screenX - anchor.x * zoom, y: screenY - anchor.y * zoom, zoom }
+    }
+
     return {
       x: inset.left + (width - inset.left - inset.right) / 2 - (bounds.x + bounds.width / 2) * zoom,
       y: inset.top + (height - inset.top - inset.bottom) / 2 - (bounds.y + bounds.height / 2) * zoom,

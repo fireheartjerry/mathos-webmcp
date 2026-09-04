@@ -54,7 +54,7 @@ export type WorldBridge = {
   openScene?: (scene: SceneId) => Promise<ToolResult> | ToolResult
   createProject?: (title: string, templateId: ProjectId | null) => Promise<ToolResult> | ToolResult
   deleteProject?: (projectId: string) => Promise<ToolResult> | ToolResult
-  focusObjects?: (ids: string[], emphasis?: 'detail' | 'feature' | 'establish') => Promise<ToolResult> | ToolResult
+  focusObjects?: (ids: string[], emphasis?: 'detail' | 'feature' | 'establish', anchor?: 'cursor' | 'center') => Promise<ToolResult> | ToolResult
   /** Draw a purple aura around objects for `seconds` before touching them; read-only, never a history commit. */
   spotlight?: (ids: string[], seconds: number, label?: string) => Promise<ToolResult> | ToolResult
   /**

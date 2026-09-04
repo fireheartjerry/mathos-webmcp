@@ -84,7 +84,7 @@ const plan = [
   // sidebar the viewer has never had explained. ABSOLUTE: the manifest appends this
   // beat after the replay, so it sits a fixed distance from the end of the take and
   // must not be stretched with the rest.
-  ['18-ledger', 164.0, { absolute: true }],
+  ['18-ledger', 165.0, { absolute: true }],
 ]
 
 /**

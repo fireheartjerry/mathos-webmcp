@@ -13,13 +13,16 @@ import type { ReplayScript, ReplayStep } from './types'
  *   so a dry run on an empty canvas still reaches the end.
  * - object ids created by earlier steps are threaded through `$ref`, never guessed.
  *
- * World layout (ivory canvas, world units):
- *   Act 1  ink + live equation      x 300..900,   y 150..560
- *   Act 2  density + note           x 300..770,   y 640..1050
- *   Act 3  attention + training     x 900..1870,  y 640..970
- *   Act 4  geometry + barycentric   x 300..1190,  y 1100..1430
- *   Act 6  simplex + partitions     x 300..1270,  y 1500..1830
- *   Act 7  matrix                   x 1300..1770, y 1500..1830
+ * World layout: ONE HORIZONTAL STRIP, so every act exits stage-left and the camera
+ * only ever pans right. Panning diagonally left the previous act hanging in frame,
+ * and a strip also makes the closing pull-back read as a chain of related ideas.
+ * Cards are 800 wide on a 1000 pitch, so 200px of clear canvas separates neighbours.
+ *   Act 1  ink + live equation      x  120..1020, y 210..500
+ *   Act 2  density + caption        x 1200..2000, y 640..1320
+ *   Act 3  attention, training      x 2200..3000, 3200..4000
+ *   Act 4  geometry, barycentric    x 4200..4930, 5130..5860
+ *   Act 6  simplex, partitions      x 6060..6860, 7060..7860
+ *   Act 7  matrix                   x 8060..8860
  */
 
 const PURPLE = '#7c5cff'
@@ -31,11 +34,72 @@ const BRIDGE_MASS_LATEX = 'w_j=\\int_{b_{j-1}}^{b_j} g_a(x)\\,dx'
 const BRIDGE_LOG_LATEX = '\\ell_j=\\log w_j'
 const BRIDGE_SOFTMAX_LATEX = '\\operatorname{softmax}(\\ell)_j=\\frac{e^{\\ell_j}}{\\sum_k e^{\\ell_k}}=w_j'
 
-/** Camera that shows the world region whose top-left corner is (x, y) at ZOOM with a 40px margin. */
+/**
+ * Camera that shows the world region whose top-left corner is (x, y).
+ *
+ * The old 40px margin put that corner underneath the film's left column — the rail is
+ * rendered expanded at 188px and the ledger, timelines and activity panels stack
+ * beside it — so a pan parked the new act behind the chrome. Clear the column and the
+ * header instead; focus_objects still does the precise framing afterwards.
+ */
 const ZOOM = 1.25
-const camera = (x: number, y: number) => ({ viewport: { x: 40 - x * ZOOM, y: 40 - y * ZOOM, zoom: ZOOM } })
+const LEFT_CHROME = 300
+const TOP_CHROME = 120
+const camera = (x: number, y: number) => ({ viewport: { x: LEFT_CHROME - x * ZOOM, y: TOP_CHROME - y * ZOOM, zoom: ZOOM } })
 
 const step = (entry: ReplayStep): ReplayStep => entry
+
+/**
+ * Educational sub-frames: when the agent changes something meaningful, it grows a small
+ * flow chart of explainers off the widget rather than just narrating.
+ *
+ * They sit BELOW the strip (the strip is y 640..1320, these start at y 1460), so they
+ * never compete with the row for space, and each is joined to its parent by a real
+ * arrow — the zoom-out then reads as a graph of related ideas instead of scattered
+ * cards. Composed from create_objects and set_arrow on purpose: no new tool, so the
+ * page still registers exactly 48.
+ */
+const EXPLAINER_W = 280
+const EXPLAINER_H = 300
+const EXPLAINER_Y = 1460
+const EXPLAINER_GAP = 40
+const explainers = (
+  id: string,
+  parent: { x: number; y: number; width: number; height: number },
+  cards: { title: string; latex: string; note: string }[],
+): ReplayStep[] => {
+  const span = cards.length * EXPLAINER_W + (cards.length - 1) * EXPLAINER_GAP
+  const startX = parent.x + parent.width / 2 - span / 2
+  const objects = cards.flatMap((card, index) => {
+    const x = startX + index * (EXPLAINER_W + EXPLAINER_GAP)
+    return [
+      // The frame owns its equation and note, so it reports "2 objects" rather than
+      // "0 objects" and the group moves as one when anything drags it.
+      { id: `${id}_frame_${index}`, kind: 'frame', title: card.title, childIds: [`${id}_eq_${index}`, `${id}_note_${index}`],
+        bounds: { x, y: EXPLAINER_Y, width: EXPLAINER_W, height: EXPLAINER_H }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: `${id}_eq_${index}`, kind: 'equation', latex: card.latex, color: GRAPHITE,
+        bounds: { x: x + 18, y: EXPLAINER_Y + 66, width: EXPLAINER_W - 36, height: 74 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: `${id}_note_${index}`, kind: 'text', text: card.note, color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: x + 18, y: EXPLAINER_Y + 158, width: EXPLAINER_W - 36, height: 112 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: `${id}_link_${index}`, kind: 'arrow', color: PURPLE,
+        from: { x: parent.x + parent.width / 2 - x, y: parent.y + parent.height - EXPLAINER_Y },
+        to: { x: EXPLAINER_W / 2, y: 0 },
+        bounds: { x, y: parent.y + parent.height, width: EXPLAINER_W, height: EXPLAINER_Y - (parent.y + parent.height) },
+        rotation: 0, author: 'agent', opacity: 1 },
+    ]
+  })
+  return [
+    step({
+      id,
+      say: 'That change has consequences worth their own cards. Let me put them underneath.',
+      tool: 'create_objects',
+      input: { summary: `Tutor spawned ${cards.length} explainers off the ${id.replace(/[0-9]/g, '')}`, objects },
+      waitMs: 540,
+    }),
+    step({ tool: 'focus_objects', input: { ids: [`${id}_frame_0`, `${id}_frame_${cards.length - 1}`], emphasis: 'feature' }, optional: true, waitMs: 660 }),
+    step({ tool: 'focus_objects', input: { ids: [`${id}_frame_1`], emphasis: 'detail', anchor: 'cursor' }, optional: true, waitMs: 720 }),
+  ]
+}
 const object = (target: { objectId: unknown }, path: string) => ({ kind: 'object', objectId: target.objectId, path })
 
 // ---------------------------------------------------------------------------
@@ -52,7 +116,7 @@ const ACT_0: ReplayStep[] = [
       { tool: 'get_scene_catalog', input: {} },
       { tool: 'get_session_context', input: {} },
     ],
-    waitMs: 652,
+    waitMs: 391,
   }),
 ]
 
@@ -62,7 +126,7 @@ const ACT_0: ReplayStep[] = [
 
 const ACT_1: ReplayStep[] = [
   step({ humanNote: 'The learner writes Γ(9/2) = ∫x^{7/2}e^{−x}dx = [−x^{7/2}e^{−x}]₀^∞ − (7/2)Γ(7/2) by hand, sign error included.' }),
-  step({ tool: 'focus_objects', input: { ids: ['replay_opening_attempt'], emphasis: 'feature' }, optional: true, waitMs: 761 }),
+  step({ tool: 'focus_objects', input: { ids: ['replay_opening_attempt'], emphasis: 'feature' }, optional: true, waitMs: 457 }),
   step({
     id: 'ink1',
     say: 'Let me read that.',
@@ -73,18 +137,32 @@ const ACT_1: ReplayStep[] = [
   // rejects it by design and printed a red failed call in the console on camera.
   // explain_object is the tool that reads any kind, and is what that error names.
   // inspect_math still runs this act, against the live equation the agent types below.
-  step({ tool: 'explain_object', input: { objectId: { $ref: 'ink1.data.objects.0.id' } }, optional: true, waitMs: 435 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'ink1.data.objects.0.id' }], label: 'the sign', seconds: 2.9 }, optional: true, waitMs: 979 }),
+  step({ tool: 'explain_object', input: { objectId: { $ref: 'ink1.data.objects.0.id' } }, optional: true, waitMs: 261 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'ink1.data.objects.0.id' }], label: 'the sign', seconds: 2.9 }, optional: true, waitMs: 587 }),
   step({
     id: 'mark1',
     say: "Integration by parts flips a sign here. I'll mark it, you fix it.",
     tool: 'draw_ink',
     input: {
       mode: 'pen', color: PURPLE, width: 4, construct: true,
+      // Ringed on the lost sign itself, not near it. The minus before (7/2)Gamma(7/2)
+      // is stroke 42 of the captured sample; mapped through cropAndFit's fit into the
+      // ink's bounds it lands at world (849, 330). The old circle sat at (604, 227),
+      // which is empty canvas between terms.
       strokes: [[
-        { x: 604, y: 227 }, { x: 610, y: 210 }, { x: 628, y: 203 }, { x: 648, y: 207 },
-        { x: 658, y: 221 }, { x: 657, y: 238 }, { x: 644, y: 250 }, { x: 624, y: 252 },
-        { x: 608, y: 243 }, { x: 604, y: 227 },
+        { x: 849, y: 296 },
+        { x: 870, y: 301 },
+        { x: 885, y: 313 },
+        { x: 891, y: 330 },
+        { x: 885, y: 347 },
+        { x: 870, y: 359 },
+        { x: 849, y: 364 },
+        { x: 828, y: 359 },
+        { x: 813, y: 347 },
+        { x: 807, y: 330 },
+        { x: 813, y: 313 },
+        { x: 828, y: 301 },
+        { x: 849, y: 296 },
       ]],
     },
     calls: [{
@@ -92,7 +170,7 @@ const ACT_1: ReplayStep[] = [
       input: { objectId: { $ref: 'ink1.data.objects.0.id' }, text: 'v = −e⁻ˣ. Two negatives.', presentation: 'handwritten', placement: 'below' },
       optional: true,
     }],
-    waitMs: 250,
+    waitMs: 220,
   }),
   // The circle is created unbuilt, so a timeline draws it the way a hand would.
   step({
@@ -118,13 +196,13 @@ const ACT_1: ReplayStep[] = [
         bounds: { x: 300, y: 420, width: 800, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
       }],
     },
-    waitMs: 326,
+    waitMs: 220,
   }),
   step({
     say: "I'll type it in. Watch the caret.",
     tool: 'edit_equation',
     input: { objectId: 'replay_live_recurrence', latex: RECURRENCE_LATEX, typewriter: true, typewriterMs: 3770 },
-    waitMs: 435,
+    waitMs: 261,
   }),
   // The equation is live now, so inspect_math has something it accepts. The ledger
   // counts a tool as used only on a SUCCESSFUL completion, so this call is what
@@ -133,16 +211,16 @@ const ACT_1: ReplayStep[] = [
     say: 'Now there is live math to read.',
     tool: 'inspect_math',
     input: { objectId: 'replay_live_recurrence' },
-    waitMs: 544,
+    waitMs: 326,
   }),
-  step({ tool: 'spotlight_objects', input: { ids: ['replay_live_recurrence'], label: 'scale ×1.6', seconds: 2.17 }, optional: true, waitMs: 544 }),
+  step({ tool: 'spotlight_objects', input: { ids: ['replay_live_recurrence'], label: 'scale ×1.6', seconds: 2.17 }, optional: true, waitMs: 326 }),
   step({
     tool: 'transform_objects',
     input: { summary: 'Tutor scaled the live equation up', ids: ['replay_live_recurrence'], scale: 1.6 },
-    waitMs: 652,
+    waitMs: 391,
   }),
   step({ humanNote: 'The learner grabs the same corner handle, shrinks the equation back a little, rotates it a few degrees and back.' }),
-  step({ say: 'Same handles I just used.', waitMs: 761 }),
+  step({ say: 'Same handles I just used.', waitMs: 457 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -150,13 +228,13 @@ const ACT_1: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_2: ReplayStep[] = [
-  step({ id: 'act2', say: 'I need space below.', tool: 'set_viewport', input: camera(240, 400), waitMs: 544 }),
+  step({ id: 'act2', say: 'I need space below.', tool: 'set_viewport', input: camera(1140, 580), waitMs: 326 }),
   step({
     id: 'graph2',
     say: "Your corrected recurrence normalises into a density. I'll build it from nothing.",
     tool: 'graph_expression',
-    input: { latex: '0', bounds: { x: 300, y: 640, width: 800, height: 560 }, construct: true },
-    waitMs: 544,
+    input: { latex: '0', bounds: { x: 1200, y: 640, width: 800, height: 560 }, construct: true },
+    waitMs: 326,
   }),
   step({
     tool: 'set_graph',
@@ -166,7 +244,7 @@ const ACT_2: ReplayStep[] = [
       parameters: { a: 4.5 }, xDomain: [0, 12], yDomain: [0, 0.25],
       visualization: 'gamma-density', binEdges: [0, 2.5, 5, 12], shadeIntegral: [0, 0.01],
     },
-    waitMs: 326,
+    waitMs: 220,
   }),
   step({
     id: 'draw2',
@@ -195,12 +273,12 @@ const ACT_2: ReplayStep[] = [
       objects: [{
         id: 'replay_bins_note', kind: 'text',
         text: 'Total area is 1. The three bins hold w₁, w₂, w₃; their logs are the scores softmax will see.',
-        color: PURPLE, fontSize: 16, presentation: 'typed', bounds: { x: 300, y: 1240, width: 800, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
+        color: PURPLE, fontSize: 16, presentation: 'typed', bounds: { x: 1200, y: 1240, width: 800, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
       }],
     },
-    waitMs: 544,
+    waitMs: 326,
   }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }, { $ref: 'graph2.changedIds.1' }], label: 'masses → logs → softmax', seconds: 2.17 }, optional: true, waitMs: 435 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }, { $ref: 'graph2.changedIds.1' }], label: 'masses → logs → softmax', seconds: 2.17 }, optional: true, waitMs: 261 }),
   step({
     id: 'bridge2',
     say: 'Here is the bridge.',
@@ -230,6 +308,18 @@ const ACT_2: ReplayStep[] = [
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'bridge2.data.timelineId' }, action: 'play' }, waitMs: 8990 }),
   step({ humanNote: 'When the timeline ends the widget is editable again; the learner nudges the slider to prove it.' }),
+  ...explainers('density2', { x: 1200, y: 640, width: 800, height: 560 }, [
+    { title: 'Why the area is one',
+      latex: '\\int_0^{\\infty} g_a(x)\\,dx = 1',
+      note: 'Dividing by Gamma(a) is exactly what normalises it, so the three bins are probabilities and not just areas.' },
+    { title: 'Masses become scores',
+      latex: '\\ell_j = \\log w_j',
+      note: 'Logs turn multiplying masses into adding scores. That is the space an attention head actually works in.' },
+    { title: 'And back again',
+      latex: '\\operatorname{softmax}(\\ell)_j = \\frac{e^{\\ell_j}}{\\sum_k e^{\\ell_k}} = w_j',
+      note: 'Exponentiate and renormalise and you land on the same three numbers. The bridge is a round trip.' },
+  ]),
+  step({ say: 'Three cards, one idea each, all hanging off the thing that produced them.', waitMs: 420 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -237,10 +327,10 @@ const ACT_2: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_3: ReplayStep[] = [
-  step({ say: 'Over to attention. Panning right.', tool: 'set_viewport', input: camera(1180, 560), waitMs: 544 }),
-  step({ id: 'att3', tool: 'visualize_concept', input: { concept: 'attention', bounds: { x: 1240, y: 640, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 706 }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }] }, waitMs: 435 }),
+  step({ say: 'Over to attention. Panning right.', tool: 'set_viewport', input: camera(2140, 580), waitMs: 326 }),
+  step({ id: 'att3', tool: 'visualize_concept', input: { concept: 'attention', bounds: { x: 2200, y: 640, width: 800, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 424 }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }] }, waitMs: 261 }),
   step({
     id: 'draw3',
     tool: 'create_timeline',
@@ -253,16 +343,27 @@ const ACT_3: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw3.data.timelineId' }, action: 'play' }, waitMs: 6000 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], label: 'W_Q[0][0]', seconds: 3.62 }, optional: true, waitMs: 761 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'att3.changedIds.0' }], label: 'W_Q[0][0]', seconds: 3.62 }, optional: true, waitMs: 457 }),
   step({
     say: 'W_Q turns each token into a query. Raising this entry leans the query toward the first embedding dimension, so the dot products with the keys change, and so do the weights.',
     tool: 'set_attention_weight',
     input: { objectId: { $ref: 'att3.changedIds.0' }, matrix: 'wq', row: 0, column: 0, value: 1.4 },
-    waitMs: 979,
+    waitMs: 587,
   }),
-  step({ say: "Weights still sum to one. That's the softmax doing its job.", waitMs: 979 }),
-  step({ id: 'train3', tool: 'visualize_concept', input: { concept: 'training', bounds: { x: 2180, y: 640, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 375 }),
+  step({ say: "Weights still sum to one. That's the softmax doing its job.", waitMs: 587 }),
+  ...explainers('attention3', { x: 2200, y: 640, width: 800, height: 560 }, [
+    { title: 'What W_Q does',
+      latex: 'q = W_Q e,\\quad k = W_K e',
+      note: 'Every token is projected twice: once as a question, once as an answer key.' },
+    { title: 'Why divide by root d',
+      latex: '\\frac{q\\cdot k}{\\sqrt{d}}',
+      note: 'Without the scale the dot products grow with dimension and softmax saturates.' },
+    { title: 'Still a distribution',
+      latex: '\\sum_j \\alpha_j = 1,\\; \\alpha_j > 0',
+      note: 'Raising one entry has to take weight from the others. That is the whole constraint.' },
+  ]),
+  step({ id: 'train3', tool: 'visualize_concept', input: { concept: 'training', bounds: { x: 3200, y: 640, width: 800, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 225 }),
   step({
     id: 'traindraw3',
     tool: 'create_timeline',
@@ -273,12 +374,35 @@ const ACT_3: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'traindraw3.data.timelineId' }, action: 'play' }, waitMs: 4600 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], label: 'one step', seconds: 2.17 }, optional: true, waitMs: 435 }),
-  step({ say: 'One step from me, then I take it back.', tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true, waitMs: 761 }),
-  step({ tool: 'step_history', input: { direction: 'undo' }, optional: true, waitMs: 544 }),
-  step({ say: "My step is undone. Your turn: it's a real widget, so train it yourself.", waitMs: 652 }),
-  step({ humanNote: 'The learner clicks train 1 step eight times; loss and target probability grow point by point.' }),
-  step({ say: 'Every click is one honest numerical gradient on the visible parameters. I spawned this widget with a tool; it runs on pure math from here.', waitMs: 1305 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'train3.changedIds.0' }], label: 'one step', seconds: 2.17 }, optional: true, waitMs: 261 }),
+  // One step, undone, then a real training run. A single step read as an animation;
+  // watching loss fall across thirteen of them is what makes it obviously arithmetic.
+  step({ say: 'One step from me, then I take it back.', tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true, waitMs: 457 }),
+  step({ tool: 'step_history', input: { direction: 'undo' }, optional: true, waitMs: 326 }),
+  step({ say: 'Undone. Now let us actually train it. One step at a time first.', waitMs: 300 }),
+  step({
+    tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } },
+    calls: [
+      { tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true },
+      { tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true },
+    ],
+    optional: true, waitMs: 660,
+  }),
+  step({
+    say: 'Loss falls and the target probability rises, every time. A step only commits when both hold.',
+    tool: 'explain_object', input: { objectId: { $ref: 'train3.changedIds.0' } },
+    optional: true, waitMs: 540,
+  }),
+  step({ say: 'Now five at once.', tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } },
+    calls: Array.from({ length: 4 }, () => ({ tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true })),
+    optional: true, waitMs: 720,
+  }),
+  step({ say: 'And five more. The curve is flattening, which is what convergence looks like.',
+    tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } },
+    calls: Array.from({ length: 4 }, () => ({ tool: 'train_model_step', input: { objectId: { $ref: 'train3.changedIds.0' } }, optional: true })),
+    optional: true, waitMs: 780,
+  }),
+  step({ say: 'Thirteen honest gradient steps on the parameters you can see. Nothing here is a canned animation.', waitMs: 600 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -286,7 +410,7 @@ const ACT_3: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_4: ReplayStep[] = [
-  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", tool: 'set_viewport', input: camera(240, 1340), waitMs: 544 }),
+  step({ say: "Let's move to geometry. Pick the Geometry tool and click three points for a triangle.", tool: 'set_viewport', input: camera(4140, 580), waitMs: 326 }),
   step({ humanNote: 'The learner picks Geometry; the GeoGebra-style toolbar appears; the cursor places A, B, C and closes the triangle.' }),
   step({ id: 'geoHuman4', tool: 'get_objects', input: { kinds: ['geometry'], limit: 1 }, optional: true }),
   step({
@@ -295,7 +419,8 @@ const ACT_4: ReplayStep[] = [
     tool: 'construct_geometry',
     input: {
       summary: 'Tutor completed the construction from the three points',
-      bounds: { x: 300, y: 1400, width: 730, height: 560 },
+      bounds: { x: 4200, y: 640, width: 730, height: 560 },
+      construct: true,
       primitives: [
         { kind: 'point', id: 'A', at: { x: 119, y: 442 }, label: 'A', draggable: true },
         { kind: 'point', id: 'B', at: { x: 595, y: 442 }, label: 'B', draggable: true },
@@ -327,10 +452,10 @@ const ACT_4: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw4.data.timelineId' }, action: 'play' }, waitMs: 4930 }),
-  step({ say: 'Drag one point and everything follows. Let me show you with A.', tool: 'spotlight_objects', input: { ids: [{ $ref: 'geo4.changedIds.0' }], label: 'moving A', seconds: 2.17 }, optional: true, waitMs: 435 }),
-  step({ tool: 'move_geometry_point', input: { objectId: { $ref: 'geo4.changedIds.0' }, pointId: 'A', by: { x: 41, y: -31 } }, waitMs: 652 }),
-  step({ id: 'bary4', tool: 'visualize_concept', input: { concept: 'barycentric', bounds: { x: 1180, y: 1400, width: 730, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 706 }),
+  step({ say: 'Drag one point and everything follows. Let me show you with A.', tool: 'spotlight_objects', input: { ids: [{ $ref: 'geo4.changedIds.0' }], label: 'moving A', seconds: 2.17 }, optional: true, waitMs: 261 }),
+  step({ tool: 'move_geometry_point', input: { objectId: { $ref: 'geo4.changedIds.0' }, pointId: 'A', by: { x: 41, y: -31 } }, waitMs: 391 }),
+  step({ id: 'bary4', tool: 'visualize_concept', input: { concept: 'barycentric', bounds: { x: 5130, y: 640, width: 730, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 424 }),
   step({
     id: 'drawBary4',
     tool: 'create_timeline',
@@ -341,15 +466,15 @@ const ACT_4: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'drawBary4.data.timelineId' }, action: 'play' }, waitMs: 4200 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], label: 'P', seconds: 2.9 }, optional: true, waitMs: 544 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'bary4.changedIds.0' }], label: 'P', seconds: 2.9 }, optional: true, waitMs: 326 }),
   step({
     say: 'P is a weighted average of A, B and C. Those weights can be anything that sums to one. Like attention weights.',
     tool: 'set_barycentric_weights',
     input: { objectId: { $ref: 'bary4.changedIds.0' }, preset: 'attention' },
     optional: true,
-    waitMs: 761,
+    waitMs: 457,
   }),
-  step({ say: 'Same decimals as the attention card. Now I move A by tool and P follows the same rule.', tool: 'move_geometry_point', input: { objectId: { $ref: 'geo4.changedIds.0' }, pointId: 'A', by: { x: -12, y: 10 } }, waitMs: 652 }),
+  step({ say: 'Same decimals as the attention card. Now I move A by tool and P follows the same rule.', tool: 'move_geometry_point', input: { objectId: { $ref: 'geo4.changedIds.0' }, pointId: 'A', by: { x: -12, y: 10 } }, waitMs: 391 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -357,7 +482,7 @@ const ACT_4: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_5: ReplayStep[] = [
-  step({ tool: 'set_viewport', input: camera(240, 380), waitMs: 544 }),
+  step({ say: 'Let me take a clean piece of canvas for this.', tool: 'set_viewport', input: camera(6000, 560), waitMs: 420 }),
   step({
     id: 'box5',
     say: 'Let me box the three acts.',
@@ -365,28 +490,28 @@ const ACT_5: ReplayStep[] = [
     input: {
       summary: 'Tutor boxed Acts 1 and 2',
       shape: 'polygon', fill: 'rgba(124, 92, 255, 0.06)', stroke: PURPLE, strokeWidth: 2,
-      points: [{ x: 250, y: 370 }, { x: 2090, y: 370 }, { x: 2090, y: 1250 }, { x: 250, y: 1250 }],
+      points: [{ x: 100, y: 180 }, { x: 2060, y: 180 }, { x: 2060, y: 1340 }, { x: 100, y: 1340 }],
     },
     calls: [{
       id: 'ellipse5',
       tool: 'create_shape',
-      input: { summary: 'Tutor ringed Act 3', shape: 'ellipse', fill: 'none', stroke: PURPLE, strokeWidth: 2, bounds: { x: 2130, y: 590, width: 900, height: 660 } },
+      input: { summary: 'Tutor ringed Act 3', shape: 'ellipse', fill: 'none', stroke: PURPLE, strokeWidth: 2, bounds: { x: 3150, y: 590, width: 900, height: 660 } },
     }],
-    waitMs: 652,
+    waitMs: 391,
   }),
   step({ humanNote: 'The learner resizes the ellipse with its handles and rotates it slightly.' }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'ellipse5.data.objectId' }], label: 'match your stroke', seconds: 1.74 }, optional: true, waitMs: 326 }),
-  step({ tool: 'edit_shape', input: { objectId: { $ref: 'ellipse5.data.objectId' }, stroke: GRAPHITE, strokeWidth: 3 }, waitMs: 544 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'ellipse5.data.objectId' }], label: 'match your stroke', seconds: 1.74 }, optional: true, waitMs: 220 }),
+  step({ tool: 'edit_shape', input: { objectId: { $ref: 'ellipse5.data.objectId' }, stroke: GRAPHITE, strokeWidth: 3 }, waitMs: 326 }),
   step({
     tool: 'update_objects',
     input: { summary: 'Tutor matched the box to your stroke', updates: [{ id: { $ref: 'box5.data.objectId' }, patch: { stroke: GRAPHITE, strokeWidth: 3 } }] },
-    waitMs: 435,
+    waitMs: 261,
   }),
   step({
     say: 'Both boxes selected in one atomic batch, same reducer you use.',
     tool: 'apply_actions',
     input: { summary: 'Tutor selected the lesson sheet', operations: [{ type: 'select', ids: [{ $ref: 'box5.data.objectId' }, { $ref: 'ellipse5.data.objectId' }] }] },
-    waitMs: 652,
+    waitMs: 391,
   }),
   step({ humanNote: 'The learner drags an arrow from the density widget to the attention card, then drags its head.' }),
   // The learner's arrow has to exist before the agent can re-aim it. This used to
@@ -400,21 +525,21 @@ const ACT_5: ReplayStep[] = [
       objects: [{
         id: 'replay_arrow', kind: 'arrow',
         from: { x: 24, y: 150 }, to: { x: 300, y: 20 },
-        bounds: { x: 1120, y: 1250, width: 300, height: 160 },
+        bounds: { x: 2000, y: 820, width: 200, height: 200 },
         rotation: 0, opacity: 1, color: GRAPHITE,
       }],
     },
-    waitMs: 544,
+    waitMs: 326,
   }),
-  step({ tool: 'spotlight_objects', input: { ids: ['replay_arrow'], label: 'tail → bin 2', seconds: 1.74 }, optional: true, waitMs: 326 }),
-  step({ say: "I'll point the tail at the exact bin.", tool: 'set_arrow', input: { objectId: 'replay_arrow', from: { x: 18, y: 168 }, color: PURPLE }, optional: true, waitMs: 544 }),
+  step({ tool: 'spotlight_objects', input: { ids: ['replay_arrow'], label: 'tail → bin 2', seconds: 1.74 }, optional: true, waitMs: 220 }),
+  step({ say: "I'll point the tail at the exact bin.", tool: 'set_arrow', input: { objectId: 'replay_arrow', from: { x: 18, y: 168 }, color: PURPLE }, optional: true, waitMs: 326 }),
   step({ humanNote: 'The learner highlights the softmax row.' }),
   step({
     id: 'glow5',
     say: 'Same colour on the matching barycentric weights.',
     tool: 'draw_ink',
-    input: { mode: 'highlighter', color: HIGHLIGHT, width: 18, construct: true, strokes: [[{ x: 1220, y: 1660 }, { x: 1620, y: 1660 }]] },
-    waitMs: 250,
+    input: { mode: 'highlighter', color: HIGHLIGHT, width: 18, construct: true, strokes: [[{ x: 5200, y: 1080 }, { x: 5600, y: 1080 }]] },
+    waitMs: 220,
   }),
   step({
     id: 'glowdraw5',
@@ -426,12 +551,16 @@ const ACT_5: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'glowdraw5.data.timelineId' }, action: 'play' }, waitMs: 1500 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'glow5.data.objectId' }], label: 'too wide, deleting', seconds: 1.74 }, optional: true, waitMs: 326 }),
-  step({ say: 'Too wide. Deleting it, like you would.', tool: 'delete_objects', input: { summary: 'Tutor deleted its highlight', ids: [{ $ref: 'glow5.data.objectId' }] }, waitMs: 544 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'glow5.data.objectId' }], label: 'too wide, deleting', seconds: 1.74 }, optional: true, waitMs: 220 }),
+  step({ say: 'Too wide. Deleting it, like you would.', tool: 'delete_objects', input: { summary: 'Tutor deleted its highlight', ids: [{ $ref: 'glow5.data.objectId' }] }, waitMs: 326 }),
   step({ humanNote: 'The learner erases a stray stroke.' }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'mark1.data.objectId' }], label: 'my circle', seconds: 1.74 }, optional: true, waitMs: 326 }),
-  step({ tool: 'erase_ink', input: { ids: [{ $ref: 'mark1.data.objectId' }] }, optional: true, waitMs: 652 }),
-  step({ say: 'Everything I do is in your history. Undo works on me too.', tool: 'step_history', input: { direction: 'undo' }, optional: true, waitMs: 870 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'mark1.data.objectId' }], label: 'my circle', seconds: 1.74 }, optional: true, waitMs: 220 }),
+  step({ tool: 'erase_ink', input: { ids: [{ $ref: 'mark1.data.objectId' }] }, optional: true, waitMs: 391 }),
+  // No tool undo here on purpose: the capture pauses the replay on this line and the
+  // LEARNER undoes it, cursor travelling to the rail's Undo button. The film claimed
+  // "one undo brings it back" while nothing was ever seen to be clicked.
+  step({ say: 'Everything I do is in your history. Undo works on me too.', waitMs: 300 }),
+  step({ humanNote: 'The learner clicks Undo in the rail; the circle the tutor erased comes straight back.' }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -439,9 +568,9 @@ const ACT_5: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_6: ReplayStep[] = [
-  step({ say: 'More space. Panning to the empty strip below.', tool: 'set_viewport', input: camera(240, 2100), waitMs: 544 }),
-  step({ id: 'simplex6', tool: 'visualize_concept', input: { concept: 'simplex', bounds: { x: 300, y: 2160, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'simplex6.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 706 }),
+  step({ say: 'More space. Panning to the empty strip below.', tool: 'set_viewport', input: camera(7000, 580), waitMs: 326 }),
+  step({ id: 'simplex6', tool: 'visualize_concept', input: { concept: 'simplex', bounds: { x: 7060, y: 640, width: 800, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'simplex6.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 424 }),
   step({
     id: 'draw6',
     tool: 'create_timeline',
@@ -455,10 +584,10 @@ const ACT_6: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw6.data.timelineId' }, action: 'play' }, waitMs: 6815 }),
-  step({ say: 'Four weights instead of three: same simplex idea, one dimension up. The section plane at δ = 0.18 holds your triangle.', tool: 'spotlight_objects', input: { ids: [{ $ref: 'simplex6.changedIds.0' }], label: 'δ = 0.18', seconds: 2.17 }, optional: true, waitMs: 326 }),
-  step({ tool: 'set_simplex_view', input: { objectId: { $ref: 'simplex6.changedIds.0' }, section: 0.18, denominator: 5 }, waitMs: 761 }),
-  step({ id: 'parts6', say: 'Count the lattice tuples and you are counting partitions.', tool: 'visualize_concept', input: { concept: 'partitions', bounds: { x: 1240, y: 2160, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'parts6.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 706 }),
+  step({ say: 'Four weights instead of three: same simplex idea, one dimension up. The section plane at δ = 0.18 holds your triangle.', tool: 'spotlight_objects', input: { ids: [{ $ref: 'simplex6.changedIds.0' }], label: 'δ = 0.18', seconds: 2.17 }, optional: true, waitMs: 220 }),
+  step({ tool: 'set_simplex_view', input: { objectId: { $ref: 'simplex6.changedIds.0' }, section: 0.18, denominator: 5 }, waitMs: 457 }),
+  step({ id: 'parts6', say: 'Count the lattice tuples and you are counting partitions.', tool: 'visualize_concept', input: { concept: 'partitions', bounds: { x: 8060, y: 640, width: 800, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'parts6.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 424 }),
   step({
     id: 'drawParts6',
     tool: 'create_timeline',
@@ -471,11 +600,11 @@ const ACT_6: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'drawParts6.data.timelineId' }, action: 'play' }, waitMs: 4800 }),
-  step({ tool: 'set_partition_view', input: { objectId: { $ref: 'parts6.changedIds.0' }, finiteCutoff: 19, selectedN: 14, revealTheorem: false }, waitMs: 870 }),
+  step({ tool: 'set_partition_view', input: { objectId: { $ref: 'parts6.changedIds.0' }, finiteCutoff: 19, selectedN: 14, revealTheorem: false }, waitMs: 522 }),
   step({ humanNote: 'The learner drags the cutoff slider.' }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'parts6.changedIds.0' }], label: 'Ramanujan', seconds: 2.17 }, optional: true, waitMs: 326 }),
-  step({ tool: 'set_partition_view', input: { objectId: { $ref: 'parts6.changedIds.0' }, revealTheorem: true }, waitMs: 652 }),
-  step({ say: "I can verify cases. I can't prove the theorem, and the card says so.", waitMs: 979 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'parts6.changedIds.0' }], label: 'Ramanujan', seconds: 2.17 }, optional: true, waitMs: 220 }),
+  step({ tool: 'set_partition_view', input: { objectId: { $ref: 'parts6.changedIds.0' }, revealTheorem: true }, waitMs: 391 }),
+  step({ say: "I can verify cases. I can't prove the theorem, and the card says so.", waitMs: 587 }),
 ]
 
 // ---------------------------------------------------------------------------
@@ -483,12 +612,12 @@ const ACT_6: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_7: ReplayStep[] = [
-  step({ say: 'Last construction. Panning right.', tool: 'set_viewport', input: camera(2120, 2100), waitMs: 544 }),
+  step({ say: 'Last construction. Panning right.', tool: 'set_viewport', input: camera(9000, 580), waitMs: 326 }),
   step({ humanNote: 'The learner picks Matrix → 2 × 2 and types values into the grid.' }),
-  step({ id: 'matrix7', tool: 'visualize_concept', input: { concept: 'matrix-transform', bounds: { x: 2180, y: 2160, width: 800, height: 560 }, construct: true } }),
-  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'matrix7.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 706 }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'matrix7.changedIds.2' }], label: 'shear', seconds: 2.17 }, optional: true, waitMs: 435 }),
-  step({ say: 'A shear: one off-diagonal entry.', tool: 'set_matrix_cells', input: { objectId: { $ref: 'matrix7.changedIds.2' }, cells: [{ row: 0, column: 1, value: 1.2 }] }, waitMs: 435 }),
+  step({ id: 'matrix7', tool: 'visualize_concept', input: { concept: 'matrix-transform', bounds: { x: 9060, y: 640, width: 800, height: 560 }, construct: true } }),
+  step({ tool: 'focus_objects', input: { ids: [{ $ref: 'matrix7.changedIds.0' }], emphasis: 'feature' }, optional: true, waitMs: 424 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'matrix7.changedIds.2' }], label: 'shear', seconds: 2.17 }, optional: true, waitMs: 261 }),
+  step({ say: 'A shear: one off-diagonal entry.', tool: 'set_matrix_cells', input: { objectId: { $ref: 'matrix7.changedIds.2' }, cells: [{ row: 0, column: 1, value: 1.2 }] }, waitMs: 261 }),
   step({
     id: 'draw7',
     tool: 'create_timeline',
@@ -503,37 +632,94 @@ const ACT_7: ReplayStep[] = [
     },
   }),
   step({ tool: 'play_timeline', input: { timelineId: { $ref: 'draw7.data.timelineId' }, action: 'play' }, waitMs: 4640 }),
-  step({ say: 'Same idea as W_Q: a matrix moves every vector at once.', waitMs: 761 }),
+  step({ say: 'Same idea as W_Q: a matrix moves every vector at once.', waitMs: 457 }),
   step({ humanNote: 'The learner drags a basis vector; the cells update.' }),
   step({ humanNote: 'The learner double-clicks the explanation note and edits a word.' }),
-  step({ tool: 'spotlight_objects', input: { ids: ['replay_bins_note'], label: 'one word', seconds: 1.74 }, optional: true, waitMs: 326 }),
+  step({ tool: 'spotlight_objects', input: { ids: ['replay_bins_note'], label: 'one word', seconds: 1.74 }, optional: true, waitMs: 220 }),
   step({
     say: 'One word in my note, retyped.',
     tool: 'edit_text',
     input: { objectId: 'replay_bins_note', text: 'Total area is 1. The three bins hold w₁, w₂, w₃; their logs become the scores softmax will see.', typewriter: true, typewriterMs: 2320 },
     optional: true,
-    waitMs: 435,
+    waitMs: 261,
   }),
-  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }], label: 'one term', seconds: 1.74 }, optional: true, waitMs: 326 }),
+  step({ tool: 'spotlight_objects', input: { ids: [{ $ref: 'graph2.changedIds.0' }], label: 'one term', seconds: 1.74 }, optional: true, waitMs: 220 }),
   step({
     say: 'And one LaTeX term, live.',
     tool: 'edit_equation',
     input: { objectId: { $ref: 'graph2.changedIds.0' }, latex: '\\frac{x^{a-1}e^{-x}}{\\Gamma(a)},\\quad a=5.5', typewriter: true, typewriterMs: 2320 },
     optional: true,
-    waitMs: 544,
+    waitMs: 326,
   }),
   step({ humanNote: 'The learner undoes and redoes both edits from the rail.' }),
   step({ humanNote: 'The learner draws a Frame around the whole page and titles it Pipeline.' }),
-  step({ id: 'project7', say: 'A second project, so you can see the isolation.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 435 }),
-  step({ tool: 'open_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 761 }),
-  step({ tool: 'open_scene', input: { scene: 'gamma-clinic' }, optional: true, waitMs: 761 }),
-  step({ say: 'Untouched. Back we go.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 870 }),
-  step({ tool: 'delete_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 435 }),
+  step({ id: 'project7', say: 'A second project, so you can see the isolation.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 261 }),
+  step({ tool: 'open_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 457 }),
+  step({ tool: 'open_scene', input: { scene: 'gamma-clinic' }, optional: true, waitMs: 457 }),
+  step({ say: 'Untouched. Back we go.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 522 }),
+  step({ tool: 'delete_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 261 }),
 ]
 
 // ---------------------------------------------------------------------------
 // Act 8 — Close.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Act 7b — The concept map. Every widget is joined to the one it produced, with the
+// reason written on the join. Without this the pull-back is scattered cards; with it
+// the same shot reads as one argument that happens to be spread across a canvas.
+// ---------------------------------------------------------------------------
+
+const ACT_7B: ReplayStep[] = [
+  step({
+    id: 'map7b',
+    say: 'None of these are separate demos. Let me draw what connects them.',
+    tool: 'create_objects',
+    input: {
+      summary: 'Tutor drew the concept map across the whole page',
+      objects: [
+      { id: 'map_link_0', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 2000, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_0', kind: 'text', text: 'log-masses are the logits', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 1970, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_1', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 3000, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_1', kind: 'text', text: 'same head, now trained', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 2970, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_2', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 4000, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_2', kind: 'text', text: 'weights that sum to one', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 3970, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_3', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 4930, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_3', kind: 'text', text: 'a point from three weights', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 4900, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_4', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 1192, y: 40 },
+        bounds: { x: 5860, y: 880, width: 1200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_4', kind: 'text', text: 'one dimension up', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 5830, y: 800, width: 1260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_5', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 7860, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_5', kind: 'text', text: 'lattice points count partitions', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 7830, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_link_6', kind: 'arrow', color: PURPLE, from: { x: 8, y: 40 }, to: { x: 192, y: 40 },
+        bounds: { x: 8860, y: 880, width: 200, height: 80 }, rotation: 0, author: 'agent', opacity: 1 },
+      { id: 'map_label_6', kind: 'text', text: 'one matrix moves all of it', color: PURPLE, fontSize: 15, presentation: 'typed',
+        bounds: { x: 8830, y: 800, width: 260, height: 60 }, rotation: 0, author: 'agent', opacity: 1 },
+      ],
+    },
+    waitMs: 840,
+  }),
+  step({
+    say: 'A density became scores, scores became attention, attention became a point in a triangle, and the triangle lifted into a simplex.',
+    tool: 'set_viewport',
+    // A 0.18 pull-back put the whole 10,000px strip on screen at once, so every widget
+    // -- geometry, simplex, attention, the lot -- rendered simultaneously with no
+    // virtualisation and the renderer stopped answering. Show the chain, not the map.
+    input: { viewport: { x: -1500, y: 120, zoom: 0.45 } },
+    waitMs: 1920,
+  }),
+]
 
 const ACT_8: ReplayStep[] = [
   step({
@@ -579,5 +765,5 @@ export const FILM_V2_SCRIPT: ReplayScript = {
   id: 'film-v2',
   title: 'Film v2 — Pipeline',
   prompt: "Walk me through the whole pipeline. Use everything you've got.",
-  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_7, ...ACT_8],
+  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_7, ...ACT_7B, ...ACT_8],
 }

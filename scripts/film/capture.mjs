@@ -347,10 +347,46 @@ try {
       // which is what this film is about anyway.
       else if (step.runTool) { await page.evaluate(`window.__mathburstFilm.runTool(${JSON.stringify(step.runTool)}, ${JSON.stringify(step.input ?? {})}); return true`); await wait(1100) }
       else if (step.navigateScene) { await page.evaluate(`window.__mathburstFilm.navigateScene(${JSON.stringify(step.navigateScene)}); return true`); await wait(900) }
-      else if (step.runReplay) {
+      // Pause the replay on a scripted line so the DRIVER can perform a real human
+      // gesture mid-script. Everything the parity act claimed the learner does was a
+      // console note, because runReplay blocked as one step and nothing could act
+      // during it. Keyed on the line rather than a step index so inserting steps
+      // upstream cannot silently move the pause somewhere else.
+      else if (step.pauseReplayAfter) {
+        const deadline = Date.now() + (step.timeoutMs ?? 90_000)
+        while (Date.now() < deadline) {
+          // Act 1 offers an Accept/Decline proposal. The replay blocks on it, so this
+          // poll has to answer it too or it waits for a line that can never arrive.
+          const state = await page.evaluate(`return {
+            seen: (document.querySelector('.agent-console-lines')?.innerText || '').includes(${JSON.stringify(step.pauseReplayAfter)}),
+            proposal: Boolean(document.querySelector('.agent-console-proposal .is-accept:not(:disabled)')),
+            status: document.querySelector('.agent-console')?.getAttribute('data-status'),
+          }`)
+          if (state.seen) break
+          if (state.proposal) { await click('.agent-console-proposal .is-accept:not(:disabled)'); await wait(350); continue }
+          if (state.status === 'stopped') throw new Error('Agent replay stopped before the pause point')
+          await wait(150)
+        }
+        await click('.agent-console-controls button', 'Pause')
+        await wait(step.wait ?? 300)
+      }
+      else if (step.resumeReplay) {
+        await click('.agent-console-controls button[aria-label="Resume"]')
+        await wait(step.wait ?? 300)
+      }
+      // Start the replay and return, so the manifest can act while it runs.
+      else if (step.startReplay) {
         await click('.console-trigger')
         await wait(500)
         await click('.agent-console-controls button[aria-label="Run"]')
+        await wait(step.wait ?? 300)
+      }
+      else if (step.runReplay || step.awaitReplay) {
+        if (step.runReplay) {
+          await click('.console-trigger')
+          await wait(500)
+          await click('.agent-console-controls button[aria-label="Run"]')
+        }
         const deadline = Date.now() + (step.timeoutMs ?? 150_000)
         while (Date.now() < deadline) {
           const state = await page.evaluate(`return {
@@ -365,7 +401,16 @@ try {
           else await wait(120)
         }
         const finished = await page.evaluate(`return document.querySelector('.agent-console')?.getAttribute('data-status') === 'done'`)
-        if (!finished) throw new Error('Timed out waiting for Agent replay')
+        if (!finished) {
+          // Say WHERE it stopped. "Timed out" alone cost two full captures to diagnose.
+          const state = await page.evaluate(`return {
+            status: document.querySelector('.agent-console')?.getAttribute('data-status'),
+            counter: document.querySelector('.agent-console-status')?.innerText,
+            proposal: Boolean(document.querySelector('.agent-console-proposal .is-accept:not(:disabled)')),
+            lines: [...document.querySelectorAll('.agent-console-line')].slice(-4).map((n) => n.innerText.replace(/\n/g, ' ').slice(0, 120)),
+          }`).catch(() => null)
+          throw new Error(`Timed out waiting for Agent replay — ${JSON.stringify(state)}`)
+        }
       }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
