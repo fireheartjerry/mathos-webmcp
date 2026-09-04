@@ -55,3 +55,91 @@
 .attention-probability-list > span.is-target { color: var(--purple); background: transparent; }
 .attention-probability-list > span.is-target > em b { background: var(--purple); }
 .attention-loss span { color: var(--muted); font-size: 9px; }
+
+/* Final film lockup. The director already owns when this node appears; this
+   layer owns the held composition and the back-out construction motion. */
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final {
+  inset: 0;
+  box-sizing: border-box;
+  align-content: center;
+  justify-content: start;
+  gap: clamp(18px, 2vw, 34px);
+  padding: 10vh 11vw;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 76% 28%, rgba(124, 92, 255, 0.16), transparent 28%),
+    linear-gradient(118deg, rgba(251, 249, 243, 0.99) 0 48%, rgba(242, 238, 255, 0.96));
+  animation: cinematic-lockup-build 900ms cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final::after {
+  content: '';
+  position: absolute;
+  left: 11vw;
+  top: 24vh;
+  width: clamp(54px, 6vw, 108px);
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--purple), var(--teal));
+  transform-origin: left;
+  animation: cinematic-lockup-rule 720ms 120ms cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final p {
+  gap: clamp(12px, 1.2vw, 22px);
+  max-width: min(900px, 72vw);
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final p b {
+  color: var(--graphite);
+  font: 600 clamp(72px, 9vw, 172px)/.82 var(--serif);
+  letter-spacing: -0.065em;
+  animation: cinematic-lockup-piece 760ms 100ms cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final p span {
+  max-width: 760px;
+  color: var(--graphite);
+  font: 400 clamp(24px, 2.5vw, 48px)/1.12 var(--serif);
+  letter-spacing: -0.02em;
+  animation: cinematic-lockup-piece 760ms 210ms cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final small {
+  gap: 9px;
+  padding: 11px 16px 11px 13px;
+  color: var(--graphite);
+  background: rgba(255, 255, 255, 0.7);
+  border-color: color-mix(in srgb, var(--purple) 35%, var(--line));
+  border-radius: 999px;
+  box-shadow: 0 10px 32px rgba(23, 23, 19, 0.08);
+  font: 600 clamp(13px, 1vw, 20px)/1 var(--mono);
+  animation: cinematic-lockup-piece 760ms 320ms cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final small i {
+  width: 9px;
+  height: 9px;
+  background: var(--teal);
+  box-shadow: 0 0 0 5px rgba(47, 143, 136, 0.12);
+}
+
+.mathburst-app[data-film='true'] .cinematic-lockup.cinematic-lockup.is-final small strong {
+  color: var(--purple);
+  font-size: inherit;
+}
+
+@keyframes cinematic-lockup-build {
+  from { opacity: 0; transform: translateY(34px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes cinematic-lockup-piece {
+  from { opacity: 0; transform: translateY(42px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes cinematic-lockup-rule {
+  from { opacity: 0; transform: scaleX(0) translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
