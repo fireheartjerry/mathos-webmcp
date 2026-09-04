@@ -80,6 +80,7 @@ import FilmCursor from './FilmCursor'
 import AnimationTimeline from './animation/AnimationTimeline'
 import { useTimelinePlayback } from './animation/useTimelinePlayback'
 import { drawIn } from '../domain/animation/presets'
+import { measureChromeInsets, SHOT_COVERAGE, solveViewportForBounds } from '../domain/animation/framing'
 import AgentConsole from './sidebar/AgentConsole'
 import AgentAura from './sidebar/AgentAura'
 import AgentActivation, { useOneShot } from './sidebar/AgentActivation'
@@ -136,47 +137,12 @@ const chromeInsets = () => {
     const rect = element.getBoundingClientRect()
     return rect.width > 4 && rect.height > 4 ? rect : null
   }
-  let right = 0
-  let bottom = 0
-  let left = 0
-  let top = 0
-  // Which edge a panel occupies is a fact about the current layout, not a constant.
-  // The animation (Timelines) panel docks LEFT in film mode, but every panel here
-  // used to be charged to right/bottom, so `canvas.right - rect.left` returned
-  // nearly the full canvas width and framing reserved a third of the RIGHT while
-  // leaving the left clear -- focus_objects then fitted cards straight underneath
-  // the panel. Charge each panel to the edge it is actually nearest instead.
-  const claim = (rect: DOMRect) => {
-    const fromLeft = rect.right - canvas.left
-    const fromRight = canvas.right - rect.left
-    const fromTop = rect.bottom - canvas.top
-    const fromBottom = canvas.bottom - rect.top
-    const horizontal = Math.min(fromLeft, fromRight)
-    const vertical = Math.min(fromTop, fromBottom)
-    if (horizontal <= vertical) {
-      if (fromLeft <= fromRight) left = Math.max(left, fromLeft)
-      else right = Math.max(right, fromRight)
-    } else if (fromTop <= fromBottom) top = Math.max(top, fromTop)
-    else bottom = Math.max(bottom, fromBottom)
-  }
-  // The header floats over the canvas, so `top` can never be assumed to be 0:
-  // card titles were being framed underneath it.
-  for (const selector of [
+  const overlays = [
     '.world-header', '.tool-rail', '.tool-ledger', '.activity-rail', '.zoom-controls',
     '.animation-panel', '.agent-console', '.personal-project-navigator',
     '.progressive-inspector', '.reconstruction-panel',
-  ]) {
-    const rect = measure(selector)
-    if (rect) claim(rect)
-  }
-  // A little air beyond the chrome itself, and never let the insets eat the canvas.
-  const gutter = 16
-  return {
-    left: Math.min(canvas.width * 0.25, Math.max(0, left) + (left > 0 ? gutter : 0)),
-    right: Math.min(canvas.width * 0.3, Math.max(0, right) + (right > 0 ? gutter : 0)),
-    top: Math.min(canvas.height * 0.2, Math.max(0, top) + (top > 0 ? gutter : 0)),
-    bottom: Math.min(canvas.height * 0.28, Math.max(0, bottom) + (bottom > 0 ? gutter : 0)),
-  }
+  ].map(measure).filter((rect): rect is DOMRect => rect !== null)
+  return measureChromeInsets(canvas, overlays)
 }
 
 const cameraViewportForWorld = (
@@ -1854,11 +1820,9 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
    * zoom 0.71, putting the card at about a fifth of the frame. Coverage states the
    * intent directly instead: fit the subject, then keep this fraction of the space.
    */
-  const SHOT_COVERAGE = { detail: 0.94, feature: 0.78, establish: 0.44 } as const
-
   const viewportForBounds = (
     bounds: { x: number; y: number; width: number; height: number },
-    emphasis: keyof typeof SHOT_CONTEXT = 'feature',
+    emphasis: keyof typeof SHOT_COVERAGE = 'feature',
     /**
      * World point to hold still while the zoom changes — a push-in "at the cursor".
      * Without it the camera always recentres, so a zoom reads as a cut to somewhere
@@ -1867,33 +1831,14 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
     anchor?: { x: number; y: number } | null,
   ): Viewport => {
     const { width, height } = canvasSize()
-    const coverage = SHOT_COVERAGE[emphasis] ?? SHOT_COVERAGE.feature
-    const padding = Math.min(96, Math.max(24, Math.min(width, height) * 0.04))
-    const inset = chromeInsets()
-    const availableWidth = Math.max(1, width - inset.left - inset.right - padding * 2)
-    const availableHeight = Math.max(1, height - inset.top - inset.bottom - padding * 2)
-    const fit = bounds.width > 0 && bounds.height > 0
-      ? Math.min(availableWidth / bounds.width, availableHeight / bounds.height)
-      : 1
-    const zoom = clampZoom(fit * coverage)
-
-    if (anchor) {
-      // Keep the anchor exactly where it already sits on screen, then only the scale
-      // changes. Fall back to centring if the anchor is currently off-picture, since
-      // holding an off-screen point would push the subject out of frame.
-      const current = worldRef.current.viewport
-      const screenX = current.x + anchor.x * current.zoom
-      const screenY = current.y + anchor.y * current.zoom
-      const onPicture = screenX > inset.left && screenX < width - inset.right
-        && screenY > inset.top && screenY < height - inset.bottom
-      if (onPicture) return { x: screenX - anchor.x * zoom, y: screenY - anchor.y * zoom, zoom }
-    }
-
-    return {
-      x: inset.left + (width - inset.left - inset.right) / 2 - (bounds.x + bounds.width / 2) * zoom,
-      y: inset.top + (height - inset.top - inset.bottom) / 2 - (bounds.y + bounds.height / 2) * zoom,
-      zoom,
-    }
+    return solveViewportForBounds({
+      canvas: { width, height },
+      insets: chromeInsets(),
+      bounds,
+      emphasis,
+      anchor,
+      currentViewport: worldRef.current.viewport,
+    }).viewport
   }
 
   const fitScene = (sceneId: CatalogSceneId) => {
