@@ -90,8 +90,8 @@ const afterCommit = (anchor, count = 1) => ({ type: 'afterCommit', anchor, count
 
 /**
  * The voice carries the argument and leaves parity flourishes and repeated tool
- * actions to the picture. The old 17-clip cut cannot start at its real late beats
- * and finish inside 177.2s; these twelve are the non-redundant story spine.
+ * actions to the picture. The generic closing line repeated the opening argument;
+ * the final ledger line now carries the measured 48/48 proof instead.
  */
 const plan = [
   { id: '01-what', beat: onBeat('take', 'start') },
@@ -104,8 +104,7 @@ const plan = [
   { id: '11-geometry', beat: onBeat('tutor', 'completed the construction') },
   { id: '12-barycentric', beat: onBeat('tutor', 'Visualized barycentric') },
   { id: '15-matrix', beat: onBeat('tutor', 'Visualized matrix-transform') },
-  { id: '18-ledger', beat: afterCommit(onBeat('tutor', 'Visualized matrix-transform'), 2) },
-  { id: '17-close', beat: onBeat('tutor', 'Audited the reconstruction') },
+  { id: '18-ledger', beat: onBeat('replay', 'all tool calls settled') },
 ]
 
 const describePredicate = (predicate) => {

@@ -259,10 +259,23 @@ try {
 
   // ---- stage ---------------------------------------------------------------------
   const plan = MANIFEST.shots.filter((shot) => !ONLY || ONLY.has(shot.id))
+  // Project creation is setup, not story. Perform the real UI interaction before the
+  // screencast starts so the mathematical film opens on the shared blank canvas. No
+  // WebMCP calls happen here; every tool call still lands inside the one recorded take.
+  if (MANIFEST.product.setupNewProject) {
+    await page.evaluate('window.__mathburstFilm.openGallery(); return true')
+    await wait(900)
+    await click('.new-project-button')
+    await rectOf('#new-project-title')
+    await typeInto('#new-project-title', String(MANIFEST.product.setupNewProject), 70, false)
+    await click('.project-create-submit')
+    await rectOf('.tool-ledger')
+    await wait(500)
+  }
   // A shot marked `stage: 'gallery'` opens on the project list instead of inside a
   // project, and leaves the Director closed -- the cold open is real navigation, not
   // a Director frame, so it must not start where every other shot starts.
-  if (plan[0]?.stage === 'gallery') {
+  else if (plan[0]?.stage === 'gallery') {
     await page.evaluate('window.__mathburstFilm.openGallery(); return true')
     await wait(900)
   } else {
@@ -451,6 +464,7 @@ try {
           }`).catch(() => null)
           throw new Error(`Timed out waiting for Agent replay — ${JSON.stringify(state)}`)
         }
+        if (step.awaitReplay) events.push({ t: now() - takeStart, kind: 'replay', label: 'complete — all tool calls settled' })
       }
       else if (step.waitFor) await rectOf(step.waitFor, undefined, step.timeoutMs ?? 12_000)
     }
@@ -490,6 +504,15 @@ try {
   }
   events.sort((a, b) => a.t - b.t)
   log(`commits logged: ${events.filter((event) => event.kind === 'tutor' || event.kind === 'human').length}`)
+  // Preserve the on-screen console as grep-able acceptance evidence. A failed tool
+  // row is marked with `!`; successful and narrative rows use a neutral dot so
+  // `grep 'console !'` has one unambiguous meaning after a four-minute take.
+  const consoleLines = await page.evaluate(`return [...document.querySelectorAll('.agent-console-line')].map((line) => ({
+    failed: line.classList.contains('is-error'),
+    text: (line.innerText || '').replace(/\\s+/g, ' ').trim(),
+  }))`)
+  for (const line of consoleLines) log(`console ${line.failed ? '!' : '·'} ${line.text}`)
+  log(`console lines: ${consoleLines.length}; failures: ${consoleLines.filter((line) => line.failed).length}`)
   page.close()
   log(`captured ${frames.length} frames over ${takeEnd.toFixed(1)}s`)
 

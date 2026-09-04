@@ -9,6 +9,7 @@
   "product": {
     "url": "http://localhost:3000/?film=1",
     "resetStorage": true,
+    "setupNewProject": "Pipeline",
     "chromePosition": "1707,0"
   },
   "narration": {
@@ -23,45 +24,6 @@
     "seed": 7
   },
   "shots": [
-    {
-      "id": "new-project",
-      "title": "Create Pipeline",
-      "seconds": 6,
-      "stage": "gallery",
-      "steps": [
-        {
-          "pointer": {
-            "x": 0.5,
-            "y": 0.56
-          }
-        },
-        {
-          "wait": 180
-        },
-        {
-          "click": ".new-project-button"
-        },
-        {
-          "waitFor": "#new-project-title"
-        },
-        {
-          "type": "#new-project-title",
-          "value": "Pipeline",
-          "settleMs": 70,
-          "enter": false
-        },
-        {
-          "click": ".project-create-submit"
-        },
-        {
-          "waitFor": ".tool-ledger"
-        },
-        {
-          "wait": 180
-        }
-      ],
-      "transitionOut": "bridge"
-    },
     {
       "id": "agent-replay",
       "title": "One shared mathematical world",
@@ -146,23 +108,14 @@
           "hover": ".tool-ledger"
         },
         {
-          "wait": 1800
-        },
-        {
-          "pointer": {
-            "x": 0.5,
-            "y": 0.55
-          }
-        },
-        {
-          "wait": 250
+          "wait": 2500
         },
         {
           "showLockup": true,
           "wait": 250
         },
         {
-          "wait": 2000
+          "wait": 1100
         }
       ],
       "transitionOut": "end"

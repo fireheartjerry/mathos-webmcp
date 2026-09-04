@@ -775,5 +775,8 @@ export const FILM_V2_SCRIPT: ReplayScript = {
   id: 'film-v2',
   title: 'Film v2 — Pipeline',
   prompt: "Walk me through the whole pipeline. Use everything you've got.",
-  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_7, ...ACT_7B, ...ACT_8],
+  // The concept-map pullback repeated create_objects and set_viewport after both had
+  // already succeeded on camera. Cutting that complete beat preserves all 48 tools
+  // while giving the final ledger enough room to be read below the three-minute cap.
+  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_7, ...ACT_8],
 }

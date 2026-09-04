@@ -13,7 +13,7 @@
       "id": "01-what",
       "act": 0,
       "text": "This is Mathburst. An infinite canvas where a student and an AI tutor do mathematics inside the same document.",
-      "shot": "new-project",
+      "shot": "agent-replay",
       "offset": 1.4
     },
     {
@@ -129,16 +129,9 @@
       "offset": 7.2
     },
     {
-      "id": "17-close",
-      "act": 8,
-      "text": "Forty-eight tools registered on the page. Every tutor edit you just saw went through one of them, and the student reached the same reducer. [calm] One history holds them both.",
-      "shot": "one-world",
-      "offset": 0.15
-    },
-    {
       "id": "18-ledger",
       "shot": "agent-replay",
-      "text": "That panel is the ledger. Every tool the tutor called, in order, with its own count. Forty-eight of forty-eight, all on the page."
+      "text": "Forty-eight of forty-eight, all on the page."
     },
     {
       "id": "16b-map",
