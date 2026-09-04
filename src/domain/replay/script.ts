@@ -166,7 +166,6 @@ const ACT_0: ReplayStep[] = [
 
 const ACT_1: ReplayStep[] = [
   step({ humanNote: 'The learner writes Γ(9/2) = ∫x^{7/2}e^{−x}dx = [−x^{7/2}e^{−x}]₀^∞ − (7/2)Γ(7/2) by hand, sign error included.' }),
-  step({ tool: 'focus_objects', input: { ids: ['replay_opening_attempt'], emphasis: 'feature' }, optional: true, waitMs: 234 }),
   step({
     id: 'ink1',
     say: 'Let me read that.',
@@ -615,23 +614,22 @@ const ACT_5: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_6: ReplayStep[] = [
-  // The simplex and partition labs are CUT FROM THE PICTURE, not from the product.
-  // Both are still built and driven here, off canvas, because set_simplex_view and
-  // set_partition_view are called nowhere else: dropping the scenes naively would take
-  // the ledger to 46/48 and falsify the film's central claim. Same device the
-  // compatibility fixture already uses for reconstruct_problem and audit_reconstruction.
+  // Show the two compact checks together. They used to run at x/y -6200, leaving the
+  // picture stuck on an enormous close-up of the opening equation while the console
+  // talked about simplex and partitions. One establishing camera now holds both cards.
+  step({ say: 'Two compact checks, together.', tool: 'set_viewport', input: camera(8000, 500), waitMs: 216 }),
   step({
     id: 'simplex6',
-    say: 'Two more labs run off the page: the four-weight simplex, and the partition table it counts into.',
+    say: 'Four weights become one point in the simplex.',
     tool: 'visualize_concept',
-    input: { concept: 'simplex', bounds: { x: -6200, y: -6200, width: 800, height: 560 } },
+    input: { concept: 'simplex', bounds: { x: 8060, y: 640, width: 620, height: 500 } },
     optional: true, waitMs: 152,
   }),
   step({ tool: 'set_simplex_view', input: { objectId: { $ref: 'simplex6.changedIds.0' }, section: 0.18, denominator: 5 }, optional: true, waitMs: 174 }),
   step({
     id: 'parts6',
     tool: 'visualize_concept',
-    input: { concept: 'partitions', bounds: { x: -5200, y: -6200, width: 800, height: 560 } },
+    input: { concept: 'partitions', bounds: { x: 8060, y: 1240, width: 620, height: 500 } },
     optional: true, waitMs: 152,
   }),
   step({ tool: 'set_partition_view', input: { objectId: { $ref: 'parts6.changedIds.0' }, finiteCutoff: 19, selectedN: 14, revealTheorem: false }, optional: true, waitMs: 174 }),
@@ -650,19 +648,18 @@ const ACT_6: ReplayStep[] = [
 // ---------------------------------------------------------------------------
 
 const ACT_6B: ReplayStep[] = [
-  step({ id: 'project7', say: 'One side room keeps imported work isolated from the live lesson.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 135 }),
+  step({ id: 'project7', say: 'One disposable side room checks the import without touching the live lesson.', tool: 'create_project', input: { title: 'Pipeline scratch', templateId: 'gamma-lab' }, optional: true, waitMs: 135 }),
   step({ tool: 'open_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 234 }),
   step({ tool: 'open_scene', input: { scene: 'gamma-clinic' }, optional: true, waitMs: 234 }),
   step({
     id: 'compatImage8',
     tool: 'create_objects',
     input: {
-      summary: 'Prepared an off-canvas compatibility fixture',
+      summary: 'Prepared the visible scratch import check',
       objects: [{
-        id: 'replay_compat_image', kind: 'image',
-        src: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
-        alt: 'Off-canvas compatibility fixture',
-        bounds: { x: -4200, y: -4200, width: 120, height: 80 }, rotation: 0, author: 'agent', opacity: 1,
+        id: 'replay_compat_label', kind: 'text', text: 'Disposable import check',
+        color: PURPLE, fontSize: 18,
+        bounds: { x: -350, y: 420, width: 250, height: 40 }, rotation: 0, author: 'agent', opacity: 1,
       }],
     },
     optional: true,
@@ -671,10 +668,10 @@ const ACT_6B: ReplayStep[] = [
     say: 'An imported worksheet can become live math here while the main lesson stays untouched.',
     tool: 'reconstruct_problem',
     input: {
-      sourceImageId: 'replay_compat_image',
+      sourceImageId: 'source',
       proposedObjects: [{
         id: 'replay_compat_equation', kind: 'equation', latex: '\\Gamma(x+1)=x\\Gamma(x)', color: GRAPHITE,
-        bounds: { x: -4000, y: -4000, width: 320, height: 64 }, rotation: 0, author: 'agent', opacity: 1,
+        bounds: { x: -815, y: 415, width: 360, height: 64 }, rotation: 0, author: 'agent', opacity: 1,
       }],
       uncertainObjectIds: [],
     },
@@ -685,7 +682,7 @@ const ACT_6B: ReplayStep[] = [
     input: { auditSummary: 'Checked the scratch import against its source.' },
     optional: true,
   }),
-  step({ say: 'Scratch checked. Back to the live lesson.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 267 }),
+  step({ say: 'Scratch checked. Back to the shared canvas.', tool: 'open_project', input: { projectId: { $ref: 'projects0.data.activeProjectId' } }, optional: true, waitMs: 267 }),
   step({ tool: 'delete_project', input: { projectId: { $ref: 'project7.data.projectId' } }, optional: true, waitMs: 135 }),
 ]
 
@@ -783,5 +780,5 @@ export const FILM_V2_SCRIPT: ReplayScript = {
   // The concept-map pullback repeated create_objects and set_viewport after both had
   // already succeeded on camera. Cutting that complete beat preserves all 48 tools
   // while giving the final ledger enough room to be read below the three-minute cap.
-  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6, ...ACT_6B, ...ACT_7, ...ACT_8],
+  steps: [...ACT_0, ...ACT_1, ...ACT_2, ...ACT_3, ...ACT_4, ...ACT_5, ...ACT_6B, ...ACT_6, ...ACT_7, ...ACT_8],
 }

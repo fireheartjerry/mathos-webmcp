@@ -10,6 +10,7 @@
     "url": "http://localhost:3000/?film=1",
     "resetStorage": true,
     "setupNewProject": "Pipeline",
+    "frameReplayOpening": true,
     "chromePosition": "1707,0"
   },
   "narration": {

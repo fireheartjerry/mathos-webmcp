@@ -286,6 +286,13 @@ try {
     await page.evaluate(`window.__mathburstFilm.selectShot(${JSON.stringify(plan[0].id)}); return true`)
   }
   await mouse('mouseMoved')
+  // Blank projects centre the world origin, which makes the opening ink appear in
+  // the lower-right of a 2560×1440 capture. Frame the empty canvas before recording
+  // so every opening object is born in the upper-left composition with no visible pan.
+  if (MANIFEST.product.frameReplayOpening) {
+    await page.evaluate('return Boolean(window.__mathburstFilm.frameReplayOpening())')
+    await wait(900)
+  }
   await wait(1600)
 
   await page.send('Page.startScreencast', { format: 'jpeg', quality: 92, maxWidth: WIDTH, maxHeight: HEIGHT, everyNthFrame: 1 })

@@ -1,5 +1,5 @@
 /** Render the measured cut directly with FFmpeg for time-critical delivery. */
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -10,20 +10,31 @@ const capture = resolve(publicDir, `${filmDir}/capture.mp4`)
 const cutlist = JSON.parse(readFileSync(resolve(publicDir, `${filmDir}/cutlist.json`), 'utf8'))
 const narration = JSON.parse(readFileSync(resolve(publicDir, `${filmDir}/narration.json`), 'utf8'))
 const manifest = JSON.parse(readFileSync(resolve(root, process.env.FILM_MANIFEST ?? 'video/film.manifest.json'), 'utf8'))
+const captureSeconds = Number(execFileSync('ffprobe', [
+  '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', capture,
+]).toString().trim())
 const output = process.argv[2] ?? resolve(process.env.USERPROFILE, 'Downloads/MathBurst-WebMCP-Challenge-Final.mp4')
 
 const lastWord = Math.max(...narration.clips.map((clip) => clip.offset + clip.duration))
 const filmSeconds = Math.max(cutlist.filmSeconds, lastWord) + 1.6
 const filters = []
 
-for (const [index, shot] of cutlist.shots.entries()) {
+const effectiveShots = cutlist.shots.map((shot) => ({
+  ...shot,
+  // A terminal hold lives in cutlist.filmSeconds but not in capture.mp4. Asking
+  // trim for a source time beyond EOF silently shortens the joined picture; padding
+  // must therefore be based on the media that actually exists.
+  srcEnd: Math.min(Number(shot.srcEnd), captureSeconds),
+}))
+for (const [index, shot] of effectiveShots.entries()) {
   filters.push(
     `[0:v]trim=start=${shot.srcStart}:end=${shot.srcEnd},` +
     `setpts=(PTS-STARTPTS)/${shot.playbackRate ?? 1}[v${index}]`,
   )
 }
-filters.push(`${cutlist.shots.map((_, index) => `[v${index}]`).join('')}concat=n=${cutlist.shots.length}:v=1:a=0[vjoined]`)
-const hold = Math.max(0, filmSeconds - cutlist.filmSeconds)
+filters.push(`${effectiveShots.map((_, index) => `[v${index}]`).join('')}concat=n=${effectiveShots.length}:v=1:a=0[vjoined]`)
+const joinedSeconds = effectiveShots.reduce((sum, shot) => sum + Math.max(0, shot.srcEnd - Number(shot.srcStart)) / Number(shot.playbackRate ?? 1), 0)
+const hold = Math.max(0, filmSeconds - joinedSeconds)
 filters.push(`[vjoined]tpad=stop_mode=clone:stop_duration=${hold},trim=duration=${filmSeconds},setpts=PTS-STARTPTS[vout]`)
 
 for (const [index, clip] of narration.clips.entries()) {

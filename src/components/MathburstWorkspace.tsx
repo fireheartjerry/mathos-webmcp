@@ -1921,6 +1921,19 @@ export default function MathburstWorkspace({ initialProjectId }: { initialProjec
         previewNext: previewNextDirectorShot,
         runCue: (cue: DemoCueId) => runDemoCue(cue),
         /**
+         * Compose the replay's blank opening in the upper-left clear plane. Blank
+         * projects normally centre world origin in the canvas, which put the first
+         * handwritten line near the lower-right at 2560×1440. The film driver calls
+         * this before recording, so the first visible stroke is already in place and
+         * no camera correction appears on screen or enters the document history.
+         */
+        frameReplayOpening: () => {
+          const next = { ...worldRef.current, viewport: { x: -45, y: -135, zoom: 1 } }
+          worldRef.current = next
+          setWorld(next)
+          return true
+        },
+        /**
          * Draw the learner's Gamma recurrence, by hand, as a HUMAN commit.
          *
          * The replay runs in a blank Pipeline project, so there was no ink on the

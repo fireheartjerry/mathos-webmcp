@@ -105,8 +105,10 @@ const plan = [
   { id: '10-training', beat: onBeat('tutor', 'Applied gradient step 1') },
   { id: '11-geometry', beat: onBeat('tutor', 'completed the construction') },
   { id: '12-barycentric', beat: onBeat('tutor', 'Visualized barycentric') },
-  { id: '13-parity-shape', beat: onBeat('tutor', 'Moved arrow replay_arrow') },
-  { id: '16c-undo', beat: onBeat('human', 'Undid erased 1 ink object by id') },
+  { id: '13-parity-shape', beat: onBeat('tutor', 'Tutor ringed Act 3') },
+  { id: '13b-parity-ink', beat: onBeat('tutor', 'Moved arrow replay_arrow') },
+  { id: '14-compat', beat: onBeat('tutor', 'Prepared the visible scratch import check') },
+  { id: '14-ramanujan', beat: onBeat('tutor', 'Set simplex section') },
   { id: '15-matrix', beat: onBeat('tutor', 'Visualized matrix-transform') },
   { id: '17-close', beat: onBeat('replay', 'all tool calls settled') },
 ]

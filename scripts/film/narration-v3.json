@@ -89,14 +89,14 @@
     {
       "id": "13-parity-shape",
       "act": 5,
-      "text": "The tutor rings the density with create shape. Then the student takes that same ellipse by its handles and turns it.",
+      "text": "The tutor draws a frame and an ellipse. The learner grabs that same ellipse, resizes it, and turns it with the very same handles.",
       "shot": "parity-shapes",
       "offset": 1
     },
     {
       "id": "13b-parity-ink",
       "act": 5,
-      "text": "The student highlights, draws, erases. Then the tutor erases the circle it drew itself, and one undo brings it back. [calm] Undo works on the tutor too.",
+      "text": "Then the tutor aims an arrow, tests a highlight, and removes what does not help. The opening circle is erased; one click on Undo brings it back.",
       "shot": "parity-ink",
       "offset": 1.2
     },
@@ -108,9 +108,16 @@
       "offset": 1.2
     },
     {
+      "id": "14-compat",
+      "act": 6,
+      "text": "A disposable copy checks the imported worksheet without touching the live lesson.",
+      "shot": "compatibility",
+      "offset": 0.4
+    },
+    {
       "id": "14-ramanujan",
       "act": 6,
-      "text": "Ramanujan's congruence, verified for these finite cases. The card says plainly that the general statement is a theorem, and not one proved here.",
+      "text": "Four weights become a simplex; finite partitions become a table, with the theorem boundary stated plainly.",
       "shot": "ramanujan",
       "offset": 1.6
     },
